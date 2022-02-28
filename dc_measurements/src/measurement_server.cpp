@@ -40,6 +40,7 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   measurement_json_schema_path_.resize(measurement_ids_.size());
   measurement_group_key_.resize(measurement_ids_.size());
   measurement_tags_.resize(measurement_ids_.size());
+  measurement_init_collect_.resize(measurement_ids_.size());
 
   if (!loadMeasurementPlugins())
   {
@@ -69,6 +70,7 @@ bool MeasurementServer::loadMeasurementPlugins()
     measurement_json_schema_path_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "json_schema_path", "");
     measurement_tags_[i] =
         dc_util::get_str_array_type_param(node, measurement_ids_[i], "tags", std::vector<std::string>());
+    measurement_init_collect_[i] = dc_util::get_bool_type_param(node, measurement_ids_[i], "init_collect", true);
 
     try
     {
@@ -79,13 +81,15 @@ bool MeasurementServer::loadMeasurementPlugins()
                                            << ", Debug: " << (int)measurement_debug_[i]
                                            << ", Validator enabled: " << (int)measurement_enable_validator_[i]
                                            << ", Schema path: " << measurement_json_schema_path_[i].c_str()
-                                           << ", Tags: [" << boost::algorithm::join(measurement_tags_[i], ",") << "]");
+                                           << ", Tags: [" << boost::algorithm::join(measurement_tags_[i], ",")
+                                           << "], Init collect: " << (int)measurement_init_collect_[i]);
 
       measurements_.push_back(plugin_loader_.createUniqueInstance(measurement_types_[i]));
       measurements_.back()->configure(node, measurement_ids_[i], tf_, measurement_types_[i], measurement_group_key_[i],
                                       measurement_topic_outputs_[i], measurement_polling_interval_[i],
                                       measurement_debug_[i], measurement_enable_validator_[i],
-                                      measurement_json_schema_path_[i], measurement_tags_[i], timer_cb_group_);
+                                      measurement_json_schema_path_[i], measurement_tags_[i],
+                                      measurement_init_collect_[i], timer_cb_group_);
     }
     catch (const pluginlib::PluginlibException& ex)
     {

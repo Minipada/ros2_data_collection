@@ -86,6 +86,7 @@ protected:
   std::vector<bool> measurement_enable_validator_;
   std::vector<std::string> measurement_json_schema_path_;
   std::vector<std::vector<std::string>> measurement_tags_;
+  std::vector<bool> measurement_init_collect_;
 
   rclcpp::CallbackGroup::SharedPtr timer_cb_group_;
 };
