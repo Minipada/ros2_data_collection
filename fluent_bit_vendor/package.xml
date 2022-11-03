@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
+    <name>fluent_bit_vendor</name>
+    <version>2.0.0</version>
+    <description>A vendor package for An End to End Observability Pipeline</description>
+    <maintainer email="d.bensoussan@proton.me">David Bensoussan</maintainer>
+    <license>MPL-2.0</license>
+
+    <buildtool_depend>ament_cmake</buildtool_depend>
+    <buildtool_depend>dc_interfaces</buildtool_depend>
+    <buildtool_depend>git</buildtool_depend>
+    <buildtool_depend>flex</buildtool_depend>
+    <buildtool_depend>bison</buildtool_depend>
+    <buildtool_depend>libpq-dev</buildtool_depend>
+    <buildtool_depend>rclc</buildtool_depend>
+
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
+</package>
