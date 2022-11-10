@@ -1,0 +1,9 @@
+<class_libraries>
+    <library path="dc_uptime_measurement">
+        <class name="dc_measurements/Uptime" type="dc_measurements::Uptime" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_uptime
+            </description>
+        </class>
+    </library>
+</class_libraries>
