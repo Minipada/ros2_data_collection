@@ -8,6 +8,7 @@ set(dependencies
   rclcpp
   rclcpp_lifecycle
 )
+find_package(Boost REQUIRED)
 
 find_package(ament_cmake REQUIRED)
 foreach(Dependency IN ITEMS ${dependencies})
