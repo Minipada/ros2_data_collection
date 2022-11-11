@@ -9,12 +9,17 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>rclcpp</depend>
-  <depend>rclcpp_lifecycle</depend>
+  <build_depend>libboost-program-options-dev</build_depend>
+
+  <depend>boost</depend>
+  <depend>dc_common</depend>
   <depend>launch</depend>
   <depend>launch_testing_ament_cmake</depend>
   <depend>nav2_util</depend>
-  <depend>dc_common</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+
+  <exec_depend>libboost-program-options</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
