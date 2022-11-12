@@ -13,6 +13,14 @@ Uptime::Uptime() : dc_measurements::Measurement()
 
 Uptime::~Uptime() = default;
 
+void Uptime::setValidationSchema()
+{
+  if (enable_validator_)
+  {
+    validateSchema("dc_measurements", "uptime.json");
+  }
+}
+
 dc_interfaces::msg::StringStamped Uptime::collect()
 {
   long uptime = system_.UpTime();

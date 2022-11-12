@@ -8,6 +8,7 @@ set(dependencies
   geometry_msgs
   nav2_util
   nlohmann_json
+  nlohmann_json_schema_validator
   PkgConfig
   pluginlib
   rclcpp_components
@@ -32,7 +33,7 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
-# Plugins measurements
+# Measurement plugins
 add_library(dc_uptime_measurement SHARED
   plugins/measurements/uptime.cpp
   plugins/measurements/system/linux_parser.cpp
