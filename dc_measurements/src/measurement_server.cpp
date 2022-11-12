@@ -20,7 +20,7 @@ MeasurementServer::~MeasurementServer()
   measurements_.clear();
 }
 
-nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle::State& /*state*/)
+nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle::State&)
 {
   RCLCPP_INFO(get_logger(), "Configuring");
   auto node = shared_from_this();
@@ -36,6 +36,8 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   measurement_topic_outputs_.resize(measurement_ids_.size());
   measurement_polling_interval_.resize(measurement_ids_.size());
   measurement_debug_.resize(measurement_ids_.size());
+  measurement_enable_validator_.resize(measurement_ids_.size());
+  measurement_json_schema_path_.resize(measurement_ids_.size());
 
   if (!loadMeasurementPlugins())
   {
@@ -58,16 +60,23 @@ bool MeasurementServer::loadMeasurementPlugins()
                                                                 std::string("/dc/measurement/") + measurement_ids_[i]);
     measurement_polling_interval_[i] = dc_util::get_int_type_param(node, measurement_ids_[i], "polling_interval", 1000);
     measurement_debug_[i] = dc_util::get_bool_type_param(node, measurement_ids_[i], "debug", false);
+    measurement_enable_validator_[i] =
+        dc_util::get_bool_type_param(node, measurement_ids_[i], "enable_validator", true);
+    measurement_json_schema_path_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "json_schema_path", "");
 
     try
     {
-      RCLCPP_INFO(get_logger(), "Creating measurement plugin %s: Type %s, Polling interval: %d",
-                  measurement_ids_[i].c_str(), measurement_types_[i].c_str(), measurement_polling_interval_[i]);
+      RCLCPP_INFO(get_logger(),
+                  "Creating measurement plugin %s: Type %s, Polling interval: %d, Debug: %d, Validator enabled: %d, "
+                  "Schema path: %s",
+                  measurement_ids_[i].c_str(), measurement_types_[i].c_str(), measurement_polling_interval_[i],
+                  (int)measurement_debug_[i], (int)measurement_enable_validator_[i],
+                  measurement_json_schema_path_[i].c_str());
       measurements_.push_back(plugin_loader_.createUniqueInstance(measurement_types_[i]));
       measurements_.back()->configure(node, measurement_ids_[i], tf_, measurement_types_[i],
-
                                       measurement_topic_outputs_[i], measurement_polling_interval_[i],
-                                      measurement_debug_[i], timer_cb_group_);
+                                      measurement_debug_[i], measurement_enable_validator_[i],
+                                      measurement_json_schema_path_[i], timer_cb_group_);
     }
     catch (const pluginlib::PluginlibException& ex)
     {

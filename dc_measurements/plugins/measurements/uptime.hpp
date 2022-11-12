@@ -23,6 +23,12 @@ public:
 
 private:
   System system_;
+
+protected:
+  /**
+   * @brief Set validation schema used to confirm data before collecting it
+   */
+  void setValidationSchema() override;
 };
 
 }  // namespace dc_measurements

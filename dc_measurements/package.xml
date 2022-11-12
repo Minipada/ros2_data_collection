@@ -15,6 +15,7 @@
   <depend>geometry_msgs</depend>
   <depend>nav2_util</depend>
   <depend>nlohmann-json-dev</depend>
+  <depend>nlohmann_json_schema_validator_vendor</depend>
   <depend>pkg-config</depend>
   <depend>pluginlib</depend>
   <depend>sensor_msgs</depend>

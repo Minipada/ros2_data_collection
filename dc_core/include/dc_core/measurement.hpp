@@ -31,11 +31,14 @@ public:
    * @param  topic_output The topic where result will be published
    * @param  polling_interval Interval to which data is collected in milliseconds
    * @param  debug Print debug lines
+   * @param  enable_validator Enables validation of JSON
+   * @param  json_schema_path Path to the JSON schema
    * @param  timer_cb_group Callback group, common to all measurements
    */
   virtual void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                          std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
                          const std::string& topic_output, const int& polling_interval, const bool& debug,
+                         const bool& enable_validator, const std::string& json_schema_path,
                          const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) = 0;
 
   /**

@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <nlohmann/json-schema.hpp>
 #include <nlohmann/json.hpp>
 #include <string>
 #include <thread>
@@ -37,6 +38,7 @@ enum class Status : int8_t
 
 using namespace std::chrono_literals;  // NOLINT
 using json = nlohmann::json;
+using nlohmann::json_schema::json_validator;
 
 /**
  * @class nav2_behaviors::Behavior
@@ -56,6 +58,18 @@ public:
   }
 
   virtual ~Measurement() = default;
+
+  // an opportunity for derived classes to set the validation schema
+  // if they chose
+  virtual void setValidationSchema() = 0;
+
+  void setValidationSchemaFromPath(const std::string& json_schema_path)
+  {
+    if (enable_validator_)
+    {
+      validateSchema(json_schema_path);
+    }
+  }
 
   // an opportunity for derived classes to do something on configuration
   // if they chose
@@ -79,6 +93,45 @@ public:
     return node;
   }
 
+  void validateSchema(const std::string& package_name, const std::string& json_filename)
+  {
+    std::string package_share_directory = ament_index_cpp::get_package_share_directory(package_name.c_str());
+    std::string path = package_share_directory + "/plugins/measurements/" + json_filename.c_str();
+    RCLCPP_INFO_STREAM(logger_, "Looking for schema at " << schema_);
+    std::ifstream f(path.c_str());
+    schema_ = json::parse(f);
+
+    RCLCPP_INFO_STREAM(logger_, "schema: " << schema_);
+    try
+    {
+      validator_.set_root_schema(schema_);
+    }
+    catch (const std::exception& e)
+    {
+      std::string err = std::string("Validation of schema failed: ") + e.what();
+      RCLCPP_ERROR(logger_, "%s", err.c_str());
+      throw std::runtime_error{ err.c_str() };
+    }
+  }
+
+  void validateSchema(const std::string& json_schema_path)
+  {
+    std::ifstream f(json_schema_path.c_str());
+    schema_ = json::parse(f);
+
+    RCLCPP_INFO_STREAM(logger_, "schema: " << schema_);
+    try
+    {
+      validator_.set_root_schema(schema_);
+    }
+    catch (const std::exception& e)
+    {
+      std::string err = std::string("Validation of schema failed: ") + e.what();
+      RCLCPP_ERROR(logger_, "%s", err.c_str());
+      throw std::runtime_error{ err.c_str() };
+    }
+  }
+
   void collectAndPublish()
   {
     if (enabled_)
@@ -86,7 +139,23 @@ public:
       auto msg = collect();
       RCLCPP_DEBUG(logger_, "Measurement: %s, msg: %s", measurement_name_.c_str(),
                    dc_interfaces::msg::to_yaml(msg).c_str());
-      data_pub_->publish(msg);
+
+      if (enable_validator_)
+      {
+        try
+        {
+          validator_.validate(json::parse(msg.data));
+          data_pub_->publish(msg);
+        }
+        catch (const std::exception& e)
+        {
+          RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what());
+        }
+      }
+      else
+      {
+        data_pub_->publish(msg);
+      }
     }
   }
 
@@ -96,6 +165,7 @@ public:
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                  std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
                  const std::string& topic_output, const int& polling_interval, const bool& debug,
+                 const bool& enable_validator, const std::string& json_schema_path,
                  const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
   {
     node_ = parent;
@@ -111,6 +181,8 @@ public:
     topic_output_ = topic_output;
     polling_interval_ = polling_interval;
     debug_ = debug;
+    enable_validator_ = enable_validator;
+    json_schema_path_ = json_schema_path;
     timer_cb_group_ = timer_cb_group;
 
     data_pub_ = node->create_publisher<dc_interfaces::msg::StringStamped>(
@@ -121,7 +193,20 @@ public:
 
     RCLCPP_INFO(logger_, "Done configuring %s", measurement_name_.c_str());
 
+    if (json_schema_path_.empty())
+    {
+      setValidationSchema();
+    }
+    else
+    {
+      setValidationSchemaFromPath(json_schema_path_);
+    }
     onConfigure();
+
+    if (enable_validator_ && schema_.empty())
+    {
+      throw std::runtime_error{ "Enabled validation but didn't configure schema!" };
+    }
   }
 
   // Cleanup server on lifecycle transition
@@ -152,21 +237,27 @@ protected:
 
   std::string measurement_name_;
   std::string measurement_plugin_;
-  rclcpp_lifecycle::LifecyclePublisher<dc_interfaces::msg::StringStamped>::SharedPtr data_pub_;
   double enabled_;
-  int polling_interval_;
-  std::string topic_output_;
-  std::shared_ptr<tf2_ros::Buffer> tf_;
   bool debug_;
+  std::shared_ptr<tf2_ros::Buffer> tf_;
 
-  // Timer
+  // Publish data
+  int polling_interval_;
+  rclcpp_lifecycle::LifecyclePublisher<dc_interfaces::msg::StringStamped>::SharedPtr data_pub_;
   rclcpp::TimerBase::SharedPtr collect_timer_;
+  std::string topic_output_;
 
   // Logger
   rclcpp::Logger logger_{ rclcpp::get_logger("dc_measurements") };
 
   // CB
   rclcpp::CallbackGroup::SharedPtr timer_cb_group_;
+
+  // Validation
+  bool enable_validator_;
+  std::string json_schema_path_;
+  json_validator validator_;
+  json schema_;
 };
 
 }  // namespace dc_measurements
