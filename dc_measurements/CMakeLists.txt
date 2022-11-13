@@ -48,6 +48,7 @@ foreach(measurement_plugin ${dc_measurement_plugin_libs})
   target_link_libraries(
     ${measurement_plugin}
     nlohmann_json::nlohmann_json
+    nlohmann_json_schema_validator
   )
   target_compile_definitions(${measurement_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
@@ -71,6 +72,7 @@ add_executable(${executable_name}
 target_link_libraries(
   ${executable_name}
   nlohmann_json::nlohmann_json
+  nlohmann_json_schema_validator
   ${library_name}
 )
 
