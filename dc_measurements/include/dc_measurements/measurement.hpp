@@ -164,8 +164,8 @@ public:
   // configure the server on lifecycle setup
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                  std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
-                 const std::string& topic_output, const int& polling_interval, const bool& debug,
-                 const bool& enable_validator, const std::string& json_schema_path,
+                 const std::string& group_key, const std::string& topic_output, const int& polling_interval,
+                 const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
                  const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
   {
     node_ = parent;
@@ -183,6 +183,7 @@ public:
     debug_ = debug;
     enable_validator_ = enable_validator;
     json_schema_path_ = json_schema_path;
+    group_key_ = group_key;
     timer_cb_group_ = timer_cb_group;
 
     data_pub_ = node->create_publisher<dc_interfaces::msg::StringStamped>(
@@ -246,6 +247,7 @@ protected:
   rclcpp_lifecycle::LifecyclePublisher<dc_interfaces::msg::StringStamped>::SharedPtr data_pub_;
   rclcpp::TimerBase::SharedPtr collect_timer_;
   std::string topic_output_;
+  std::string group_key_;
 
   // Logger
   rclcpp::Logger logger_{ rclcpp::get_logger("dc_measurements") };

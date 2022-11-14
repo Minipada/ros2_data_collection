@@ -28,6 +28,7 @@ dc_interfaces::msg::StringStamped Uptime::collect()
   auto node = getNode();
   dc_interfaces::msg::StringStamped msg;
   msg.header.stamp = node->get_clock()->now();
+  msg.group_key = group_key_;
   json data_json;
   data_json["time"] = uptime;
 

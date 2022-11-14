@@ -38,6 +38,7 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   measurement_debug_.resize(measurement_ids_.size());
   measurement_enable_validator_.resize(measurement_ids_.size());
   measurement_json_schema_path_.resize(measurement_ids_.size());
+  measurement_group_key_.resize(measurement_ids_.size());
 
   if (!loadMeasurementPlugins())
   {
@@ -55,6 +56,8 @@ bool MeasurementServer::loadMeasurementPlugins()
   {
     // Mandatory parameters
     measurement_types_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "plugin");
+    measurement_group_key_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "group_key");
+
     // Optional parameters
     measurement_topic_outputs_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "topic_output",
                                                                 std::string("/dc/measurement/") + measurement_ids_[i]);
@@ -67,13 +70,14 @@ bool MeasurementServer::loadMeasurementPlugins()
     try
     {
       RCLCPP_INFO(get_logger(),
-                  "Creating measurement plugin %s: Type %s, Polling interval: %d, Debug: %d, Validator enabled: %d, "
+                  "Creating measurement plugin %s: Type %s, Group key: %s, Polling interval: %d, Debug: %d, Validator "
+                  "enabled: %d, "
                   "Schema path: %s",
-                  measurement_ids_[i].c_str(), measurement_types_[i].c_str(), measurement_polling_interval_[i],
-                  (int)measurement_debug_[i], (int)measurement_enable_validator_[i],
+                  measurement_ids_[i].c_str(), measurement_types_[i].c_str(), measurement_group_key_[i].c_str(),
+                  measurement_polling_interval_[i], (int)measurement_debug_[i], (int)measurement_enable_validator_[i],
                   measurement_json_schema_path_[i].c_str());
       measurements_.push_back(plugin_loader_.createUniqueInstance(measurement_types_[i]));
-      measurements_.back()->configure(node, measurement_ids_[i], tf_, measurement_types_[i],
+      measurements_.back()->configure(node, measurement_ids_[i], tf_, measurement_types_[i], measurement_group_key_[i],
                                       measurement_topic_outputs_[i], measurement_polling_interval_[i],
                                       measurement_debug_[i], measurement_enable_validator_[i],
                                       measurement_json_schema_path_[i], timer_cb_group_);
