@@ -37,8 +37,8 @@ public:
    */
   virtual void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                          std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
-                         const std::string& topic_output, const int& polling_interval, const bool& debug,
-                         const bool& enable_validator, const std::string& json_schema_path,
+                         const std::string& group_key, const std::string& topic_output, const int& polling_interval,
+                         const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
                          const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) = 0;
 
   /**
