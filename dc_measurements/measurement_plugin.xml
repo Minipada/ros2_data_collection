@@ -1,4 +1,12 @@
 <class_libraries>
+    <library path="dc_string_stamped_measurement">
+        <class name="dc_measurements/StringStamped" type="dc_measurements::StringStamped" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_string_stamped
+            </description>
+        </class>
+    </library>
+
     <library path="dc_uptime_measurement">
         <class name="dc_measurements/Uptime" type="dc_measurements::Uptime" base_class_type="dc_core::Measurement">
             <description>
