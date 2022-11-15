@@ -43,6 +43,9 @@ add_library(dc_uptime_measurement SHARED
 )
 list(APPEND dc_measurement_plugin_libs dc_uptime_measurement)
 
+add_library(dc_string_stamped_measurement SHARED plugins/measurements/string_stamped.cpp)
+list(APPEND dc_measurement_plugin_libs dc_string_stamped_measurement)
+
 foreach(measurement_plugin ${dc_measurement_plugin_libs})
   ament_target_dependencies(${measurement_plugin} ${dependencies})
   target_link_libraries(
