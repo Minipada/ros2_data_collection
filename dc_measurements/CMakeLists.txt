@@ -34,6 +34,15 @@ include_directories(
 )
 
 # Measurement plugins
+add_library(dc_cpu_measurement SHARED
+  plugins/measurements/cpu.cpp
+  plugins/measurements/system/linux_parser.cpp
+  plugins/measurements/system/process.cpp
+  plugins/measurements/system/processor.cpp
+  plugins/measurements/system/system.cpp
+)
+list(APPEND dc_measurement_plugin_libs dc_cpu_measurement)
+
 add_library(dc_os_measurement SHARED
   plugins/measurements/os.cpp
   plugins/measurements/system/linux_parser.cpp

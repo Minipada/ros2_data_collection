@@ -1,4 +1,12 @@
 <class_libraries>
+    <library path="dc_cpu_measurement">
+        <class name="dc_measurements/Cpu" type="dc_measurements::Cpu" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_cpu
+            </description>
+        </class>
+    </library>
+
     <library path="dc_os_measurement">
         <class name="dc_measurements/OS" type="dc_measurements::OS" base_class_type="dc_core::Measurement">
             <description>
