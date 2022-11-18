@@ -7,6 +7,14 @@
         </class>
     </library>
 
+    <library path="dc_network_measurement">
+        <class name="dc_measurements/Network" type="dc_measurements::Network" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_network
+            </description>
+        </class>
+    </library>
+
     <library path="dc_os_measurement">
         <class name="dc_measurements/OS" type="dc_measurements::OS" base_class_type="dc_core::Measurement">
             <description>
