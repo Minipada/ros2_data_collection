@@ -43,6 +43,9 @@ add_library(dc_cpu_measurement SHARED
 )
 list(APPEND dc_measurement_plugin_libs dc_cpu_measurement)
 
+add_library(dc_network_measurement SHARED plugins/measurements/network.cpp)
+list(APPEND dc_measurement_plugin_libs dc_network_measurement)
+
 add_library(dc_os_measurement SHARED
   plugins/measurements/os.cpp
   plugins/measurements/system/linux_parser.cpp
