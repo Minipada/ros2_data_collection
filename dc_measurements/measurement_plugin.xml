@@ -7,6 +7,14 @@
         </class>
     </library>
 
+    <library path="dc_memory_measurement">
+        <class name="dc_measurements/Memory" type="dc_measurements::Memory" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_memory
+            </description>
+        </class>
+    </library>
+
     <library path="dc_network_measurement">
         <class name="dc_measurements/Network" type="dc_measurements::Network" base_class_type="dc_core::Measurement">
             <description>
