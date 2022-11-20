@@ -64,6 +64,12 @@ add_library(dc_os_measurement SHARED
 )
 list(APPEND dc_measurement_plugin_libs dc_os_measurement)
 
+add_library(dc_storage_measurement SHARED plugins/measurements/storage.cpp)
+list(APPEND dc_measurement_plugin_libs dc_storage_measurement)
+
+add_library(dc_string_stamped_measurement SHARED plugins/measurements/string_stamped.cpp)
+list(APPEND dc_measurement_plugin_libs dc_string_stamped_measurement)
+
 add_library(dc_uptime_measurement SHARED
   plugins/measurements/uptime.cpp
   plugins/measurements/system/linux_parser.cpp
@@ -72,9 +78,6 @@ add_library(dc_uptime_measurement SHARED
   plugins/measurements/system/system.cpp
 )
 list(APPEND dc_measurement_plugin_libs dc_uptime_measurement)
-
-add_library(dc_string_stamped_measurement SHARED plugins/measurements/string_stamped.cpp)
-list(APPEND dc_measurement_plugin_libs dc_string_stamped_measurement)
 
 foreach(measurement_plugin ${dc_measurement_plugin_libs})
   ament_target_dependencies(${measurement_plugin} ${dependencies})

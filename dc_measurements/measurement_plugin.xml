@@ -31,6 +31,14 @@
         </class>
     </library>
 
+    <library path="dc_storage_measurement">
+        <class name="dc_measurements/Storage" type="dc_measurements::Storage" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_storage
+            </description>
+        </class>
+    </library>
+
     <library path="dc_string_stamped_measurement">
         <class name="dc_measurements/StringStamped" type="dc_measurements::StringStamped" base_class_type="dc_core::Measurement">
             <description>
