@@ -1,0 +1,24 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Permissions",
+    "description": "Permissions of a file/directory",
+    "properties": {
+        "uid": {
+            "description": "File/directory User IDentifier",
+            "type": "integer"
+        },
+        "gid": {
+            "description": "File/directory Group IDentifier",
+            "type": "integer"
+        },
+        "exists": {
+            "description": "File/directory exists",
+            "type": "boolean"
+        },
+        "permissions": {
+            "description": "Permissions as rwx or integer",
+            "type": "string"
+        }
+    },
+    "type": "object"
+}
