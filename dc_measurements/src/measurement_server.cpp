@@ -39,6 +39,7 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   measurement_enable_validator_.resize(measurement_ids_.size());
   measurement_json_schema_path_.resize(measurement_ids_.size());
   measurement_group_key_.resize(measurement_ids_.size());
+  measurement_tags_.resize(measurement_ids_.size());
 
   if (!loadMeasurementPlugins())
   {
@@ -66,21 +67,25 @@ bool MeasurementServer::loadMeasurementPlugins()
     measurement_enable_validator_[i] =
         dc_util::get_bool_type_param(node, measurement_ids_[i], "enable_validator", true);
     measurement_json_schema_path_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "json_schema_path", "");
+    measurement_tags_[i] =
+        dc_util::get_str_array_type_param(node, measurement_ids_[i], "tags", std::vector<std::string>());
 
     try
     {
-      RCLCPP_INFO(get_logger(),
-                  "Creating measurement plugin %s: Type %s, Group key: %s, Polling interval: %d, Debug: %d, Validator "
-                  "enabled: %d, "
-                  "Schema path: %s",
-                  measurement_ids_[i].c_str(), measurement_types_[i].c_str(), measurement_group_key_[i].c_str(),
-                  measurement_polling_interval_[i], (int)measurement_debug_[i], (int)measurement_enable_validator_[i],
-                  measurement_json_schema_path_[i].c_str());
+      RCLCPP_INFO_STREAM(get_logger(), "Creating measurement plugin "
+                                           << measurement_ids_[i].c_str() << ": Type " << measurement_types_[i].c_str()
+                                           << ", Group key: " << measurement_group_key_[i]
+                                           << ", Polling interval: " << measurement_polling_interval_[i]
+                                           << ", Debug: " << (int)measurement_debug_[i]
+                                           << ", Validator enabled: " << (int)measurement_enable_validator_[i]
+                                           << ", Schema path: " << measurement_json_schema_path_[i].c_str()
+                                           << ", Tags: [" << boost::algorithm::join(measurement_tags_[i], ",") << "]");
+
       measurements_.push_back(plugin_loader_.createUniqueInstance(measurement_types_[i]));
       measurements_.back()->configure(node, measurement_ids_[i], tf_, measurement_types_[i], measurement_group_key_[i],
                                       measurement_topic_outputs_[i], measurement_polling_interval_[i],
                                       measurement_debug_[i], measurement_enable_validator_[i],
-                                      measurement_json_schema_path_[i], timer_cb_group_);
+                                      measurement_json_schema_path_[i], measurement_tags_[i], timer_cb_group_);
     }
     catch (const pluginlib::PluginlibException& ex)
     {

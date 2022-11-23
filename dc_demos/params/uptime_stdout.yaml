@@ -8,3 +8,4 @@ measurement_server:
       polling_interval: 5000
       enable_validator: true
       debug: true
+      tags: ["flb_stdout"]
