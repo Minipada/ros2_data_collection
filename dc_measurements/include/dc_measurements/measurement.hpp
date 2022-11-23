@@ -140,21 +140,32 @@ public:
       RCLCPP_DEBUG(logger_, "Measurement: %s, msg: %s", measurement_name_.c_str(),
                    dc_interfaces::msg::to_yaml(msg).c_str());
 
-      if (enable_validator_)
+      // Init publish
+      if (msg.data != "" && msg.data != "null")
       {
-        try
+        // Add tags
+        if (tags_.size() != 0)
         {
-          validator_.validate(json::parse(msg.data));
+          json data_json = json::parse(msg.data);
+          data_json["tags"] = tags_;
+          msg.data = data_json.dump(-1, ' ', true);
+        }
+        if (enable_validator_)
+        {
+          try
+          {
+            validator_.validate(json::parse(msg.data));
+            data_pub_->publish(msg);
+          }
+          catch (const std::exception& e)
+          {
+            RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what());
+          }
+        }
+        else
+        {
           data_pub_->publish(msg);
         }
-        catch (const std::exception& e)
-        {
-          RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what());
-        }
-      }
-      else
-      {
-        data_pub_->publish(msg);
       }
     }
   }
@@ -166,7 +177,7 @@ public:
                  std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
                  const std::string& group_key, const std::string& topic_output, const int& polling_interval,
                  const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
-                 const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
+                 const std::vector<std::string>& tags, const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -184,6 +195,7 @@ public:
     enable_validator_ = enable_validator;
     json_schema_path_ = json_schema_path;
     group_key_ = group_key;
+    tags_ = tags;
     timer_cb_group_ = timer_cb_group;
 
     data_pub_ = node->create_publisher<dc_interfaces::msg::StringStamped>(
@@ -260,6 +272,9 @@ protected:
   std::string json_schema_path_;
   json_validator validator_;
   json schema_;
+
+  // Tags
+  std::vector<std::string> tags_;
 };
 
 }  // namespace dc_measurements

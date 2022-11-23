@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/algorithm/string.hpp>
+
 #include "dc_core/measurement.hpp"
 #include "dc_util/node_utils.hpp"
 #include "nav2_util/lifecycle_node.hpp"
@@ -83,6 +85,7 @@ protected:
   std::vector<bool> measurement_debug_;
   std::vector<bool> measurement_enable_validator_;
   std::vector<std::string> measurement_json_schema_path_;
+  std::vector<std::vector<std::string>> measurement_tags_;
 
   rclcpp::CallbackGroup::SharedPtr timer_cb_group_;
 };

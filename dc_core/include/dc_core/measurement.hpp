@@ -34,11 +34,13 @@ public:
    * @param  enable_validator Enables validation of JSON
    * @param  json_schema_path Path to the JSON schema
    * @param  timer_cb_group Callback group, common to all measurements
+   * @param  tags Used to match to destination
    */
   virtual void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                          std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
                          const std::string& group_key, const std::string& topic_output, const int& polling_interval,
                          const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
+                         const std::vector<std::string>& tags,
                          const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) = 0;
 
   /**
