@@ -41,7 +41,7 @@ public:
                          const std::string& group_key, const std::string& topic_output, const int& polling_interval,
                          const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
                          const std::vector<std::string>& tags, const bool& init_collect,
-                         const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) = 0;
+                         const int& init_max_measurements, const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) = 0;
 
   /**
    * @brief Method to cleanup resources used on shutdown.
