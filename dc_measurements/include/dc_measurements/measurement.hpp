@@ -141,7 +141,8 @@ public:
                    dc_interfaces::msg::to_yaml(msg).c_str());
 
       // Init publish
-      if (msg.data != "" && msg.data != "null")
+      if (msg.data != "" && msg.data != "null" &&
+          (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_))
       {
         // Add tags
         if (tags_.size() != 0)
@@ -150,12 +151,14 @@ public:
           data_json["tags"] = tags_;
           msg.data = data_json.dump(-1, ' ', true);
         }
+
         if (enable_validator_)
         {
           try
           {
             validator_.validate(json::parse(msg.data));
             data_pub_->publish(msg);
+            init_counter_published_++;
           }
           catch (const std::exception& e)
           {
@@ -165,6 +168,7 @@ public:
         else
         {
           data_pub_->publish(msg);
+          init_counter_published_++;
         }
       }
     }
@@ -177,7 +181,7 @@ public:
                  std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
                  const std::string& group_key, const std::string& topic_output, const int& polling_interval,
                  const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
-                 const std::vector<std::string>& tags, const bool& init_collect,
+                 const std::vector<std::string>& tags, const bool& init_collect, const int& init_max_measurements,
                  const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
   {
     node_ = parent;
@@ -198,6 +202,7 @@ public:
     group_key_ = group_key;
     tags_ = tags;
     init_collect_ = init_collect;
+    init_max_measurements_ = init_max_measurements;
     timer_cb_group_ = timer_cb_group;
 
     data_pub_ = node->create_publisher<dc_interfaces::msg::StringStamped>(
@@ -270,6 +275,10 @@ protected:
 
   // Parameters
   bool init_collect_;
+
+  // Counters
+  int init_counter_published_ = 0;
+  int init_max_measurements_;
 
   // Logger
   rclcpp::Logger logger_{ rclcpp::get_logger("dc_measurements") };
