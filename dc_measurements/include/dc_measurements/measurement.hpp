@@ -151,7 +151,15 @@ public:
           data_json["tags"] = tags_;
           msg.data = data_json.dump(-1, ' ', true);
         }
+        // Add measurement name
+        if (include_measurement_name_)
+        {
+          json data_json = json::parse(msg.data);
+          data_json["name"] = measurement_name_;
+          msg.data = data_json.dump(-1, ' ', true);
+        }
 
+        // Publish when validation activated
         if (enable_validator_)
         {
           try
@@ -165,6 +173,7 @@ public:
             RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what());
           }
         }
+        // Publish without validation
         else
         {
           data_pub_->publish(msg);
@@ -182,7 +191,7 @@ public:
                  const std::string& group_key, const std::string& topic_output, const int& polling_interval,
                  const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
                  const std::vector<std::string>& tags, const bool& init_collect, const int& init_max_measurements,
-                 const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
+                 const bool& include_measurement_name, const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -203,6 +212,7 @@ public:
     tags_ = tags;
     init_collect_ = init_collect;
     init_max_measurements_ = init_max_measurements;
+    include_measurement_name_ = include_measurement_name;
     timer_cb_group_ = timer_cb_group;
 
     data_pub_ = node->create_publisher<dc_interfaces::msg::StringStamped>(
@@ -275,6 +285,7 @@ protected:
 
   // Parameters
   bool init_collect_;
+  bool include_measurement_name_;
 
   // Counters
   int init_counter_published_ = 0;
