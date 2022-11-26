@@ -15,6 +15,7 @@
 #include <thread>
 #include <utility>
 
+#include "dc_core/condition.hpp"
 #include "dc_core/measurement.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -132,6 +133,48 @@ public:
     }
   }
 
+  bool isConditionOn()
+  {
+    bool all_conditions_res = true;
+    bool any_conditions_res = true;
+    bool none_conditions_res = true;
+
+    // "All" conditions ON enable
+    if (!if_all_conditions_.empty())
+    {
+      all_conditions_res =
+          std::all_of(if_all_conditions_.begin(), if_all_conditions_.end(),
+                      [&](const std::string& condition) { return conditions_[condition]->getState() == true; });
+    }
+
+    // "Any" condition ON enable
+    if (!if_any_conditions_.empty())
+    {
+      // No "any" condition defined, activates
+      any_conditions_res =
+          std::any_of(if_any_conditions_.begin(), if_any_conditions_.end(),
+                      [&](const std::string& condition) { return conditions_[condition]->getState() == true; });
+    }
+
+    // All condition set to false condition ON enable
+    if (!if_none_conditions_.empty())
+    {
+      none_conditions_res =
+          std::all_of(if_none_conditions_.begin(), if_none_conditions_.end(),
+                      [&](const std::string& condition) { return conditions_[condition]->getState() == false; });
+    }
+
+    RCLCPP_DEBUG(logger_, "all_conditions_res=%d, any_conditions_res=%d, none_conditions_res=%d", all_conditions_res,
+                 any_conditions_res, none_conditions_res);
+
+    return all_conditions_res && any_conditions_res && none_conditions_res;
+  }
+
+  bool isAnyConditionSet()
+  {
+    return (!if_all_conditions_.empty() && !if_any_conditions_.empty() && !if_none_conditions_.empty());
+  }
+
   void collectAndPublish()
   {
     if (enabled_)
@@ -191,7 +234,9 @@ public:
                  const std::string& group_key, const std::string& topic_output, const int& polling_interval,
                  const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
                  const std::vector<std::string>& tags, const bool& init_collect, const int& init_max_measurements,
-                 const bool& include_measurement_name, const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
+                 const bool& include_measurement_name, const std::vector<std::string>& if_all_conditions,
+                 const std::vector<std::string>& if_any_conditions, const std::vector<std::string>& if_none_conditions,
+                 const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -213,6 +258,9 @@ public:
     init_collect_ = init_collect;
     init_max_measurements_ = init_max_measurements;
     include_measurement_name_ = include_measurement_name;
+    if_all_conditions_ = if_all_conditions;
+    if_any_conditions_ = if_any_conditions;
+    if_none_conditions_ = if_none_conditions;
     timer_cb_group_ = timer_cb_group;
 
     data_pub_ = node->create_publisher<dc_interfaces::msg::StringStamped>(
@@ -290,6 +338,12 @@ protected:
   // Counters
   int init_counter_published_ = 0;
   int init_max_measurements_;
+
+  // Conditions
+  std::map<std::string, std::shared_ptr<dc_core::Condition>> conditions_;
+  std::vector<std::string> if_all_conditions_;
+  std::vector<std::string> if_any_conditions_;
+  std::vector<std::string> if_none_conditions_;
 
   // Logger
   rclcpp::Logger logger_{ rclcpp::get_logger("dc_measurements") };

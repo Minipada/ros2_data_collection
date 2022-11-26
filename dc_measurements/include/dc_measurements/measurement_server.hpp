@@ -8,8 +8,10 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include "dc_core/condition.hpp"
 #include "dc_core/measurement.hpp"
 #include "dc_util/node_utils.hpp"
+#include "dc_util/string_utils.hpp"
 #include "nav2_util/lifecycle_node.hpp"
 #include "pluginlib/class_list_macros.hpp"
 #include "pluginlib/class_loader.hpp"
@@ -35,10 +37,16 @@ public:
   ~MeasurementServer();
 
   /**
-   * @brief Loads behavior plugins from parameter file
+   * @brief Loads measurement plugins from parameter file
    * @return bool if successfully loaded the plugins
    */
   bool loadMeasurementPlugins();
+
+  /**
+   * @brief Loads condition plugins from parameter file
+   * @return bool if successfully loaded the plugins
+   */
+  bool loadConditionPlugins();
 
 protected:
   /**
@@ -72,10 +80,10 @@ protected:
 
   std::shared_ptr<tf2_ros::Buffer> tf_;
   std::shared_ptr<tf2_ros::TransformListener> transform_listener_;
-  // Plugins
-  pluginlib::ClassLoader<dc_core::Measurement> plugin_loader_;
-  std::vector<pluginlib::UniquePtr<dc_core::Measurement>> measurements_;
 
+  // Measurements
+  pluginlib::ClassLoader<dc_core::Measurement> measurement_plugin_loader_;
+  std::vector<pluginlib::UniquePtr<dc_core::Measurement>> measurements_;
   std::vector<std::string> measurement_plugins_;
   std::vector<std::string> measurement_group_key_;
   std::vector<std::string> measurement_ids_;
@@ -89,6 +97,15 @@ protected:
   std::vector<bool> measurement_init_collect_;
   std::vector<int> measurement_init_max_measurements_;
   std::vector<bool> measurement_include_measurement_name_;
+  std::vector<std::vector<std::string>> measurement_if_all_conditions_;
+  std::vector<std::vector<std::string>> measurement_if_any_conditions_;
+  std::vector<std::vector<std::string>> measurement_if_none_conditions_;
+
+  // Conditions
+  std::map<std::string, std::shared_ptr<dc_core::Condition>> conditions_;
+  std::vector<std::string> condition_types_;
+  pluginlib::ClassLoader<dc_core::Condition> condition_plugin_loader_;
+  std::vector<std::string> condition_ids_;
 
   rclcpp::CallbackGroup::SharedPtr timer_cb_group_;
 };

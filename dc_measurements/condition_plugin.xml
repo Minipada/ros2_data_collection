@@ -1,0 +1,9 @@
+<class_libraries>
+    <library path="dc_moving_condition">
+        <class name="dc_conditions/Moving" type="dc_conditions::Moving" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_moving
+            </description>
+        </class>
+    </library>
+</class_libraries>
