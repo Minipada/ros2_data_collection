@@ -10,6 +10,18 @@
 
 namespace dc_util
 {
+
+std::string join(const std::vector<std::string>& vec, const std::string delim = ", ")
+{
+  if (vec.empty())
+  {
+    return std::string();
+  }
+
+  return std::accumulate(std::next(vec.begin()), vec.end(), vec[0],
+                         [&delim](const std::string& a, const std::string& b) { return a + delim + b; });
+}
+
 std::string expand_env(std::string text)
 {
   static const std::regex env_re{ R"--(\$\{?([[:alpha:]]\w+)\}?)--" };

@@ -33,6 +33,10 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
+# Condition plugins
+add_library(dc_moving_condition SHARED plugins/conditions/moving.cpp)
+list(APPEND dc_condition_plugin_libs dc_moving_condition)
+
 # Measurement plugins
 add_library(dc_cpu_measurement SHARED
   plugins/measurements/cpu.cpp
@@ -92,7 +96,13 @@ foreach(measurement_plugin ${dc_measurement_plugin_libs})
   target_compile_definitions(${measurement_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
 
+foreach(condition_plugin ${dc_condition_plugin_libs})
+  ament_target_dependencies(${condition_plugin} ${dependencies})
+  target_compile_definitions(${condition_plugin} PRIVATE BT_PLUGIN_EXPORT)
+endforeach()
+
 pluginlib_export_plugin_description_file(dc_core measurement_plugin.xml)
+pluginlib_export_plugin_description_file(dc_core condition_plugin.xml)
 
 # Library
 add_library(${library_name} SHARED
@@ -123,6 +133,7 @@ rclcpp_components_register_nodes(${library_name} "measurement_server::Measuremen
 
 install(TARGETS ${library_name}
                 ${dc_measurement_plugin_libs}
+                ${dc_condition_plugin_libs}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -140,13 +151,22 @@ install(FILES measurement_plugin.xml
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(FILES condition_plugin.xml measurement_plugin.xml
+  DESTINATION share/${PROJECT_NAME}
+)
+
 install(DIRECTORY plugins/measurements/
   DESTINATION share/${PROJECT_NAME}/plugins/measurements/
+)
+
+install(DIRECTORY plugins/conditions/
+  DESTINATION share/${PROJECT_NAME}/plugins/conditions/
 )
 
 ament_export_include_directories(include)
 ament_export_libraries(${library_name}
   ${dc_measurement_plugin_libs}
+  ${dc_condition_plugin_libs}
 )
 ament_export_dependencies(${dependencies})
 ament_package()
