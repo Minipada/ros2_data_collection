@@ -26,7 +26,6 @@ public:
 private:
   std::string path_;
   std::string full_path_;
-  std::string env_;
 
 protected:
   /**
