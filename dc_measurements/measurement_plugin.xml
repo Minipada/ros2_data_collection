@@ -39,6 +39,14 @@
         </class>
     </library>
 
+    <library path="dc_position_measurement">
+        <class name="dc_measurements/Position" type="dc_measurements::Position" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_position
+            </description>
+        </class>
+    </library>
+
     <library path="dc_storage_measurement">
         <class name="dc_measurements/Storage" type="dc_measurements::Storage" base_class_type="dc_core::Measurement">
             <description>
