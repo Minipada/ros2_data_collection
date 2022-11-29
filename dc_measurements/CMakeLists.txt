@@ -74,6 +74,9 @@ list(APPEND dc_measurement_plugin_libs dc_permissions_measurement)
 add_library(dc_position_measurement SHARED plugins/measurements/position.cpp)
 list(APPEND dc_measurement_plugin_libs dc_position_measurement)
 
+add_library(dc_speed_measurement SHARED plugins/measurements/speed.cpp)
+list(APPEND dc_measurement_plugin_libs dc_speed_measurement)
+
 add_library(dc_storage_measurement SHARED plugins/measurements/storage.cpp)
 list(APPEND dc_measurement_plugin_libs dc_storage_measurement)
 

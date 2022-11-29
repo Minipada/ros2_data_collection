@@ -47,6 +47,14 @@
         </class>
     </library>
 
+    <library path="dc_speed_measurement">
+        <class name="dc_measurements/Speed" type="dc_measurements::Speed" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_speed
+            </description>
+        </class>
+    </library>
+
     <library path="dc_storage_measurement">
         <class name="dc_measurements/Storage" type="dc_measurements::Storage" base_class_type="dc_core::Measurement">
             <description>
