@@ -7,6 +7,14 @@
         </class>
     </library>
 
+    <library path="dc_distance_traveled_measurement">
+        <class name="dc_measurements/DistanceTraveled" type="dc_measurements::DistanceTraveled" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_distance_traveled
+            </description>
+        </class>
+    </library>
+
     <library path="dc_memory_measurement">
         <class name="dc_measurements/Memory" type="dc_measurements::Memory" base_class_type="dc_core::Measurement">
             <description>
