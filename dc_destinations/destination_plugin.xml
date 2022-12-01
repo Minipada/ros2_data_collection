@@ -1,0 +1,9 @@
+<class_libraries>
+    <library path="dc_rcl_destination">
+        <class name="dc_destinations/Rcl" type="dc_destinations::Rcl" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_rcl
+            </description>
+        </class>
+    </library>
+</class_libraries>

@@ -201,6 +201,13 @@ public:
           data_json["name"] = measurement_name_;
           msg.data = data_json.dump(-1, ' ', true);
         }
+        // Add measurement plugin name
+        if (include_measurement_plugin_)
+        {
+          json data_json = json::parse(msg.data);
+          data_json["plugin"] = measurement_plugin_;
+          msg.data = data_json.dump(-1, ' ', true);
+        }
 
         // Publish when validation activated
         if (enable_validator_)
@@ -234,8 +241,9 @@ public:
                  const std::string& group_key, const std::string& topic_output, const int& polling_interval,
                  const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
                  const std::vector<std::string>& tags, const bool& init_collect, const int& init_max_measurements,
-                 const bool& include_measurement_name, const std::vector<std::string>& if_all_conditions,
-                 const std::vector<std::string>& if_any_conditions, const std::vector<std::string>& if_none_conditions,
+                 const bool& include_measurement_name, const bool& include_measurement_plugin,
+                 const std::vector<std::string>& if_all_conditions, const std::vector<std::string>& if_any_conditions,
+                 const std::vector<std::string>& if_none_conditions,
                  const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
   {
     node_ = parent;
@@ -258,6 +266,7 @@ public:
     init_collect_ = init_collect;
     init_max_measurements_ = init_max_measurements;
     include_measurement_name_ = include_measurement_name;
+    include_measurement_plugin_ = include_measurement_plugin;
     if_all_conditions_ = if_all_conditions;
     if_any_conditions_ = if_any_conditions;
     if_none_conditions_ = if_none_conditions;
@@ -334,6 +343,7 @@ protected:
   // Parameters
   bool init_collect_;
   bool include_measurement_name_;
+  bool include_measurement_plugin_;
 
   // Counters
   int init_counter_published_ = 0;
