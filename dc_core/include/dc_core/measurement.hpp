@@ -38,6 +38,7 @@ public:
    * @param  init_collect Collect when the node starts instead of waiting the first tick
    * @param  init_max_measurements Collect a maximum of n measurements when starting the node (-1 = never, 0 = infinite)
    * @param  include_measurement_name Include measurement name in the JSON
+   * @param  include_measurement_plugin Include measurement plugin name in the JSON
    * @param  if_all_conditions Collect only if all conditions are activated
    * @param  if_any_conditions Collect if any conditions is activated
    * @param  if_none_conditions Collect only if all conditions are not activated
@@ -48,7 +49,7 @@ public:
                          const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
                          const std::vector<std::string>& tags, const bool& init_collect,
                          const int& init_max_measurements, const bool& include_measurement_name,
-                         const std::vector<std::string>& if_all_conditions,
+                         const bool& include_measurement_plugin, const std::vector<std::string>& if_all_conditions,
                          const std::vector<std::string>& if_any_conditions,
                          const std::vector<std::string>& if_none_conditions,
                          const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) = 0;

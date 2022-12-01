@@ -1,3 +1,10 @@
+destination_server:
+  ros__parameters:
+    destination_plugins: ["rcl"]
+    rcl:
+      plugin: "dc_destinations/Rcl"
+      inputs: ["/dc/measurement/uptime"]
+
 measurement_server:
   ros__parameters:
     measurement_plugins: ["uptime"]
@@ -8,4 +15,4 @@ measurement_server:
       polling_interval: 5000
       enable_validator: true
       debug: true
-      tags: ["flb_stdout"]
+      tags: ["rcl"]

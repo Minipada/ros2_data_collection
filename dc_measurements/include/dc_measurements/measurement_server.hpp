@@ -97,6 +97,7 @@ protected:
   std::vector<bool> measurement_init_collect_;
   std::vector<int> measurement_init_max_measurements_;
   std::vector<bool> measurement_include_measurement_name_;
+  std::vector<bool> measurement_include_measurement_plugin_;
   std::vector<std::vector<std::string>> measurement_if_all_conditions_;
   std::vector<std::vector<std::string>> measurement_if_any_conditions_;
   std::vector<std::vector<std::string>> measurement_if_none_conditions_;

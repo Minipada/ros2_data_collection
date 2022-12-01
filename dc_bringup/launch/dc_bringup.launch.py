@@ -25,7 +25,7 @@ def generate_launch_description():
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
 
-    lifecycle_nodes = ["measurement_server"]
+    lifecycle_nodes = ["measurement_server", "destination_server"]
 
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {"autostart": autostart}
@@ -103,6 +103,19 @@ def generate_launch_description():
                 arguments=["--ros-args", "--log-level", log_level],
             ),
             Node(
+                package="dc_destinations",
+                executable="destination_server",
+                name="destination_server",
+                output={
+                    "stdout": "screen",
+                    "stderr": "screen",
+                },
+                respawn=use_respawn,
+                respawn_delay=2.0,
+                parameters=[configured_params],
+                arguments=["--ros-args", "--log-level", log_level],
+            ),
+            Node(
                 package="nav2_lifecycle_manager",
                 executable="lifecycle_manager",
                 name="lifecycle_manager_navigation",
@@ -139,6 +152,12 @@ def generate_launch_description():
                         package="dc_measurements",
                         plugin="measurement_server::MeasurementServer",
                         name="measurement_server",
+                        parameters=[configured_params],
+                    ),
+                    ComposableNode(
+                        package="dc_destinations",
+                        plugin="destination_server::DestinationServer",
+                        name="destination_server",
                         parameters=[configured_params],
                     ),
                     ComposableNode(
