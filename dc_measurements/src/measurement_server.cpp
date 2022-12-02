@@ -46,9 +46,11 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   measurement_init_max_measurements_.resize(measurement_ids_.size());
   measurement_include_measurement_name_.resize(measurement_ids_.size());
   measurement_include_measurement_plugin_.resize(measurement_ids_.size());
+
   measurement_if_all_conditions_.resize(measurement_ids_.size());
   measurement_if_any_conditions_.resize(measurement_ids_.size());
   measurement_if_none_conditions_.resize(measurement_ids_.size());
+  measurement_condition_max_measurements_.resize(measurement_ids_.size());
 
   condition_types_.resize(condition_ids_.size());
 
@@ -126,6 +128,8 @@ bool MeasurementServer::loadMeasurementPlugins()
         dc_util::get_str_array_type_param(node, measurement_ids_[i], "if_any_conditions", std::vector<std::string>());
     measurement_if_none_conditions_[i] =
         dc_util::get_str_array_type_param(node, measurement_ids_[i], "if_none_conditions", std::vector<std::string>());
+    measurement_condition_max_measurements_[i] =
+        dc_util::get_int_type_param(node, measurement_ids_[i], "condition_max_measurements", 0);
 
     try
     {
@@ -141,6 +145,7 @@ bool MeasurementServer::loadMeasurementPlugins()
                              << ", Init Max measurement: " << measurement_init_max_measurements_[i]
                              << ", Include measurement name: " << measurement_include_measurement_name_[i]
                              << ", Include measurement plugin name: " << measurement_include_measurement_plugin_[i]
+                             << ", Max measurement on condition: " << measurement_condition_max_measurements_[i]
                              << ", If all condition: " << dc_util::join(measurement_if_all_conditions_[i], ",")
                              << ", If any condition: " << dc_util::join(measurement_if_any_conditions_[i], ",")
                              << ", If none condition: " << dc_util::join(measurement_if_none_conditions_[i], ","));
@@ -151,8 +156,9 @@ bool MeasurementServer::loadMeasurementPlugins()
           measurement_topic_outputs_[i], measurement_polling_interval_[i], measurement_debug_[i],
           measurement_enable_validator_[i], measurement_json_schema_path_[i], measurement_tags_[i],
           measurement_init_collect_[i], measurement_init_max_measurements_[i], measurement_include_measurement_name_[i],
-          measurement_include_measurement_plugin_[i], measurement_if_all_conditions_[i],
-          measurement_if_any_conditions_[i], measurement_if_none_conditions_[i], timer_cb_group_);
+          measurement_include_measurement_plugin_[i], measurement_condition_max_measurements_[i],
+          measurement_if_all_conditions_[i], measurement_if_any_conditions_[i], measurement_if_none_conditions_[i],
+          timer_cb_group_);
     }
     catch (const pluginlib::PluginlibException& ex)
     {
