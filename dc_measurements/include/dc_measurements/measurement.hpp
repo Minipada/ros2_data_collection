@@ -230,6 +230,24 @@ public:
           init_counter_published_++;
         }
       }
+      // Infinite measurements on condition
+      else if (msg.data != "" && msg.data != "null" &&
+               (isAnyConditionSet() && isConditionOn() && condition_max_measurements_ == 0))
+      {
+        data_pub_->publish(msg);
+      }
+      // Trigger publish with maximum
+      else if (msg.data != "" && msg.data != "null" &&
+               (isAnyConditionSet() && isConditionOn() && condition_counter_published_ < condition_max_measurements_))
+      {
+        data_pub_->publish(msg);
+        condition_counter_published_++;
+      }
+      // Not publish, reset Condition counter
+      else if (isAnyConditionSet() && !isConditionOn())
+      {
+        condition_counter_published_ = 0;
+      }
     }
   }
 
@@ -242,8 +260,8 @@ public:
                  const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
                  const std::vector<std::string>& tags, const bool& init_collect, const int& init_max_measurements,
                  const bool& include_measurement_name, const bool& include_measurement_plugin,
-                 const std::vector<std::string>& if_all_conditions, const std::vector<std::string>& if_any_conditions,
-                 const std::vector<std::string>& if_none_conditions,
+                 const int& condition_max_measurements, const std::vector<std::string>& if_all_conditions,
+                 const std::vector<std::string>& if_any_conditions, const std::vector<std::string>& if_none_conditions,
                  const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
   {
     node_ = parent;
@@ -267,9 +285,12 @@ public:
     init_max_measurements_ = init_max_measurements;
     include_measurement_name_ = include_measurement_name;
     include_measurement_plugin_ = include_measurement_plugin;
+
+    condition_max_measurements_ = condition_max_measurements;
     if_all_conditions_ = if_all_conditions;
     if_any_conditions_ = if_any_conditions;
     if_none_conditions_ = if_none_conditions;
+
     timer_cb_group_ = timer_cb_group;
 
     data_pub_ = node->create_publisher<dc_interfaces::msg::StringStamped>(
@@ -354,6 +375,8 @@ protected:
   std::vector<std::string> if_all_conditions_;
   std::vector<std::string> if_any_conditions_;
   std::vector<std::string> if_none_conditions_;
+  int condition_max_measurements_;
+  int condition_counter_published_ = 0;
 
   // Logger
   rclcpp::Logger logger_{ rclcpp::get_logger("dc_measurements") };
