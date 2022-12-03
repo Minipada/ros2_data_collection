@@ -10,6 +10,14 @@
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include <nlohmann/json.hpp>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wparentheses"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#include <fluent-bit.h>
+#pragma GCC diagnostic pop
+
 namespace dc_core
 {
 class Destination
@@ -32,7 +40,8 @@ public:
    * @param  debug Display debug messages
    */
   virtual void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
-                         const std::vector<std::string>& inputs, const bool& debug) = 0;
+                         const std::vector<std::string>& inputs, flb_ctx_t* ctx, const bool& debug,
+                         const std::string& flb_in_storage_type) = 0;
 
   /**
    * @brief Method to cleanup resources used on shutdown.

@@ -13,16 +13,11 @@
   <depend>dc_core</depend>
   <depend>dc_interfaces</depend>
   <depend>dc_util</depend>
+  <depend>fluent_bit_vendor</depend>
   <depend>nav2_util</depend>
   <depend>nlohmann-json-dev</depend>
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
-
-  <exec_depend>fluent_bit_plugins</exec_depend>
-
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_cmake_clang_format</test_depend>
-  <test_depend>ament_lint_common</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

@@ -16,6 +16,14 @@
 #include "rclcpp/rclcpp.hpp"
 #include <nlohmann/json.hpp>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wparentheses"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#include <fluent-bit.h>
+#pragma GCC diagnostic pop
+
 namespace dc_destinations
 {
 
@@ -81,13 +89,16 @@ public:
 
   // configure the server on lifecycle setup
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
-                 const std::vector<std::string>& inputs, const bool& debug) override
+                 const std::vector<std::string>& inputs, flb_ctx_t* ctx, const bool& debug,
+                 const std::string& flb_in_storage_type) override
   {
     node_ = parent;
     auto node = node_.lock();
 
     inputs_ = inputs;
     debug_ = debug;
+    ctx_ = ctx;
+    flb_in_storage_type_ = flb_in_storage_type;
 
     logger_ = node->get_logger();
 
@@ -147,6 +158,10 @@ protected:
   rclcpp::Logger logger_{ rclcpp::get_logger("dc_destinations") };
 
   bool debug_{ false };
+
+  // Fluent Bit
+  flb_ctx_t* ctx_;
+  std::string flb_in_storage_type_;
 
   // CB
   rclcpp::CallbackGroup::SharedPtr timer_cb_group_;
