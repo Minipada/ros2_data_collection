@@ -6,4 +6,12 @@
             </description>
         </class>
     </library>
+
+    <library path="dc_flb_stdout_destination">
+        <class name="dc_destinations/Flbstdout" type="dc_destinations::Flbstdout" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_stdout
+            </description>
+        </class>
+    </library>
 </class_libraries>

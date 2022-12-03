@@ -11,6 +11,13 @@
 namespace dc_util
 {
 
+char* convert(const std::string& s)
+{
+  char* pc = new char[s.size() + 1];
+  std::strcpy(pc, s.c_str());
+  return pc;
+}
+
 std::string join(const std::vector<std::string>& vec, const std::string delim = ", ")
 {
   if (vec.empty())
@@ -20,6 +27,22 @@ std::string join(const std::vector<std::string>& vec, const std::string delim = 
 
   return std::accumulate(std::next(vec.begin()), vec.end(), vec[0],
                          [&delim](const std::string& a, const std::string& b) { return a + delim + b; });
+}
+
+std::string to_space_separated_string(std::vector<std::string> string_array)
+{
+  std::vector<char*> vc;
+  std::transform(string_array.begin(), string_array.end(), std::back_inserter(vc), convert);
+  std::string formatted_string;
+  for (size_t i = 0; i < vc.size(); i++)
+  {
+    formatted_string += vc[i];
+    if (i != vc.size() - 1)
+    {
+      formatted_string += " ";
+    }
+  }
+  return formatted_string;
 }
 
 std::string expand_env(std::string text)

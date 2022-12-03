@@ -6,6 +6,7 @@ set(dependencies
   dc_core
   dc_interfaces
   dc_util
+  fluent_bit_vendor
   nav2_util
   pluginlib
   rclcpp_components
@@ -17,6 +18,7 @@ find_package(ament_cmake_ros REQUIRED)
 foreach(Dependency IN ITEMS ${dependencies})
   find_package(${Dependency} REQUIRED)
 endforeach()
+find_package(fluent_bit REQUIRED)
 
 dc_package()
 
@@ -29,10 +31,14 @@ include_directories(include)
 add_library(dc_rcl_destination SHARED plugins/rcl.cpp)
 list(APPEND dc_destination_plugin_libs dc_rcl_destination)
 
+add_library(dc_flb_stdout_destination SHARED plugins/flb_stdout.cpp)
+list(APPEND dc_destination_plugin_libs dc_flb_stdout_destination)
+
 foreach(destination_plugin ${dc_destination_plugin_libs})
   ament_target_dependencies(${destination_plugin} ${dependencies})
   target_link_libraries(
     ${destination_plugin}
+    fluent_bit::fluent_bit
   )
   target_compile_definitions(${destination_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
@@ -46,6 +52,7 @@ add_library(${library_name} SHARED
 
 target_link_libraries(
   ${library_name}
+  fluent_bit::fluent_bit
 )
 
 ament_target_dependencies(${library_name}
@@ -91,15 +98,6 @@ install(FILES destination_plugin.xml
 install(DIRECTORY plugins/
   DESTINATION share/${PROJECT_NAME}/plugins/
 )
-
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  set(ament_cmake_copyright_FOUND TRUE)
-  set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
-endif()
-
 
 ament_export_include_directories(include)
 ament_export_libraries(${library_name}
