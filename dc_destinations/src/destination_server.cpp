@@ -71,6 +71,8 @@ nav2_util::CallbackReturn DestinationServer::on_configure(const rclcpp_lifecycle
   destination_types_.resize(destination_ids_.size());
   destination_inputs_.resize(destination_ids_.size());
   destination_debug_.resize(destination_ids_.size());
+  destination_time_format_.resize(destination_ids_.size());
+  destination_time_key_.resize(destination_ids_.size());
 
   initFlb();
 
@@ -95,14 +97,20 @@ bool DestinationServer::loadDestinationPlugins()
     destination_types_[i] = dc_util::get_str_type_param(node, destination_ids_[i], "plugin");
     destination_inputs_[i] = dc_util::get_str_array_type_param(node, destination_ids_[i], "inputs");
     destination_debug_[i] = dc_util::get_bool_type_param(node, destination_ids_[i], "debug", false);
+    destination_time_format_[i] = dc_util::get_str_type_param(node, destination_ids_[i], "time_format", "double");
+    destination_time_key_[i] = dc_util::get_str_type_param(node, destination_ids_[i], "time_key", "date");
 
     try
     {
-      RCLCPP_INFO(get_logger(), "Creating destination plugin %s: Type %s", destination_ids_[i].c_str(),
-                  destination_types_[i].c_str());
+      RCLCPP_INFO_STREAM(get_logger(), "Creating destination plugin "
+                                           << destination_ids_[i].c_str() << ": Type " << destination_types_[i].c_str()
+                                           << ", Debug: " << destination_debug_[i]
+                                           << ", Time format: " << destination_time_format_[i]
+                                           << ". Time key: " << destination_time_key_[i]);
+
       destinations_.push_back(plugin_loader_.createUniqueInstance(destination_types_[i]));
       destinations_.back()->configure(node, destination_ids_[i], destination_inputs_[i], ctx_, destination_debug_[i],
-                                      flb_in_storage_type_);
+                                      flb_in_storage_type_, destination_time_format_[i], destination_time_key_[i]);
     }
     catch (const pluginlib::PluginlibException& ex)
     {

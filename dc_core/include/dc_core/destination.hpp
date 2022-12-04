@@ -41,7 +41,8 @@ public:
    */
   virtual void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                          const std::vector<std::string>& inputs, flb_ctx_t* ctx, const bool& debug,
-                         const std::string& flb_in_storage_type) = 0;
+                         const std::string& flb_in_storage_type, const std::string& time_format,
+                         const std::string& time_key) = 0;
 
   /**
    * @brief Method to cleanup resources used on shutdown.

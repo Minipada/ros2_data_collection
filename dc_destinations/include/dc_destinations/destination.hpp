@@ -90,7 +90,8 @@ public:
   // configure the server on lifecycle setup
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                  const std::vector<std::string>& inputs, flb_ctx_t* ctx, const bool& debug,
-                 const std::string& flb_in_storage_type) override
+                 const std::string& flb_in_storage_type, const std::string& time_format,
+                 const std::string& time_key) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -99,6 +100,8 @@ public:
     debug_ = debug;
     ctx_ = ctx;
     flb_in_storage_type_ = flb_in_storage_type;
+    time_format_ = time_format;
+    time_key_ = time_key;
 
     logger_ = node->get_logger();
 
@@ -162,6 +165,8 @@ protected:
   // Fluent Bit
   flb_ctx_t* ctx_;
   std::string flb_in_storage_type_;
+  std::string time_format_{ "iso8601" };
+  std::string time_key_{ "date" };
 
   // CB
   rclcpp::CallbackGroup::SharedPtr timer_cb_group_;
