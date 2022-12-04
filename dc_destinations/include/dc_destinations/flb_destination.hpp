@@ -49,7 +49,8 @@ public:
   // configure the server on lifecycle setup
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                  const std::vector<std::string>& inputs, flb_ctx_t* ctx, const bool& debug,
-                 const std::string& flb_in_storage_type) override
+                 const std::string& flb_in_storage_type, const std::string& time_format,
+                 const std::string& time_key) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -59,6 +60,8 @@ public:
     destination_name_ = name;
     inputs_ = inputs;
     flb_in_storage_type_ = flb_in_storage_type;
+    time_format_ = time_format;
+    time_key_ = time_key;
 
     logger_ = node->get_logger();
 
@@ -89,13 +92,71 @@ public:
            std::to_string(msg->header.stamp.nanosec) + "," + formatted_str + std::string("]");
   }
 
-  void initFlbFilters()
+  void initTimestampFilter()
   {
-    int ret = 0;
+    /* Filter for timestamp*/
+    int f_ffd = flb_filter(ctx_, (char*)"lua", NULL);
+    if (f_ffd == -1)
+    {
+      flb_destroy(ctx_);
+      throw std::runtime_error("Cannot start lua timestamp filter");
+    }
+    std::string date_record = "";
+    if (time_format_ == "double")
+    {
+      date_record = "record[\"" + time_key_ + "\"] = timestamp ";
+    }
+    else if (time_format_ == "iso8601")
+    {
+      date_record = "record[\"" + time_key_ +
+                    "\"] = os.date('!%Y-%m-%dT%H:%M:%S', timestamp[\"sec\"]) .. \".\" .. "
+                    "tostring(math.floor(timestamp[\"nsec\"])) ";
+    }
+    std::string ts_lua_code =
+        std::string("function replace_ts(tag, timestamp, record) ") + date_record + " return 2, timestamp, record end";
+    int ret = flb_filter_set(ctx_, f_ffd, "code", ts_lua_code.c_str(), NULL);
+    ret += flb_filter_set(ctx_, f_ffd, "call", "replace_ts", NULL);
+    ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
+    if (time_format_ != "double")
+    {
+      ret += flb_filter_set(ctx_, f_ffd, "time_as_table", "true", NULL);
+    }
+    if (ret != 0)
+    {
+      flb_destroy(ctx_);
+      throw std::runtime_error("Cannot set lua timestamp filter");
+    }
+  }
+
+  void initRewriteTagFilter()
+  {
+    int f_ffd = flb_filter(ctx_, (char*)"rewrite_tag", NULL);
+    if (f_ffd == -1)
+    {
+      flb_destroy(ctx_);
+      throw std::runtime_error("Cannot start rewrite_tag filter");
+    }
+    std::string rule = "$tags .*(" + destination_name_ + ").* " + destination_name_ + " true";
+
+    int ret = flb_filter_set(ctx_, f_ffd, "Rule", rule.c_str(), NULL);
+    ret += flb_filter_set(ctx_, f_ffd, "Match", "ros2", NULL);
+    ret += flb_filter_set(ctx_, f_ffd, "emitter_storage.type", flb_in_storage_type_.c_str(), NULL);
+    ret += flb_filter_set(ctx_, f_ffd, "emitter_mem_buf_limit", "5M", NULL);
+    if (ret != 0)
+    {
+      flb_destroy(ctx_);
+      throw std::runtime_error("Cannot set rule for rewrite_tag filter");
+    }
+
+    RCLCPP_INFO(logger_, "Loaded rewrite_tag filter. Match=ros2, Rule=%s", rule.c_str());
+  }
+
+  void initConcatenateTags()
+  {
     /* Filter rewrite tags as string configuration */
     /* ["tag1", "tag2"] -> "tag1,tag2" */
     /* and add timestamp in the field - Not sure this is needed */
-    f_ffd = flb_filter(ctx_, (char*)"lua", NULL);
+    int f_ffd = flb_filter(ctx_, (char*)"lua", NULL);
     if (f_ffd == -1)
     {
       flb_destroy(ctx_);
@@ -107,7 +168,7 @@ public:
                            "record[\"tags\"] = table.concat(record[\"tags\"], \",\") " + "end " +
                            " return 2, timestamp, record end";
 
-    ret = flb_filter_set(ctx_, f_ffd, "code", lua_code.c_str(), NULL);
+    int ret = flb_filter_set(ctx_, f_ffd, "code", lua_code.c_str(), NULL);
     ret += flb_filter_set(ctx_, f_ffd, "call", "concatenate", NULL);
     ret += flb_filter_set(ctx_, f_ffd, "Match", "ros2", NULL);
 
@@ -117,38 +178,20 @@ public:
       throw std::runtime_error("Cannot set lua filter");
     }
     RCLCPP_INFO(logger_, "Loaded lua filter. Match=ros2, code=%s", lua_code.c_str());
+  }
 
-    /* Filter rewrite configuration */
-    f_ffd = flb_filter(ctx_, (char*)"rewrite_tag", NULL);
-    if (f_ffd == -1)
-    {
-      flb_destroy(ctx_);
-      throw std::runtime_error("Cannot start rewrite_tag filter");
-    }
-    std::string rule = "$tags .*(" + destination_name_ + ").* " + destination_name_ + " true";
-
-    ret = flb_filter_set(ctx_, f_ffd, "Rule", rule.c_str(), NULL);
-    ret += flb_filter_set(ctx_, f_ffd, "Match", "ros2", NULL);
-    ret += flb_filter_set(ctx_, f_ffd, "emitter_storage.type", flb_in_storage_type_.c_str(), NULL);
-    ret += flb_filter_set(ctx_, f_ffd, "emitter_mem_buf_limit", "5M", NULL);
-    if (ret != 0)
-    {
-      flb_destroy(ctx_);
-      throw std::runtime_error("Cannot set rule for rewrite_tag filter");
-    }
-
-    RCLCPP_INFO(logger_, "Loaded rewrite_tag filter. Match=ros2, Rule=%s", rule.c_str());
-
+  void initRemoveTagsFilter()
+  {
     /* Filter modify configuration */
     // Remove the tag from the json message
-    f_ffd = flb_filter(ctx_, (char*)"modify", NULL);
+    int f_ffd = flb_filter(ctx_, (char*)"modify", NULL);
     if (f_ffd == -1)
     {
       flb_destroy(ctx_);
       throw std::runtime_error("Cannot start modify filter");
     }
 
-    ret = flb_filter_set(ctx_, f_ffd, "Remove", "tags", NULL);
+    int ret = flb_filter_set(ctx_, f_ffd, "Remove", "tags", NULL);
     ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
 
     for (auto param = custom_params_.begin(); param != custom_params_.end(); ++param)
@@ -162,16 +205,35 @@ public:
       flb_destroy(ctx_);
       throw std::runtime_error("Cannot set rule for modify filter");
     }
+  }
 
+  void initFlbFilters()
+  {
+    initTimestampFilter();
+
+    initConcatenateTags();
+
+    initRewriteTagFilter();
+
+    initRemoveTagsFilter();
+  }
+
+  void initFlbDebug()
+  {
     /* Enable fluent bit debug */
     if (debug_)
     {
-      f_ffd = flb_output(ctx_, (char*)"stdout", NULL);
-      ret = flb_output_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
+      int f_ffd = flb_output(ctx_, (char*)"stdout", NULL);
+      int ret = flb_output_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
       if (f_ffd == -1)
       {
         flb_destroy(ctx_);
         throw std::runtime_error("Cannot start stdout filter");
+      }
+      if (ret != 0)
+      {
+        flb_destroy(ctx_);
+        throw std::runtime_error("Cannot enable debug for plugin");
       }
     }
   }
@@ -179,6 +241,7 @@ public:
   void onDestinationConfigure()
   {
     initFlbFilters();
+    initFlbDebug();
     initFlbOutputPlugin();
   }
 
