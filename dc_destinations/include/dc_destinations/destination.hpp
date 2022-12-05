@@ -90,8 +90,8 @@ public:
   // configure the server on lifecycle setup
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                  const std::vector<std::string>& inputs, flb_ctx_t* ctx, const bool& debug,
-                 const std::string& flb_in_storage_type, const std::string& time_format,
-                 const std::string& time_key) override
+                 const std::string& flb_in_storage_type, const std::string& time_format, const std::string& time_key,
+                 const std::string& run_id, const bool& run_id_enabled) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -102,6 +102,8 @@ public:
     flb_in_storage_type_ = flb_in_storage_type;
     time_format_ = time_format;
     time_key_ = time_key;
+    run_id_ = run_id;
+    run_id_enabled_ = run_id_enabled;
 
     logger_ = node->get_logger();
 
@@ -147,6 +149,8 @@ protected:
   std::string destination_name_;
   std::vector<std::string> inputs_;
   double enabled_;
+  bool run_id_enabled_;
+  std::string run_id_;
 
   json custom_params_;
 
