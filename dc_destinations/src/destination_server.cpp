@@ -39,6 +39,11 @@ DestinationServer::DestinationServer(const rclcpp::NodeOptions& options)
                                                rclcpp::ParameterValue(ros2_plugin_path_default_));
   nav2_util::declare_parameter_if_not_declared(this, "ros2_plugin_spin_time_ms", rclcpp::ParameterValue(100));
 
+  nav2_util::declare_parameter_if_not_declared(this, "run_id.enabled", rclcpp::ParameterValue(true));
+  nav2_util::declare_parameter_if_not_declared(this, "run_id.counter", rclcpp::ParameterValue(true));
+  nav2_util::declare_parameter_if_not_declared(this, "run_id.counter_path", rclcpp::ParameterValue("$HOME/run_id"));
+  nav2_util::declare_parameter_if_not_declared(this, "run_id.uuid", rclcpp::ParameterValue(false));
+
   flb_flush_ = this->get_parameter("flb.flush").as_int();
   flb_grace_ = this->get_parameter("flb.grace").as_int();
   flb_log_level_ = this->get_parameter("flb.log_level").as_string();
@@ -57,6 +62,55 @@ DestinationServer::DestinationServer(const rclcpp::NodeOptions& options)
 
   ros2_plugin_path_ = this->get_parameter("ros2_plugin_path").as_string();
   ros2_plugin_spin_time_ms_ = this->get_parameter("ros2_plugin_spin_time_ms").as_int();
+
+  run_id_enabled_ = this->get_parameter("run_id.enabled").as_bool();
+  run_id_counter_ = this->get_parameter("run_id.counter").as_bool();
+  run_id_counter_path_ = dc_util::expand_env(this->get_parameter("run_id.counter_path").as_string());
+  run_id_uuid_ = this->get_parameter("run_id.uuid").as_bool();
+
+  if (run_id_enabled_)
+  {
+    if (run_id_uuid_ && run_id_counter_)
+    {
+      throw std::runtime_error("Please select only one source for run ID");
+    }
+    else if (run_id_uuid_)
+    {
+      uuid_t uuid_obj;
+      char uuid_str[100];
+      uuid_generate(uuid_obj);
+      uuid_unparse(uuid_obj, uuid_str);
+      run_id_ = uuid_str;
+    }
+    else if (run_id_counter_)
+    {
+      // Check file exists, if not create it
+      if (!std::ifstream(run_id_counter_path_))
+      {
+        // Create parent directory
+        auto parent_dir = std::filesystem::path(run_id_counter_path_).parent_path().u8string();
+        std::filesystem::create_directories(parent_dir);
+        // Create file
+        std::ofstream file(run_id_counter_path_);
+        if (!file)
+        {
+          throw std::runtime_error("UUID counter file could not be created");
+        }
+        else
+        {
+          run_id_ = "1";
+          dc_util::write_str_file(run_id_counter_path_, "1");
+        }
+      }
+      // If counter file exists
+      else
+      {
+        // Get new run_id
+        run_id_ = std::to_string(stoi(dc_util::get_file_content(run_id_counter_path_)) + 1);
+        dc_util::write_str_file(run_id_counter_path_, run_id_);
+      }
+    }
+  }
 }
 
 DestinationServer::~DestinationServer()
@@ -110,7 +164,8 @@ bool DestinationServer::loadDestinationPlugins()
 
       destinations_.push_back(plugin_loader_.createUniqueInstance(destination_types_[i]));
       destinations_.back()->configure(node, destination_ids_[i], destination_inputs_[i], ctx_, destination_debug_[i],
-                                      flb_in_storage_type_, destination_time_format_[i], destination_time_key_[i]);
+                                      flb_in_storage_type_, destination_time_format_[i], destination_time_key_[i],
+                                      run_id_, run_id_enabled_);
     }
     catch (const pluginlib::PluginlibException& ex)
     {
