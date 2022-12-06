@@ -215,6 +215,7 @@ public:
     {
       int f_ffd = flb_filter(ctx_, (char*)"modify", NULL);
       int ret = flb_filter_set(ctx_, f_ffd, "Add", (std::string("run_id ") + run_id_).c_str(), NULL);
+      ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
       if (f_ffd == -1)
       {
         flb_destroy(ctx_);
