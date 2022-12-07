@@ -50,7 +50,7 @@ public:
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                  const std::vector<std::string>& inputs, flb_ctx_t* ctx, const bool& debug,
                  const std::string& flb_in_storage_type, const std::string& time_format, const std::string& time_key,
-                 const std::string& run_id, const bool& run_id_enabled) override
+                 const json& custom_params, const std::string& run_id, const bool& run_id_enabled) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -64,6 +64,7 @@ public:
     time_key_ = time_key;
     run_id_ = run_id;
     run_id_enabled_ = run_id_enabled;
+    custom_params_ = custom_params;
 
     logger_ = node->get_logger();
 
@@ -226,6 +227,29 @@ public:
         flb_destroy(ctx_);
         throw std::runtime_error("Cannot set rule for modify filter (add run_id)");
       }
+    }
+  }
+
+  void initAddCustomParamsFilter()
+  {
+    int ret = 0;
+    int f_ffd = flb_filter(ctx_, (char*)"modify", NULL);
+    ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
+    for (auto param = custom_params_.begin(); param != custom_params_.end(); ++param)
+    {
+      std::string key = param.key();
+      std::string value = param.value();
+      ret += flb_filter_set(ctx_, f_ffd, "Add", (key + " " + value).c_str(), NULL);
+    }
+    if (f_ffd == -1)
+    {
+      flb_destroy(ctx_);
+      throw std::runtime_error("Cannot start modify filter (add custom params)");
+    }
+    if (ret != 0)
+    {
+      flb_destroy(ctx_);
+      throw std::runtime_error("Cannot set rule for modify filter (add custom params)");
     }
   }
 
