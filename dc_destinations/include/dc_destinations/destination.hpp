@@ -91,7 +91,7 @@ public:
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                  const std::vector<std::string>& inputs, flb_ctx_t* ctx, const bool& debug,
                  const std::string& flb_in_storage_type, const std::string& time_format, const std::string& time_key,
-                 const std::string& run_id, const bool& run_id_enabled) override
+                 const json& custom_params, const std::string& run_id, const bool& run_id_enabled) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -104,6 +104,7 @@ public:
     time_key_ = time_key;
     run_id_ = run_id;
     run_id_enabled_ = run_id_enabled;
+    custom_params_ = custom_params;
 
     logger_ = node->get_logger();
 
