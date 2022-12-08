@@ -7,6 +7,14 @@
         </class>
     </library>
 
+    <library path="dc_flb_kinesis_streams_destination">
+        <class name="dc_destinations/FlbKinesisStreams" type="dc_destinations::FlbKinesisStreams" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_kinesis_streams
+            </description>
+        </class>
+    </library>
+
     <library path="dc_flb_stdout_destination">
         <class name="dc_destinations/Flbstdout" type="dc_destinations::Flbstdout" base_class_type="dc_core::Destination">
             <description>

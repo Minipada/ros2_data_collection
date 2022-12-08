@@ -28,11 +28,14 @@ set(executable_name destination_server)
 include_directories(include)
 
 # Plugins destinations
-add_library(dc_rcl_destination SHARED plugins/rcl.cpp)
-list(APPEND dc_destination_plugin_libs dc_rcl_destination)
+add_library(dc_flb_kinesis_streams_destination SHARED plugins/flb_kinesis_streams.cpp)
+list(APPEND dc_destination_plugin_libs dc_flb_kinesis_streams_destination)
 
 add_library(dc_flb_stdout_destination SHARED plugins/flb_stdout.cpp)
 list(APPEND dc_destination_plugin_libs dc_flb_stdout_destination)
+
+add_library(dc_rcl_destination SHARED plugins/rcl.cpp)
+list(APPEND dc_destination_plugin_libs dc_rcl_destination)
 
 foreach(destination_plugin ${dc_destination_plugin_libs})
   ament_target_dependencies(${destination_plugin} ${dependencies})
