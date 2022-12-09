@@ -7,6 +7,14 @@
         </class>
     </library>
 
+    <library path="dc_flb_file_destination">
+        <class name="dc_destinations/Flbfile" type="dc_destinations::Flbfile" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_file
+            </description>
+        </class>
+    </library>
+
     <library path="dc_flb_kinesis_streams_destination">
         <class name="dc_destinations/FlbKinesisStreams" type="dc_destinations::FlbKinesisStreams" base_class_type="dc_core::Destination">
             <description>
