@@ -28,6 +28,9 @@ set(executable_name destination_server)
 include_directories(include)
 
 # Plugins destinations
+add_library(dc_flb_file_destination SHARED plugins/flb_file.cpp)
+list(APPEND dc_destination_plugin_libs dc_flb_file_destination)
+
 add_library(dc_flb_kinesis_streams_destination SHARED plugins/flb_kinesis_streams.cpp)
 list(APPEND dc_destination_plugin_libs dc_flb_kinesis_streams_destination)
 
