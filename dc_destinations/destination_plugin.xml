@@ -15,6 +15,14 @@
         </class>
     </library>
 
+    <library path="dc_flb_http_destination">
+        <class name="dc_destinations/Flbhttp" type="dc_destinations::Flbhttp" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_http
+            </description>
+        </class>
+    </library>
+
     <library path="dc_flb_kinesis_streams_destination">
         <class name="dc_destinations/FlbKinesisStreams" type="dc_destinations::FlbKinesisStreams" base_class_type="dc_core::Destination">
             <description>
