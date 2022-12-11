@@ -1,9 +1,39 @@
 destination_server:
   ros__parameters:
+    flb:
+      flush: 1
+      flb_grace: 1
+      log_level: "info"
+      storage_path: "/var/log/flb-storage/"
+      storage_sync: "full"
+      storage_checksum: "off"
+      storage_backlog_mem_limit: "1M"
+      scheduler_cap: 200
+      scheduler_base: 5
+      http_server: true
+      http_listen: "0.0.0.0"
+      http_port: 2020
+      in_storage_type: "filesystem"
+      in_storage_pause_on_chunks_overlimit: "off"
     destination_plugins: ["flb_stdout"]
+    custom_str_params_list: ["robot_name", "id"]
+    custom_str_params:
+      robot_name:
+        name: robot_name
+        value: david-pc
+      id:
+        name: id
+        value_from_file: /etc/machine-id
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: "$HOME/run_id"
+      uuid: false
     flb_stdout:
       plugin: "dc_destinations/Flbstdout"
       inputs: ["/dc/measurement/uptime"]
+      time_format: "double"
+      time_key: "date"
 
 measurement_server:
   ros__parameters:
@@ -16,3 +46,4 @@ measurement_server:
       enable_validator: true
       debug: true
       tags: ["flb_stdout"]
+      init_collect: true
