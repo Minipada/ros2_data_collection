@@ -184,7 +184,7 @@ bool DestinationServer::loadDestinationPlugins()
     {
       RCLCPP_INFO_STREAM(get_logger(), "Creating destination plugin "
                                            << destination_ids_[i].c_str() << ": Type " << destination_types_[i].c_str()
-                                           << ", Debug: " << destination_debug_[i]
+                                           << ", Debug: " << (int)destination_debug_[i]
                                            << ", Time format: " << destination_time_format_[i]
                                            << ". Time key: " << destination_time_key_[i]);
 

@@ -34,6 +34,7 @@ destination_server:
       inputs: ["/dc/measurement/uptime"]
       time_format: "double"
       time_key: "date"
+      debug: false
 
 measurement_server:
   ros__parameters:
