@@ -183,7 +183,7 @@ public:
     RCLCPP_INFO(logger_, "Loaded lua filter. Match=ros2, code=%s", lua_code.c_str());
   }
 
-  void initRemoveTagsFilter()
+  void initModifyFilter()
   {
     /* Filter modify configuration */
     // Remove the tag from the json message
@@ -208,14 +208,10 @@ public:
       flb_destroy(ctx_);
       throw std::runtime_error("Cannot set rule for modify filter");
     }
-  }
 
-  void initAddRunId()
-  {
     if (run_id_enabled_)
     {
-      int f_ffd = flb_filter(ctx_, (char*)"modify", NULL);
-      int ret = flb_filter_set(ctx_, f_ffd, "Add", (std::string("run_id ") + run_id_).c_str(), NULL);
+      ret = flb_filter_set(ctx_, f_ffd, "Add", (std::string("run_id ") + run_id_).c_str(), NULL);
       ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
       if (f_ffd == -1)
       {
@@ -228,17 +224,13 @@ public:
         throw std::runtime_error("Cannot set rule for modify filter (add run_id)");
       }
     }
-  }
 
-  void initAddCustomParamsFilter()
-  {
-    int ret = 0;
-    int f_ffd = flb_filter(ctx_, (char*)"modify", NULL);
-    ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
+    ret = flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
     for (auto param = custom_params_.begin(); param != custom_params_.end(); ++param)
     {
       std::string key = param.key();
       std::string value = param.value();
+      RCLCPP_INFO(logger_, "************************************** %s %s", key.c_str(), value.c_str());
       ret += flb_filter_set(ctx_, f_ffd, "Add", (key + " " + value).c_str(), NULL);
     }
     if (f_ffd == -1)
@@ -261,9 +253,7 @@ public:
 
     initRewriteTagFilter();
 
-    initRemoveTagsFilter();
-
-    initAddRunId();
+    initModifyFilter();
   }
 
   void initFlbDebug()
