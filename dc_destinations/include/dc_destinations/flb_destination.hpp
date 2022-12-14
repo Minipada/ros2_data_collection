@@ -230,8 +230,14 @@ public:
     {
       std::string key = param.key();
       std::string value = param.value();
-      RCLCPP_INFO(logger_, "************************************** %s %s", key.c_str(), value.c_str());
-      ret += flb_filter_set(ctx_, f_ffd, "Add", (key + " " + value).c_str(), NULL);
+      if (!value.empty())
+      {
+        ret += flb_filter_set(ctx_, f_ffd, "Add", (key + " " + value).c_str(), NULL);
+      }
+      else
+      {
+        throw std::runtime_error("Value from parameter %s is empty.", key.c_str());
+      }
     }
     if (f_ffd == -1)
     {
