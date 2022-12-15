@@ -21,6 +21,7 @@ destination_server:
       robot_name:
         name: robot_name
         value: david-pc
+      # Requires systemd package
       id:
         name: id
         value_from_file: /etc/machine-id
