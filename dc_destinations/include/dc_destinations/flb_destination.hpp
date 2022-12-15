@@ -236,7 +236,7 @@ public:
       }
       else
       {
-        throw std::runtime_error("Value from parameter %s is empty.", key.c_str());
+        throw std::runtime_error("Value from parameter " + key + " is empty.");
       }
     }
     if (f_ffd == -1)
