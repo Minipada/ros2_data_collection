@@ -15,6 +15,24 @@ MeasurementServer::MeasurementServer(const rclcpp::NodeOptions& options)
 {
   declare_parameter("measurement_plugins", measurement_plugins_);
   get_parameter("measurement_plugins", measurement_ids_);
+
+  // Base file saving path
+  setBaseSavePath();
+}
+
+void MeasurementServer::setBaseSavePath()
+{
+  declare_parameter("save_local_base_path", "$HOME/ros2/data/%Y/%M/%D/%H");
+  get_parameter("save_local_base_path", save_local_base_path_);
+  declare_parameter("all_base_path", "");
+  get_parameter("all_base_path", all_base_path_);
+
+  save_local_base_path_expanded_ = dc_util::expand_env(save_local_base_path_);
+  save_local_base_path_expanded_ = dc_util::expand_values(save_local_base_path_expanded_, this);
+  RCLCPP_INFO(get_logger(), "Base save path expanded to %s", save_local_base_path_expanded_.c_str());
+  all_base_path_expanded_ = dc_util::expand_env(all_base_path_);
+  all_base_path_expanded_ = dc_util::expand_values(all_base_path_expanded_, this);
+  RCLCPP_INFO(get_logger(), "All Base path expanded to %s", all_base_path_expanded_.c_str());
 }
 
 MeasurementServer::~MeasurementServer()
@@ -46,6 +64,8 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   measurement_init_max_measurements_.resize(measurement_ids_.size());
   measurement_include_measurement_name_.resize(measurement_ids_.size());
   measurement_include_measurement_plugin_.resize(measurement_ids_.size());
+  measurement_remote_keys_.resize(measurement_ids_.size());
+  measurement_remote_prefixes_.resize(measurement_ids_.size());
 
   measurement_if_all_conditions_.resize(measurement_ids_.size());
   measurement_if_any_conditions_.resize(measurement_ids_.size());
@@ -121,6 +141,10 @@ bool MeasurementServer::loadMeasurementPlugins()
         dc_util::get_bool_type_param(node, measurement_ids_[i], "include_measurement_name", false);
     measurement_include_measurement_plugin_[i] =
         dc_util::get_bool_type_param(node, measurement_ids_[i], "include_measurement_plugin", false);
+    measurement_remote_keys_[i] =
+        dc_util::get_str_array_type_param(node, measurement_ids_[i], "remote_keys", std::vector<std::string>());
+    measurement_remote_prefixes_[i] =
+        dc_util::get_str_array_type_param(node, measurement_ids_[i], "remote_prefixes", std::vector<std::string>());
 
     measurement_if_all_conditions_[i] =
         dc_util::get_str_array_type_param(node, measurement_ids_[i], "if_all_conditions", std::vector<std::string>());
@@ -145,6 +169,9 @@ bool MeasurementServer::loadMeasurementPlugins()
                              << ", Init Max measurement: " << measurement_init_max_measurements_[i]
                              << ", Include measurement name: " << measurement_include_measurement_name_[i]
                              << ", Include measurement plugin name: " << measurement_include_measurement_plugin_[i]
+                             << ", Remote keys: " << dc_util::join(measurement_remote_keys_[i])
+                             << ", Remote prefixes: " << dc_util::join(measurement_remote_prefixes_[i])
+                             << ", Include measurement plugin name: " << measurement_include_measurement_plugin_[i]
                              << ", Max measurement on condition: " << measurement_condition_max_measurements_[i]
                              << ", If all condition: " << dc_util::join(measurement_if_all_conditions_[i], ",")
                              << ", If any condition: " << dc_util::join(measurement_if_any_conditions_[i], ",")
@@ -158,7 +185,8 @@ bool MeasurementServer::loadMeasurementPlugins()
           measurement_init_collect_[i], measurement_init_max_measurements_[i], measurement_include_measurement_name_[i],
           measurement_include_measurement_plugin_[i], measurement_condition_max_measurements_[i],
           measurement_if_all_conditions_[i], measurement_if_any_conditions_[i], measurement_if_none_conditions_[i],
-          timer_cb_group_);
+          measurement_remote_keys_[i], measurement_remote_prefixes_[i], save_local_base_path_, all_base_path_,
+          all_base_path_expanded_, save_local_base_path_expanded_, timer_cb_group_);
     }
     catch (const pluginlib::PluginlibException& ex)
     {

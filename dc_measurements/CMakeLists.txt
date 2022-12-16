@@ -50,6 +50,9 @@ list(APPEND dc_measurement_plugin_libs dc_cpu_measurement)
 add_library(dc_distance_traveled_measurement SHARED plugins/measurements/distance_traveled.cpp)
 list(APPEND dc_measurement_plugin_libs dc_distance_traveled_measurement)
 
+add_library(dc_map_measurement SHARED plugins/measurements/map.cpp)
+list(APPEND dc_measurement_plugin_libs dc_map_measurement)
+
 add_library(dc_memory_measurement SHARED
   plugins/measurements/memory.cpp
   plugins/measurements/system/linux_parser.cpp

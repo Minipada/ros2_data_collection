@@ -94,6 +94,37 @@ public:
     return node;
   }
 
+  std::string getSavePath(const std::string& path_parameter)
+  {
+    auto rclcpp_time = rclcpp::Clock().now();
+    std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds> t{ std::chrono::nanoseconds(
+        rclcpp_time.nanoseconds()) };
+    std::time_t newt = std::chrono::system_clock::to_time_t(t);
+    std::stringstream trans_time;
+
+    auto node = getNode();
+    trans_time << std::put_time(localtime(&newt),
+                                node->get_parameter(measurement_name_ + "." + path_parameter).as_string().c_str());
+    std::string fmt_time = trans_time.str();
+
+    return fmt_time;
+  }
+
+  std::string getSavePath(const std::string& path_parameter, const rclcpp::Time& now)
+  {
+    std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds> t{ std::chrono::nanoseconds(
+        now.nanoseconds()) };
+    std::time_t newt = std::chrono::system_clock::to_time_t(t);
+    std::stringstream trans_time;
+
+    auto node = getNode();
+    trans_time << std::put_time(localtime(&newt),
+                                node->get_parameter(measurement_name_ + "." + path_parameter).as_string().c_str());
+    std::string fmt_time = trans_time.str();
+
+    return fmt_time;
+  }
+
   void validateSchema(const std::string& package_name, const std::string& json_filename)
   {
     std::string package_share_directory = ament_index_cpp::get_package_share_directory(package_name.c_str());
@@ -262,6 +293,9 @@ public:
                  const bool& include_measurement_name, const bool& include_measurement_plugin,
                  const int& condition_max_measurements, const std::vector<std::string>& if_all_conditions,
                  const std::vector<std::string>& if_any_conditions, const std::vector<std::string>& if_none_conditions,
+                 const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
+                 const std::string& save_local_base_path, const std::string& all_base_path,
+                 const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
                  const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
   {
     node_ = parent;
@@ -285,6 +319,12 @@ public:
     init_max_measurements_ = init_max_measurements;
     include_measurement_name_ = include_measurement_name;
     include_measurement_plugin_ = include_measurement_plugin;
+    remote_keys_ = remote_keys;
+    remote_prefixes_ = remote_prefixes;
+    all_base_path_ = all_base_path;
+    all_base_path_expanded_ = all_base_path_expanded;
+    save_local_base_path_ = save_local_base_path;
+    save_local_base_path_expanded_ = save_local_base_path_expanded;
 
     condition_max_measurements_ = condition_max_measurements;
     if_all_conditions_ = if_all_conditions;
@@ -365,6 +405,12 @@ protected:
   bool init_collect_;
   bool include_measurement_name_;
   bool include_measurement_plugin_;
+  std::vector<std::string> remote_keys_;
+  std::vector<std::string> remote_prefixes_;
+  std::string all_base_path_;
+  std::string all_base_path_expanded_;
+  std::string save_local_base_path_;
+  std::string save_local_base_path_expanded_;
 
   // Counters
   int init_counter_published_ = 0;
