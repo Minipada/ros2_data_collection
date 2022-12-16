@@ -55,6 +55,9 @@ public:
                          const std::vector<std::string>& if_all_conditions,
                          const std::vector<std::string>& if_any_conditions,
                          const std::vector<std::string>& if_none_conditions,
+                         const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
+                         const std::string& save_local_base_path, const std::string& all_base_path,
+                         const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
                          const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) = 0;
 
   /**

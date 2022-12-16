@@ -15,6 +15,14 @@
         </class>
     </library>
 
+    <library path="dc_map_measurement">
+        <class name="dc_measurements/Map" type="dc_measurements::Map" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_map
+            </description>
+        </class>
+    </library>
+
     <library path="dc_memory_measurement">
         <class name="dc_measurements/Memory" type="dc_measurements::Memory" base_class_type="dc_core::Measurement">
             <description>

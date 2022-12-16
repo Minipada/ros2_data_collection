@@ -45,6 +45,33 @@ std::string to_space_separated_string(std::vector<std::string> string_array)
   return formatted_string;
 }
 
+std::string expand_time(const std::string& s)
+{
+  auto now = rclcpp::Clock().now();
+  std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds> t{ std::chrono::nanoseconds(
+      now.nanoseconds()) };
+  std::time_t newt = std::chrono::system_clock::to_time_t(t);
+  std::stringstream trans_time;
+
+  trans_time << std::put_time(localtime(&newt), s.c_str());
+  std::string fmt_time = trans_time.str();
+
+  return fmt_time;
+}
+
+std::string expand_time(const std::string& s, const rclcpp::Time& now)
+{
+  std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds> t{ std::chrono::nanoseconds(
+      now.nanoseconds()) };
+  std::time_t newt = std::chrono::system_clock::to_time_t(t);
+  std::stringstream trans_time;
+
+  trans_time << std::put_time(localtime(&newt), s.c_str());
+  std::string fmt_time = trans_time.str();
+
+  return fmt_time;
+}
+
 std::string expand_env(std::string text)
 {
   static const std::regex env_re{ R"--(\$\{?([[:alpha:]]\w+)\}?)--" };
@@ -57,6 +84,21 @@ std::string expand_env(std::string text)
   }
   return text;
 }
+
+template <typename NodeT>
+std::string expand_values(std::string text, NodeT node)
+{
+  static const std::regex env_re{ R"--(\=\{?([[:alpha:]]\w+)\}?)--" };
+  std::smatch match;
+  while (std::regex_search(text, match, env_re))
+  {
+    auto const from = match[0];
+    auto const var_name = match[1].str().c_str();
+    text.replace(from.first, from.second, node->get_parameter(var_name).as_string());
+  }
+  return text;
+}
+
 }  // namespace dc_util
 
 #endif  // DC_UTIL__STRING_UTILS_HPP_

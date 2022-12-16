@@ -101,6 +101,12 @@ protected:
   std::vector<std::vector<std::string>> measurement_if_all_conditions_;
   std::vector<std::vector<std::string>> measurement_if_any_conditions_;
   std::vector<std::vector<std::string>> measurement_if_none_conditions_;
+  std::vector<std::vector<std::string>> measurement_remote_keys_;
+  std::vector<std::vector<std::string>> measurement_remote_prefixes_;
+  std::string save_local_base_path_;
+  std::string save_local_base_path_expanded_;
+  std::string all_base_path_;
+  std::string all_base_path_expanded_;
 
   // Conditions
   std::map<std::string, std::shared_ptr<dc_core::Condition>> conditions_;
