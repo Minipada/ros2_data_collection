@@ -3,6 +3,9 @@ project(dc_demos)
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
+find_package(nav2_bringup REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(rclpy REQUIRED)
 
 install(
   DIRECTORY launch params

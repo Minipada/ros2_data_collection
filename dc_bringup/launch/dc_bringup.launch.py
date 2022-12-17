@@ -19,7 +19,7 @@ def generate_launch_description():
     namespace = LaunchConfiguration("namespace")
     use_sim_time = LaunchConfiguration("use_sim_time")
     autostart = LaunchConfiguration("autostart")
-    params_file = LaunchConfiguration("params_file")
+    dc_params_file = LaunchConfiguration("dc_params_file")
     use_composition = LaunchConfiguration("use_composition")
     container_name = LaunchConfiguration("container_name")
     use_respawn = LaunchConfiguration("use_respawn")
@@ -31,7 +31,7 @@ def generate_launch_description():
     param_substitutions = {"autostart": autostart}
 
     configured_params = RewrittenYaml(
-        source_file=params_file,
+        source_file=dc_params_file,
         root_key=namespace,
         param_rewrites=param_substitutions,
         convert_types=True,
@@ -52,7 +52,7 @@ def generate_launch_description():
     )
 
     declare_params_file_cmd = DeclareLaunchArgument(
-        "params_file",
+        "dc_params_file",
         default_value=os.path.join(bringup_dir, "params", "dc_params.yaml"),
         description="Full path to the ROS2 parameters file to use for all launched nodes",
     )
