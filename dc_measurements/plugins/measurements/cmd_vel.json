@@ -1,0 +1,41 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Cmd_vel",
+    "description": "Command velocity sent to the robot",
+    "properties": {
+        "linear": {
+            "description": "Linear velocity as a vector",
+            "type": "object",
+            "items": {
+                "$ref": "#/$defs/vector3"
+            }
+        },
+        "angular": {
+            "description": "Angular velocity as a vector",
+            "type": "object",
+            "items": {
+                "$ref": "#/$defs/vector3"
+            }
+        }
+    },
+    "$defs": {
+        "vector3": {
+            "type": "object",
+            "properties": {
+                "x": {
+                    "description": "X speed",
+                    "type": "number"
+                },
+                "y": {
+                    "description": "Y speed",
+                    "type": "number"
+                },
+                "z": {
+                    "description": "Z speed",
+                    "type": "number"
+                }
+            }
+        }
+    },
+    "type": "object"
+}
