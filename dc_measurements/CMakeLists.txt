@@ -15,6 +15,7 @@ set(dependencies
   rclcpp_lifecycle
   std_msgs
   tf2
+  yaml_cpp_vendor
 )
 
 find_package(ament_cmake REQUIRED)

@@ -7,6 +7,7 @@ set(dependencies
   nav2_util
   rclcpp
   rclcpp_lifecycle
+  yaml_cpp_vendor
 )
 find_package(Boost REQUIRED)
 
@@ -19,6 +20,7 @@ dc_package()
 
 include_directories(
   include
+  ${YAML_CPP_INCLUDEDIR}
   ${OpenCV_INCLUDE_DIRS}
 )
 
