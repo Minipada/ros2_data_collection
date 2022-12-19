@@ -32,14 +32,24 @@ destination_server:
       uuid: false
     flb_stdout:
       plugin: "dc_destinations/Flbstdout"
-      inputs: ["/dc/measurement/position", "/dc/measurement/speed"]
+      inputs:
+        [
+          "/dc/measurement/cmd_vel",
+          "/dc/measurement/position",
+          "/dc/measurement/speed",
+        ]
       time_format: "double"
       time_key: "date"
       debug: false
 
 measurement_server:
   ros__parameters:
-    measurement_plugins: ["position", "speed"]
+    measurement_plugins: ["cmd_vel", "position", "speed"]
+    cmd_vel:
+      plugin: "dc_measurements/CmdVel"
+      group_key: "cmd_vel"
+      enable_validator: true
+      topic_output: "/dc/measurement/cmd_vel"
     position:
       plugin: "dc_measurements/Position"
       group_key: "position"

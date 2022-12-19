@@ -18,6 +18,7 @@
   <depend>nav2_util</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_lifecycle</depend>
+  <depend>yaml_cpp_vendor</depend>
 
   <exec_depend>libboost-program-options</exec_depend>
 
