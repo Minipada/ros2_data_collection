@@ -37,6 +37,9 @@ list(APPEND dc_destination_plugin_libs dc_flb_http_destination)
 add_library(dc_flb_kinesis_streams_destination SHARED plugins/flb_kinesis_streams.cpp)
 list(APPEND dc_destination_plugin_libs dc_flb_kinesis_streams_destination)
 
+add_library(dc_flb_pgsql_destination SHARED plugins/flb_pgsql.cpp)
+list(APPEND dc_destination_plugin_libs dc_flb_pgsql_destination)
+
 add_library(dc_flb_stdout_destination SHARED plugins/flb_stdout.cpp)
 list(APPEND dc_destination_plugin_libs dc_flb_stdout_destination)
 
