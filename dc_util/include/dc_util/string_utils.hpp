@@ -11,6 +11,11 @@
 namespace dc_util
 {
 
+const char* boolToString(bool b)
+{
+  return b ? "true" : "false";
+}
+
 char* convert(const std::string& s)
 {
   char* pc = new char[s.size() + 1];

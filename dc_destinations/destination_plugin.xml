@@ -31,6 +31,14 @@
         </class>
     </library>
 
+    <library path="dc_flb_pgsql_destination">
+        <class name="dc_destinations/Flbpgsql" type="dc_destinations::Flbpgsql" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_pgsql
+            </description>
+        </class>
+    </library>
+
     <library path="dc_flb_stdout_destination">
         <class name="dc_destinations/Flbstdout" type="dc_destinations::Flbstdout" base_class_type="dc_core::Destination">
             <description>
