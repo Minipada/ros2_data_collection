@@ -40,7 +40,7 @@ std::string Map::getAbsolutePath(const std::string& param_reference, const rclcp
 {
   std::string file_save_path = getSavePath(param_reference, now);
   std::string local_file_save_path =
-      std::filesystem::path(save_local_base_path_expanded_) / all_base_path_ / (file_save_path);
+      std::filesystem::path(save_local_base_path_expanded_) / all_base_path_expanded_ / (file_save_path);
   local_file_save_path = dc_util::expand_time(local_file_save_path, now);
 
   return local_file_save_path;
@@ -113,7 +113,7 @@ void Map::saveRemoteKeys(json& data_json, const std::string& key, const std::str
   {
     int index = std::distance(remote_keys_.begin(), it);
     std::string new_key = *it;
-    std::string new_value = std::filesystem::path(all_base_path_) / remote_prefixes_[index] / relative_path;
+    std::string new_value = std::filesystem::path(all_base_path_expanded_) / remote_prefixes_[index] / relative_path;
 
     // Erase leading slash
     if (new_value[0] == '/')
