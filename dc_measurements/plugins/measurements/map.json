@@ -16,10 +16,10 @@
             }
         },
         "remote_paths": {
-            "description": "Paths where metadata and image will be remotely stored",
+            "description": "Dictionary of paths where metadata and image will be remotely stored",
             "type": "object",
             "additionalProperties": {
-                "type": "string",
+                "type": "object",
                 "items": {
                     "$ref": "#/$defs/paths"
                 }
