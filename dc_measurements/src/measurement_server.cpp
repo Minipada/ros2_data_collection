@@ -16,6 +16,8 @@ MeasurementServer::MeasurementServer(const rclcpp::NodeOptions& options)
   declare_parameter("measurement_plugins", measurement_plugins_);
   get_parameter("measurement_plugins", measurement_ids_);
 
+  setCustomParameters();
+
   // Base file saving path
   setBaseSavePath();
 }
@@ -33,6 +35,18 @@ void MeasurementServer::setBaseSavePath()
   all_base_path_expanded_ = dc_util::expand_env(all_base_path_);
   all_base_path_expanded_ = dc_util::expand_values(all_base_path_expanded_, this);
   RCLCPP_INFO(get_logger(), "All Base path expanded to %s", all_base_path_expanded_.c_str());
+}
+
+void MeasurementServer::setCustomParameters()
+{
+  declare_parameter("custom_str_params", std::vector<std::string>());
+  get_parameter("custom_str_params", measurement_custom_str_params_);
+  for (auto param = std::begin(measurement_custom_str_params_); param != std::end(measurement_custom_str_params_);
+       ++param)
+  {
+    declare_parameter(*param, "");
+    get_parameter(*param, custom_str_params_map_[*param]);
+  }
 }
 
 MeasurementServer::~MeasurementServer()

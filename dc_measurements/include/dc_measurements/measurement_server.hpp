@@ -107,6 +107,8 @@ protected:
   std::string save_local_base_path_expanded_;
   std::string all_base_path_;
   std::string all_base_path_expanded_;
+  std::vector<std::string> measurement_custom_str_params_;
+  std::map<std::string, std::string> custom_str_params_map_;
 
   // Conditions
   std::map<std::string, std::shared_ptr<dc_core::Condition>> conditions_;
