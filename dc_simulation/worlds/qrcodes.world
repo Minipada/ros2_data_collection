@@ -1,0 +1,2375 @@
+<?xml version="1.0" encoding='utf-8' ?>
+<sdf version="1.6">
+  <world name="default">
+
+    <plugin name='gazebo_occupancy_map' filename='libgazebo_ros_2d_map.so'>
+      <map_resolution>0.05</map_resolution>
+      <map_height>0.161</map_height>
+      <map_size_x>55</map_size_x>
+      <map_size_y>55</map_size_y>
+      <init_robot_x>-7.3</init_robot_x>
+      <init_robot_y>1.37</init_robot_y>
+    </plugin>
+
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <scene>
+      <shadows>false</shadows>
+    </scene>
+
+    <gui fullscreen='0'>
+      <camera name='user_camera'>
+        <pose frame=''>-8.187731 1.656407 34.320637 0.0000592 1.565797 3.138172</pose>
+        <view_controller>orbit</view_controller>
+        <projection_type>perspective</projection_type>
+      </camera>
+    </gui>
+
+    <physics type="ode">
+      <real_time_update_rate>1000.0</real_time_update_rate>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <ode>
+        <solver>
+          <type>quick</type>
+          <iters>150</iters>
+          <precon_iters>0</precon_iters>
+          <sor>1.400000</sor>
+          <use_dynamic_moi_rescaling>1</use_dynamic_moi_rescaling>
+        </solver>
+        <constraints>
+          <cfm>0.00001</cfm>
+          <erp>0.2</erp>
+          <contact_max_correcting_vel>2000.000000</contact_max_correcting_vel>
+          <contact_surface_layer>0.01000</contact_surface_layer>
+        </constraints>
+      </ode>
+    </physics>
+
+    <model name="warehouse">
+      <pose>-5.96 -1.64 -0.094592 0 0 0</pose>
+      <include>
+        <uri>model://warehouse</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_1">
+      <pose>0 0 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_2">
+      <pose>1.4 0 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_3">
+      <pose>1.4 1.4 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_4">
+      <pose>0 1.4 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_5">
+      <pose>2.8 0 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_6">
+      <pose>4.2 0 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_7">
+      <pose>4.2 1.4 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_8">
+      <pose>2.8 1.4 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_9">
+      <pose>0 2.8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_10">
+      <pose>1.4 2.8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_11">
+      <pose>1.4 4.2 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_12">
+      <pose>0 4.2 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_13">
+      <pose>2.8 2.8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_14">
+      <pose>4.2 2.8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_15">
+      <pose>4.2 4.2 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <model name="europallet10_16">
+      <pose>2.8 4.2 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet_10</uri>
+      </include>
+    </model>
+
+    <!-- Pallet with bag row 1 -->
+    <model name="europallet_bag_e_1_1">
+      <static>1</static>
+      <pose>-9.5 -0.2 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_1_1">
+      <static>1</static>
+      <pose>-9.5 -0.2 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_1_1">
+      <static>1</static>
+      <pose>-8.998293 -0.2 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0001</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_1_2">
+      <static>1</static>
+      <pose>-9.5 -1.5 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_1_2">
+      <static>1</static>
+      <pose>-9.5 -1.5 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_1_2">
+      <static>1</static>
+      <pose>-8.998293 -1.5 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0001</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_1_3">
+      <static>1</static>
+      <pose>-9.5 -2.8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_1_3">
+      <static>1</static>
+      <pose>-9.5 -2.8 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_1_3">
+      <static>1</static>
+      <pose>-8.998293 -2.8 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0001</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_1_4">
+      <static>1</static>
+      <pose>-9.5 -4.1 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_1_4">
+      <static>1</static>
+      <pose>-9.5 -4.1 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_1_4">
+      <static>1</static>
+      <pose>-8.998293 -4.1 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0001</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_1_5">
+      <static>1</static>
+      <pose>-9.5 -5.4 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_1_5">
+      <static>1</static>
+      <pose>-9.5 -5.4 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_1_5">
+      <static>1</static>
+      <pose>-8.998293 -5.4 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0001</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_1_6">
+      <static>1</static>
+      <pose>-9.5 -6.7 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_1_6">
+      <static>1</static>
+      <pose>-9.5 -6.7 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_1_6">
+      <static>1</static>
+      <pose>-8.998293 -6.7 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0001</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_1_7">
+      <static>1</static>
+      <pose>-9.5 -8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_1_7">
+      <static>1</static>
+      <pose>-9.5 -8 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_1_7">
+      <static>1</static>
+      <pose>-8.998293 -8 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0001</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_1_8">
+      <static>1</static>
+      <pose>-9.5 -9.3 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_1_8">
+      <static>1</static>
+      <pose>-9.5 -9.3 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_1_8">
+      <static>1</static>
+      <pose>-8.998293 -9.3 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0001</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_1_9">
+      <static>1</static>
+      <pose>-9.5 -10.6 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_1_9">
+      <static>1</static>
+      <pose>-9.5 -10.6 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_1_9">
+      <static>1</static>
+      <pose>-8.998293 -10.6 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0001</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_1_10">
+      <static>1</static>
+      <pose>-9.5 -11.9 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_1_10">
+      <static>1</static>
+      <pose>-9.5 -11.9 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_1_10">
+      <static>1</static>
+      <pose>-8.998293 -11.9 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0001</uri>
+      </include>
+    </model>
+
+    <!-- Pallet row 2 -->
+    <model name="europallet_bag_e_2_1">
+      <static>1</static>
+      <pose>-10.8 -0.2 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_2_1">
+      <static>1</static>
+      <pose>-10.8 -0.2 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_2_1">
+      <static>1</static>
+      <pose>-11.307849 -0.2 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0002</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_2_2">
+      <static>1</static>
+      <pose>-10.8 -1.5 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_2_2">
+      <static>1</static>
+      <pose>-10.8 -1.5 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_2_2">
+      <static>1</static>
+      <pose>-11.307849 -1.5 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0002</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_2_3">
+      <static>1</static>
+      <pose>-10.8 -2.8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_2_3">
+      <static>1</static>
+      <pose>-10.8 -2.8 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_2_3">
+      <static>1</static>
+      <pose>-11.307849 -2.8 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0002</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_2_4">
+      <static>1</static>
+      <pose>-10.8 -4.1 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_2_4">
+      <static>1</static>
+      <pose>-10.8 -4.1 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_2_4">
+      <static>1</static>
+      <pose>-11.307849 -4.1 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0002</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_2_5">
+      <static>1</static>
+      <pose>-10.8 -5.4 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_2_5">
+      <static>1</static>
+      <pose>-10.8 -5.4 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_2_5">
+      <static>1</static>
+      <pose>-11.307849 -5.4 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0002</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_2_6">
+      <static>1</static>
+      <pose>-10.8 -6.7 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_2_6">
+      <static>1</static>
+      <pose>-10.8 -6.7 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_2_6">
+      <static>1</static>
+      <pose>-11.307849 -6.7 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0002</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_2_7">
+      <static>1</static>
+      <pose>-10.8 -8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_2_7">
+      <static>1</static>
+      <pose>-10.8 -8 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_2_7">
+      <static>1</static>
+      <pose>-11.307849 -8 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0002</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_2_8">
+      <static>1</static>
+      <pose>-10.8 -9.3 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_2_8">
+      <static>1</static>
+      <pose>-10.8 -9.3 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_2_8">
+      <static>1</static>
+      <pose>-11.307849 -9.3 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0002</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_2_9">
+      <static>1</static>
+      <pose>-10.8 -10.6 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_2_9">
+      <static>1</static>
+      <pose>-10.8 -10.6 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_2_9">
+      <static>1</static>
+      <pose>-11.307849 -10.6 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0002</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_2_10">
+      <static>1</static>
+      <pose>-10.8 -11.9 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_2_10">
+      <static>1</static>
+      <pose>-10.8 -11.9 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_2_10">
+      <static>1</static>
+      <pose>-11.307849 -11.9 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0002</uri>
+      </include>
+    </model>
+
+    <!-- Pallet with bag row 3 -->
+    <model name="europallet_bag_e_3_1">
+      <static>1</static>
+      <pose>-9.5 2.3 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_3_1">
+      <static>1</static>
+      <pose>-9.5 2.3 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_3_1">
+      <static>1</static>
+      <pose>-8.998293 2.3 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0003</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_3_2">
+      <static>1</static>
+      <pose>-9.5 3.6 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_3_2">
+      <static>1</static>
+      <pose>-9.5 3.6 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_3_2">
+      <static>1</static>
+      <pose>-8.998293 3.6 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0003</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_3_3">
+      <static>1</static>
+      <pose>-9.5 4.9 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_3_3">
+      <static>1</static>
+      <pose>-9.5 4.9 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_3_3">
+      <static>1</static>
+      <pose>-8.998293 4.9 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0003</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_3_4">
+      <static>1</static>
+      <pose>-9.5 6.2 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_3_4">
+      <static>1</static>
+      <pose>-9.5 6.2 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_3_4">
+      <static>1</static>
+      <pose>-8.998293 6.2 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0003</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_3_5">
+      <static>1</static>
+      <pose>-9.5 7.5 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_3_5">
+      <static>1</static>
+      <pose>-9.5 7.5 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_3_5">
+      <static>1</static>
+      <pose>-8.998293 7.5 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0003</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_3_6">
+      <static>1</static>
+      <pose>-9.5 8.8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_3_6">
+      <static>1</static>
+      <pose>-9.5 8.8 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_3_6">
+      <static>1</static>
+      <pose>-8.998293 8.8 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0003</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_3_7">
+      <static>1</static>
+      <pose>-9.5 10.1 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_3_7">
+      <static>1</static>
+      <pose>-9.5 10.1 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_3_7">
+      <static>1</static>
+      <pose>-8.998293 10.1 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0003</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_3_8">
+      <static>1</static>
+      <pose>-9.5 11.4 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_3_8">
+      <static>1</static>
+      <pose>-9.5 11.4 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_3_8">
+      <static>1</static>
+      <pose>-8.998293 11.4 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0003</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_3_9">
+      <static>1</static>
+      <pose>-9.5 12.7 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_3_9">
+      <static>1</static>
+      <pose>-9.5 12.7 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_3_9">
+      <static>1</static>
+      <pose>-8.998293 12.7 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0003</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_3_10">
+      <static>1</static>
+      <pose>-9.5 14 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_3_10">
+      <static>1</static>
+      <pose>-9.5 14 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_3_10">
+      <static>1</static>
+      <pose>-8.998293 14 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0003</uri>
+      </include>
+    </model>
+
+    <!-- Pallet row 4 -->
+    <model name="europallet_bag_e_4_1">
+      <static>1</static>
+      <pose>-10.8 2.3 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_4_1">
+      <static>1</static>
+      <pose>-10.8 2.3 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_4_1">
+      <static>1</static>
+      <pose>-11.307849 2.3 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0004</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_4_2">
+      <static>1</static>
+      <pose>-10.8 3.6 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_4_2">
+      <static>1</static>
+      <pose>-10.8 3.6 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_4_2">
+      <static>1</static>
+      <pose>-11.307849 3.6 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0004</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_4_3">
+      <static>1</static>
+      <pose>-10.8 4.9 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_4_3">
+      <static>1</static>
+      <pose>-10.8 4.9 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_4_3">
+      <static>1</static>
+      <pose>-11.307849 4.9 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0004</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_4_4">
+      <static>1</static>
+      <pose>-10.8 6.2 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_4_4">
+      <static>1</static>
+      <pose>-10.8 6.2 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_4_4">
+      <static>1</static>
+      <pose>-11.307849 6.2 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0004</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_4_5">
+      <static>1</static>
+      <pose>-10.8 7.5 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_4_5">
+      <static>1</static>
+      <pose>-10.8 7.5 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_4_5">
+      <static>1</static>
+      <pose>-11.307849 7.5 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0004</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_4_6">
+      <static>1</static>
+      <pose>-10.8 8.8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_4_6">
+      <static>1</static>
+      <pose>-10.8 8.8 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_4_6">
+      <static>1</static>
+      <pose>-11.307849 8.8 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0004</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_4_7">
+      <static>1</static>
+      <pose>-10.8 10.1 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_4_7">
+      <static>1</static>
+      <pose>-10.8 10.1 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_4_7">
+      <static>1</static>
+      <pose>-11.307849 10.1 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0004</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_4_8">
+      <static>1</static>
+      <pose>-10.8 11.4 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_4_8">
+      <static>1</static>
+      <pose>-10.8 11.4 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_4_8">
+      <static>1</static>
+      <pose>-11.307849 11.4 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0004</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_4_9">
+      <static>1</static>
+      <pose>-10.8 12.7 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_4_9">
+      <static>1</static>
+      <pose>-10.8 12.7 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_4_9">
+      <static>1</static>
+      <pose>-11.307849 12.7 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0004</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_4_10">
+      <static>1</static>
+      <pose>-10.8 14 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_4_10">
+      <static>1</static>
+      <pose>-10.8 14 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_4_10">
+      <static>1</static>
+      <pose>-11.307849 14 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0004</uri>
+      </include>
+    </model>
+
+    <!-- Pallet with bag row 5 -->
+    <model name="europallet_bag_e_5_1">
+      <static>1</static>
+      <pose>-7 -0.2 0 0 0 3.141593</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_5_1">
+      <static>1</static>
+      <pose>-7 -0.2 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_5_1">
+      <static>1</static>
+      <pose>-7.503675 -0.2 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0005</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_5_2">
+      <static>1</static>
+      <pose>-7 -1.5 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_5_2">
+      <static>1</static>
+      <pose>-7 -1.5 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_5_2">
+      <static>1</static>
+      <pose>-7.503675 -1.5 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0005</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_5_3">
+      <static>1</static>
+      <pose>-7 -2.8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_5_3">
+      <static>1</static>
+      <pose>-7 -2.8 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_5_3">
+      <static>1</static>
+      <pose>-7.503675 -2.8 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0005</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_5_4">
+      <static>1</static>
+      <pose>-7 -4.1 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_5_4">
+      <static>1</static>
+      <pose>-7 -4.1 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_5_4">
+      <static>1</static>
+      <pose>-7.503675 -4.1 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0005</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_5_5">
+      <static>1</static>
+      <pose>-7 -5.4 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_5_5">
+      <static>1</static>
+      <pose>-7 -5.4 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_5_5">
+      <static>1</static>
+      <pose>-7.503675 -5.4 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0005</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_5_6">
+      <static>1</static>
+      <pose>-7 -6.7 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_5_6">
+      <static>1</static>
+      <pose>-7 -6.7 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_5_6">
+      <static>1</static>
+      <pose>-7.503675 -6.7 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0005</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_5_7">
+      <static>1</static>
+      <pose>-7 -8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_5_7">
+      <static>1</static>
+      <pose>-7 -8 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_5_7">
+      <static>1</static>
+      <pose>-7.503675 -8 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0005</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_5_8">
+      <static>1</static>
+      <pose>-7 -9.3 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_5_8">
+      <static>1</static>
+      <pose>-7 -9.3 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_5_8">
+      <static>1</static>
+      <pose>-7.503675 -9.3 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0005</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_5_9">
+      <static>1</static>
+      <pose>-7 -10.6 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_5_9">
+      <static>1</static>
+      <pose>-7 -10.6 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_5_9">
+      <static>1</static>
+      <pose>-7.503675 -10.6 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0005</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_5_10">
+      <static>1</static>
+      <pose>-7 -11.9 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_5_10">
+      <static>1</static>
+      <pose>-7 -11.9 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_5_10">
+      <static>1</static>
+      <pose>-7.503675 -11.9 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0005</uri>
+      </include>
+    </model>
+
+    <!-- Pallet row 6 -->
+    <model name="europallet_bag_e_6_1">
+      <static>1</static>
+      <pose>-5.7 -0.2 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_6_1">
+      <static>1</static>
+      <pose>-5.7 -0.2 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_6_1">
+      <static>1</static>
+      <pose>-5.197858 -0.2 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0006</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_6_2">
+      <static>1</static>
+      <pose>-5.7 -1.5 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_6_2">
+      <static>1</static>
+      <pose>-5.7 -1.5 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_6_2">
+      <static>1</static>
+      <pose>-5.197858 -1.5 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0006</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_6_3">
+      <static>1</static>
+      <pose>-5.7 -2.8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_6_3">
+      <static>1</static>
+      <pose>-5.7 -2.8 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_6_3">
+      <static>1</static>
+      <pose>-5.197858 -2.8 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0006</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_6_4">
+      <static>1</static>
+      <pose>-5.7 -4.1 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_6_4">
+      <static>1</static>
+      <pose>-5.7 -4.1 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_6_4">
+      <static>1</static>
+      <pose>-5.197858 -4.1 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0006</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_6_5">
+      <static>1</static>
+      <pose>-5.7 -5.4 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_6_5">
+      <static>1</static>
+      <pose>-5.7 -5.4 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_6_5">
+      <static>1</static>
+      <pose>-5.197858 -5.4 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0006</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_6_6">
+      <static>1</static>
+      <pose>-5.7 -6.7 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_6_6">
+      <static>1</static>
+      <pose>-5.7 -6.7 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_6_6">
+      <static>1</static>
+      <pose>-5.197858 -6.7 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0006</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_6_7">
+      <static>1</static>
+      <pose>-5.7 -8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_6_7">
+      <static>1</static>
+      <pose>-5.7 -8 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_6_7">
+      <static>1</static>
+      <pose>-5.197858 -8 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0006</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_6_8">
+      <static>1</static>
+      <pose>-5.7 -9.3 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_6_8">
+      <static>1</static>
+      <pose>-5.7 -9.3 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_6_8">
+      <static>1</static>
+      <pose>-5.197858 -9.3 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0006</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_6_9">
+      <static>1</static>
+      <pose>-5.7 -10.6 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_6_9">
+      <static>1</static>
+      <pose>-5.7 -10.6 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_6_9">
+      <static>1</static>
+      <pose>-5.197858 -10.6 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0006</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_6_10">
+      <static>1</static>
+      <pose>-5.7 -11.9 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_6_10">
+      <static>1</static>
+      <pose>-5.7 -11.9 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_6_10">
+      <static>1</static>
+      <pose>-5.197858 -11.9 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0006</uri>
+      </include>
+    </model>
+
+    <!-- Pallet with bag row 7 -->
+    <model name="europallet_bag_e_7_1">
+      <static>1</static>
+      <pose>-7 2.3 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_7_1">
+      <static>1</static>
+      <pose>-7 2.3 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_7_1">
+      <static>1</static>
+      <pose>-7.503675 2.3 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0007</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_7_2">
+      <static>1</static>
+      <pose>-7 3.6 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_7_2">
+      <static>1</static>
+      <pose>-7 3.6 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_7_2">
+      <static>1</static>
+      <pose>-7.503675 3.6 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0007</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_7_3">
+      <static>1</static>
+      <pose>-7 4.9 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_7_3">
+      <static>1</static>
+      <pose>-7 4.9 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_7_3">
+      <static>1</static>
+      <pose>-7.503675 4.9 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0007</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_7_4">
+      <static>1</static>
+      <pose>-7 6.2 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_7_4">
+      <static>1</static>
+      <pose>-7 6.2 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_7_4">
+      <static>1</static>
+      <pose>-7.503675 6.2 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0007</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_7_5">
+      <static>1</static>
+      <pose>-7 7.5 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_7_5">
+      <static>1</static>
+      <pose>-7 7.5 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_7_5">
+      <static>1</static>
+      <pose>-7.503675 7.5 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0007</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_7_6">
+      <static>1</static>
+      <pose>-7 8.8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_7_6">
+      <static>1</static>
+      <pose>-7 8.8 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_7_6">
+      <static>1</static>
+      <pose>-7.503675 8.8 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0007</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_7_7">
+      <static>1</static>
+      <pose>-7 10.1 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_7_7">
+      <static>1</static>
+      <pose>-7 10.1 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_7_7">
+      <static>1</static>
+      <pose>-7.503675 10.1 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0007</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_7_8">
+      <static>1</static>
+      <pose>-7 11.4 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_7_8">
+      <static>1</static>
+      <pose>-7 11.4 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_7_8">
+      <static>1</static>
+      <pose>-7.503675 11.4 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0007</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_7_9">
+      <static>1</static>
+      <pose>-7 12.7 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_7_9">
+      <static>1</static>
+      <pose>-7 12.7 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_7_9">
+      <static>1</static>
+      <pose>-7.503675 12.7 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0007</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_7_10">
+      <static>1</static>
+      <pose>-7 14 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_7_10">
+      <static>1</static>
+      <pose>-7 14 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_7_10">
+      <static>1</static>
+      <pose>-7.503675 14 0.328453 0 0 3.141593</pose>
+      <include>
+        <uri>model://qrcode_0007</uri>
+      </include>
+    </model>
+
+    <!-- Pallet row 8 -->
+    <model name="europallet_bag_e_8_1">
+      <static>1</static>
+      <pose>-5.7 2.3 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_8_1">
+      <static>1</static>
+      <pose>-5.7 2.3 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_8_1">
+      <static>1</static>
+      <pose>-5.197858 2.3 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0008</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_8_2">
+      <static>1</static>
+      <pose>-5.7 3.6 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_8_2">
+      <static>1</static>
+      <pose>-5.7 3.6 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_8_2">
+      <static>1</static>
+      <pose>-5.197858 3.6 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0008</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_8_3">
+      <static>1</static>
+      <pose>-5.7 4.9 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_8_3">
+      <static>1</static>
+      <pose>-5.7 4.9 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_8_3">
+      <static>1</static>
+      <pose>-5.197858 4.9 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0008</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_8_4">
+      <static>1</static>
+      <pose>-5.7 6.2 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_8_4">
+      <static>1</static>
+      <pose>-5.7 6.2 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_8_4">
+      <static>1</static>
+      <pose>-5.197858 6.2 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0008</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_8_5">
+      <static>1</static>
+      <pose>-5.7 7.5 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_8_5">
+      <static>1</static>
+      <pose>-5.7 7.5 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_8_5">
+      <static>1</static>
+      <pose>-5.197858 7.5 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0008</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_8_6">
+      <static>1</static>
+      <pose>-5.7 8.8 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_8_6">
+      <static>1</static>
+      <pose>-5.7 8.8 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_8_6">
+      <static>1</static>
+      <pose>-5.197858 8.8 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0008</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_8_7">
+      <static>1</static>
+      <pose>-5.7 10.1 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_8_7">
+      <static>1</static>
+      <pose>-5.7 10.1 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_8_7">
+      <static>1</static>
+      <pose>-5.197858 10.1 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0008</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_8_8">
+      <static>1</static>
+      <pose>-5.7 11.4 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_8_8">
+      <static>1</static>
+      <pose>-5.7 11.4 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_8_8">
+      <static>1</static>
+      <pose>-5.197858 11.4 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0008</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_8_9">
+      <static>1</static>
+      <pose>-5.7 12.7 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_8_9">
+      <static>1</static>
+      <pose>-5.7 12.7 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_8_9">
+      <static>1</static>
+      <pose>-5.197858 12.7 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0008</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_e_8_10">
+      <static>1</static>
+      <pose>-5.7 14 0 0 0 0</pose>
+      <include>
+        <uri>model://europallet</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_b_8_10">
+      <static>1</static>
+      <pose>-5.7 14 0 0 0 0</pose>
+      <include>
+        <uri>model://bag</uri>
+      </include>
+    </model>
+    <model name="europallet_bag_q_8_10">
+      <static>1</static>
+      <pose>-5.197858 14 0.328453 0 0 0</pose>
+      <include>
+        <uri>model://qrcode_0008</uri>
+      </include>
+    </model>
+
+
+
+    <!-- Decorations -->
+    <model name="fireextinguisher_1">
+      <static>1</static>
+      <pose>1.41 13.26 1.08 0 0 0</pose>
+      <include>
+        <uri>model://fireextinguisher</uri>
+      </include>
+    </model>
+    <model name="fireextinguisher_2">
+      <static>1</static>
+      <pose>1.41 5.82 1.08 0 0 0</pose>
+      <include>
+        <uri>model://fireextinguisher</uri>
+      </include>
+    </model>
+    <model name="fireextinguisher_3">
+      <static>1</static>
+      <pose>1.41 -1.68 1.08 0 0 0</pose>
+      <include>
+        <uri>model://fireextinguisher</uri>
+      </include>
+    </model>
+    <model name="fireextinguisher_4">
+      <static>1</static>
+      <pose>1.41 -9.19 1.08 0 0 0</pose>
+      <include>
+        <uri>model://fireextinguisher</uri>
+      </include>
+    </model>
+    <model name="fireextinguisher_5">
+      <static>1</static>
+      <pose>-13.09 13.26 1.08 0 0 0</pose>
+      <include>
+        <uri>model://fireextinguisher</uri>
+      </include>
+    </model>
+    <model name="fireextinguisher_6">
+      <static>1</static>
+      <pose>-13.09 5.82 1.08 0 0 0</pose>
+      <include>
+        <uri>model://fireextinguisher</uri>
+      </include>
+    </model>
+    <model name="fireextinguisher_7">
+      <static>1</static>
+      <pose>-13.09 -1.607 1.08 0 0 0</pose>
+      <include>
+        <uri>model://fireextinguisher</uri>
+      </include>
+    </model>
+    <model name="fireextinguisher_8">
+      <static>1</static>
+      <pose>-13.09 -9.19 1.08 0 0 0</pose>
+      <include>
+        <uri>model://fireextinguisher</uri>
+      </include>
+    </model>
+    <model name="fireextinguisher_9">
+      <static>1</static>
+      <pose>1.41 -16.64 1.08 0 0 0</pose>
+      <include>
+        <uri>model://fireextinguisher</uri>
+      </include>
+    </model>
+    <model name="fireextinguisher_10">
+      <static>1</static>
+      <pose>-13.1 -16.64 1.08 0 0 0</pose>
+      <include>
+        <uri>model://fireextinguisher</uri>
+      </include>
+    </model>
+
+    <model name="drc_practice_angled_barrier_135_1">
+      <static>1</static>
+      <pose>-3.679527 15.964084 0 0 0 2.361593</pose>
+      <include>
+        <uri>model://drc_practice_angled_barrier_135</uri>
+      </include>
+    </model>
+    <model name="drc_practice_angled_barrier_135_2">
+      <static>1</static>
+      <pose>-3.135057 -4.786276 0 0 0 -1.565401</pose>
+      <include>
+        <uri>model://drc_practice_angled_barrier_135</uri>
+      </include>
+    </model>
+    <model name="drc_practice_orange_jersey_barrier_1">
+      <static>1</static>
+      <pose>-3.135230 12.8709 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_orange_jersey_barrier</uri>
+      </include>
+    </model>
+    <model name="drc_practice_white_jersey_barrier_2">
+      <static>1</static>
+      <pose>-3.135230 10.9256 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_white_jersey_barrier</uri>
+      </include>
+    </model>
+    <model name="drc_practice_orange_jersey_barrier_2">
+      <static>1</static>
+      <pose>-3.135230 9.1803 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_orange_jersey_barrier</uri>
+      </include>
+    </model>
+    <model name="drc_practice_white_jersey_barrier_3">
+      <static>1</static>
+      <pose>-3.135230 7.435 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_white_jersey_barrier</uri>
+      </include>
+    </model>
+    <model name="drc_practice_orange_jersey_barrier_3">
+      <static>1</static>
+      <pose>-3.135230 5.6897 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_orange_jersey_barrier</uri>
+      </include>
+    </model>
+    <model name="drc_practice_white_jersey_barrier_4">
+      <static>1</static>
+      <pose>-3.135230 4.2444 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_white_jersey_barrier</uri>
+      </include>
+    </model>
+    <model name="drc_practice_orange_jersey_barrier_4">
+      <static>1</static>
+      <pose>-3.135230 2.19910 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_orange_jersey_barrier</uri>
+      </include>
+    </model>
+    <model name="drc_practice_white_jersey_barrier_5">
+      <static>1</static>
+      <pose>-3.135230 0.45380 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_white_jersey_barrier</uri>
+      </include>
+    </model>
+    <model name="drc_practice_orange_jersey_barrier_5">
+      <static>1</static>
+      <pose>-3.135230 -1.29149 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_orange_jersey_barrier</uri>
+      </include>
+    </model>
+    <model name="drc_practice_white_jersey_barrier_6">
+      <static>1</static>
+      <pose>-3.135230 -3.03679 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_white_jersey_barrier</uri>
+      </include>
+    </model>
+
+    <model name="aws_robomaker_warehouse_shelfD_01_1">
+      <static>1</static>
+      <pose>1.41 -4.16 0 0 0 -1.570796</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ShelfD_01</uri>
+      </include>
+    </model>
+
+    <model name="aws_robomaker_warehouse_shelfD_01_2">
+      <static>1</static>
+      <pose>3.45 -4.16 0 0 0 -1.570796</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ShelfD_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_shelfD_01_3">
+      <static>1</static>
+      <pose>2.056982 -11.601024 0 0 0 -1.570796</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ShelfD_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_shelfD_01_4">
+      <static>1</static>
+      <pose>4.292329 -11.601024 0 0 0 -1.570796</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ShelfD_01</uri>
+      </include>
+    </model>
+
+    <model name="aws_robomaker_warehouse_ClutteringC_01_1">
+      <static>1</static>
+      <pose>-9.813851 17.840649 0 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ClutteringC_01</uri>
+      </include>
+    </model>
+
+    <model name="aws_robomaker_warehouse_ClutteringD_01_1">
+      <static>1</static>
+      <pose>-1.622579 13.102307 -0.32544 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ClutteringD_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringD_01_2">
+      <static>1</static>
+      <pose>-1.622579 11.604358 -0.32544 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ClutteringD_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringD_01_3">
+      <static>1</static>
+      <pose>-0.626293 11.604358 -0.32544 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ClutteringD_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringD_01_4">
+      <static>1</static>
+      <pose>-0.626293 13.102307 -0.32544 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ClutteringD_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringD_01_5">
+      <static>1</static>
+      <pose>0.453186 13.102307 -0.32544 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ClutteringD_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_ClutteringD_01_6">
+      <static>1</static>
+      <pose>0.453186 11.580966 -0.32544 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ClutteringD_01</uri>
+      </include>
+    </model>
+
+    <model name="aws_robomaker_warehouse_ShelfF_01_1">
+      <static>1</static>
+      <pose>7.546470 6.299420 -0.32544 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ShelfF_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfF_01_2">
+      <static>1</static>
+      <pose>7.546470 -15.924300 0 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ShelfF_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfF_01_3">
+      <static>1</static>
+      <pose>-5.694371 21.792191 0 0 0 1.570796</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ShelfF_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_ShelfF_01_4">
+      <static>1</static>
+      <pose>-18.525892 6.833850 0 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_ShelfF_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_TrashCanC_01_1">
+      <static>1</static>
+      <pose>7.546470 -3.381110 -0.032628 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_TrashCanC_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_TrashCanC_01_2">
+      <static>1</static>
+      <pose>7.546470 -4.320150 -0.032628 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_TrashCanC_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_TrashCanC_01_3">
+      <static>1</static>
+      <pose>7.546470 -5.282830 -0.032628 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_TrashCanC_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_TrashCanC_01_4">
+      <static>1</static>
+      <pose>7.546470 -6.191500 -0.032628 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_TrashCanC_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_TrashCanC_01_5">
+      <static>1</static>
+      <pose>7.741740 20.014300 -0.032628 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_TrashCanC_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_TrashCanC_01_6">
+      <static>1</static>
+      <pose>-17.949400 22.079000 -0.032628 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_TrashCanC_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_TrashCanC_01_7">
+      <static>1</static>
+      <pose>-19.796600 20.190300 -0.032628 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_TrashCanC_01</uri>
+      </include>
+    </model>
+    <model name="aws_robomaker_warehouse_TrashCanC_01_8">
+      <static>1</static>
+      <pose>-19.101700 -3.468910 -0.032628 0 0 0</pose>
+      <include>
+        <uri>model://aws_robomaker_warehouse_TrashCanC_01</uri>
+      </include>
+    </model>
+
+    <model name="table_1">
+      <static>1</static>
+      <pose>-17.939400 -21.517200 -0.410512 0 0 0</pose>
+      <include>
+        <uri>model://table</uri>
+      </include>
+    </model>
+    <model name="Chair_1">
+      <static>1</static>
+      <pose>-17.913256 -22.176359 0 0 0 1.449409</pose>
+      <include>
+        <uri>model://Chair</uri>
+      </include>
+    </model>
+    <model name="MonitorAndKeyboard_1">
+      <static>1</static>
+      <pose>-18.084242 -21.479200 0.606376 0 0 1.741284</pose>
+      <include>
+        <uri>model://MonitorAndKeyboard</uri>
+      </include>
+    </model>
+    <model name="cutout_wall_1">
+      <static>1</static>
+      <pose>-15.957384 -16.249321 0 0 0 0</pose>
+      <include>
+        <uri>model://cutout_wall</uri>
+      </include>
+    </model>
+    <model name="cutout_wall_2">
+      <static>1</static>
+      <pose>-11.053098 -21.200809 0 0 0 1.570796</pose>
+      <include>
+        <uri>model://cutout_wall</uri>
+      </include>
+    </model>
+
+    <model name="pickup_1">
+      <static>1</static>
+      <pose>-8.651595 -20.930292 0 0 0 1.570796</pose>
+      <include>
+        <uri>model://pickup</uri>
+      </include>
+    </model>
+    <model name="pickup_2">
+      <static>1</static>
+      <pose>1.677820 -20.930292 0 0 0 1.570796</pose>
+      <include>
+        <uri>model://pickup</uri>
+      </include>
+    </model>
+    <model name="drc_practice_yellow_parking_block_1_1">
+      <static>1</static>
+      <pose>-10.199500 -19.026700 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_yellow_parking_block</uri>
+      </include>
+    </model>
+    <model name="drc_practice_yellow_parking_block_1_2">
+      <static>1</static>
+      <pose>-10.199500 -20.801600 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_yellow_parking_block</uri>
+      </include>
+    </model>
+    <model name="drc_practice_yellow_parking_block_1_3">
+      <static>1</static>
+      <pose>-10.199500 -22.561900 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_yellow_parking_block</uri>
+      </include>
+    </model>
+    <model name="drc_practice_yellow_parking_block_2_1">
+      <static>1</static>
+      <pose>-7.260039 -19.026700 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_yellow_parking_block</uri>
+      </include>
+    </model>
+    <model name="drc_practice_yellow_parking_block_2_2">
+      <static>1</static>
+      <pose>-7.260039 -20.801600 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_yellow_parking_block</uri>
+      </include>
+    </model>
+    <model name="drc_practice_yellow_parking_block_2_3">
+      <static>1</static>
+      <pose>-7.260039 -22.561900 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_yellow_parking_block</uri>
+      </include>
+    </model>
+
+    <model name="drc_practice_yellow_parking_block_3_1">
+      <static>1</static>
+      <pose>0 -19.026700 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_yellow_parking_block</uri>
+      </include>
+    </model>
+    <model name="drc_practice_yellow_parking_block_3_2">
+      <static>1</static>
+      <pose>0 -20.801600 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_yellow_parking_block</uri>
+      </include>
+    </model>
+    <model name="drc_practice_yellow_parking_block_3_3">
+      <static>1</static>
+      <pose>0 -22.561900 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_yellow_parking_block</uri>
+      </include>
+    </model>
+    <model name="drc_practice_yellow_parking_block_4_1">
+      <static>1</static>
+      <pose>3 -19.026700 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_yellow_parking_block</uri>
+      </include>
+    </model>
+    <model name="drc_practice_yellow_parking_block_4_2">
+      <static>1</static>
+      <pose>3 -20.801600 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_yellow_parking_block</uri>
+      </include>
+    </model>
+    <model name="drc_practice_yellow_parking_block_4_3">
+      <static>1</static>
+      <pose>3 -22.561900 0 0 0 0</pose>
+      <include>
+        <uri>model://drc_practice_yellow_parking_block</uri>
+      </include>
+    </model>
+
+    <model name="drc_practice_orange_jersey_barrier_car_1">
+      <static>1</static>
+      <pose>-8.651595 -17.430702 0 0 0 1.570796</pose>
+      <include>
+        <uri>model://drc_practice_orange_jersey_barrier</uri>
+      </include>
+    </model>
+    <model name="drc_practice_orange_jersey_barrier_car_2">
+      <static>1</static>
+      <pose>1.677820 -17.381783 0 0 0 1.570796</pose>
+      <include>
+        <uri>model://drc_practice_orange_jersey_barrier</uri>
+      </include>
+    </model>
+
+    <model name="construction_cone_1">
+      <static>1</static>
+      <pose>-0.797462 -18.808802 0 0 0 0</pose>
+      <include>
+        <uri>model://construction_cone</uri>
+      </include>
+    </model>
+    <model name="construction_cone_2">
+      <static>1</static>
+      <pose>-6.5332466 -19.147816 0 0 0 0</pose>
+      <include>
+        <uri>model://construction_cone</uri>
+      </include>
+    </model>
+    <model name="construction_cone_3">
+      <static>1</static>
+      <pose>-6.5332466 -22.218269 0 0 0 0</pose>
+      <include>
+        <uri>model://construction_cone</uri>
+      </include>
+    </model>
+    <model name="construction_cone_4">
+      <static>1</static>
+      <pose>-0.797462 -22.218269 0 0 0 0</pose>
+      <include>
+        <uri>model://construction_cone</uri>
+      </include>
+    </model>
+  </world>
+</sdf>
