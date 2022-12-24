@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(dc_measurements)
 
 set(dependencies
+  cv_bridge
   dc_core
   dc_interfaces
   dc_util
@@ -39,6 +40,9 @@ add_library(dc_moving_condition SHARED plugins/conditions/moving.cpp)
 list(APPEND dc_condition_plugin_libs dc_moving_condition)
 
 # Measurement plugins
+add_library(dc_camera_measurement SHARED plugins/measurements/camera.cpp)
+list(APPEND dc_measurement_plugin_libs dc_camera_measurement)
+
 add_library(dc_cmd_vel_measurement SHARED plugins/measurements/cmd_vel.cpp)
 list(APPEND dc_measurement_plugin_libs dc_cmd_vel_measurement)
 
