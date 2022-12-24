@@ -1,0 +1,16 @@
+sensor_msgs/Image frame
+string   shape
+uint16   box_top
+uint16   box_left
+uint16   box_height
+uint16   box_width
+uint16   box_thickness
+uint16[] color
+uint16[] polygon
+uint16   font_txt
+uint16   font_thickness
+float32  font_scale
+string   text
+---
+sensor_msgs/Image frame
+bool success

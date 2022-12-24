@@ -1,4 +1,12 @@
 <class_libraries>
+    <library path="dc_camera_measurement">
+        <class name="dc_measurements/Camera" type="dc_measurements::Camera" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_camera
+            </description>
+        </class>
+    </library>
+
     <library path="dc_cmd_vel_measurement">
         <class name="dc_measurements/CmdVel" type="dc_measurements::CmdVel" base_class_type="dc_core::Measurement">
             <description>
