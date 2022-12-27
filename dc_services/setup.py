@@ -40,6 +40,7 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
+            "barcode_detection =" " dc_services.barcode_detection:main",
             "save_image =" " dc_services.save_image:main",
             "draw_image =" " dc_services.draw_image:main",
         ],
