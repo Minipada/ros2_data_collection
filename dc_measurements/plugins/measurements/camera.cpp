@@ -204,7 +204,6 @@ dc_interfaces::msg::StringStamped Camera::collect()
       std::string absolute_path = getLocalPath("save_raw_path", now);
       std::string relative_path = getSavePath("save_raw_path", now);
 
-      // Request to save image
       std::string absolute_path_dir = std::filesystem::path(absolute_path).parent_path().u8string();
       std::filesystem::create_directories(absolute_path_dir);
       auto status = cv::imwrite(absolute_path, cv_ptr->image);
