@@ -1,15 +1,20 @@
 import os
 
 from ament_index_python.packages import get_package_share_directory
-
-from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, SetEnvironmentVariable
-from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch_ros.actions import LoadComposableNodes, SetParameter
-from launch_ros.actions import Node
+from launch_ros.actions import LoadComposableNodes, Node, SetParameter
 from launch_ros.descriptions import ComposableNode
 from nav2_common.launch import RewrittenYaml
+
+from launch import LaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    GroupAction,
+    IncludeLaunchDescription,
+    SetEnvironmentVariable,
+)
+from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PythonExpression
 
 
 def generate_launch_description():
@@ -89,6 +94,33 @@ def generate_launch_description():
         condition=IfCondition(PythonExpression(["not ", use_composition])),
         actions=[
             SetParameter("use_sim_time", use_sim_time),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(
+                        get_package_share_directory("dc_services"),
+                        "launch",
+                        "dc_save_image.launch.py",
+                    )
+                )
+            ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(
+                        get_package_share_directory("dc_services"),
+                        "launch",
+                        "dc_draw_image.launch.py",
+                    )
+                )
+            ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(
+                        get_package_share_directory("dc_services"),
+                        "launch",
+                        "dc_detection_barcodes.launch.py",
+                    )
+                )
+            ),
             Node(
                 package="dc_measurements",
                 executable="measurement_server",
@@ -136,6 +168,33 @@ def generate_launch_description():
         condition=IfCondition(use_composition),
         actions=[
             SetParameter("use_sim_time", use_sim_time),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(
+                        get_package_share_directory("dc_services"),
+                        "launch",
+                        "dc_save_image.launch.py",
+                    )
+                )
+            ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(
+                        get_package_share_directory("dc_services"),
+                        "launch",
+                        "dc_draw_image.launch.py",
+                    )
+                )
+            ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(
+                        get_package_share_directory("dc_services"),
+                        "launch",
+                        "dc_detection_barcodes.launch.py",
+                    )
+                )
+            ),
             Node(
                 condition=IfCondition(use_composition),
                 name=container_name,
