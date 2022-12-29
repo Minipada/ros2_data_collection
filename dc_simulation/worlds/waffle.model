@@ -377,7 +377,7 @@
       <sensor name="left_intel_realsense_r200_depth" type="depth">
         <always_on>1</always_on>
         <update_rate>5</update_rate>
-        <pose>0.064 -0.047 0.107 0 0 0</pose>
+        <pose>0.064 -0.047 0.107 0 0 1.57</pose>
         <camera name="left_realsense_depth_camera">
           <image>
             <width>1280</width>
@@ -433,7 +433,7 @@
       <sensor name="right_intel_realsense_r200_depth" type="depth">
         <always_on>1</always_on>
         <update_rate>5</update_rate>
-        <pose>0.064 -0.047 0.107 0 0 0</pose>
+        <pose>0.064 -0.047 0.107 0 0 -1.57</pose>
         <camera name="right_realsense_depth_camera">
           <image>
             <width>1280</width>
