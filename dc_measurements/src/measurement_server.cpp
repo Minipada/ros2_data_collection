@@ -15,6 +15,8 @@ MeasurementServer::MeasurementServer(const rclcpp::NodeOptions& options)
 {
   declare_parameter("measurement_plugins", measurement_plugins_);
   get_parameter("measurement_plugins", measurement_ids_);
+  declare_parameter("condition_plugins", std::vector<std::string>());
+  get_parameter("condition_plugins", condition_ids_);
 
   setCustomParameters();
 
