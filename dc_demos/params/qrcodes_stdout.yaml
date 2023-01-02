@@ -32,7 +32,7 @@ destination_server:
       uuid: false
     flb_stdout:
       plugin: "dc_destinations/Flbstdout"
-      inputs: ["/dc/measurement/right_camera"]
+      inputs: ["/dc/measurement/right_camera", "/dc/measurement/left_camera"]
       time_format: "double"
       time_key: "date"
       debug: false
@@ -41,12 +41,16 @@ measurement_server:
   ros__parameters:
     custom_str_params: ["robot_name"]
     robot_name: "r2d2"
-    measurement_plugins: ["right_camera"]
+    measurement_plugins: ["right_camera", "left_camera"]
     save_local_base_path: "$HOME/dc_data/"
     all_base_path: "=robot_name/%Y/%m/%d/%H"
+    condition_plugins: ["moving"]
+    moving:
+      plugin: "dc_conditions/Moving"
     right_camera:
       plugin: "dc_measurements/Camera"
       group_key: "right_camera"
+      if_none_triggers: ["moving"]
       topic_output: "/dc/measurement/right_camera"
       polling_interval: 1000
       init_collect: true
@@ -58,9 +62,34 @@ measurement_server:
       save_raw_img: false
       save_rotated_img: false
       save_detections_img: true
-      save_raw_path: "camera/raw/%Y-%m-%dT%H-%M-%S"
-      save_rotated_path: "camera/rotated/%Y-%m-%dT%H-%M-%S"
-      save_inspected_path: "camera/inspected/%Y-%m-%dT%H-%M-%S"
+      save_raw_path: "right_camera/raw/%Y-%m-%dT%H-%M-%S"
+      save_rotated_path: "right_camera/rotated/%Y-%m-%dT%H-%M-%S"
+      save_inspected_path: "right_camera/inspected/%Y-%m-%dT%H-%M-%S"
+      rotation_angle: 0
+      detection_modules: ["barcode"]
+      remote_prefixes: [""]
+      remote_keys: ["minio"]
+      tags: ["flb_stdout"]
+    left_camera:
+      plugin: "dc_measurements/Camera"
+      group_key: "left_camera"
+      if_none_triggers: ["moving"]
+      topic_output: "/dc/measurement/left_camera"
+      polling_interval: 1000
+      init_collect: true
+      init_max_measurements: -1
+      condition_max_measurements: 1
+      node_name: "dc_measurement_camera"
+      cam_topic: "/left_intel_realsense_r200_depth/image_raw"
+      cam_name: left_camera
+      enable_validator: true
+      draw_det_barcodes: true
+      save_raw_img: false
+      save_rotated_img: false
+      save_detections_img: true
+      save_raw_path: "left_camera/raw/%Y-%m-%dT%H-%M-%S"
+      save_rotated_path: "left_camera/rotated/%Y-%m-%dT%H-%M-%S"
+      save_inspected_path: "left_camera/inspected/%Y-%m-%dT%H-%M-%S"
       rotation_angle: 0
       detection_modules: ["barcode"]
       remote_prefixes: [""]
