@@ -50,10 +50,12 @@ measurement_server:
     right_camera:
       plugin: "dc_measurements/Camera"
       group_key: "right_camera"
-      if_none_triggers: ["moving"]
+      if_none_conditions: ["moving"]
       topic_output: "/dc/measurement/right_camera"
       polling_interval: 1000
       init_collect: true
+      init_max_measurements: -1
+      condition_max_measurements: 1
       node_name: "dc_measurement_camera"
       cam_topic: "/right_intel_realsense_r200_depth/image_raw"
       cam_name: right_camera
@@ -73,7 +75,7 @@ measurement_server:
     left_camera:
       plugin: "dc_measurements/Camera"
       group_key: "left_camera"
-      if_none_triggers: ["moving"]
+      if_none_conditions: ["moving"]
       topic_output: "/dc/measurement/left_camera"
       polling_interval: 1000
       init_collect: true
