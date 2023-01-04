@@ -195,24 +195,32 @@ public:
                       [&](const std::string& condition) { return conditions_[condition]->getState() == false; });
     }
 
-    RCLCPP_DEBUG(logger_, "all_conditions_res=%d, any_conditions_res=%d, none_conditions_res=%d", all_conditions_res,
-                 any_conditions_res, none_conditions_res);
+    RCLCPP_INFO(logger_, "all_conditions_res=%d, any_conditions_res=%d, none_conditions_res=%d", all_conditions_res,
+                any_conditions_res, none_conditions_res);
 
     return all_conditions_res && any_conditions_res && none_conditions_res;
   }
 
   bool isAnyConditionSet()
   {
-    return (!if_all_conditions_.empty() && !if_any_conditions_.empty() && !if_none_conditions_.empty());
+    return (!if_all_conditions_.empty() || !if_any_conditions_.empty() || !if_none_conditions_.empty());
   }
 
   void collectAndPublish()
   {
-    if (enabled_)
+    if (enabled_ && isConditionOn())
     {
-      auto msg = collect();
-      RCLCPP_DEBUG(logger_, "Measurement: %s, msg: %s", measurement_name_.c_str(),
-                   dc_interfaces::msg::to_yaml(msg).c_str());
+      dc_interfaces::msg::StringStamped msg;
+      if (
+          // Unlimited measurements or maximum measurements at start not reached
+          (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_) ||
+          // Unlimited measurements on condition(s) activated
+          (isAnyConditionSet() && isConditionOn() && condition_max_measurements_ == 0) ||
+          // Measurements on condition(s) activated and maximum amount not reached
+          (isAnyConditionSet() && isConditionOn() && condition_counter_published_ < condition_max_measurements_))
+      {
+        msg = collect();
+      }
 
       // Init publish
       if (msg.data != "" && msg.data != "null" &&
@@ -271,6 +279,7 @@ public:
       else if (msg.data != "" && msg.data != "null" &&
                (isAnyConditionSet() && isConditionOn() && condition_counter_published_ < condition_max_measurements_))
       {
+        RCLCPP_INFO(logger_, "6");
         data_pub_->publish(msg);
         condition_counter_published_++;
       }
@@ -286,6 +295,7 @@ public:
 
   // configure the server on lifecycle setup
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
+                 const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
                  std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
                  const std::string& group_key, const std::string& topic_output, const int& polling_interval,
                  const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
@@ -306,6 +316,7 @@ public:
     RCLCPP_INFO(logger_, "Configuring %s", name.c_str());
 
     measurement_plugin_ = measurement_plugin;
+    conditions_ = conditions;
     tf_ = tf;
     measurement_name_ = name;
     topic_output_ = topic_output;

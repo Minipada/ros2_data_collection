@@ -1,13 +1,8 @@
-from geometry_msgs.msg import PoseStamped
-from rclpy.duration import Duration
 import rclpy
-
-from nav2_simple_commander.robot_navigator import (
-    BasicNavigator,
-    TaskResult,
-)  # Helper module
+from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
+from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
+from rclpy.duration import Duration
 from std_msgs.msg import Header
-from geometry_msgs.msg import Pose, Point, Quaternion
 
 """
 Follow waypoints using the ROS 2 Navigation Stack (Nav2)
@@ -22,6 +17,14 @@ def main():
     # Launch the ROS 2 Navigation Stack
     navigator = BasicNavigator()
 
+    initial_pose = PoseStamped()
+    initial_pose.header.frame_id = "map"
+    initial_pose.header.stamp = navigator.get_clock().now().to_msg()
+    initial_pose.pose.position.x = -23.910843605740368
+    initial_pose.pose.position.y = -13.887905581663327
+    initial_pose.pose.orientation.z = 0.7071068967259818
+    initial_pose.pose.orientation.w = 0.7248122257854975
+    navigator.setInitialPose(initial_pose)
     # Wait for navigation to fully activate. Use this line if autostart is set to true.
     navigator.waitUntilNav2Active()
 
@@ -33,7 +36,7 @@ def main():
     space_rows = 2.5 - space_pallets  # since we count the space_pallets in calculation
     pallet_per_row = 10
     rows_count = 2
-    rows_y0 = -10.39
+    rows_y0 = -10.45
 
     row_1 = [
         PoseStamped(
@@ -97,37 +100,34 @@ def main():
     navigator.followWaypoints(goal_poses)
 
     i = 0
-    while not navigator.isTaskComplete():
-        # Do something with the feedback
-        i = i + 1
-        feedback = navigator.getFeedback()
-        if feedback and i % 5 == 0:
-            print(
-                "Executing current waypoint: "
-                + str(feedback.current_waypoint + 1)
-                + "/"
-                + str(len(goal_poses))
-            )
-            now = navigator.get_clock().now()
+    while rclpy.ok():
+        while not navigator.isTaskComplete():
+            # Do something with the feedback
+            i = i + 1
+            feedback = navigator.getFeedback()
+            if feedback and i % 5 == 0:
+                print(
+                    "Executing current waypoint: "
+                    + str(feedback.current_waypoint + 1)
+                    + "/"
+                    + str(len(goal_poses))
+                )
+                now = navigator.get_clock().now()
 
-            # Some navigation timeout to demo cancellation
-            if now - nav_start > Duration(seconds=100000000.0):
-                navigator.cancelNav()
+                # Some navigation timeout to demo cancellation
+                if now - nav_start > Duration(seconds=100000000.0):
+                    navigator.cancelTask()
 
-    # Do something depending on the return code
-    result = navigator.getResult()
-    if result == TaskResult.SUCCEEDED:
-        print("Goal succeeded!")
-    elif result == TaskResult.CANCELED:
-        print("Goal was canceled!")
-    elif result == TaskResult.FAILED:
-        print("Goal failed!")
-    else:
-        print("Goal has an invalid return status!")
-
-    navigator.lifecycleShutdown()
-
-    exit(0)
+        # Do something depending on the return code
+        result = navigator.getResult()
+        if result == TaskResult.SUCCEEDED:
+            print("Goal succeeded!")
+        elif result == TaskResult.CANCELED:
+            print("Goal was canceled!")
+        elif result == TaskResult.FAILED:
+            print("Goal failed!")
+        else:
+            print("Goal has an invalid return status!")
 
 
 if __name__ == "__main__":

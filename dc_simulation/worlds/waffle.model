@@ -372,7 +372,7 @@
         </geometry>
       </collision>
 
-      <pose>0.069 -0.047 0.607 0 0 0</pose>
+      <pose>0.069 -0.047 0.407 0 0 0</pose>
 
       <sensor name="left_intel_realsense_r200_depth" type="depth">
         <always_on>1</always_on>
@@ -428,7 +428,7 @@
         </geometry>
       </collision>
 
-      <pose>0.069 -0.047 0.607 0 0 0</pose>
+      <pose>0.069 -0.047 0.407 0 0 0</pose>
 
       <sensor name="right_intel_realsense_r200_depth" type="depth">
         <always_on>1</always_on>

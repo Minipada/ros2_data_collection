@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include "dc_core/condition.hpp"
 #include "pluginlib/class_loader.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
@@ -46,6 +47,7 @@ public:
    * @param  if_none_conditions Collect only if all conditions are not activated
    */
   virtual void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
+                         const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
                          std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
                          const std::string& group_key, const std::string& topic_output, const int& polling_interval,
                          const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
