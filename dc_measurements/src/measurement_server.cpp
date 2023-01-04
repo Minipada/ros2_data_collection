@@ -195,7 +195,7 @@ bool MeasurementServer::loadMeasurementPlugins()
 
       measurements_.push_back(measurement_plugin_loader_.createUniqueInstance(measurement_types_[i]));
       measurements_.back()->configure(
-          node, measurement_ids_[i], tf_, measurement_types_[i], measurement_group_key_[i],
+          node, measurement_ids_[i], conditions_, tf_, measurement_types_[i], measurement_group_key_[i],
           measurement_topic_outputs_[i], measurement_polling_interval_[i], measurement_debug_[i],
           measurement_enable_validator_[i], measurement_json_schema_path_[i], measurement_tags_[i],
           measurement_init_collect_[i], measurement_init_max_measurements_[i], measurement_include_measurement_name_[i],

@@ -9,7 +9,7 @@ import rclpy
 from cv_bridge import CvBridge
 from dc_interfaces.msg import Barcode
 from dc_interfaces.srv import DetectBarcode
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from rclpy.node import Node
 
 
@@ -18,6 +18,12 @@ class DetectedObject(BaseModel):
     left: int = Field(description="Left pixel")
     width: int = Field(description="Box width")
     height: int = Field(description="Box height")
+
+    @validator("left")
+    def left_cant_be_negative(cls, v):
+        if v < 0:
+            return 0
+        return v
 
 
 class DetectedBarcode(DetectedObject):

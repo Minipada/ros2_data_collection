@@ -6,7 +6,12 @@ from ament_index_python.packages import get_package_share_directory
 from launch_ros.actions import Node
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    GroupAction,
+    IncludeLaunchDescription,
+    LogInfo,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration
 
@@ -29,14 +34,16 @@ def generate_launch_description():
     log_level = LaunchConfiguration("log_level")
 
     # Nav2
+    nav2_params_file = LaunchConfiguration("nav2_params_file")
+    map_yaml_file = LaunchConfiguration("map")
+    rviz_config_file = LaunchConfiguration("rviz_config_file")
+    use_simulator = LaunchConfiguration("use_simulator")
     use_robot_state_pub = LaunchConfiguration(
         "use_robot_state_pub"
     )  # Should always be false
+    use_rviz = LaunchConfiguration("use_rviz")
     slam = LaunchConfiguration("slam")
     use_namespace = LaunchConfiguration("use_namespace")
-    rviz_config_file = LaunchConfiguration("rviz_config_file")
-    use_simulator = LaunchConfiguration("use_simulator")
-    use_rviz = LaunchConfiguration("use_rviz")
     headless = LaunchConfiguration("headless")
     world = LaunchConfiguration("world")
     x_pose = LaunchConfiguration("x_pose", default="-16.679400")
@@ -90,6 +97,11 @@ def generate_launch_description():
         "robot_sdf",
         default_value=os.path.join(sim_dir, "worlds", "waffle.model"),
         description="Full path to robot sdf file to spawn the robot in gazebo",
+    )
+    declare_nav2_params_file_cmd = DeclareLaunchArgument(
+        "nav2_params_file",
+        default_value=os.path.join(demos_dir, "params", "qrcodes_nav.yaml"),
+        description="Full path to the ROS2 parameters file to use for all launched nodes",
     )
 
     # DC
@@ -193,32 +205,44 @@ def generate_launch_description():
         }.items(),
     )
 
-    nav2_bringup_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(nav2_bringup_dir, "launch", "tb3_simulation_launch.py")
-        ),
-        launch_arguments={
-            "namespace": namespace,
-            "use_namespace": use_namespace,
-            "slam": slam,
-            "use_sim_time": use_sim_time,
-            "autostart": autostart,
-            "use_composition": use_composition,
-            "use_respawn": use_respawn,
-            "log_level": log_level,
-            "rviz_config_file": rviz_config_file,
-            "use_simulator": use_simulator,
-            "use_rviz": use_rviz,
-            "headless": headless,
-            "world": world,
-            "x_pose": x_pose,
-            "y_pose": y_pose,
-            "z_pose": z_pose,
-            "roll": roll,
-            "pitch": pitch,
-            "yaw": yaw,
-            "use_robot_state_pub": use_robot_state_pub,
-        }.items(),
+    group = GroupAction(
+        [
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(nav2_bringup_dir, "launch", "tb3_simulation_launch.py")
+                ),
+                launch_arguments={
+                    "map": map_yaml_file,
+                    "params_file": nav2_params_file,
+                    "namespace": namespace,
+                    "use_namespace": use_namespace,
+                    "slam": slam,
+                    "use_sim_time": use_sim_time,
+                    "autostart": autostart,
+                    "use_composition": use_composition,
+                    "use_respawn": use_respawn,
+                    "log_level": log_level,
+                    "rviz_config_file": rviz_config_file,
+                    "use_simulator": use_simulator,
+                    "use_rviz": use_rviz,
+                    "headless": headless,
+                    "world": world,
+                    "x_pose": x_pose,
+                    "y_pose": y_pose,
+                    "z_pose": z_pose,
+                    "roll": roll,
+                    "pitch": pitch,
+                    "yaw": yaw,
+                    "use_robot_state_pub": use_robot_state_pub,
+                }.items(),
+            ),
+            LogInfo(
+                msg=["nav2_params yaml: ", nav2_params_file],
+            ),
+            LogInfo(
+                msg=["map: ", map_yaml_file],
+            ),
+        ]
     )
 
     # Create the launch description and populate
@@ -227,28 +251,31 @@ def generate_launch_description():
     # Declare the launch options
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_use_namespace_cmd)
-    ld.add_action(declare_use_sim_time_cmd)
-    ld.add_action(declare_dc_params_file_cmd)
-    ld.add_action(declare_autostart_cmd)
-    ld.add_action(declare_use_composition_cmd)
-    ld.add_action(declare_container_name_cmd)
-    ld.add_action(declare_use_respawn_cmd)
-    ld.add_action(declare_log_level_cmd)
-    ld.add_action(declare_robot_name_cmd)
-    ld.add_action(declare_robot_sdf_cmd)
     ld.add_action(declare_slam_cmd)
     ld.add_action(declare_map_yaml_cmd)
-    ld.add_action(declare_simulator_cmd)
-    ld.add_action(declare_use_robot_state_pub_cmd)
-    ld.add_action(declare_use_simulator_cmd)
-    ld.add_action(declare_use_rviz_cmd)
-    ld.add_action(declare_world_cmd)
+    ld.add_action(declare_use_sim_time_cmd)
+    ld.add_action(declare_nav2_params_file_cmd)
+    ld.add_action(declare_autostart_cmd)
+    ld.add_action(declare_use_composition_cmd)
 
     ld.add_action(declare_rviz_config_file_cmd)
+    ld.add_action(declare_use_simulator_cmd)
+    ld.add_action(declare_use_robot_state_pub_cmd)
+    ld.add_action(declare_use_rviz_cmd)
+    ld.add_action(declare_simulator_cmd)
+    ld.add_action(declare_world_cmd)
+    ld.add_action(declare_robot_name_cmd)
+    ld.add_action(declare_robot_sdf_cmd)
+    ld.add_action(declare_use_respawn_cmd)
+
+    ld.add_action(declare_container_name_cmd)
+    ld.add_action(declare_dc_params_file_cmd)
+    ld.add_action(declare_log_level_cmd)
 
     # Declare the launch options
     # ld.add_action(dc_bringup_cmd)
     ld.add_action(start_robot_state_publisher_cmd)
-    ld.add_action(nav2_bringup_cmd)
+    # ld.add_action(nav2_bringup_cmd)
+    ld.add_action(group)
 
     return ld
