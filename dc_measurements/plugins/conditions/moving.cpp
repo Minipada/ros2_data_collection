@@ -50,15 +50,15 @@ void Moving::odomCb(nav_msgs::msg::Odometry::SharedPtr msg)
     moving_count_ = -count_limit_;
   }
 
-  if (moving_count_ >= count_hysteresis_ && !active)
+  if (moving_count_ >= count_hysteresis_ && !active_)
   {
     RCLCPP_DEBUG(logger_, "Moving, was stopped");
-    active = true;
+    active_ = true;
   }
-  else if (moving_count_ <= -count_hysteresis_ and active)
+  else if (moving_count_ <= -count_hysteresis_ and active_)
   {
     RCLCPP_DEBUG(logger_, "Stopped, was moving");
-    active = false;
+    active_ = false;
   }
 }
 
