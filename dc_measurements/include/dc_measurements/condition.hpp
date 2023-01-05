@@ -113,10 +113,10 @@ public:
 
   bool getState() override
   {
-    return active;
+    return active_;
   }
 
-  bool active{ false };
+  bool active_{ false };
 
 protected:
   rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
