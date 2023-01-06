@@ -20,6 +20,7 @@ def generate_launch_description():
     # Get the launch directory
     demos_dir = get_package_share_directory("dc_demos")
     sim_dir = get_package_share_directory("dc_simulation")
+    dc_description_dir = get_package_share_directory("dc_description")
     dc_bringup_dir = get_package_share_directory("dc_bringup")
     nav2_bringup_dir = get_package_share_directory("nav2_bringup")
 
@@ -160,10 +161,7 @@ def generate_launch_description():
     )
 
     # Use custom URDF with camera
-    urdf = os.path.join(sim_dir, "urdf", "turtlebot3_waffle_qrcodes.xacro")
-    # urdf = os.path.join(sim_dir, "urdf", "turtlebot3_waffle_qrcodes.urdf")
-    # with open(urdf, "r") as infp:
-    #     robot_description = infp.read()
+    urdf = os.path.join(dc_description_dir, "urdf", "turtlebot3_waffle_qrcodes.xacro")
 
     remappings = [("/tf", "tf"), ("/tf_static", "tf_static")]
 
@@ -173,12 +171,6 @@ def generate_launch_description():
         name="robot_state_publisher",
         namespace=namespace,
         output="screen",
-        # parameters=[
-        #     {
-        #         "use_sim_time": use_sim_time,
-        #         "robot_description": robot_description,
-        #     }
-        # ],
         parameters=[
             {
                 "use_sim_time": use_sim_time,
