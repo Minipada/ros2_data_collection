@@ -8,11 +8,9 @@
   <license>MPL-2.0</license>
 
   <exec_depend>aws_robomaker_small_warehouse_world</exec_depend>
+  <exec_depend>dc_description</exec_depend>
   <exec_depend>gazebo_ros</exec_depend>
   <exec_depend>rclpy</exec_depend>
-  <exec_depend>realsense2_description</exec_depend>
-  <exec_depend>urdf</exec_depend>
-  <exec_depend>xacro</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

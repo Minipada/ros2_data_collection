@@ -8,7 +8,7 @@ find_package(rclpy REQUIRED)
 find_package(aws_robomaker_small_warehouse_world REQUIRED)
 
 install(
-  DIRECTORY launch maps models rviz urdf worlds
+  DIRECTORY launch maps models rviz worlds
   DESTINATION share/${PROJECT_NAME}
 )
 
