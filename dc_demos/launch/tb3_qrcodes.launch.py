@@ -12,6 +12,7 @@ from launch.actions import (
     IncludeLaunchDescription,
     LogInfo,
 )
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration
 
@@ -33,6 +34,7 @@ def generate_launch_description():
     container_name = LaunchConfiguration("container_name")
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
+    use_dc = LaunchConfiguration("use_dc")
 
     # Nav2
     nav2_params_file = LaunchConfiguration("nav2_params_file")
@@ -53,8 +55,6 @@ def generate_launch_description():
     roll = LaunchConfiguration("roll", default="0.00")
     pitch = LaunchConfiguration("pitch", default="0.00")
     yaw = LaunchConfiguration("yaw", default="1.570796")
-    robot_name = LaunchConfiguration("robot_name")
-    robot_sdf = LaunchConfiguration("robot_sdf")
 
     declare_slam_cmd = DeclareLaunchArgument(
         "slam", default_value="False", description="Whether run a SLAM"
@@ -106,6 +106,9 @@ def generate_launch_description():
     )
 
     # DC
+    declare_use_dc = DeclareLaunchArgument(
+        "use_dc", default_value="True", description="Start Data Collection"
+    )
     declare_namespace_cmd = DeclareLaunchArgument(
         "namespace", default_value="", description="Top-level namespace"
     )
@@ -118,7 +121,7 @@ def generate_launch_description():
 
     declare_dc_params_file_cmd = DeclareLaunchArgument(
         "dc_params_file",
-        default_value=os.path.join(demos_dir, "params", "tb3_simulation_stdout.yaml"),
+        default_value=os.path.join(demos_dir, "params", "qrcodes_stdout.yaml"),
         description="Full path to the ROS2 parameters file to use for all launched nodes",
     )
 
@@ -185,6 +188,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             os.path.join(dc_bringup_dir, "launch", "dc_bringup.launch.py")
         ),
+        condition=IfCondition(use_dc),
         launch_arguments={
             "namespace": namespace,
             "use_sim_time": use_sim_time,
@@ -197,44 +201,34 @@ def generate_launch_description():
         }.items(),
     )
 
-    group = GroupAction(
-        [
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    os.path.join(nav2_bringup_dir, "launch", "tb3_simulation_launch.py")
-                ),
-                launch_arguments={
-                    "map": map_yaml_file,
-                    "params_file": nav2_params_file,
-                    "namespace": namespace,
-                    "use_namespace": use_namespace,
-                    "slam": slam,
-                    "use_sim_time": use_sim_time,
-                    "autostart": autostart,
-                    "use_composition": use_composition,
-                    "use_respawn": use_respawn,
-                    "log_level": log_level,
-                    "rviz_config_file": rviz_config_file,
-                    "use_simulator": use_simulator,
-                    "use_rviz": use_rviz,
-                    "headless": headless,
-                    "world": world,
-                    "x_pose": x_pose,
-                    "y_pose": y_pose,
-                    "z_pose": z_pose,
-                    "roll": roll,
-                    "pitch": pitch,
-                    "yaw": yaw,
-                    "use_robot_state_pub": use_robot_state_pub,
-                }.items(),
-            ),
-            LogInfo(
-                msg=["nav2_params yaml: ", nav2_params_file],
-            ),
-            LogInfo(
-                msg=["map: ", map_yaml_file],
-            ),
-        ]
+    nav2_bringup_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(nav2_bringup_dir, "launch", "tb3_simulation_launch.py")
+        ),
+        launch_arguments={
+            "map": map_yaml_file,
+            "params_file": nav2_params_file,
+            "namespace": namespace,
+            "use_namespace": use_namespace,
+            "slam": slam,
+            "use_sim_time": use_sim_time,
+            "autostart": autostart,
+            "use_composition": use_composition,
+            "use_respawn": use_respawn,
+            "log_level": log_level,
+            "rviz_config_file": rviz_config_file,
+            "use_simulator": use_simulator,
+            "use_rviz": use_rviz,
+            "headless": headless,
+            "world": world,
+            "x_pose": x_pose,
+            "y_pose": y_pose,
+            "z_pose": z_pose,
+            "roll": roll,
+            "pitch": pitch,
+            "yaw": yaw,
+            "use_robot_state_pub": use_robot_state_pub,
+        }.items(),
     )
 
     # Create the launch description and populate
@@ -249,6 +243,7 @@ def generate_launch_description():
     ld.add_action(declare_nav2_params_file_cmd)
     ld.add_action(declare_autostart_cmd)
     ld.add_action(declare_use_composition_cmd)
+    ld.add_action(declare_use_dc)
 
     ld.add_action(declare_rviz_config_file_cmd)
     ld.add_action(declare_use_simulator_cmd)
@@ -265,9 +260,8 @@ def generate_launch_description():
     ld.add_action(declare_log_level_cmd)
 
     # Declare the launch options
-    # ld.add_action(dc_bringup_cmd)
+    ld.add_action(dc_bringup_cmd)
     ld.add_action(start_robot_state_publisher_cmd)
-    # ld.add_action(nav2_bringup_cmd)
-    ld.add_action(group)
+    ld.add_action(nav2_bringup_cmd)
 
     return ld
