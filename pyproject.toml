@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "ros2_data_collection"
+version = "0.1.0"
+description = ""
+authors = ["David Bensoussan <d.bensoussan@proton.me>"]
+
+[tool.poetry.dependencies]
+python = "^3.8.10"
+pyzbar = "^0.1.9"
+opencv-python = "^4.7.0"
+numpy = "^1.24.2"
+pydantic = "^1.10.4"
+Pillow = "^9.4.0"
+
+[tool.poetry.dev-dependencies]
+ipython = "^8.10.0"
+Jinja2 = "^3.1.2"
+typer = "^0.7.0"
+qrcode = "^7.4.2"
+pypng = "^0.20220715.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
