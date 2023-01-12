@@ -133,7 +133,7 @@ void Processor::AddCpuSample(int cpu_id, int idle, int active)
  *  Provides the number of CPUs currently readable from procfs. This is used by
  *  NCursesDisplay::Display to determine the system_window vertical size.
  *  Inputs: None.
- *  Ouputs: Number of CPUs in the system.
+ *  Outputs: Number of CPUs in the system.
  */
 int Processor::NumCpus()
 {

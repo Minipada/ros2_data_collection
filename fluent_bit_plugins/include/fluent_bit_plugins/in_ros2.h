@@ -21,12 +21,6 @@
 #define FLB_IN_ROS2_H
 
 #include <fluent-bit/flb_config.h>
-#include <fluent-bit/flb_input.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-
-#include <fluent-bit/flb_config.h>
 #include <fluent-bit/flb_config_map.h>
 #include <fluent-bit/flb_error.h>
 #include <fluent-bit/flb_info.h>
@@ -35,12 +29,14 @@
 #include <fluent-bit/flb_pack.h>
 #include <fluent-bit/flb_time.h>
 #include <msgpack.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
+#include "dc_interfaces/msg/string_stamped.h"
 #include "rcl/error_handling.h"
 #include "rclc/executor.h"
 #include "rclc/rclc.h"
-
-#include "dc_interfaces/msg/string_stamped.h"
 
 struct rclc_subscriber
 {

@@ -72,7 +72,7 @@ bool Network::ping()
   {
     if (i < 0)
     {
-      RCLCPP_ERROR(logger_, "ping: Error occured in sendto call");
+      RCLCPP_ERROR(logger_, "ping: Error occurred in sendto call");
       return false;
     }
     RCLCPP_ERROR(logger_, "ping: Sent to_ %s %d characters and received %d", hostname_.c_str(), cc, i);
@@ -140,7 +140,7 @@ int Network::unpack()
       fromlen = sizeof(sockaddr_in);
       if ((cc = recvfrom(skt, packet_, sizeof(packet_), 0, (struct sockaddr*)&from_, (socklen_t*)&fromlen)) < 0)
       {
-        RCLCPP_ERROR(logger_, "ping: Error occured in recvfrom call");
+        RCLCPP_ERROR(logger_, "ping: Error occurred in recvfrom call");
         return -1;
       }
       gettimeofday(&tv, &tz_);

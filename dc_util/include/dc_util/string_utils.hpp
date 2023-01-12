@@ -5,8 +5,9 @@
 #include <numeric>
 #include <regex>
 #include <vector>
-#include "rclcpp/rclcpp.hpp"
+
 #include "nav2_util/lifecycle_node.hpp"
+#include "rclcpp/rclcpp.hpp"
 
 namespace dc_util
 {

@@ -1,12 +1,11 @@
 #ifndef DC_MEASUREMENTS__MEASUREMENT_SERVER_HPP_
 #define DC_MEASUREMENTS__MEASUREMENT_SERVER_HPP_
 
+#include <boost/algorithm/string.hpp>
 #include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <boost/algorithm/string.hpp>
 
 #include "dc_core/condition.hpp"
 #include "dc_core/measurement.hpp"

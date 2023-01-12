@@ -2,13 +2,13 @@
 #define DC_CORE_DESTINATION_HPP_
 
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "pluginlib/class_loader.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
-#include <nlohmann/json.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"

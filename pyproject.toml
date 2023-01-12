@@ -18,7 +18,58 @@ Jinja2 = "^3.1.2"
 typer = "^0.7.0"
 qrcode = "^7.4.2"
 pypng = "^0.20220715.0"
+pre-commit = "^3.0.4"
+black = "^23.1.0"
+darglint = "^1.8.1"
+flake8 = "^6.0.0"
+flake8-comprehensions = "^3.10.1"
+flake8-copyright = "^0.2.4"
+flake8-debugger = "^4.1.2"
+flake8-executable = "^2.1.3"
+flake8-functions = "^0.0.7"
+flake8-logging-format = "^0.9.0"
+flake8-pep3101 = "^2.0.0"
+flake8-polyfill = "^1.0.2"
+flake8-pyi = "^23.1.2"
+flake8-quotes = "^3.3.2"
+flake8-variables-names = "^0.0.5"
+pep8-naming = "^0.13.3"
+pydeps = "^1.11.1"
+pylint = "^2.16.2"
+cmake-format = "^0.6.13"
+codespell = "^2.2.2"
+flake8-bugbear = "^23.2.13"
+flake8-use-fstring = "^1.4"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+diff = false
+verbose = false
+line-length = 100
+target-version = ['py310']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.pycln]
+all = true
+
+[tool.isort]
+multi_line_output = 3
+line_length = 100
+include_trailing_comma = true

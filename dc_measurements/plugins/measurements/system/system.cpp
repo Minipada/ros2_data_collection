@@ -21,7 +21,7 @@ using std::string;
 using std::vector;
 
 /********* System::Cpu *******
- *  Provides access to the Processor object reprenting the system CPU usage.
+ *  Provides access to the Processor object representing the system CPU usage.
  *  Inputs: None.
  *  Outputs: A reference to the Processor object living inside the System.
  */

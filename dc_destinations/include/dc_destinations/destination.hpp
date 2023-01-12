@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <thread>
 #include <utility>
@@ -14,7 +15,6 @@
 #include "dc_core/destination.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include <nlohmann/json.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"

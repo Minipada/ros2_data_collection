@@ -1,24 +1,24 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Network",
-    "description": "Network accessibility and information",
-    "properties": {
-        "ping": {
-            "description": "Time to ping the host in ms",
-            "type": "integer",
-            "minimum": -1
-        },
-        "online": {
-            "description": "If the pc is online",
-            "type": "boolean"
-        },
-        "interfaces": {
-            "description": "List of network interfaces",
-            "type": "array",
-            "items": {
-                "type": "string"
-            }
-        }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Network",
+  "description": "Network accessibility and information",
+  "properties": {
+    "ping": {
+      "description": "Time to ping the host in ms",
+      "type": "integer",
+      "minimum": -1
     },
-    "type": "object"
+    "online": {
+      "description": "If the pc is online",
+      "type": "boolean"
+    },
+    "interfaces": {
+      "description": "List of network interfaces",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "type": "object"
 }

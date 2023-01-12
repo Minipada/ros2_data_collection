@@ -5,8 +5,8 @@
 #include <memory>
 #include <string>
 
-#include "dc_destinations/flb_destination.hpp"
 #include "dc_destinations/destination_server.hpp"
+#include "dc_destinations/flb_destination.hpp"
 
 namespace dc_destinations
 {

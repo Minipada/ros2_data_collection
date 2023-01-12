@@ -1,28 +1,26 @@
 """Collects cpu data."""
 
-from typing import List, Optional, Tuple
 
 import cv2
 import rclpy
 from cv_bridge import CvBridge
-from dc_interfaces.srv import DrawImage
 from pydantic import BaseModel, Field
 from rclpy.node import Node
+
+from dc_interfaces.srv import DrawImage
 
 
 class ColorConfig(BaseModel):
     # Set default values in case they are not passed
-    color: Optional[Tuple[int, int, int]] = Field(
+    color: tuple[int, int, int] | None = Field(
         default=(255, 0, 0),
         description="Color of bounding box, polygon and text in RBG",
     )
-    font_txt: Optional[int] = Field(
-        default=cv2.FONT_HERSHEY_SIMPLEX, description="Font to use"
-    )
-    font_thickness: Optional[int] = Field(
+    font_txt: int | None = Field(default=cv2.FONT_HERSHEY_SIMPLEX, description="Font to use")
+    font_thickness: int | None = Field(
         default=2, description="Thickness of lines used to render the text."
     )
-    font_scale: Optional[float] = Field(
+    font_scale: float | None = Field(
         default=0.8,
         description="Font scale factor that is multiplied by the font-specific base size.",
     )
@@ -31,9 +29,7 @@ class ColorConfig(BaseModel):
 class DrawImageNode(Node):
     def __init__(self, node_name: str) -> None:
         super().__init__(node_name=node_name)
-        self.srv = self.create_service(
-            DrawImage, "draw_image", self.draw_image_callback
-        )
+        self.srv = self.create_service(DrawImage, "draw_image", self.draw_image_callback)
 
     def draw_image_callback(self, request, response):
         cv_br = CvBridge()
@@ -66,7 +62,7 @@ class DrawImageNode(Node):
                     thickness=color_config.font_thickness,
                 )
                 response.frame = cv_br.cv2_to_imgmsg(cv_frame)
-                self.get_logger().debug(f"Added rectangle to image")
+                self.get_logger().debug("Added rectangle to image")
                 response.success = True
         except Exception as e:
             response.success = False
@@ -74,8 +70,7 @@ class DrawImageNode(Node):
         return response
 
 
-def main(args: Optional[List[str]] = None) -> None:
-
+def main(args: list[str] | None = None) -> None:
     rclpy.init(args=args)
 
     try:
