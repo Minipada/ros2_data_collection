@@ -1,16 +1,13 @@
+"""Follow waypoints using the ROS 2 Navigation Stack (Nav2)."""
 import rclpy
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from rclpy.duration import Duration
 from std_msgs.msg import Header
 
-"""
-Follow waypoints using the ROS 2 Navigation Stack (Nav2)
-"""
-
 
 def main():
-
+    """Wait Navigation is active and go through points, in front of pallets with QRcodes."""
     # Start the ROS 2 Python Client Library
     rclpy.init()
 
@@ -49,9 +46,7 @@ def main():
                     + space_rows * (index_pall // pallet_per_row),
                     z=0.0,
                 ),
-                orientation=Quaternion(
-                    x=0.0, y=0.0, z=z_orientation[0], w=w_orientation[0]
-                ),
+                orientation=Quaternion(x=0.0, y=0.0, z=z_orientation[0], w=w_orientation[0]),
             ),
         )
         for index_pall in range(0, rows_count * pallet_per_row)
@@ -68,9 +63,7 @@ def main():
                     + space_rows * (index_pall // pallet_per_row),
                     z=0.0,
                 ),
-                orientation=Quaternion(
-                    x=0.0, y=0.0, z=z_orientation[1], w=w_orientation[1]
-                ),
+                orientation=Quaternion(x=0.0, y=0.0, z=z_orientation[1], w=w_orientation[1]),
             ),
         )
         for index_pall in list(reversed(range(0, rows_count * pallet_per_row)))
@@ -87,9 +80,7 @@ def main():
                     + space_rows * (index_pall // pallet_per_row),
                     z=0.0,
                 ),
-                orientation=Quaternion(
-                    x=0.0, y=0.0, z=z_orientation[0], w=w_orientation[0]
-                ),
+                orientation=Quaternion(x=0.0, y=0.0, z=z_orientation[0], w=w_orientation[0]),
             ),
         )
         for index_pall in range(0, rows_count * pallet_per_row)

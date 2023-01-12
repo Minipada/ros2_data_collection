@@ -12,6 +12,15 @@ app = typer.Typer(help="Generate QR codes")
 
 
 def create_qr_img(*, data: str, qr_path: str) -> qrcode.image.styledpil.StyledPilImage:
+    """Create QRcode image.
+
+    Args:
+        data (str): data (str): QRcode data
+        qr_path (str): Path where QRcode image is saved
+
+    Returns:
+        qrcode.image.styledpil.StyledPilImage: QRcode image as Pillow image
+    """
     qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_H)
     qr.add_data(data)
     qr_img = qr.make_image(
@@ -35,6 +44,14 @@ def create_qr_img_w_text(
     qr_path: str,
     final_path: str,
 ):
+    """Create image with text from data.
+
+    Args:
+        data (str): QRcode data
+        qr_img (qrcode.image.styledpil.StyledPilImage): Image of a QR code
+        qr_path (str): Path to the QRcode
+        final_path (str): Path where image is saved
+    """
     height_text = 75
     height_qr = qr_img.pixel_size
     width_qr = qr_img.pixel_size
@@ -42,17 +59,17 @@ def create_qr_img_w_text(
     width_new_img = width_qr
 
     # Write all white in image
-    f = open(final_path, "wb")  # binary mode is important
-    w = png.Writer(width_new_img, height_new_img, greyscale=False)
-    w.write(f, [[255] * width_new_img * 3] * height_new_img)  # *3 for RGB
-    f.close()
+    final_path_file = open(final_path, "wb")  # binary mode is important
+    png_w = png.Writer(width_new_img, height_new_img, greyscale=False)
+    png_w.write(final_path_file, [[255] * width_new_img * 3] * height_new_img)  # *3 for RGB
+    final_path_file.close()
 
     max_font_size = 60
     max_position = 25
 
     # Add title with dynamic size based on qr code data length
     with Image.open(final_path) as img:
-        d = ImageDraw.Draw(img)
+        img_d = ImageDraw.Draw(img)
         text_pix = width_new_img - 50  # 25 left, 25 right
         font_pix_ratio = 40 / 24  # For a font of 40, it needs to take around 24px
         font_size = int(text_pix / len(data) * font_pix_ratio)
@@ -63,7 +80,7 @@ def create_qr_img_w_text(
         img.paste(qr_img, (5, 60))
         pos_ratio = (10 - len(data)) / 1.75
         position = 25 * pos_ratio if pos_ratio > 1 else max_position
-        d.text((position, 15), data, fill=(0), font=font)
+        img_d.text((position, 15), data, fill=(0), font=font)
         img.save(final_path)
 
 
@@ -71,16 +88,22 @@ def create_qr_img_w_text(
 def create_img(
     data: str = typer.Option(..., help="QR code data"),
     path: str = typer.Option(..., help="Path where to save it"),
-    keep_qr: bool = typer.Option(
-        default=False, help="Keep image of QR Code without text"
-    ),
+    keep_qr: bool | None = typer.Option(default=False, help="Keep image of QR Code without text"),
 ):
+    """Create QRcode image in png.
+
+    Args:
+        data (str): Data to store in the QRcode, used as filename.
+            Defaults to typer.Option(..., help="QR code data").
+        path (str): Path where to save the image.
+            Defaults to typer.Option(..., help="Path where to save it").
+        keep_qr (bool, optional): Keep image of QRcode.
+            Defaults to typer.Option(default=False, help="Keep image of QR Code without text").
+    """
     qr_path = (pathlib.Path(path) / f"qr_{data}.png").as_posix()
     final_path = (pathlib.Path(path) / f"qrcode_{data}.png").as_posix()
     qr_img = create_qr_img(data=data, qr_path=qr_path)
-    create_qr_img_w_text(
-        data=data, qr_img=qr_img, qr_path=qr_path, final_path=final_path
-    )
+    create_qr_img_w_text(data=data, qr_img=qr_img, qr_path=qr_path, final_path=final_path)
     if not keep_qr:
         os.unlink(qr_path)
     print(f"Image saved: {final_path}")
@@ -91,11 +114,17 @@ def create_model(
     data: str = typer.Option(..., help="QR code data"),
     models_dir: str = typer.Option(..., help="ROS2 Package model directory"),
 ):
+    """Create a dae model file.
+
+    Args:
+        data (str): Data provided by the QRcode.
+            Defaults to typer.Option(..., help="QR code data").
+        models_dir (str): Path to the directory where all
+            models are located. Defaults to typer.Option(..., help="ROS2 Package model directory").
+    """
     environment = Environment(
         loader=FileSystemLoader(
-            (
-                pathlib.Path(os.path.dirname(os.path.realpath(__file__))) / "templates"
-            ).as_posix()
+            (pathlib.Path(os.path.dirname(os.path.realpath(__file__))) / "templates").as_posix()
         )
     )
     model_config_template = environment.get_template("model_qr/model.config.jinja2")
@@ -109,9 +138,7 @@ def create_model(
 
     dir_main = pathlib.Path(models_dir) / f"qrcode_{data}"
     dir_dae = pathlib.Path(models_dir) / f"qrcode_{data}" / "meshes"
-    dir_textures = (
-        pathlib.Path(models_dir) / f"qrcode_{data}" / "materials" / "textures"
-    )
+    dir_textures = pathlib.Path(models_dir) / f"qrcode_{data}" / "materials" / "textures"
     dir_main.mkdir(exist_ok=True, parents=True)
     dir_textures.mkdir(exist_ok=True, parents=True)
     dir_dae.mkdir(exist_ok=True, parents=True)
@@ -120,20 +147,18 @@ def create_model(
     qr_path = (pathlib.Path(dir_textures) / f"qr_{data}.png").as_posix()
     final_path = (pathlib.Path(dir_textures) / f"qrcode_{data}.png").as_posix()
     qr_img = create_qr_img(data=data, qr_path=qr_path)
-    create_qr_img_w_text(
-        data=data, qr_img=qr_img, qr_path=qr_path, final_path=final_path
-    )
+    create_qr_img_w_text(data=data, qr_img=qr_img, qr_path=qr_path, final_path=final_path)
     os.unlink(qr_path)
 
     with open(
-        (pathlib.Path(dir_main) / f"model.config").as_posix(),
+        (pathlib.Path(dir_main) / "model.config").as_posix(),
         mode="w",
         encoding="utf-8",
     ) as message:
         message.write(model_config_content)
 
     with open(
-        (pathlib.Path(dir_main) / f"model.sdf").as_posix(), mode="w", encoding="utf-8"
+        (pathlib.Path(dir_main) / "model.sdf").as_posix(), mode="w", encoding="utf-8"
     ) as message:
         message.write(model_sdf_content)
 

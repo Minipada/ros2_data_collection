@@ -16,7 +16,7 @@ namespace LinuxParser
  *  Inputs: Pointer to Queue_t, number of elements as size, queue_data pointer,
  *          pointer to a putFunction and a getFunction,
  *          function pointer callback to handle queue xfer from the scheduler.
- *  Ouputs: None
+ *  Outputs: None
  */
 const std::string kProcDirectory{ "/proc/" };
 const std::string kCmdlineFilename{ "/cmdline" };
@@ -34,7 +34,7 @@ const std::string kPasswordPath{ "/etc/passwd" };
  *  Inputs: Pointer to Queue_t, number of elements as size, queue_data pointer,
  *          pointer to a putFunction and a getFunction,
  *          function pointer callback to handle queue xfer from the scheduler.
- *  Ouputs: None
+ *  Outputs: None
  */
 //
 float MemoryUtilization();
@@ -50,7 +50,7 @@ std::string Kernel();
  *  Inputs: Pointer to Queue_t, number of elements as size, queue_data pointer,
  *          pointer to a putFunction and a getFunction,
  *          function pointer callback to handle queue xfer from the scheduler.
- *  Ouputs: None
+ *  Outputs: None
  */
 enum CPUState
 {
@@ -92,7 +92,7 @@ enum PidStat
  *  Inputs: Pointer to Queue_t, number of elements as size, queue_data pointer,
  *          pointer to a putFunction and a getFunction,
  *          function pointer callback to handle queue xfer from the scheduler.
- *  Ouputs: None
+ *  Outputs: None
  */
 std::string Command(int pid);
 std::vector<long> PidStat(int pid);
@@ -107,7 +107,7 @@ long StartTime(int pid);
  *  Inputs: Pointer to Queue_t, number of elements as size, queue_data pointer,
  *          pointer to a putFunction and a getFunction,
  *          function pointer callback to handle queue xfer from the scheduler.
- *  Ouputs: None
+ *  Outputs: None
  */
 std::string NthToken(std::string line, int token_pos);
 int SysClk();

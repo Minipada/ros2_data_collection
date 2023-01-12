@@ -1,10 +1,6 @@
 import os
 
 from ament_index_python.packages import get_package_share_directory
-from launch_ros.actions import LoadComposableNodes, Node, SetParameter
-from launch_ros.descriptions import ComposableNode
-from nav2_common.launch import RewrittenYaml
-
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
@@ -15,6 +11,9 @@ from launch.actions import (
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch_ros.actions import LoadComposableNodes, Node, SetParameter
+from launch_ros.descriptions import ComposableNode
+from nav2_common.launch import RewrittenYaml
 
 
 def generate_launch_description():
@@ -42,9 +41,7 @@ def generate_launch_description():
         convert_types=True,
     )
 
-    stdout_linebuf_envvar = SetEnvironmentVariable(
-        "RCUTILS_LOGGING_BUFFERED_STREAM", "1"
-    )
+    stdout_linebuf_envvar = SetEnvironmentVariable("RCUTILS_LOGGING_BUFFERED_STREAM", "1")
 
     declare_namespace_cmd = DeclareLaunchArgument(
         "namespace", default_value="", description="Top-level namespace"

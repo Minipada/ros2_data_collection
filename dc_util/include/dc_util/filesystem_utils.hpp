@@ -1,11 +1,11 @@
 #ifndef DC_UTIL__FILESYSTEM_UTILS_HPP_
 #define DC_UTIL__FILESYSTEM_UTILS_HPP_
 
+#include <fstream>
 #include <iostream>
 #include <numeric>
 #include <regex>
 #include <vector>
-#include <fstream>
 
 namespace dc_util
 {

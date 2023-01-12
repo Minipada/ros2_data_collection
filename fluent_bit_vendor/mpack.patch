@@ -3,17 +3,17 @@ index 7e9275297..1ce70cfab 100644
 --- a/include/fluent-bit/flb_lib.h
 +++ b/include/fluent-bit/flb_lib.h
 @@ -22,6 +22,7 @@
- 
+
  #include <fluent-bit/flb_macros.h>
  #include <fluent-bit/flb_config.h>
 +#include <fluent-bit/flb_plugin.h>
- 
+
  /* Lib engine status */
  #define FLB_LIB_ERROR     -1
 @@ -79,4 +80,10 @@ FLB_EXPORT int flb_loop(flb_ctx_t *ctx);
  FLB_EXPORT int flb_lib_push(flb_ctx_t *ctx, int ffd, const void *data, size_t len);
  FLB_EXPORT int flb_lib_config_file(flb_ctx_t *ctx, const char *path);
- 
+
 +/* Flb plugin */
 +FLB_EXPORT int flb_plugin_load_wr(char *path, struct flb_plugins *ctx, struct flb_config *config);
 +FLB_EXPORT int flb_plugin_load_router_wr(char *path, struct flb_config *config);
@@ -28,7 +28,7 @@ index 7c0b3f17e..cfe860eb4 100644
 @@ -3271,129 +3271,6 @@ MPACK_EXTERN_C_END
  #undef mpack_write_kv
  #endif
- 
+
 -MPACK_INLINE void mpack_write(mpack_writer_t* writer, int8_t value) {
 -    mpack_write_i8(writer, value);
 -}
@@ -153,7 +153,7 @@ index 7c0b3f17e..cfe860eb4 100644
 - */
 -
  #endif /* __cplusplus */
- 
+
  /**
 diff --git a/lib/mpack-amalgamation-1.1/src/mpack/mpack.h b/lib/mpack-amalgamation-1.1/src/mpack/mpack.h
 index 803f03e41..7c2ceb338 100644
@@ -162,16 +162,16 @@ index 803f03e41..7c2ceb338 100644
 @@ -4104,7 +4104,7 @@ MPACK_INLINE void mpack_finish_type(mpack_writer_t* writer, mpack_type_t type) {
   * @}
   */
- 
+
 -#if MPACK_HAS_GENERIC && !defined(__cplusplus)
 +#if MPACK_HAS_GENERIC
- 
+
  /**
   * @name Type-Generic Writers
 @@ -4183,146 +4183,6 @@ MPACK_INLINE void mpack_finish_type(mpack_writer_t* writer, mpack_type_t type) {
  // The rest of this file contains C++ overloads, so we end extern "C" here.
  MPACK_EXTERN_C_END
- 
+
 -#if defined(__cplusplus) || defined(MPACK_DOXYGEN)
 -
 -/**
@@ -312,7 +312,7 @@ index 803f03e41..7c2ceb338 100644
 - */
 -
 -#endif /* __cplusplus */
- 
+
  /**
   * @}
 diff --git a/src/flb_lib.c b/src/flb_lib.c
@@ -330,7 +330,7 @@ index 996816e23..a81c64924 100644
 @@ -66,6 +67,26 @@ static inline int flb_socket_init_win32(void)
  }
  #endif
- 
+
 +int flb_plugin_load_wr(char *path, struct flb_plugins *ctx, struct flb_config *config)
 +{
 +    return flb_plugin_load(path,ctx,config);

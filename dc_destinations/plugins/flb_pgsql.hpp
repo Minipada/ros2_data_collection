@@ -1,13 +1,13 @@
 #ifndef DC_DESTINATIONS__PLUGINS__DESTINATIONS__FLB_PGSQL_HPP_
 #define DC_DESTINATIONS__PLUGINS__DESTINATIONS__FLB_PGSQL_HPP_
 
+#include <boost/algorithm/string/replace.hpp>
 #include <chrono>
 #include <memory>
 #include <string>
 
-#include "dc_destinations/flb_destination.hpp"
 #include "dc_destinations/destination_server.hpp"
-#include <boost/algorithm/string/replace.hpp>
+#include "dc_destinations/flb_destination.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_util/string_utils.hpp"
 

@@ -1,17 +1,20 @@
 """Collects cpu data."""
 
 import pathlib
-from typing import List, Optional
 
 import cv2
 import rclpy
 from cv_bridge import CvBridge
-from dc_interfaces.srv import SaveImage
 from rclpy.node import Node
+
+from dc_interfaces.srv import SaveImage
 
 
 class SaveImageNode(Node):
+    """Node that save an image from a SaveImage request."""
+
     def __init__(self, node_name: str) -> None:
+        """Initialize the node and create the save_image service."""
         super().__init__(node_name=node_name)
         self.srv = self.create_service(SaveImage, "save_image", self.save_callback)
 
@@ -27,14 +30,17 @@ class SaveImageNode(Node):
             self.get_logger().debug(f"Image saved to {img_path.as_posix()}")
         except Exception as e:
             response.success = False
-            self.get_logger().error(
-                f"Image could not be saved to {img_path.as_posix()}: {e}"
-            )
+            self.get_logger().error(f"Image could not be saved to {img_path.as_posix()}: {e}")
 
         return response
 
 
-def main(args: Optional[List[str]] = None) -> None:
+def main(args: list[str] | None = None) -> None:
+    """Start ROS node.
+
+    Args:
+        args (list[str] | None, optional): List of arguments to pass to the node. Defaults to None.
+    """
     rclpy.init(args=args)
     try:
         save_image_node = SaveImageNode(node_name="save_image")
