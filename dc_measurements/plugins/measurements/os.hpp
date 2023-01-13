@@ -1,13 +1,8 @@
 #ifndef DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__OS_HPP_
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__OS_HPP_
 
-#include <chrono>
-#include <memory>
-#include <string>
-
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
-#include "dc_measurements/measurement_server.hpp"
 #include "system/linux_parser.hpp"
 #include "system/system.hpp"
 

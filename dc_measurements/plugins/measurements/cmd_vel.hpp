@@ -2,15 +2,11 @@
 #ifndef DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__CMD_VEL_HPP_
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__CMD_VEL_HPP_
 
-#include <chrono>
-#include <memory>
-#include <string>
-
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
-#include "dc_measurements/measurement_server.hpp"
 #include "dc_util/json_utils.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "nav2_util/node_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/serialization.hpp"
 

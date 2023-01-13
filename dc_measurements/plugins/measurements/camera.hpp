@@ -5,17 +5,13 @@
 #include <cv_bridge/cv_bridge.h>
 
 #include <boost/algorithm/string/replace.hpp>
-#include <chrono>
-#include <memory>
 #include <opencv2/highgui.hpp>
-#include <string>
 
 #include "dc_core/measurement.hpp"
 #include "dc_interfaces/srv/detect_barcode.hpp"
 #include "dc_interfaces/srv/draw_image.hpp"
 #include "dc_interfaces/srv/save_image.hpp"
 #include "dc_measurements/measurement.hpp"
-#include "dc_measurements/measurement_server.hpp"
 #include "dc_util/image_utils.hpp"
 #include "dc_util/service_utils.hpp"
 #include "rclcpp/rclcpp.hpp"

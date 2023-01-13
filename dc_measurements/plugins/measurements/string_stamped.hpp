@@ -1,13 +1,8 @@
 #ifndef DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__STRING_STAMPED_HPP_
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__STRING_STAMPED_HPP_
 
-#include <chrono>
-#include <memory>
-#include <string>
-
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
-#include "dc_measurements/measurement_server.hpp"
 
 namespace dc_measurements
 {

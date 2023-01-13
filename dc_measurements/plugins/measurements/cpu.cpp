@@ -1,8 +1,5 @@
 #include "cpu.hpp"
 
-#include <chrono>
-#include <memory>
-
 namespace dc_measurements
 {
 namespace lp = LinuxParser;

@@ -13,6 +13,7 @@
     <buildtool_depend>flex</buildtool_depend>
     <buildtool_depend>bison</buildtool_depend>
     <buildtool_depend>libpq-dev</buildtool_depend>
+    <buildtool_depend>libssl-dev</buildtool_depend>
     <buildtool_depend>rclc</buildtool_depend>
 
     <export>
