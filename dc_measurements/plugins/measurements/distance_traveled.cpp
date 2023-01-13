@@ -1,8 +1,5 @@
 #include "distance_traveled.hpp"
 
-#include <chrono>
-#include <memory>
-
 namespace dc_measurements
 {
 

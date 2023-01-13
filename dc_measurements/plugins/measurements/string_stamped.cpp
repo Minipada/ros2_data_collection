@@ -1,8 +1,5 @@
 #include "string_stamped.hpp"
 
-#include <chrono>
-#include <memory>
-
 namespace dc_measurements
 {
 
