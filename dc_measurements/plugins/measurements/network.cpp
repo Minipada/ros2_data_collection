@@ -1,5 +1,4 @@
-#include "network.hpp"
-
+#include "dc_measurements/plugins/measurements/network.hpp"
 
 namespace dc_measurements
 {

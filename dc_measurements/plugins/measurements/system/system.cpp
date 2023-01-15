@@ -1,4 +1,4 @@
-#include "system.hpp"
+#include "dc_measurements/system/system.hpp"
 
 #include <unistd.h>
 
@@ -9,9 +9,9 @@
 #include <string>
 #include <vector>
 
-#include "linux_parser.hpp"
-#include "process.hpp"
-#include "processor.hpp"
+#include "dc_measurements/system/linux_parser.hpp"
+#include "dc_measurements/system/process.hpp"
+#include "dc_measurements/system/processor.hpp"
 
 namespace lp = LinuxParser;
 

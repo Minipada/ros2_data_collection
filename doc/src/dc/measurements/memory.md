@@ -1,0 +1,23 @@
+# Memory
+
+## Description
+
+Collect memory used in percentage.
+
+## Schema
+
+```json
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Memory",
+    "description": "Memory used",
+    "properties": {
+        "used": {
+            "description": "Memory used in percent",
+            "type": "number",
+            "minimum": 0
+        }
+    },
+    "type": "object"
+}
+```

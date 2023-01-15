@@ -1,4 +1,4 @@
-#include "distance_traveled.hpp"
+#include "dc_measurements/plugins/measurements/distance_traveled.hpp"
 
 namespace dc_measurements
 {

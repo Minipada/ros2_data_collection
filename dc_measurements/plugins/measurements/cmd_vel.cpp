@@ -1,4 +1,4 @@
-#include "cmd_vel.hpp"
+#include "dc_measurements/plugins/measurements/cmd_vel.hpp"
 
 namespace dc_measurements
 {

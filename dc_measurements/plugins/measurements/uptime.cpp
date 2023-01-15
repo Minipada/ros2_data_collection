@@ -1,4 +1,4 @@
-#include "uptime.hpp"
+#include "dc_measurements/plugins/measurements/uptime.hpp"
 
 namespace dc_measurements
 {

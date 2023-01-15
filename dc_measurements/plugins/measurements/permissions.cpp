@@ -1,4 +1,4 @@
-#include "permissions.hpp"
+#include "dc_measurements/plugins/measurements/permissions.hpp"
 
 namespace dc_measurements
 {

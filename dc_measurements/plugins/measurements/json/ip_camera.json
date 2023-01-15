@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Ip Camera",
+  "description": "Local and remote path where the remote camera video is recorded",
+  "properties": {
+    "local_path": {
+      "description": "Local video path",
+      "type": "string"
+    },
+    "remote_path": {
+      "description": "Remote video path",
+      "type": "string"
+    }
+  },
+  "type": "object"
+}

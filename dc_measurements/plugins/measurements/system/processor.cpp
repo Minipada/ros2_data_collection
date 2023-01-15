@@ -1,4 +1,4 @@
-#include "processor.hpp"
+#include "dc_measurements/system/processor.hpp"
 
 #include <sys/time.h>
 
@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "linux_parser.hpp"
+#include "dc_measurements/system/linux_parser.hpp"
 
 namespace lp = LinuxParser;
 

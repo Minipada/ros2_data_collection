@@ -3,8 +3,8 @@
 
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
-#include "system/linux_parser.hpp"
-#include "system/system.hpp"
+#include "dc_measurements/system/linux_parser.hpp"
+#include "dc_measurements/system/system.hpp"
 
 namespace dc_measurements
 {
@@ -16,14 +16,12 @@ public:
   ~Uptime();
   dc_interfaces::msg::StringStamped collect() override;
 
-private:
-  System system_;
-
 protected:
   /**
    * @brief Set validation schema used to confirm data before collecting it
    */
   void setValidationSchema() override;
+  System system_;
 };
 
 }  // namespace dc_measurements
