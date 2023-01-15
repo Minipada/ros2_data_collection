@@ -3,8 +3,8 @@
 
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
-#include "system/linux_parser.hpp"
-#include "system/system.hpp"
+#include "dc_measurements/system/linux_parser.hpp"
+#include "dc_measurements/system/system.hpp"
 
 namespace dc_measurements
 {

@@ -1,4 +1,4 @@
-#include "string_stamped.hpp"
+#include "dc_measurements/plugins/measurements/string_stamped.hpp"
 
 namespace dc_measurements
 {

@@ -1,4 +1,4 @@
-#include "os.hpp"
+#include "dc_measurements/plugins/measurements/os.hpp"
 
 namespace dc_measurements
 {

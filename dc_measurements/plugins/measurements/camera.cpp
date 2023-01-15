@@ -1,4 +1,4 @@
-#include "camera.hpp"
+#include "dc_measurements/plugins/measurements/camera.hpp"
 
 namespace dc_measurements
 {

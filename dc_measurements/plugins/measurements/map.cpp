@@ -1,4 +1,4 @@
-#include "map.hpp"
+#include "dc_measurements/plugins/measurements/map.hpp"
 
 namespace dc_measurements
 {

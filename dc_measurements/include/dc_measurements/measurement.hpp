@@ -79,6 +79,12 @@ public:
   {
   }
 
+  // an opportunity for derived classes to do something on failed validation
+  // if they chose
+  virtual void onFailedValidation()
+  {
+  }
+
   std::shared_ptr<rclcpp_lifecycle::LifecycleNode> getNode()
   {
     auto node = node_.lock();
@@ -123,10 +129,10 @@ public:
   void validateSchema(const std::string& package_name, const std::string& json_filename)
   {
     std::string package_share_directory = ament_index_cpp::get_package_share_directory(package_name.c_str());
-    std::string path = package_share_directory + "/plugins/measurements/" + json_filename.c_str();
-    RCLCPP_INFO_STREAM(logger_, "Looking for schema at " << schema_);
+    std::string path = package_share_directory + "/plugins/measurements/json/" + json_filename.c_str();
     std::ifstream f(path.c_str());
     schema_ = json::parse(f);
+    RCLCPP_INFO_STREAM(logger_, "Looking for schema at " << path);
 
     RCLCPP_INFO_STREAM(logger_, "schema: " << schema_);
     try
@@ -190,8 +196,8 @@ public:
                       [&](const std::string& condition) { return conditions_[condition]->getState() == false; });
     }
 
-    RCLCPP_INFO(logger_, "all_conditions_res=%d, any_conditions_res=%d, none_conditions_res=%d", all_conditions_res,
-                any_conditions_res, none_conditions_res);
+    RCLCPP_DEBUG(logger_, "all_conditions_res=%d, any_conditions_res=%d, none_conditions_res=%d", all_conditions_res,
+                 any_conditions_res, none_conditions_res);
 
     return all_conditions_res && any_conditions_res && none_conditions_res;
   }
@@ -255,6 +261,7 @@ public:
           catch (const std::exception& e)
           {
             RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what());
+            onFailedValidation();
           }
         }
         // Publish without validation

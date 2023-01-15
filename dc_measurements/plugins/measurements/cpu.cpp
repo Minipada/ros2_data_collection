@@ -1,4 +1,4 @@
-#include "cpu.hpp"
+#include "dc_measurements/plugins/measurements/cpu.hpp"
 
 namespace dc_measurements
 {

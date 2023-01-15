@@ -175,12 +175,8 @@ install(FILES condition_plugin.xml measurement_plugin.xml
   DESTINATION share/${PROJECT_NAME}
 )
 
-install(DIRECTORY plugins/measurements/
+install(DIRECTORY plugins/measurements/json
   DESTINATION share/${PROJECT_NAME}/plugins/measurements/
-)
-
-install(DIRECTORY plugins/conditions/
-  DESTINATION share/${PROJECT_NAME}/plugins/conditions/
 )
 
 ament_export_include_directories(include)

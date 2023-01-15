@@ -1,0 +1,29 @@
+[book]
+authors = ["The Contributors"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Data Collection for ROS 2"
+
+[build]
+create-missing = false
+
+[preprocessor.open-on-gh]
+command = "mdbook-open-on-gh"
+renderer = ["html"]
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+
+[preprocessor.admonish]
+command = "mdbook-admonish"
+assets_version = "2.0.0" # do not edit: managed by `mdbook-admonish install`
+
+[output.html]
+default-theme = "navy"
+git-repository-url = "https://github.com/minipada/ros2_data_collection"
+additional-css = ["open-in.css", "./css/mdbook-admonish.css"]
+additional-js = ["js/mermaid.js", "js/mermaid-init.js"]
+
+[output.html.fold]
+enable = true

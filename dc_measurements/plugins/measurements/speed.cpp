@@ -1,4 +1,4 @@
-#include "speed.hpp"
+#include "dc_measurements/plugins/measurements/speed.hpp"
 
 namespace dc_measurements
 {

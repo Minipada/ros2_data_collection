@@ -1,4 +1,4 @@
-#include "memory.hpp"
+#include "dc_measurements/plugins/measurements/memory.hpp"
 
 namespace dc_measurements
 {

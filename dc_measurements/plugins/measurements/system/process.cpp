@@ -1,4 +1,4 @@
-#include "process.hpp"
+#include "dc_measurements/system/process.hpp"
 
 #include <unistd.h>
 
@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "linux_parser.hpp"
+#include "dc_measurements/system/linux_parser.hpp"
 
 using std::string;
 using std::to_string;
