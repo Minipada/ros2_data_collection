@@ -13,6 +13,7 @@
 
     <exec_depend>launch_ros</exec_depend>
     <exec_depend>dc_measurements</exec_depend>
+    <exec_depend>dc_destinations</exec_depend>
     <exec_depend>dc_services</exec_depend>
     <exec_depend>nav2_lifecycle_manager</exec_depend>
 
