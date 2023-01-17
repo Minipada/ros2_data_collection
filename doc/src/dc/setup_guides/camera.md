@@ -25,4 +25,4 @@ ffmpeg \
 
 Change the /dev/video4 by your device name
 
-1. 
+1.

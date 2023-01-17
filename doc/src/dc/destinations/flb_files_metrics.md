@@ -6,7 +6,7 @@ Tracks files (yaml files, jpg pictures etc.) sent to their destinations (s3, min
 
 It loads a Fluent Bit plugin we wrote ourselves to do this task, located in the fluent_bit_plugins package.
 
-It creates a table on the database (currently PostgresSQL only) to store each file status.
+It creates a table on the database (currently PostgreSQL only) to store each file status.
 
 ```mermaid
 erDiagram

@@ -75,7 +75,7 @@ flowchart LR
     end
 
     subgraph d_n["Destination node"]
-        pl_pgsql["PostgresSQL"]
+        pl_pgsql["PostgreSQL"]
         pl_minio["Minio"]
         pl_s3["S3"]
     end

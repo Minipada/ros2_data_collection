@@ -2,7 +2,7 @@
 
 ## Description
 
-Save map using nav2_map_server and collect the map of the local map saved. The measurement also includes metadata: width, heigh and x and y origin.
+Save map using nav2_map_server and collect the map of the local map saved. The measurement also includes metadata: width, height and x and y origin.
 
 ## Parameters
 
