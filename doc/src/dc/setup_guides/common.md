@@ -95,7 +95,7 @@ services:
     image: nginx:1.19.2-alpine
     hostname: minio-nginx
     volumes:
-      - ./minio-nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./minio-nginx.conf:/etc/nginx/nginx.conf
     ports:
       - "9000:9000"
       - "9001:9001"

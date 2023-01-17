@@ -22,4 +22,3 @@ Examples are split in different categories:
 ### Example 5: CPU and Memory as a group to Fluent Bit Stdout every 5 seconds forever
 
 ### Example 6: CPU and Memory as a group to Fluent Bit Stdout every 5 seconds forever
-

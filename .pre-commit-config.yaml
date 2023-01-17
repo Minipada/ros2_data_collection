@@ -1,3 +1,4 @@
+exclude: "doc/js/.*$"
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
@@ -103,7 +104,7 @@ repos:
     rev: v2.2.0
     hooks:
       - id: codespell
-        args: [-w]
+        args: [-w, --ignore-words=.codespell.txt]
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v15.0.7
     hooks:

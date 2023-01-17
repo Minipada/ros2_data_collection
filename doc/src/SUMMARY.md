@@ -29,7 +29,7 @@
   - [Fluent Bit HTTP](./dc/destinations/flb_http.md)
   - [Fluent Bit AWS Kinesis Data Streams](./dc/destinations/flb_kinesis_data_streams.md)
   - [Fluent Bit Minio](./dc/destinations/flb_minio.md)
-  - [Fluent Bit PostgresSQL](./dc/destinations/flb_pgsql.md)
+  - [Fluent Bit PostgreSQL](./dc/destinations/flb_pgsql.md)
   - [Fluent Bit Stdout](./dc/destinations/flb_stdout.md)
   - [RCL](./dc/destinations/rcl.md)
 - [Future Work and Roadmap](./dc/future/future_work.md)

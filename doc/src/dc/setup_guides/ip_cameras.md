@@ -41,4 +41,3 @@ This will create a stream on rtsp://127.0.0.1:8554/mystream
 ```bash
 ros2 launch dc_bringup ip_cameras.launch.py
 ```
-
