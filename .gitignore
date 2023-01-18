@@ -1,6 +1,8 @@
 # Created by https://www.toptal.com/developers/gitignore/api/ros
 # Edit at https://www.toptal.com/developers/gitignore?templates=ros
 
+### DOC ###
+doc/book
 ### ROS ###
 **devel/
 **logs/
