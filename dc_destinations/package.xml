@@ -19,6 +19,8 @@
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
 
+  <exec_depend>fluent_bit_plugins</exec_depend>
+
   <export>
     <build_type>ament_cmake</build_type>
     <dc_core plugin="${prefix}/destination_plugin.xml" />
