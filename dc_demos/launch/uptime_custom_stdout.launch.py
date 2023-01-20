@@ -35,7 +35,7 @@ def generate_launch_description():
 
     declare_params_file_cmd = DeclareLaunchArgument(
         "dc_params_file",
-        default_value=os.path.join(demos_dir, "params", "uptime_stdout.yaml"),
+        default_value=os.path.join(demos_dir, "params", "uptime_custom_stdout.yaml"),
         description="Full path to the ROS2 parameters file to use for all launched nodes",
     )
 
