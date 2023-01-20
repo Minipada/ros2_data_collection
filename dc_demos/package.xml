@@ -7,9 +7,12 @@
   <maintainer email="root@todo.todo">root</maintainer>
   <license>TODO: License declaration</license>
 
+  <depend>dc_measurements</depend>
   <depend>launch</depend>
+  <depend>pluginlib</depend>
 
   <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>dc_bringup</exec_depend>
   <exec_depend>dc_simulation</exec_depend>
   <exec_depend>nav2_bringup</exec_depend>
   <exec_depend>nav2_simple_commander</exec_depend>
@@ -17,6 +20,7 @@
   <exec_depend>xacro</exec_depend>
 
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
+    <dc_core plugin="${prefix}/measurement_plugin.xml" />
   </export>
 </package>
