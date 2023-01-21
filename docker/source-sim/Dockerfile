@@ -24,7 +24,7 @@ RUN --mount=type=cache,target=/root/.ccache/ \
     if [ -r "src/dc/dc_${ROS_DISTRO}.repos" ] ; then vcs import src < src/dc/dc_sim.repos ; fi  && \
     if [ -r "src/dc/dc_${ROS_DISTRO}.repos" ] ; then vcs import src < "src/dc/dc_sim_${ROS_DISTRO}.repos" ; fi && \
     #
-    apt update -qq && \
+    apt-get update && \
     rosdep update && \
     DEBIAN_FRONTEND=noninteractive \
     rosdep install -y --from-paths src --ignore-src --rosdistro "${ROS_DISTRO}" --as-root=apt:false && \
