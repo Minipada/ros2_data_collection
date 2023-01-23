@@ -132,6 +132,16 @@ def generate_launch_description():
                 arguments=["--ros-args", "--log-level", log_level],
             ),
             Node(
+                package="dc_group",
+                executable="group_server",
+                output={
+                    "stdout": "screen",
+                    "stderr": "screen",
+                },
+                parameters=[configured_params],
+                arguments=["--ros-args", "--log-level", log_level],
+            ),
+            Node(
                 package="dc_destinations",
                 executable="destination_server",
                 name="destination_server",
@@ -200,6 +210,16 @@ def generate_launch_description():
                 parameters=[configured_params, {"autostart": autostart}],
                 arguments=["--ros-args", "--log-level", log_level],
                 output="screen",
+            ),
+            Node(
+                package="dc_group",
+                executable="group_server",
+                output={
+                    "stdout": "screen",
+                    "stderr": "screen",
+                },
+                parameters=[configured_params],
+                arguments=["--ros-args", "--log-level", log_level],
             ),
             LoadComposableNodes(
                 target_container=container_name,
