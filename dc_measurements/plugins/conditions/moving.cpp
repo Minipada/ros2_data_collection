@@ -1,4 +1,4 @@
-#include "moving.hpp"
+#include "dc_measurements/plugins/conditions/moving.hpp"
 
 namespace dc_conditions
 {
