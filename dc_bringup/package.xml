@@ -8,7 +8,6 @@
     <license>MPL-2.0</license>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
-    <build_depend>launch_ros</build_depend>
     <build_depend>dc_common</build_depend>
 
     <exec_depend>launch_ros</exec_depend>
