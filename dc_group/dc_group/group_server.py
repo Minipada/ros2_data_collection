@@ -3,11 +3,12 @@ import json
 from typing import List, Optional
 
 import rclpy
-from dc_interfaces.msg import StringStamped
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 from rclpy.node import Node
 from rclpy_message_converter import message_converter
+
+from dc_interfaces.msg import StringStamped
 
 from .flatten import flatten, unflatten_list
 
@@ -41,7 +42,7 @@ class GroupServer(Node):
             tmp_data_dict = flatten(
                 nested_dict={measurement_dict["group_key"]: m_data}, separator="."
             )
-            data_dict = {**data_dict, **tmp_data_dict}
+            data_dict = data_dict | tmp_data_dict
 
         for exclude_key in self.params[group]["exclude_keys"]:
             if exclude_key != "":
@@ -141,7 +142,7 @@ class GroupServer(Node):
             )
 
 
-def main(args: Optional[List[str]] = None) -> None:
+def main(args: list[str] | None = None) -> None:
     rclpy.init(args=args)
 
     try:
