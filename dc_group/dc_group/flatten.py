@@ -1,7 +1,5 @@
 from collections.abc import Iterable
 
-import six
-
 
 def _unflatten_asserts(flat_dict, separator):
     assert isinstance(flat_dict, dict), "un_flatten requires dictionary input"
@@ -12,16 +10,20 @@ def _unflatten_asserts(flat_dict, separator):
     ), "provided dict is not flat"
 
 
-def _construct_key(previous_key, separator, new_key, replace_separators=None):
-    """
-    Returns the new_key if no previous key exists, otherwise concatenates
+def _construct_key(
+    previous_key: str, separator: str, new_key: str, replace_separators: str | None = None
+):
+    """Returns the new_key if no previous key exists, otherwise concatenates
     previous key, separator, and new_key
-    :param previous_key:
-    :param separator:
-    :param new_key:
-    :param str replace_separators: Replace separators within keys
-    :return: a string if previous_key exists and simply passes through the
-    new_key otherwise
+
+    Args:
+        previous_key (str): Previous key
+        separator (str): string to separate dictionary keys by
+        new_key (str): New key
+        replace_separators (str, optional): _description_. Defaults to None.
+
+    Returns:
+        str: New key
     """
     if replace_separators is not None:
         new_key = str(new_key).replace(separator, replace_separators)
@@ -31,18 +33,26 @@ def _construct_key(previous_key, separator, new_key, replace_separators=None):
         return new_key
 
 
-def flatten(nested_dict, separator="_", root_keys_to_ignore=None, replace_separators=None):
-    """
-    Flattens a dictionary with nested structure to a dictionary with no
-    hierarchy
+def flatten(
+    nested_dict,
+    separator="_",
+    root_keys_to_ignore: list | None = None,
+    replace_separators: str | None = None,
+) -> dict:
+    """Flattens a dictionary with nested structure to a dictionary with no
+    hierarchy.
     Consider ignoring keys that you are not interested in to prevent
-    unnecessary processing
-    This is specially true for very deep objects
-    :param nested_dict: dictionary we want to flatten
-    :param separator: string to separate dictionary keys by
-    :param root_keys_to_ignore: set of root keys to ignore from flattening
-    :param str replace_separators: Replace separators within keys
-    :return: flattened dictionary
+        unnecessary processing. This is specially true for very deep objects
+
+    Args:
+        nested_dict (str): dictionary we want to flatten
+        separator (str, optional): string to separate dictionary keys by. Defaults to "_".
+        root_keys_to_ignore (list, optional): set of root keys to ignore from flattening.
+            Defaults to None.
+        replace_separators (str, optional): Replace separators within keys. Defaults to None.
+
+    Returns:
+        dict: Flattened dictionary
     """
     assert isinstance(nested_dict, dict), "flatten requires a dictionary input"
     assert isinstance(separator, str), "separator must be string"
@@ -55,16 +65,15 @@ def flatten(nested_dict, separator="_", root_keys_to_ignore=None, replace_separa
 
     # This global dictionary stores the flattened keys and values and is
     # ultimately returned
-    flattened_dict = dict()
+    flattened_dict = {}
 
-    def _flatten(object_, key):
-        """
-        For dict, list and set objects_ calls itself on the elements and for
-        other types assigns the object_ to
-        the corresponding key in the global flattened_dict
-        :param object_: object to flatten
-        :param key: carries the concatenated key for the object_
-        :return: None
+    def _flatten(object_: dict, key: str):
+        """For dict, list and set objects_ calls itself on the elements and for other types
+            assigns the object_ to the corresponding key in the global flattened_dict.
+
+        Args:
+            object_ (dict): object to flatten
+            key (str): carries the concatenated key for the object_
         """
         # Empty object can't be iterated, take as is
         if not object_:
@@ -93,18 +102,20 @@ def flatten(nested_dict, separator="_", root_keys_to_ignore=None, replace_separa
     return flattened_dict
 
 
-def unflatten(flat_dict, separator="_"):
-    """
-    Creates a hierarchical dictionary from a flattened dictionary
-    Assumes no lists are present
-    :param flat_dict: a dictionary with no hierarchy
-    :param separator: a string that separates keys
-    :return: a dictionary with hierarchy
+def unflatten(flat_dict: dict, separator: str | None = "_") -> dict:
+    """Creates a hierarchical dictionary from a flattened dictionary, assume no lists are present.
+
+    Args:
+        flat_dict (dict): a dictionary with no hierarchy
+        separator (str, optional): a string that separates keys. Defaults to "_".
+
+    Returns:
+        dict: a dictionary with hierarchy
     """
     _unflatten_asserts(flat_dict, separator)
 
     # This global dictionary is mutated and returned
-    unflattened_dict = dict()
+    unflattened_dict = {}
 
     def _unflatten(dic, keys, value):
         for key in keys[:-1]:
@@ -127,20 +138,22 @@ def unflatten(flat_dict, separator="_"):
     return unflattened_dict
 
 
-def check_if_numbers_are_consecutive(list_):
-    """
-    Returns True if numbers in the list are consecutive
-    :param list_: list of integers
-    :return: Boolean
+def check_if_numbers_are_consecutive(list_: list) -> bool:
+    """Returns True if numbers in the list are consecutive
+
+    Args:
+        list_ (list): list of integers
+
+    Returns:
+        bool: Returns True if numbers in the list are consecutive
     """
     return all(
         True if second - first == 1 else False for first, second in zip(list_[:-1], list_[1:])
     )
 
 
-def unflatten_list(flat_dict, separator="_"):
-    """
-    Unflattens a dictionary, first assuming no lists exist and then tries to
+def unflatten_list(flat_dict: dict, separator="_") -> dict:
+    """Unflatten a dictionary, first assuming no lists exist and then tries to
     identify lists and replaces them
     This is probably not very efficient and has not been tested extensively
     Feel free to add test cases or rewrite the logic
@@ -148,9 +161,13 @@ def unflatten_list(flat_dict, separator="_"):
     - Sorting all the keys in the dictionary, which specially for the root
     dictionary can be a lot of keys
     - Checking that numbers are consecutive is O(N) in number of keys
-    :param flat_dict: dictionary with no hierarchy
-    :param separator: a string that separates keys
-    :return: a dictionary with hierarchy
+
+    Args:
+        flat_dict (dict): dictionary with no hierarchy
+        separator (str, optional): a string that separates keys. Defaults to "_".
+
+    Returns:
+        dict: a dictionary with hierarchy
     """
     _unflatten_asserts(flat_dict, separator)
 

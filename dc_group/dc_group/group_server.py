@@ -1,6 +1,5 @@
 import functools
 import json
-from typing import List, Optional
 
 import rclpy
 from message_filters import ApproximateTimeSynchronizer, Subscriber
@@ -46,7 +45,7 @@ class GroupServer(Node):
 
         for exclude_key in self.params[group]["exclude_keys"]:
             if exclude_key != "":
-                if not "*" in exclude_key:
+                if "*" not in exclude_key:
                     data_dict = {
                         k: v for k, v in data_dict.items() if not k.startswith(exclude_key)
                     }
