@@ -1,7 +1,12 @@
 #ifndef DC_UTIL__STRING_UTILS_HPP_
 #define DC_UTIL__STRING_UTILS_HPP_
 
+#include <algorithm>
+#include <boost/algorithm/hex.hpp>
+#include <boost/uuid/detail/md5.hpp>
+#include <fstream>
 #include <iostream>
+#include <iterator>
 #include <numeric>
 #include <regex>
 #include <vector>
@@ -11,6 +16,7 @@
 
 namespace dc_util
 {
+using boost::uuids::detail::md5;
 
 const char* boolToString(bool b)
 {
@@ -24,7 +30,35 @@ char* convert(const std::string& s)
   return pc;
 }
 
-std::string join(const std::vector<std::string>& vec, const std::string delim = ", ")
+std::string md5toString(const md5::digest_type& digest)
+{
+  const auto intDigest = reinterpret_cast<const int*>(&digest);
+  std::string result;
+  boost::algorithm::hex(intDigest, intDigest + (sizeof(md5::digest_type) / sizeof(int)), std::back_inserter(result));
+  return result;
+}
+
+std::string getFileMd5(std::string file_path)
+{
+  std::string s;
+  std::ifstream infile(file_path);
+  std::string result;
+
+  while (std::getline(infile, s))
+  {
+    md5 hash;
+    md5::digest_type digest;
+
+    hash.process_bytes(s.data(), s.size());
+    hash.get_digest(digest);
+
+    result = md5toString(digest);
+  }
+
+  return result;
+}
+
+std::string join(const std::vector<std::string>& vec, const std::string& delim = ", ")
 {
   if (vec.empty())
   {
@@ -33,6 +67,12 @@ std::string join(const std::vector<std::string>& vec, const std::string delim = 
 
   return std::accumulate(std::next(vec.begin()), vec.end(), vec[0],
                          [&delim](const std::string& a, const std::string& b) { return a + delim + b; });
+}
+
+std::vector<std::string> split(const std::string& str, const std::string& regex_str = "/")
+{
+  std::regex regexz(regex_str);
+  return { std::sregex_token_iterator(str.begin(), str.end(), regexz, -1), std::sregex_token_iterator() };
 }
 
 std::string to_space_separated_string(std::vector<std::string> string_array)

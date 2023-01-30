@@ -209,7 +209,7 @@ public:
 
   void collectAndPublish()
   {
-    if (enabled_ && isConditionOn())
+    if (enabled_)
     {
       dc_interfaces::msg::StringStamped msg;
       if (
@@ -228,7 +228,9 @@ public:
           (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_))
       {
         // Add tags
-        if (tags_.size() != 0)
+        // Only put the tags in if the conditions are ok. This way, we still publish the data
+        // and can check in conditions but with no tags, this is not received by the destination_server
+        if (tags_.size() != 0 && isConditionOn())
         {
           json data_json = json::parse(msg.data);
           data_json["tags"] = tags_;

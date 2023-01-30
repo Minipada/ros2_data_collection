@@ -14,6 +14,7 @@ public:
   ~StringStamped();
   dc_interfaces::msg::StringStamped collect() override;
   void dataCb(dc_interfaces::msg::StringStamped::SharedPtr msg);
+  // void onConfigure();
 
 protected:
   /**

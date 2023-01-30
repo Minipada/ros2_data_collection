@@ -9,6 +9,12 @@ StringStamped::StringStamped() : dc_measurements::Measurement()
 
 StringStamped::~StringStamped() = default;
 
+// void StringStamped::onConfigure()
+// {
+//   subscription_ = node->create_subscription<dc_interfaces::msg::StringStamped>(
+//       cmd_vel_topic_.c_str(), 10, std::bind(&StringStamped::dataCb, this, std::placeholders::_1));
+// }
+
 void StringStamped::setValidationSchema()
 {
 }
@@ -22,7 +28,6 @@ dc_interfaces::msg::StringStamped StringStamped::collect()
 {
   dc_interfaces::msg::StringStamped msg = last_data_;
   last_data_ = dc_interfaces::msg::StringStamped();
-
   return msg;
 }
 
