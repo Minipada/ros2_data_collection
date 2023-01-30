@@ -3,6 +3,7 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <regex>
 #if __has_cpp_attribute(nodiscard)
 #define TOJSON_NODISCARD [[nodiscard]]
 #else
@@ -15,6 +16,18 @@ namespace tojson
 {
 namespace detail
 {
+
+nlohmann::json remove_key_match_regex(nlohmann::json flat_json, std::string regex_field, const std::string& key)
+{
+  std::smatch base_match;
+  const std::regex base_regex(regex_field);
+  if (std::regex_match(key, base_match, base_regex))
+  {
+    flat_json.erase(key);
+  }
+
+  return flat_json;
+}
 
 inline nlohmann::json parse_scalar(const YAML::Node& node)
 {

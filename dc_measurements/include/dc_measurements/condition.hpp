@@ -3,6 +3,8 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <nlohmann/json.hpp>
+
 #include "dc_core/condition.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -16,6 +18,8 @@ enum class Status : int8_t
   FAILED = 2,
   RUNNING = 3,
 };
+
+using json = nlohmann::json;
 
 using namespace std::chrono_literals;  // NOLINT
 
