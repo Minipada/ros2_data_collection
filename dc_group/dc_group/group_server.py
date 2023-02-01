@@ -1,5 +1,6 @@
 import functools
 import json
+import sys
 
 import rclpy
 from message_filters import ApproximateTimeSynchronizer, Subscriber
@@ -77,9 +78,13 @@ class GroupServer(Node):
             ),
         )
         self.group_measurement_plugins = self.declare_parameter("group_measurement_plugins", True)
-        self.params["groups"] = (
-            self.get_parameter("groups").get_parameter_value().string_array_value
-        )
+        try:
+            self.params["groups"] = (
+                self.get_parameter("groups").get_parameter_value().string_array_value
+            )
+        except rclpy.exceptions.ParameterUninitializedException:
+            self.get_logger().error("groups parameter not set. Exiting Node")
+            sys.exit(1)
 
         for group in self.params["groups"]:
             self.declare_parameter(
