@@ -165,7 +165,7 @@ public:
     }
   }
 
-  bool isConditionOn()
+  bool isConditionOn(dc_interfaces::msg::StringStamped msg)
   {
     bool all_conditions_res = true;
     bool any_conditions_res = true;
@@ -176,7 +176,7 @@ public:
     {
       all_conditions_res =
           std::all_of(if_all_conditions_.begin(), if_all_conditions_.end(),
-                      [&](const std::string& condition) { return conditions_[condition]->getState() == true; });
+                      [&](const std::string& condition) { return conditions_[condition]->getState(msg) == true; });
     }
 
     // "Any" condition ON enable
@@ -185,7 +185,7 @@ public:
       // No "any" condition defined, activates
       any_conditions_res =
           std::any_of(if_any_conditions_.begin(), if_any_conditions_.end(),
-                      [&](const std::string& condition) { return conditions_[condition]->getState() == true; });
+                      [&](const std::string& condition) { return conditions_[condition]->getState(msg) == true; });
     }
 
     // All condition set to false condition ON enable
@@ -193,7 +193,7 @@ public:
     {
       none_conditions_res =
           std::all_of(if_none_conditions_.begin(), if_none_conditions_.end(),
-                      [&](const std::string& condition) { return conditions_[condition]->getState() == false; });
+                      [&](const std::string& condition) { return conditions_[condition]->getState(msg) == false; });
     }
 
     RCLCPP_DEBUG(logger_, "all_conditions_res=%d, any_conditions_res=%d, none_conditions_res=%d", all_conditions_res,
@@ -211,17 +211,7 @@ public:
   {
     if (enabled_)
     {
-      dc_interfaces::msg::StringStamped msg;
-      if (
-          // Unlimited measurements or maximum measurements at start not reached
-          (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_) ||
-          // Unlimited measurements on condition(s) activated
-          (isAnyConditionSet() && isConditionOn() && condition_max_measurements_ == 0) ||
-          // Measurements on condition(s) activated and maximum amount not reached
-          (isAnyConditionSet() && isConditionOn() && condition_counter_published_ < condition_max_measurements_))
-      {
-        msg = collect();
-      }
+      dc_interfaces::msg::StringStamped msg = collect();
 
       // Init publish
       if (msg.data != "" && msg.data != "null" &&
@@ -230,7 +220,7 @@ public:
         // Add tags
         // Only put the tags in if the conditions are ok. This way, we still publish the data
         // and can check in conditions but with no tags, this is not received by the destination_server
-        if (tags_.size() != 0 && isConditionOn())
+        if (tags_.size() != 0 && isConditionOn(msg))
         {
           json data_json = json::parse(msg.data);
           data_json["tags"] = tags_;
@@ -275,20 +265,19 @@ public:
       }
       // Infinite measurements on condition
       else if (msg.data != "" && msg.data != "null" &&
-               (isAnyConditionSet() && isConditionOn() && condition_max_measurements_ == 0))
+               (isAnyConditionSet() && isConditionOn(msg) && condition_max_measurements_ == 0))
       {
         data_pub_->publish(msg);
       }
       // Trigger publish with maximum
       else if (msg.data != "" && msg.data != "null" &&
-               (isAnyConditionSet() && isConditionOn() && condition_counter_published_ < condition_max_measurements_))
+               (isAnyConditionSet() && isConditionOn(msg) && condition_counter_published_ < condition_max_measurements_))
       {
-        RCLCPP_INFO(logger_, "6");
         data_pub_->publish(msg);
         condition_counter_published_++;
       }
       // Not publish, reset Condition counter
-      else if (isAnyConditionSet() && !isConditionOn())
+      else if (isAnyConditionSet() && !isConditionOn(msg))
       {
         condition_counter_published_ = 0;
       }

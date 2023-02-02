@@ -6,6 +6,7 @@
 #include <nlohmann/json.hpp>
 
 #include "dc_core/condition.hpp"
+#include "dc_interfaces/msg/string_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/bool.hpp"
 
@@ -104,12 +105,11 @@ public:
     condition_pub_->on_deactivate();
     enabled_ = false;
   }
-
-  bool getState() override
+  bool getState(dc_interfaces::msg::StringStamped msg) override
   {
+    (void)msg;  // Ignore error of variable being unused
     return active_;
   }
-
   bool active_{ false };
 
 protected:

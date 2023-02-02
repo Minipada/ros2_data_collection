@@ -10,7 +10,6 @@
 #include "dc_util/string_utils.hpp"
 #include "nav2_util/node_utils.hpp"
 #include "nav_msgs/msg/odometry.hpp"
-
 namespace dc_conditions
 {
 
@@ -26,7 +25,7 @@ protected:
   std::vector<std::string> paths_hash_;
   std::vector<std::string> previous_paths_hash_;
   std::string topic_;
-  void dataCb(dc_interfaces::msg::StringStamped::SharedPtr msg);
+  bool getState(dc_interfaces::msg::StringStamped msg);
   void onConfigure();
   rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr subscription_;
   json previous_json_;

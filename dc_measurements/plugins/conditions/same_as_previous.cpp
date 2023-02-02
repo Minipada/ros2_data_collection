@@ -10,14 +10,10 @@ SameAsPrevious::SameAsPrevious() : dc_conditions::Condition()
 void SameAsPrevious::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".topic", rclcpp::ParameterValue(""));
   nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".paths", rclcpp::PARAMETER_STRING_ARRAY);
   nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".exclude", rclcpp::PARAMETER_STRING_ARRAY);
-  node->get_parameter(condition_name_ + ".topic", topic_);
   node->get_parameter(condition_name_ + ".paths", paths_);
   node->get_parameter(condition_name_ + ".exclude", exclude_);
-  subscription_ = node->create_subscription<dc_interfaces::msg::StringStamped>(
-      topic_.c_str(), 10, std::bind(&SameAsPrevious::dataCb, this, std::placeholders::_1));
 
   for (std::size_t i = 0; i < paths_.size(); ++i)
   {
@@ -26,10 +22,11 @@ void SameAsPrevious::onConfigure()
   }
 }
 
-void SameAsPrevious::dataCb(dc_interfaces::msg::StringStamped::SharedPtr msg)
+bool SameAsPrevious::getState(dc_interfaces::msg::StringStamped msg)
 {
-  json data_json = json::parse(msg->data);
+  json data_json = json::parse(msg.data);
   data_json.erase("tags");
+  previous_paths_hash_ = paths_hash_;
 
   // Exclude paths from paths_ first
   json flat_json = data_json.flatten();
@@ -66,8 +63,14 @@ void SameAsPrevious::dataCb(dc_interfaces::msg::StringStamped::SharedPtr msg)
     flat_json_tmp = dc_util::tojson::detail::remove_key_match_regex(flat_json_tmp, key_path_w_prefix, *key_path);
   }
   flat_json = flat_json_tmp;
+  // If first data
+  if (previous_json_.empty())
+  {
+    active_ = false;
+  }
   // If hash comparison didn't determine the result, we compare the jsons
-  if (previous_json_ == flat_json.unflatten() && previous_paths_hash_ == paths_hash_)
+  else if (previous_json_ == flat_json.unflatten() &&
+           ((previous_paths_hash_ == paths_hash_) || (previous_paths_hash_.empty())))
   {
     active_ = true;
   }
@@ -76,7 +79,8 @@ void SameAsPrevious::dataCb(dc_interfaces::msg::StringStamped::SharedPtr msg)
     active_ = false;
   }
   previous_json_ = flat_json.unflatten();
-  previous_paths_hash_ = paths_hash_;
+
+  return active_;
 }
 
 SameAsPrevious::~SameAsPrevious() = default;
