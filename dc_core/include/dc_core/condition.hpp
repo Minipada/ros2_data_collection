@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include "dc_interfaces/msg/string_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
@@ -38,7 +39,7 @@ public:
    */
   virtual void activate() = 0;
 
-  virtual bool getState() = 0;
+  virtual bool getState(dc_interfaces::msg::StringStamped msg) = 0;
 
   /**
    * @brief Method to deactivate Condition and any threads involved in execution.
