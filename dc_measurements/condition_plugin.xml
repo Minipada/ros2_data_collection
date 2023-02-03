@@ -1,4 +1,12 @@
 <class_libraries>
+    <library path="dc_exist_condition">
+        <class name="dc_conditions/Exist" type="dc_conditions::Exist" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_exist
+            </description>
+        </class>
+    </library>
+
     <library path="dc_moving_condition">
         <class name="dc_conditions/Moving" type="dc_conditions::Moving" base_class_type="dc_core::Condition">
             <description>

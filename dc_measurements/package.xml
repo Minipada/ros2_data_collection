@@ -27,6 +27,7 @@
 
   <export>
     <build_type>ament_cmake</build_type>
+    <dc_core plugin="${prefix}/condition_plugin.xml" />
     <dc_core plugin="${prefix}/measurement_plugin.xml" />
   </export>
 </package>

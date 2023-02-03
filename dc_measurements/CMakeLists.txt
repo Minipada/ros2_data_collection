@@ -36,11 +36,14 @@ include_directories(
 )
 
 # Condition plugins
-add_library(dc_same_as_previous_condition SHARED plugins/conditions/same_as_previous.cpp)
-list(APPEND dc_condition_plugin_libs dc_same_as_previous_condition)
+add_library(dc_exist_condition SHARED plugins/conditions/exist.cpp)
+list(APPEND dc_condition_plugin_libs dc_exist_condition)
 
 add_library(dc_moving_condition SHARED plugins/conditions/moving.cpp)
 list(APPEND dc_condition_plugin_libs dc_moving_condition)
+
+add_library(dc_same_as_previous_condition SHARED plugins/conditions/same_as_previous.cpp)
+list(APPEND dc_condition_plugin_libs dc_same_as_previous_condition)
 
 # Measurement plugins
 add_library(dc_camera_measurement SHARED plugins/measurements/camera.cpp)
