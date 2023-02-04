@@ -36,8 +36,29 @@ include_directories(
 )
 
 # Condition plugins
+add_library(dc_bool_equal_condition SHARED plugins/conditions/bool_equal.cpp)
+list(APPEND dc_condition_plugin_libs dc_bool_equal_condition)
+
+add_library(dc_double_equal_condition SHARED plugins/conditions/double_equal.cpp)
+list(APPEND dc_condition_plugin_libs dc_double_equal_condition)
+
+add_library(dc_double_inferior_condition SHARED plugins/conditions/double_inferior.cpp)
+list(APPEND dc_condition_plugin_libs dc_double_inferior_condition)
+
+add_library(dc_double_superior_condition SHARED plugins/conditions/double_superior.cpp)
+list(APPEND dc_condition_plugin_libs dc_double_superior_condition)
+
 add_library(dc_exist_condition SHARED plugins/conditions/exist.cpp)
 list(APPEND dc_condition_plugin_libs dc_exist_condition)
+
+add_library(dc_integer_equal_condition SHARED plugins/conditions/integer_equal.cpp)
+list(APPEND dc_condition_plugin_libs dc_integer_equal_condition)
+
+add_library(dc_integer_inferior_condition SHARED plugins/conditions/integer_inferior.cpp)
+list(APPEND dc_condition_plugin_libs dc_integer_inferior_condition)
+
+add_library(dc_integer_superior_condition SHARED plugins/conditions/integer_superior.cpp)
+list(APPEND dc_condition_plugin_libs dc_integer_superior_condition)
 
 add_library(dc_moving_condition SHARED plugins/conditions/moving.cpp)
 list(APPEND dc_condition_plugin_libs dc_moving_condition)
