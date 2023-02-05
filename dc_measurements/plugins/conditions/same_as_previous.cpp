@@ -80,6 +80,7 @@ bool SameAsPrevious::getState(dc_interfaces::msg::StringStamped msg)
   }
   previous_json_ = flat_json.unflatten();
 
+  publishActive();
   return active_;
 }
 

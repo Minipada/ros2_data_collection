@@ -24,16 +24,34 @@ bool DoubleSuperior::getState(dc_interfaces::msg::StringStamped msg)
   json flat_json = data_json.flatten();
 
   std::string key_w_prefix = std::string("/") + key_;
+
+  if (!flat_json.contains(key_w_prefix))
+  {
+    RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found");
+    active_ = false;
+    publishActive();
+    return active_;
+  }
+
+  if (flat_json[key_w_prefix].type() != json::value_t::number_float)
+  {
+    RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not a double");
+    active_ = false;
+    publishActive();
+    return active_;
+  }
+
   if (include_value_)
   {
-    return (flat_json.contains(key_w_prefix) && flat_json[key_w_prefix].type() == json::value_t::number_float &&
-            flat_json[key_w_prefix] >= value_);
+    active_ = flat_json[key_w_prefix] >= value_;
   }
   else
   {
-    return (flat_json.contains(key_w_prefix) && flat_json[key_w_prefix].type() == json::value_t::number_float &&
-            flat_json[key_w_prefix] > value_);
+    active_ = flat_json[key_w_prefix] > value_;
   }
+
+  publishActive();
+  return active_;
 }
 
 DoubleSuperior::~DoubleSuperior() = default;
