@@ -21,7 +21,9 @@ bool Exist::getState(dc_interfaces::msg::StringStamped msg)
 
   std::string key_w_prefix = std::string("/") + key_;
 
-  return flat_json.contains(key_w_prefix);
+  active_ = flat_json.contains(key_w_prefix);
+  publishActive();
+  return active_;
 }
 
 Exist::~Exist() = default;

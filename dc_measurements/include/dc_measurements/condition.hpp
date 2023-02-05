@@ -108,7 +108,15 @@ public:
   bool getState(dc_interfaces::msg::StringStamped msg) override
   {
     (void)msg;  // Ignore error of variable being unused
+    publishActive();
     return active_;
+  }
+
+  void publishActive()
+  {
+    std_msgs::msg::Bool msg_condition = std_msgs::msg::Bool();
+    msg_condition.data = active_;
+    condition_pub_->publish(msg_condition);
   }
   bool active_{ false };
 

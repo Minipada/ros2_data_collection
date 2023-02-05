@@ -23,8 +23,25 @@ bool IntegerEqual::getState(dc_interfaces::msg::StringStamped msg)
 
   std::string key_w_prefix = std::string("/") + key_;
 
-  return (flat_json.contains(key_w_prefix) && flat_json[key_w_prefix].type() == json::value_t::number_integer &&
-          flat_json[key_w_prefix] == value_);
+  if (!flat_json.contains(key_w_prefix))
+  {
+    RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found");
+    active_ = false;
+    publishActive();
+    return active_;
+  }
+
+  if (flat_json[key_w_prefix].type() != json::value_t::number_integer)
+  {
+    RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not an integer");
+    active_ = false;
+    publishActive();
+    return active_;
+  }
+
+  active_ = flat_json[key_w_prefix] == value_;
+  publishActive();
+  return active_;
 }
 
 IntegerEqual::~IntegerEqual() = default;
