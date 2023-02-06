@@ -60,11 +60,26 @@ list(APPEND dc_condition_plugin_libs dc_integer_inferior_condition)
 add_library(dc_integer_superior_condition SHARED plugins/conditions/integer_superior.cpp)
 list(APPEND dc_condition_plugin_libs dc_integer_superior_condition)
 
+add_library(dc_list_bool_equal_condition SHARED plugins/conditions/list_bool_equal.cpp)
+list(APPEND dc_condition_plugin_libs dc_list_bool_equal_condition)
+
+add_library(dc_list_double_equal_condition SHARED plugins/conditions/list_double_equal.cpp)
+list(APPEND dc_condition_plugin_libs dc_list_double_equal_condition)
+
+add_library(dc_list_integer_equal_condition SHARED plugins/conditions/list_integer_equal.cpp)
+list(APPEND dc_condition_plugin_libs dc_list_integer_equal_condition)
+
+add_library(dc_list_string_equal_condition SHARED plugins/conditions/list_string_equal.cpp)
+list(APPEND dc_condition_plugin_libs dc_list_string_equal_condition)
+
 add_library(dc_moving_condition SHARED plugins/conditions/moving.cpp)
 list(APPEND dc_condition_plugin_libs dc_moving_condition)
 
 add_library(dc_same_as_previous_condition SHARED plugins/conditions/same_as_previous.cpp)
 list(APPEND dc_condition_plugin_libs dc_same_as_previous_condition)
+
+add_library(dc_string_match_condition SHARED plugins/conditions/string_match.cpp)
+list(APPEND dc_condition_plugin_libs dc_string_match_condition)
 
 # Measurement plugins
 add_library(dc_camera_measurement SHARED plugins/measurements/camera.cpp)
