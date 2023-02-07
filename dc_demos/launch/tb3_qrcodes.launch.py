@@ -29,6 +29,9 @@ def generate_launch_description():
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
     use_dc = LaunchConfiguration("use_dc")
+    detection_barcodes_service = LaunchConfiguration("detection_barcodes_service")
+    draw_img_service = LaunchConfiguration("draw_img_service")
+    save_img_service = LaunchConfiguration("save_img_service")
 
     # Nav2
     nav2_params_file = LaunchConfiguration("nav2_params_file")
@@ -154,6 +157,17 @@ def generate_launch_description():
     declare_use_rviz_cmd = DeclareLaunchArgument(
         "use_rviz", default_value="True", description="Whether to start RVIZ"
     )
+    declare_detection_barcodes_service = DeclareLaunchArgument(
+        "detection_barcodes_service",
+        default_value="True",
+        description="Start barcode detection service",
+    )
+    declare_draw_img_service = DeclareLaunchArgument(
+        "draw_img_service", default_value="True", description="Start draw image service"
+    )
+    declare_save_img_service = DeclareLaunchArgument(
+        "save_img_service", default_value="True", description="Start save image service"
+    )
 
     # Use custom URDF with camera
     urdf = os.path.join(dc_description_dir, "urdf", "turtlebot3_waffle_qrcodes.xacro")
@@ -190,6 +204,9 @@ def generate_launch_description():
             "container_name": container_name,
             "use_respawn": use_respawn,
             "log_level": log_level,
+            "detection_barcodes_service": detection_barcodes_service,
+            "save_img_service": save_img_service,
+            "draw_img_service": draw_img_service,
         }.items(),
     )
 
@@ -250,6 +267,9 @@ def generate_launch_description():
     ld.add_action(declare_container_name_cmd)
     ld.add_action(declare_dc_params_file_cmd)
     ld.add_action(declare_log_level_cmd)
+    ld.add_action(declare_detection_barcodes_service)
+    ld.add_action(declare_draw_img_service)
+    ld.add_action(declare_save_img_service)
 
     # Declare the launch options
     ld.add_action(dc_bringup_cmd)
