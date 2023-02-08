@@ -128,7 +128,7 @@ def generate_launch_description():
 
     declare_use_composition_cmd = DeclareLaunchArgument(
         "use_composition",
-        default_value="True",
+        default_value="False",
         description="Use composed bringup if True",
     )
 
