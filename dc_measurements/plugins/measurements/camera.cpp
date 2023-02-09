@@ -75,7 +75,7 @@ void Camera::onConfigure()
       }
       RCLCPP_INFO(logger_, "Waiting for barcode service to appear...");
     }
-    RCLCPP_INFO(logger_, "Barcode detection initialized");
+    RCLCPP_INFO(logger_, "Barcode detection service initialized");
   }
 
   // Services
@@ -106,7 +106,7 @@ void Camera::onConfigure()
       }
       RCLCPP_INFO(logger_, "Waiting for draw image service to appear...");
     }
-    RCLCPP_INFO(logger_, "Draw detection barcode initialized");
+    RCLCPP_INFO(logger_, "Draw detection barcode service initialized");
   }
 
   // Data subscriber
