@@ -31,6 +31,7 @@ def generate_launch_description():
     detection_barcodes_service = LaunchConfiguration("detection_barcodes_service")
     draw_img_service = LaunchConfiguration("draw_img_service")
     save_img_service = LaunchConfiguration("save_img_service")
+    group_node = LaunchConfiguration("group_node")
 
     lifecycle_nodes = ["measurement_server", "destination_server"]
 
@@ -101,6 +102,9 @@ def generate_launch_description():
     declare_save_img_service = DeclareLaunchArgument(
         "save_img_service", default_value="False", description="Start save image service"
     )
+    declare_group_node = DeclareLaunchArgument(
+        "group_node", default_value="False", description="Start group_node"
+    )
 
     load_nodes = GroupAction(
         condition=IfCondition(PythonExpression(["not ", use_composition])),
@@ -150,6 +154,7 @@ def generate_launch_description():
                 arguments=["--ros-args", "--log-level", log_level],
             ),
             Node(
+                condition=IfCondition(group_node),
                 package="dc_group",
                 executable="group_server",
                 output={
@@ -233,6 +238,7 @@ def generate_launch_description():
                 output="screen",
             ),
             Node(
+                condition=IfCondition(group_node),
                 package="dc_group",
                 executable="group_server",
                 output={
@@ -292,6 +298,7 @@ def generate_launch_description():
     ld.add_action(declare_detection_barcodes_service)
     ld.add_action(declare_draw_img_service)
     ld.add_action(declare_save_img_service)
+    ld.add_action(declare_group_node)
     # Add the actions to launch all of the navigation nodes
     ld.add_action(load_nodes)
     ld.add_action(load_composable_nodes)

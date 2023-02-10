@@ -22,6 +22,7 @@ def generate_launch_description():
     container_name = LaunchConfiguration("container_name")
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
+    group_node = LaunchConfiguration("group_node")
 
     declare_namespace_cmd = DeclareLaunchArgument(
         "namespace", default_value="", description="Top-level namespace"
@@ -66,6 +67,9 @@ def generate_launch_description():
     declare_log_level_cmd = DeclareLaunchArgument(
         "log_level", default_value="info", description="log level"
     )
+    declare_group_node = DeclareLaunchArgument(
+        "group_node", default_value="False", description="Start group_node"
+    )
 
     bringup_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(bringup_dir, "launch", "dc_bringup.launch.py")),
@@ -78,6 +82,7 @@ def generate_launch_description():
             "container_name": container_name,
             "use_respawn": use_respawn,
             "log_level": log_level,
+            "group_node": group_node,
         }.items(),
     )
 
@@ -93,6 +98,7 @@ def generate_launch_description():
     ld.add_action(declare_container_name_cmd)
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
+    ld.add_action(declare_group_node)
 
     # Declare the launch options
     ld.add_action(bringup_cmd)
