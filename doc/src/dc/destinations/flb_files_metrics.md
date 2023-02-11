@@ -33,32 +33,32 @@ erDiagram
 
 ## Parameters
 
-| Parameter                   | Description                            | Type      | Default                                 |
-| --------------------------- | -------------------------------------- | --------- | --------------------------------------- |
-| **plugin_path**             | Where data will be stored              | str       | <install_path>/lib/out_files_metrics.so |
-| **file_storage**            | Where data will be stored              | list[str] | N/A (Mandatory)                         |
-| **db_type**                 | Speed threshold used in the hysteresis | str       | "pgsql"                                 |
-| **delete_when_sent**        | Counter to know if the robot is moving | bool      | true                                    |
-| **minio.endpoint**          | Minio endpoint                         | str       | "127.0.0.1:9000"                        |
-| **minio.access_key_id**     | Minio Access key ID                    | str       | N/A (Mandatory)                         |
-| **minio.secret_access_key** | Minio Secret access key                | str       | N/A (Mandatory)                         |
-| **minio.use_ssl**           | Use SSL for Minio                      | bool      | true                                    |
-| **minio.bucket**            | Minio Bucket name                      | str       | "dc_bucket"                             |
-| **minio.src_fields**        | Local paths for Minio                  | str       | N/A (Mandatory)                         |
-| **minio.upload_fields**     | Remote paths for Minio                 | str       | N/A (Mandatory)                         |
-| **s3.endpoint**             | Hysteresis counter                     | str       | N/A (Mandatory)                         |
-| **s3.access_key_id**        | Hysteresis counter                     | str       | N/A (Mandatory)                         |
-| **s3.secret_access_key**    | Hysteresis counter                     | str       | N/A (Mandatory)                         |
-| **s3.bucket**               | Hysteresis counter                     | str       | N/A (Mandatory)                         |
-| **s3.src_fields**           | Hysteresis counter                     | str       | N/A (Mandatory)                         |
-| **s3.upload_fields**        | Hysteresis counter                     | str       | N/A (Mandatory)                         |
-| **pgsql.host**              | Hysteresis counter                     | str       | "127.0.0.1"                             |
-| **pgsql.port**              | Hysteresis counter                     | str       | "5432"                                  |
-| **pgsql.user**              | Hysteresis counter                     | str       | <system_username>                       |
-| **pgsql.password**          | Hysteresis counter                     | str       | ""                                      |
-| **pgsql.database**          | Hysteresis counter                     | str       | <system_username>                       |
-| **pgsql.table**             | Hysteresis counter                     | str       | "pg_table"                              |
-| **pgsql.ssl**               | Hysteresis counter                     | bool      | true                                    |
+| Parameter                   | Description                            | Type        | Default                                 |
+| --------------------------- | -------------------------------------- | ----------- | --------------------------------------- |
+| **plugin_path**             | Where data will be stored              | str         | <install_path>/lib/out_files_metrics.so |
+| **file_storage**            | Where data will be stored              | list\[str\] | N/A (Mandatory)                         |
+| **db_type**                 | Speed threshold used in the hysteresis | str         | "pgsql"                                 |
+| **delete_when_sent**        | Counter to know if the robot is moving | bool        | true                                    |
+| **minio.endpoint**          | Minio endpoint                         | str         | "127.0.0.1:9000"                        |
+| **minio.access_key_id**     | Minio Access key ID                    | str         | N/A (Mandatory)                         |
+| **minio.secret_access_key** | Minio Secret access key                | str         | N/A (Mandatory)                         |
+| **minio.use_ssl**           | Use SSL for Minio                      | bool        | true                                    |
+| **minio.bucket**            | Minio Bucket name                      | str         | "dc_bucket"                             |
+| **minio.src_fields**        | Local paths for Minio                  | str         | N/A (Mandatory)                         |
+| **minio.upload_fields**     | Remote paths for Minio                 | str         | N/A (Mandatory)                         |
+| **s3.endpoint**             | Hysteresis counter                     | str         | N/A (Mandatory)                         |
+| **s3.access_key_id**        | Hysteresis counter                     | str         | N/A (Mandatory)                         |
+| **s3.secret_access_key**    | Hysteresis counter                     | str         | N/A (Mandatory)                         |
+| **s3.bucket**               | Hysteresis counter                     | str         | N/A (Mandatory)                         |
+| **s3.src_fields**           | Hysteresis counter                     | str         | N/A (Mandatory)                         |
+| **s3.upload_fields**        | Hysteresis counter                     | str         | N/A (Mandatory)                         |
+| **pgsql.host**              | Hysteresis counter                     | str         | "127.0.0.1"                             |
+| **pgsql.port**              | Hysteresis counter                     | str         | "5432"                                  |
+| **pgsql.user**              | Hysteresis counter                     | str         | <system_username>                       |
+| **pgsql.password**          | Hysteresis counter                     | str         | ""                                      |
+| **pgsql.database**          | Hysteresis counter                     | str         | <system_username>                       |
+| **pgsql.table**             | Hysteresis counter                     | str         | "pg_table"                              |
+| **pgsql.ssl**               | Hysteresis counter                     | bool        | true                                    |
 
 
 ## Example

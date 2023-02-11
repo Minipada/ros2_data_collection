@@ -20,13 +20,13 @@ The node starts the fluent bit engine and its ros2 plugin and enables data colle
 Each topic is configured in a measurement, which is loaded in this node with pluginlib.
 In addition, conditions are pluginlibs plugin also loaded dynamically. They are optional plugins that allow to collect on some conditions, e.g robot is moving.
 
-| Parameter name       | Description                                                                                                                        | Type(s)   | Default         |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | --------- | --------------- |
-| measurement_plugins  | Name of the measurement plugins to load                                                                                            | list[str] | N/A (mandatory) |
-| condition_plugins    | Name of the condition plugins to load                                                                                              | list[str] | N/A (mandatory) |
-| save_local_base_path | Path where files will be saved locally (e.g camera images). Expands $X to environment variables and =Y to custom string parameters | str       | N/A (mandatory) |
-| all_base_path        | Path where files will be saved at their destination (S3, minio...). Expands $X to environment variables and =Y to                  | str       | N/A (mandatory) |
-| custom_str_params    | Custom string parameters that can be used in other parameters.                                                                     | list[str] | N/A (optional)  |
+| Parameter name       | Description                                                                                                                        | Type(s)     | Default         |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------------- |
+| measurement_plugins  | Name of the measurement plugins to load                                                                                            | list\[str\] | N/A (mandatory) |
+| condition_plugins    | Name of the condition plugins to load                                                                                              | list\[str\] | N/A (mandatory) |
+| save_local_base_path | Path where files will be saved locally (e.g camera images). Expands $X to environment variables and =Y to custom string parameters | str         | N/A (mandatory) |
+| all_base_path        | Path where files will be saved at their destination (S3, minio...). Expands $X to environment variables and =Y to                  | str         | N/A (mandatory) |
+| custom_str_params    | Custom string parameters that can be used in other parameters.                                                                     | list\[str\] | N/A (optional)  |
 
 
 ## Plugin parameters
@@ -45,29 +45,29 @@ Each measurement is collected through a node and has these configuration paramet
 | enable_validator           | Will validate the data against a JSON schema                                                 | bool        | false           |
 | remote_prefixes            | Prefixes to apply to the paths when sending files to a destination                           | str         | ""              |
 | remote_keys                | Remote keys                                                                                  | str         | ""              |
-| if_all_conditions          | Collect only if all conditions are activated                                                 | list[str]   | N/A (optional)  |
-| if_any_conditions          | Collect if any conditions is activated                                                       | list[str]   | N/A (optional)  |
-| if_none_conditions         | Collect only if all conditions are not activated                                             | list[str]   | N/A (optional)  |
+| if_all_conditions          | Collect only if all conditions are activated                                                 | list\[str\] | N/A (optional)  |
+| if_any_conditions          | Collect if any conditions is activated                                                       | list\[str\] | N/A (optional)  |
+| if_none_conditions         | Collect only if all conditions are not activated                                             | list\[str\] | N/A (optional)  |
 
 ## Available plugins:
 
-| Name                                                        | Description                                                                                             |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| [Camera](./dc/measurements/camera.md)                       | Camera images, images can be rotated and inspected to detect content in images. They are saved as files |
-| [Command velocity](./dc/measurements/cmd_vel.md)            | Command velocity: navigation commands                                                                   |
-| [CPU](./dc/measurements/cpu.md)                             | CPU statistics                                                                                          |
-| [Distance traveled](./dc/measurements/distance_traveled.md) | Total distance traveled by the robot                                                                    |
-| [IP Camera](./dc/measurements/ip_camera.md)                 | IP camera videos as files                                                                               |
-| [Map](./dc/measurements/map.md)                             | ROS map files (yaml and pgm) and metadata used by the robot to localize and navigate                    |
-| [Memory](./dc/measurements/memory.md)                       | System memory usage                                                                                     |
-| [Network](./dc/measurements/network.md)                     | Network interfaces, availability                                                                        |
-| [OS](./dc/measurements/os.md)                               | Operating System information                                                                            |
-| [Permissions](./dc/measurements/permissions.md)             | Permissions of a file or directory                                                                      |
-| [Position](./dc/measurements/position.md)                   | Robot position                                                                                          |
-| [Speed](./dc/measurements/speed.md)                         | Robot speed                                                                                             |
-| [Storage](./dc/measurements/storage.md)                     | Available and used space in a directory                                                                 |
-| [String stamped](./dc/measurements/string_stamped.md)       | Republish a string stamped message, can be used for external data                                       |
-| [Uptime](./dc/measurements/uptime.md)                       | How long the machine has been turned on                                                                 |
+| Name                                                     | Description                                                                                             |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| [Camera](./measurements/camera.md)                       | Camera images, images can be rotated and inspected to detect content in images. They are saved as files |
+| [Command velocity](./measurements/cmd_vel.md)            | Command velocity: navigation commands                                                                   |
+| [CPU](./measurements/cpu.md)                             | CPU statistics                                                                                          |
+| [Distance traveled](./measurements/distance_traveled.md) | Total distance traveled by the robot                                                                    |
+| [IP Camera](./measurements/ip_camera.md)                 | IP camera videos as files                                                                               |
+| [Map](./measurements/map.md)                             | ROS map files (yaml and pgm) and metadata used by the robot to localize and navigate                    |
+| [Memory](./measurements/memory.md)                       | System memory usage                                                                                     |
+| [Network](./measurements/network.md)                     | Network interfaces, availability                                                                        |
+| [OS](./measurements/os.md)                               | Operating System information                                                                            |
+| [Permissions](./measurements/permissions.md)             | Permissions of a file or directory                                                                      |
+| [Position](./measurements/position.md)                   | Robot position                                                                                          |
+| [Speed](./measurements/speed.md)                         | Robot speed                                                                                             |
+| [Storage](./measurements/storage.md)                     | Available and used space in a directory                                                                 |
+| [String stamped](./measurements/string_stamped.md)       | Republish a string stamped message, can be used for external data                                       |
+| [Uptime](./measurements/uptime.md)                       | How long the machine has been turned on                                                                 |
 
 ## Example configuration
 

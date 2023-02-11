@@ -25,4 +25,4 @@ $ colcon build
 ```
 
 ## Issues
-If you run into any issues when building ROS2 Data Collection, you can use the search tool in the issues tab on [GitHub](https://github.com/brisa-robotics/ros2_data_collection) and always feel free to [open a ticket](https://github.com/brisa-robotics/ros2_data_collection).
+If you run into any issues when building ROS2 Data Collection, you can use the search tool in the issues tab on [GitHub](https://github.com/minipada/ros2_data_collection) and always feel free to [open a ticket](https://github.com/minipada/ros2_data_collection).

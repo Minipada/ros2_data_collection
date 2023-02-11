@@ -2,7 +2,8 @@
 
 - [Introduction](./dc/introduction.md)
 - [Build](./dc/build.md)
-- [Getting Started](./dc/getting_started.md)
+- [Setup guides](./dc/setup_guides.md)
+  - [Basics](./dc/setup_guides/basics.md)
 - [Measurements](./dc/measurements.md)
   - [Camera](./dc/measurements/camera.md)
   - [Command velocity](./dc/measurements/cmd_vel.md)
