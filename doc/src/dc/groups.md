@@ -14,21 +14,21 @@ Currently, this node is written in python. The main reason for it is that we don
 
 ## Node parameters
 
-| Parameter | Description      | Type      | Default |
-| --------- | ---------------- | --------- | ------- |
-| groups    | Groups to enable | list[str] | N/A     |
+| Parameter | Description      | Type        | Default |
+| --------- | ---------------- | ----------- | ------- |
+| groups    | Groups to enable | list\[str\] | N/A     |
 
 ## Group parameters
 
-| Parameter    | Description                                                                         | Type      | Default             |
-| ------------ | ----------------------------------------------------------------------------------- | --------- | ------------------- |
-| inputs       | Name of the input topics to group                                                   | list[str] | N/A                 |
-| output       | Output topic to send the data to                                                    | str       | "/dc/group/{group}" |
-| sync_delay   | Delay to wait during all subscriber data need to reach before being published again | float     | 5.0                 |
-| group_key    | Dictionary key under which data is grouped                                          | str       | {group_name}        |
-| exclude_keys | List of keys to exclude from the published data. Data depth is separated by a dot   | list[str] | N/A                 |
-| tags         | Destination names, used to know where data will be forwarded to                     | list[str] | N/A                 |
-| nested_data  | Whether measurements are nested dictionaries or flat                                | bool      | false               |
+| Parameter    | Description                                                                         | Type        | Default             |
+| ------------ | ----------------------------------------------------------------------------------- | ----------- | ------------------- |
+| inputs       | Name of the input topics to group                                                   | list\[str\] | N/A                 |
+| output       | Output topic to send the data to                                                    | str         | "/dc/group/{group}" |
+| sync_delay   | Delay to wait during all subscriber data need to reach before being published again | float       | 5.0                 |
+| group_key    | Dictionary key under which data is grouped                                          | str         | {group_name}        |
+| exclude_keys | List of keys to exclude from the published data. Data depth is separated by a dot   | list\[str\] | N/A                 |
+| tags         | Destination names, used to know where data will be forwarded to                     | list\[str\] | N/A                 |
+| nested_data  | Whether measurements are nested dictionaries or flat                                | bool        | false               |
 
 ## Example
 

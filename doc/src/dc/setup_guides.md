@@ -8,7 +8,7 @@ By here, you must have built the workspace following the [build guide](./build.m
 
 Examples are split in different categories:
 
-1. [Basics](./getting_started/basics.md): Understand how to start nodes, create your configuration and go around basic parameters
+1. [Basics](./setup_guides/basics.md): Understand how to start nodes, create your configuration and go around basic parameters
 
 ## Running the examples
 ### Example 1: Uptime to Fluent Bit Stdout every second and flush data every second

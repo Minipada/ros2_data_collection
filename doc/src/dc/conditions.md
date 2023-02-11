@@ -7,6 +7,6 @@ Each condition is enabled or disabled through a pluginlib plugin. It has these c
 
 ## Available plugins:
 
-| Name                                              | Description     |
-| ------------------------------------------------- | --------------- |
-| [Robot moving](./dc/conditions/plugins/moving.md) | Robot is moving |
+| Name                                   | Description     |
+| -------------------------------------- | --------------- |
+| [Robot moving](./conditions/moving.md) | Robot is moving |
