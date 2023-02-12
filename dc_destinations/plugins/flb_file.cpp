@@ -1,4 +1,4 @@
-#include "flb_file.hpp"
+#include "dc_destinations/plugins/flb_file.hpp"
 
 namespace dc_destinations
 {

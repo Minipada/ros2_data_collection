@@ -1,4 +1,4 @@
-#include "flb_stdout.hpp"
+#include "dc_destinations/plugins/flb_stdout.hpp"
 
 namespace dc_destinations
 {

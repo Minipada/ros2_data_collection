@@ -1,4 +1,4 @@
-#include "flb_pgsql.hpp"
+#include "dc_destinations/plugins/flb_pgsql.hpp"
 
 namespace dc_destinations
 {

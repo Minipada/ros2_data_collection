@@ -1,4 +1,4 @@
-#include "flb_http.hpp"
+#include "dc_destinations/plugins/flb_http.hpp"
 
 namespace dc_destinations
 {
