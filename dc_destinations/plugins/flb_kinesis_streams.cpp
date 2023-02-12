@@ -1,4 +1,4 @@
-#include "flb_kinesis_streams.hpp"
+#include "dc_destinations/plugins/flb_kinesis_streams.hpp"
 
 namespace dc_destinations
 {
