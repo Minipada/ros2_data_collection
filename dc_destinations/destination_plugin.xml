@@ -1,12 +1,4 @@
 <class_libraries>
-    <library path="dc_rcl_destination">
-        <class name="dc_destinations/Rcl" type="dc_destinations::Rcl" base_class_type="dc_core::Destination">
-            <description>
-                dc_destination_rcl
-            </description>
-        </class>
-    </library>
-
     <library path="dc_flb_file_destination">
         <class name="dc_destinations/Flbfile" type="dc_destinations::Flbfile" base_class_type="dc_core::Destination">
             <description>
@@ -39,10 +31,26 @@
         </class>
     </library>
 
+    <library path="dc_flb_s3_destination">
+        <class name="dc_destinations/FlbS3" type="dc_destinations::FlbS3" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_s3
+            </description>
+        </class>
+    </library>
+
     <library path="dc_flb_stdout_destination">
         <class name="dc_destinations/Flbstdout" type="dc_destinations::Flbstdout" base_class_type="dc_core::Destination">
             <description>
                 dc_destination_flb_stdout
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_rcl_destination">
+        <class name="dc_destinations/Rcl" type="dc_destinations::Rcl" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_rcl
             </description>
         </class>
     </library>
