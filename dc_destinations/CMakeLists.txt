@@ -40,11 +40,14 @@ list(APPEND dc_destination_plugin_libs dc_flb_kinesis_streams_destination)
 add_library(dc_flb_pgsql_destination SHARED plugins/flb_pgsql.cpp)
 list(APPEND dc_destination_plugin_libs dc_flb_pgsql_destination)
 
-add_library(dc_flb_stdout_destination SHARED plugins/flb_stdout.cpp)
-list(APPEND dc_destination_plugin_libs dc_flb_stdout_destination)
-
 add_library(dc_flb_s3_destination SHARED plugins/flb_s3.cpp)
 list(APPEND dc_destination_plugin_libs dc_flb_s3_destination)
+
+add_library(dc_flb_slack_destination SHARED plugins/flb_slack.cpp)
+list(APPEND dc_destination_plugin_libs dc_flb_slack_destination)
+
+add_library(dc_flb_stdout_destination SHARED plugins/flb_stdout.cpp)
+list(APPEND dc_destination_plugin_libs dc_flb_stdout_destination)
 
 add_library(dc_rcl_destination SHARED plugins/rcl.cpp)
 list(APPEND dc_destination_plugin_libs dc_rcl_destination)

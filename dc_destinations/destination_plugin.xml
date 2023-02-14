@@ -47,6 +47,14 @@
         </class>
     </library>
 
+    <library path="dc_flb_slack_destination">
+        <class name="dc_destinations/Slack" type="dc_destinations::FlbSlack" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_slack
+            </description>
+        </class>
+    </library>
+
     <library path="dc_rcl_destination">
         <class name="dc_destinations/Rcl" type="dc_destinations::Rcl" base_class_type="dc_core::Destination">
             <description>
