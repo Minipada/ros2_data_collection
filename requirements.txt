@@ -1,0 +1,80 @@
+appnope==0.1.3; sys_platform == "darwin" and python_version >= "3.8"
+ast-decompiler==0.7.0; python_version < "3.9" and python_version >= "3.7"
+astroid==2.14.2; python_full_version >= "3.7.2"
+asttokens==2.2.1; python_version >= "3.8"
+attrs==22.2.0; python_version >= "3.7"
+backcall==0.2.0; python_version >= "3.8"
+black==23.1.0; python_version >= "3.7"
+cfgv==3.3.1; python_full_version >= "3.6.1" and python_version >= "3.8"
+click==8.1.3; python_version >= "3.7"
+cmake-format==0.6.13
+cmakelang==0.6.13
+codespell==2.2.2; python_version >= "3.7"
+colorama==0.4.6; sys_platform == "win32" and python_version >= "3.8" and python_full_version >= "3.7.2" and platform_system == "Windows" and (python_version >= "3.7" and python_full_version < "3.0.0" and platform_system == "Windows" or platform_system == "Windows" and python_version >= "3.7" and python_full_version >= "3.7.0")
+darglint==1.8.1; python_version >= "3.6" and python_version < "4.0"
+decorator==5.1.1; python_version >= "3.8"
+dill==0.3.6
+distlib==0.3.6; python_version >= "3.8"
+executing==1.2.0; python_version >= "3.8"
+filelock==3.9.0; python_version >= "3.8"
+flake8-bugbear==23.2.13; python_version >= "3.7"
+flake8-comprehensions==3.10.1; python_version >= "3.7"
+flake8-copyright==0.2.4
+flake8-debugger==4.1.2; python_version >= "3.7"
+flake8-executable==2.1.3; python_version >= "3.6"
+flake8-functions==0.0.7
+flake8-logging-format==0.9.0
+flake8-pep3101==2.0.0
+flake8-polyfill==1.0.2
+flake8-pyi==23.1.2; python_version >= "3.7"
+flake8-quotes==3.3.2
+flake8-use-fstring==1.4; python_version >= "3.6"
+flake8-variables-names==0.0.5; python_version >= "3.7"
+flake8==6.0.0; python_full_version >= "3.8.1"
+identify==2.5.18; python_version >= "3.8"
+ipython==8.10.0; python_version >= "3.8"
+isort==5.12.0; python_full_version >= "3.8.0"
+jedi==0.18.2; python_version >= "3.8"
+jinja2==3.1.2; python_version >= "3.7"
+lazy-object-proxy==1.9.0; python_version >= "3.7" and python_full_version >= "3.7.2"
+markupsafe==2.1.2; python_version >= "3.7"
+matplotlib-inline==0.1.6; python_version >= "3.8"
+mccabe==0.7.0; python_version >= "3.7" and python_full_version >= "3.8.1"
+mr-proper==0.0.7
+mypy-extensions==1.0.0; python_version >= "3.7"
+nodeenv==1.7.0; python_version >= "3.8" and python_full_version < "3.0.0" or python_full_version >= "3.7.0" and python_version >= "3.8"
+numpy==1.24.2; python_version >= "3.8"
+opencv-python==4.7.0.68; python_version >= "3.6"
+packaging==23.0; python_version >= "3.7"
+parso==0.8.3; python_version >= "3.8"
+pathspec==0.11.0; python_version >= "3.7"
+pep8-naming==0.13.3; python_version >= "3.7"
+pexpect==4.8.0; sys_platform != "win32" and python_version >= "3.8"
+pickleshare==0.7.5; python_version >= "3.8"
+pillow==9.4.0; python_version >= "3.7"
+platformdirs==3.0.0; python_version >= "3.8" and python_full_version >= "3.7.2"
+pre-commit==3.0.4; python_version >= "3.8"
+prompt-toolkit==3.0.36; python_full_version >= "3.6.2" and python_version >= "3.8"
+ptyprocess==0.7.0; sys_platform != "win32" and python_version >= "3.8"
+pure-eval==0.2.2; python_version >= "3.8"
+pycodestyle==2.10.0; python_version >= "3.7" and python_full_version >= "3.8.1"
+pydantic==1.10.4; python_version >= "3.7"
+pydeps==1.11.1
+pyflakes==3.0.1; python_version >= "3.7" and python_full_version >= "3.8.1"
+pygments==2.14.0; python_version >= "3.8"
+pylint==2.16.2; python_full_version >= "3.7.2"
+pypng==0.20220715.0
+pyyaml==6.0; python_version >= "3.8"
+pyzbar==0.1.9
+qrcode==7.4.2; python_version >= "3.7"
+six==1.16.0; python_version >= "3.8" and python_full_version < "3.0.0" or python_full_version >= "3.3.0" and python_version >= "3.8"
+stack-data==0.6.2; python_version >= "3.8"
+stdlib-list==0.8.0
+tomli==2.0.1; python_version < "3.11" and python_version >= "3.7" and python_full_version >= "3.7.2"
+tomlkit==0.11.6; python_version >= "3.6" and python_full_version >= "3.7.2"
+traitlets==5.9.0; python_version >= "3.8"
+typer==0.7.0; python_version >= "3.6"
+typing-extensions==4.5.0; python_version < "3.10" and python_version >= "3.7" and python_full_version >= "3.7.2"
+virtualenv==20.19.0; python_version >= "3.8"
+wcwidth==0.2.6; python_full_version >= "3.6.2" and python_version >= "3.8"
+wrapt==1.14.1
