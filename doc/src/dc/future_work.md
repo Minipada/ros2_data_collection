@@ -1,4 +1,4 @@
-# Future Work and Roadmap
+# Future work and Roadmap
 
 DC still being in early development, it requires:
 1. High code coverage with tests and codecov
