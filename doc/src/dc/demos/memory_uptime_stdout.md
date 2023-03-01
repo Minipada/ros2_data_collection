@@ -61,7 +61,12 @@ group_server:
       sync_delay: 5.0
       group_key: "memory_uptime"
       tags: ["flb_stdout"]
+      include_group_name: false
 ```
+
+**include_group_name (Optional)**: Will include the name of the group in the JSON, it makes it easier later on to fetch the data from your API. In this case, we can skip it since we only have one group to show.
+
+You can also notice that the group also has a "group_key". It means a group can be part of another.
 
 ### Destination
 
