@@ -21,9 +21,9 @@ public:
 
 protected:
   std::vector<std::string> exclude_;
-  std::vector<std::string> paths_;
-  std::vector<std::string> paths_hash_;
-  std::vector<std::string> previous_paths_hash_;
+  std::vector<std::string> keys_;
+  std::vector<std::string> keys_hash_;
+  std::vector<std::string> previous_keys_hash_;
   std::string topic_;
   bool getState(dc_interfaces::msg::StringStamped msg);
   void onConfigure();
