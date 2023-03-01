@@ -207,80 +207,108 @@ public:
     return (!if_all_conditions_.empty() || !if_any_conditions_.empty() || !if_none_conditions_.empty());
   }
 
-  void collectAndPublish()
+  void addTags(dc_interfaces::msg::StringStamped& msg)
   {
-    if (enabled_)
+    // Only put the tags in if the conditions are ok. This way, we still publish the data
+    // and can check in conditions but with no tags, this is not received by the destination_server
+    if (tags_.size() != 0 && isConditionOn(msg))
     {
-      dc_interfaces::msg::StringStamped msg = collect();
+      json data_json = json::parse(msg.data);
+      data_json["tags"] = tags_;
+      msg.data = data_json.dump(-1, ' ', true);
+    }
+  }
 
-      // Init publish
-      if (msg.data != "" && msg.data != "null" &&
-          (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_))
+  void addMeasurementName(dc_interfaces::msg::StringStamped& msg)
+  {
+    // Only put the tags in if the conditions are ok. This way, we still publish the data
+    // and can check in conditions but with no tags, this is not received by the destination_server
+    if (include_measurement_name_)
+    {
+      json data_json = json::parse(msg.data);
+      data_json["name"] = measurement_name_;
+      msg.data = data_json.dump(-1, ' ', true);
+    }
+  }
+
+  void addMeasurementPluginName(dc_interfaces::msg::StringStamped& msg)
+  {
+    // Only put the tags in if the conditions are ok. This way, we still publish the data
+    // and can check in conditions but with no tags, this is not received by the destination_server
+    if (include_measurement_plugin_)
+    {
+      json data_json = json::parse(msg.data);
+      data_json["plugin"] = measurement_plugin_;
+      msg.data = data_json.dump(-1, ' ', true);
+    }
+  }
+
+  void publish(dc_interfaces::msg::StringStamped msg)
+  {
+    // Init publish
+    if (msg.data != "" && msg.data != "null" &&
+        (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_))
+    {
+      addTags(msg);
+      addMeasurementName(msg);
+      addMeasurementPluginName(msg);
+
+      // Publish when validation activated
+      if (enable_validator_)
       {
-        // Add tags
-        // Only put the tags in if the conditions are ok. This way, we still publish the data
-        // and can check in conditions but with no tags, this is not received by the destination_server
-        if (tags_.size() != 0 && isConditionOn(msg))
+        try
         {
-          json data_json = json::parse(msg.data);
-          data_json["tags"] = tags_;
-          msg.data = data_json.dump(-1, ' ', true);
-        }
-        // Add measurement name
-        if (include_measurement_name_)
-        {
-          json data_json = json::parse(msg.data);
-          data_json["name"] = measurement_name_;
-          msg.data = data_json.dump(-1, ' ', true);
-        }
-        // Add measurement plugin name
-        if (include_measurement_plugin_)
-        {
-          json data_json = json::parse(msg.data);
-          data_json["plugin"] = measurement_plugin_;
-          msg.data = data_json.dump(-1, ' ', true);
-        }
-
-        // Publish when validation activated
-        if (enable_validator_)
-        {
-          try
-          {
-            validator_.validate(json::parse(msg.data));
-            data_pub_->publish(msg);
-            init_counter_published_++;
-          }
-          catch (const std::exception& e)
-          {
-            RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what());
-            onFailedValidation();
-          }
-        }
-        // Publish without validation
-        else
-        {
+          validator_.validate(json::parse(msg.data));
           data_pub_->publish(msg);
           init_counter_published_++;
         }
+        catch (const std::exception& e)
+        {
+          RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what());
+          onFailedValidation();
+        }
       }
-      // Infinite measurements on condition
-      else if (msg.data != "" && msg.data != "null" &&
-               (isAnyConditionSet() && isConditionOn(msg) && condition_max_measurements_ == 0))
+      // Publish without validation
+      else
       {
         data_pub_->publish(msg);
+        init_counter_published_++;
       }
-      // Trigger publish with maximum
-      else if (msg.data != "" && msg.data != "null" &&
-               (isAnyConditionSet() && isConditionOn(msg) && condition_counter_published_ < condition_max_measurements_))
-      {
-        data_pub_->publish(msg);
-        condition_counter_published_++;
-      }
-      // Not publish, reset Condition counter
-      else if (isAnyConditionSet() && !isConditionOn(msg))
-      {
-        condition_counter_published_ = 0;
-      }
+    }
+    // Infinite measurements on condition
+    else if (msg.data != "" && msg.data != "null" &&
+             (isAnyConditionSet() && isConditionOn(msg) && condition_max_measurements_ == 0))
+    {
+      data_pub_->publish(msg);
+    }
+    // Trigger publish with maximum
+    else if (msg.data != "" && msg.data != "null" &&
+             (isAnyConditionSet() && isConditionOn(msg) && condition_counter_published_ < condition_max_measurements_))
+    {
+      data_pub_->publish(msg);
+      condition_counter_published_++;
+    }
+    // Not publish, reset Condition counter
+    else if (isAnyConditionSet() && !isConditionOn(msg))
+    {
+      condition_counter_published_ = 0;
+    }
+  }
+
+  void publishFromMsg(dc_interfaces::msg::StringStamped msg)
+  {
+    if (enabled_)
+    {
+      publish(msg);
+    }
+  }
+
+  void collectAndPublish()
+  {
+    dc_interfaces::msg::StringStamped msg = collect();
+    if (enabled_)
+    {
+      publish(msg);
     }
   }
 
