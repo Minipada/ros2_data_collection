@@ -2,14 +2,13 @@
 
 ## Description
 
-Collect storage information on a directory. Use either path or env
+Collect storage information on a directory.
 
 ## Parameters
 
-| Parameter | Description                               | Type | Default         |
-| --------- | ----------------------------------------- | ---- | --------------- |
-| **path**  | Absolute path to the directory to inspect | str  | N/A (Mandatory) |
-| **env**   | Environment variable to inspect           | str  | N/A (Mandatory) |
+| Parameter | Description                                                             | Type | Default         |
+| --------- | ----------------------------------------------------------------------- | ---- | --------------- |
+| **path**  | Absolute path to the directory to inspect, expect environment variables | str  | N/A (Mandatory) |
 
 ## Schema
 
@@ -37,4 +36,15 @@ Collect storage information on a directory. Use either path or env
     },
     "type": "object"
 }
+```
+
+## Measurement configuration
+
+```yaml
+...
+storage_home:
+  plugin: "dc_measurements/Storage"
+  topic_output: "/dc/measurement/storage_home"
+  tags: ["flb_stdout"]
+  path: "$HOME"
 ```

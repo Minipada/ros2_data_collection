@@ -2,7 +2,7 @@
 
 ## Description
 
-The Amazon Kinesis Data Streams output plugin allows to ingest your records into the [Kinesis](https://aws.amazon.com/kinesis/data-streams/) service. This is the documentation for the core Fluent Bit Kinesis plugin written in C. It has all the core features of the [aws/amazon-kinesis-streams-for-fluent-bit](https://github.com/aws/amazon-kinesis-streams-for-fluent-bit). Golang Fluent Bit plugin released in 2019. The Golang plugin was named kinesis; this new high performance and highly efficient kinesis plugin is called kinesis_streams to prevent conflicts/confusion. See [here](https://github.com/fluent/fluent-bit-docs/tree/43c4fe134611da471e706b0edb2f9acd7cdfdbc3/administration/aws-credentials.md) for details on how AWS credentials are fetched. See [fluent bit page](https://docs.fluentbit.io/manual/pipeline/outputs/kinesis) for more information.
+The Amazon Kinesis Data Streams output plugin allows to ingest your records into the [Kinesis](https://aws.amazon.com/kinesis/data-streams/) service. See [fluent bit page](https://docs.fluentbit.io/manual/pipeline/outputs/s3) for more information.
 
 ## Parameters
 
@@ -15,4 +15,18 @@ The Amazon Kinesis Data Streams output plugin allows to ingest your records into
 | **time_key_format**     | strftime compliant format string for the timestamp; for example, the default is '%Y-%m-%dT%H:%M:%S'. Supports millisecond precision with '%3N' and supports nanosecond precision with '%9N' and '%L'; for example, adding '%3N' to support millisecond '%Y-%m-%dT%H:%M:%S.%3N'. This option is used with time_key.                           | str  | "%Y-%m-%dT%H:%M:%S" |
 | **log_key**             | By default, the whole log record will be sent to Kinesis. If you specify a key name with this option, then only the value of that key will be sent to Kinesis. For example, if you are using the Fluentd Docker log driver, you can specify log_key log and only the log message will be sent to Kinesis. Server                             | str  | N/A                 |
 | **endpoint**            | Specify a custom endpoint for the Kinesis API.Server                                                                                                                                                                                                                                                                                         | str  | N/A                 |
-| **auto_retry_requests** | Immediately retry failed requests to AWS services once. This option does not affect the normal Fluent Bit retry mechanism with backoff. Instead, it enables an immediate retry with no delay for networking errors, which may help improve throughput when there are transient/random networking issues. This option defaults to true.Server | str  | "true"              |
+| **auto_retry_requests** | Immediately retry failed requests to AWS services once. This option does not affect the normal Fluent Bit retry mechanism with backoff. Instead, it enables an immediate retry with no delay for networking errors, which may help improve throughput when there are transient/random networking issues. This option defaults to true.Server | bool | true                |
+
+## Node configuration
+
+```yaml
+...
+flb_kinesis_streams:
+  plugin: "dc_destinations/FlbKinesisStreams"
+  inputs: ["/dc/measurement/data"]
+  region: "us-east-1"
+  stream: my_stream
+  time_key: "date"
+  time_key_format: "%Y-%m-%dT%H:%M:%S"
+...
+```

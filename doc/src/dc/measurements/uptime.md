@@ -20,3 +20,13 @@ Time since when the robot PC has been on.
     "type": "object"
 }
 ```
+
+## Measurement configuration
+
+```yaml
+...
+uptime:
+  plugin: "dc_measurements/Uptime"
+  topic_output: "/dc/measurement/uptime"
+  tags: ["flb_stdout"]
+```

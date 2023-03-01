@@ -22,8 +22,8 @@ assets_version = "2.0.0" # do not edit: managed by `mdbook-admonish install`
 [output.html]
 default-theme = "navy"
 git-repository-url = "https://github.com/minipada/ros2_data_collection"
-additional-css = ["open-in.css", "./css/mdbook-admonish.css", "css/logo.css"]
-additional-js = ["js/mermaid.js", "js/mermaid-init.js", "js/logo.js"]
+additional-css = ["open-in.css", "./css/mdbook-admonish.css", "css/logo.css", "css/lineicon.css"]
+additional-js = ["js/mermaid.js", "js/mermaid-init.js", "js/theme.js"]
 
 [output.html.fold]
 enable = true

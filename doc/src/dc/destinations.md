@@ -103,7 +103,7 @@ destination_server:
       src_fields: ["camera.local_img_paths.raw","camera.local_img_paths.rotated", "map.local_map_paths.yaml", "map.local_map_paths.pgm"]
       upload_fields: ["camera.minio_img_paths.raw","camera.minio_img_paths.rotated", "map.minio_map_paths.yaml", "map.minio_map_paths.pgm"]
     flb_pgsql:
-      plugin: "dc_destinations/Flbpgsql"
+      plugin: "dc_destinations/FlbPgSQL"
       inputs: ["/dc/group/memory_uptime"]
       host: "127.0.0.1"
       port: "5432"
@@ -119,17 +119,17 @@ destination_server:
       plugin: "dc_destinations/Rcl"
       inputs: ["/dc/group/memory_uptime"]
     flb_stdout:
-      plugin: "dc_destinations/Flbstdout"
+      plugin: "dc_destinations/FlbStdout"
       inputs: ["/dc/group/cameras"]
       inputs: ["/dc/group/cameras"]
       time_format: "iso8601"
       time_key: "date"
     flb_http:
-      plugin: "dc_destinations/Flbhttp"
+      plugin: "dc_destinations/FlbHTTP"
       inputs: ["/dc/group/memory_uptime"]
       debug: true
     flb_file:
-      plugin: "dc_destinations/Flbfile"
+      plugin: "dc_destinations/FlbFile"
       inputs: ["/dc/group/memory_uptime"]
       path: "$HOME/data"
       file: uptime

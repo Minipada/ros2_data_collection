@@ -21,3 +21,13 @@ Collect memory used in percentage.
     "type": "object"
 }
 ```
+
+## Measurement configuration
+
+```yaml
+...
+memory:
+  plugin: "dc_measurements/Memory"
+  topic_output: "/dc/measurement/memory"
+  tags: ["flb_stdout"]
+```

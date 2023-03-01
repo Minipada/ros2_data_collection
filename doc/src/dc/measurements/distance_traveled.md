@@ -28,3 +28,16 @@ Collect total distance traveled in the robot since it is powered.
     "type": "object"
 }
 ```
+
+## Measurement configuration
+
+```yaml
+...
+distance_traveled:
+  plugin: "dc_measurements/DistanceTraveled"
+  topic_output: "/dc/measurement/distance_traveled"
+  tags: ["flb_stdout"]
+  global_frame: "map"
+  robot_base_frame: "base_link"
+  transform_timeout: 0.1
+```
