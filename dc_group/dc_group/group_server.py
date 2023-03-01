@@ -64,6 +64,9 @@ class GroupServer(Node):
         if self.group_measurement_plugins and plugins_list:
             data_dict["plugins"] = plugins_list
 
+        if self.params[group]["include_group_name"]:
+            data_dict["name"] = group
+
         msg = StringStamped()
         msg.data = json.dumps(data_dict)
         msg.header.stamp = collected_time.to_msg()
@@ -101,6 +104,7 @@ class GroupServer(Node):
             self.declare_parameter(f"{group}.group_key", group)
             self.declare_parameter(f"{group}.tags", [""])
             self.declare_parameter(f"{group}.nested_data", True)
+            self.declare_parameter(f"{group}.include_group_name", True)
             self.params[group] = {
                 "inputs": self.get_parameter(f"{group}.inputs")
                 .get_parameter_value()
@@ -119,6 +123,9 @@ class GroupServer(Node):
                 .get_parameter_value()
                 .string_array_value,
                 "nested_data": self.get_parameter(f"{group}.nested_data")
+                .get_parameter_value()
+                .bool_value,
+                "include_group_name": self.get_parameter(f"{group}.include_group_name")
                 .get_parameter_value()
                 .bool_value,
             }
