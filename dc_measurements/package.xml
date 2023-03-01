@@ -13,6 +13,7 @@
   <depend>dc_core</depend>
   <depend>dc_interfaces</depend>
   <depend>dc_util</depend>
+  <depend>ffmpeg</depend>
   <depend>geometry_msgs</depend>
   <depend>nav2_util</depend>
   <depend>nlohmann-json-dev</depend>
