@@ -7,6 +7,14 @@
         </class>
     </library>
 
+    <library path="dc_flb_files_metrics_destination">
+        <class name="dc_destinations/FlbFilesMetrics" type="dc_destinations::FlbFilesMetrics" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_files_metrics
+            </description>
+        </class>
+    </library>
+
     <library path="dc_flb_http_destination">
         <class name="dc_destinations/FlbHTTP" type="dc_destinations::FlbHTTP" base_class_type="dc_core::Destination">
             <description>

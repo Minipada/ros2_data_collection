@@ -33,6 +33,7 @@ endforeach()
 # TODO If a modification is done, it will not be recompiled, at the moment, we need to cleanup the workspace
 if(EXISTS "/usr/bin/go")
   list(APPEND go_plugins "out_minio")
+  list(APPEND go_plugins "out_files_metrics")
 
   foreach(go_plugin ${go_plugins})
     set(LIBRARY_NAME "${go_plugin}")
