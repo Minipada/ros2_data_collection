@@ -36,6 +36,7 @@ class GroupServer(Node):
             # https://github.com/ros2/rosidl_python/blob/0f5c8f360be92566ad86f4b29f3db1febfca2242/rosidl_generator_py/resource/_msg.py.em#L187-L189
             measurement_dict = message_converter.convert_ros_message_to_dictionary(measurement)
             m_data = json.loads(measurement.data)
+            m_data.pop("tags", None)
             if self.group_measurement_plugins:
                 if "plugin" in m_data:
                     plugins_list.append(m_data["plugin"])
