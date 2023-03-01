@@ -31,7 +31,7 @@ destination_server:
       counter_path: "$HOME/run_id"
       uuid: false
     flb_stdout:
-      plugin: "dc_destinations/Flbstdout"
+      plugin: "dc_destinations/FlbStdout"
       inputs: ["/dc/measurement/uptime"]
       time_format: "double"
       time_key: "date"
