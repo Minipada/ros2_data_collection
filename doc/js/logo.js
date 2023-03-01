@@ -1,5 +1,4 @@
 window.addEventListener('load', function () {
-    console.log("ok")
     let navbar = document.getElementById('sidebar');
     var logo_dc = document.createElement("img");
     logo_dc.src = "/images/dc.png"
