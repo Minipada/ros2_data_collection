@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="2">
   <name>dc_services</name>
-  <version>0.6.1</version>
+  <version>0.1.0</version>
   <description>Collect uptime data</description>
   <maintainer email="d.bensoussan@proton.me">David Bensoussan</maintainer>
   <license>MPL-2.0</license>

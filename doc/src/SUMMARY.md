@@ -33,7 +33,7 @@
   - [List bool equal](./dc/conditions/list_bool_equal.md)
   - [List double equal](./dc/conditions/list_double_equal.md)
   - [List integer equal](./dc/conditions/list_integer_equal.md)
-  - [List string match](./dc/conditions/list_string_match.md)
+  - [List string equal](./dc/conditions/list_string_equal.md)
   - [Moving](./dc/conditions/moving.md)
   - [Same as previous](./dc/conditions/same_as_previous.md)
   - [String match](./dc/conditions/string_match.md)
