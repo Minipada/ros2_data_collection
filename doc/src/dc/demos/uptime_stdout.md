@@ -293,8 +293,8 @@ So...what happened?
 
 1. The measurement plugin starts publishing data to /dc/measurement/uptime, which contains the JSON, tags and timestamp of the message
 2. Run ID and robot_name is appended in the JSON
-3. The ROS 2 Fluent Bit plugin, which subscribes to this message, receive the data and pass it on to Fluent Bit
+3. The ROS 2 Fluent Bit plugin, which subscribes to this topic, receive the data and pass it on to Fluent Bit
 4. Fluent Bit receives it, applies the timestamp filter (which modifies the timestamp to the desired format)
 5. Fluent Bit applies changes the tag with another filter. This tag is used to match to the destination afterward.
 6. Data is flushed
-7. The Fluent Bit stdout output plugin receives the data because tags matche (the flb_stdout tag is used) and forwards it to Stdout
+7. The Fluent Bit stdout output plugin receives the data because tags match (the flb_stdout tag is used) and forwards it to Stdout
