@@ -3,6 +3,7 @@
 
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "nav2_util/node_utils.hpp"
 
 namespace dc_measurements
 {
@@ -14,7 +15,7 @@ public:
   ~StringStamped();
   dc_interfaces::msg::StringStamped collect() override;
   void dataCb(dc_interfaces::msg::StringStamped::SharedPtr msg);
-  // void onConfigure();
+  void onConfigure();
 
 protected:
   /**
@@ -22,6 +23,9 @@ protected:
    */
   void setValidationSchema() override;
   dc_interfaces::msg::StringStamped last_data_;
+  std::string topic_;
+  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr subscription_;
+  bool timer_based_;
 };
 
 }  // namespace dc_measurements
