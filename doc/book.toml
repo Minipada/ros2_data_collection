@@ -20,13 +20,28 @@ command = "mdbook-admonish"
 assets_version = "2.0.0" # do not edit: managed by `mdbook-admonish install`
 
 [output.html]
+mathjax-support = true
 default-theme = "navy"
 git-repository-url = "https://github.com/minipada/ros2_data_collection"
+edit-url-template = "https://github.com/minipada/ros2_data_collection/edit/humble/guide/{path}"
 additional-css = ["open-in.css", "./css/mdbook-admonish.css", "css/logo.css", "css/lineicon.css"]
 additional-js = ["js/mermaid.js", "js/mermaid-init.js", "js/theme.js"]
 
 [output.html.fold]
 enable = true
+
+[output.html.playground]
+editable = true
+line-numbers = true
+
+[output.html.search]
+limit-results = 20
+use-boolean-and = true
+boost-title = 2
+boost-hierarchy = 2
+boost-paragraph = 1
+expand = true
+heading-split-level = 2
 
 [output.linkcheck]
 # Should we check links on the internet? Enabling this option adds a
@@ -44,7 +59,7 @@ traverse-parent-directories = false
 #
 # Hint: you can use TOML's raw strings (single quote) to avoid needing to
 # escape things twice.
-exclude = ["https://github.com/minipada/ros2_data_collection", "http://localhost*"]
+exclude = ["https://github.com/[mM]inipada/ros2_data_collection.*", "http://localhost*"]
 
 # The User-Agent to use when sending web requests
 user-agent = "mdbook-linkcheck-0.4.0"
