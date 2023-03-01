@@ -36,7 +36,7 @@ public:
    * @param  json_schema_path Path to the JSON schema
    * @param  timer_cb_group Callback group, common to all measurements
    * @param  tags Used to match to destination
-   * @param  init_collect Collect when the node starts instead of waiting the first tick
+   * @param  init_collect Collect when the node starts instead of waiting for the polling_interval time to pass
    * @param  init_max_measurements Collect a maximum of n measurements when starting the node (-1 = never, 0 = infinite)
    * @param  include_measurement_name Include measurement name in the JSON
    * @param  include_measurement_plugin Include measurement plugin name in the JSON
