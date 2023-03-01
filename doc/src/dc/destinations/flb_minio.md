@@ -21,3 +21,31 @@ The [S3 plugin](https://docs.fluentbit.io/manual/pipeline/outputs/s3) sends data
 | **bucket**            | Bucket name                                                                        | str         | "dc_bucket"                                              |
 | **upload_fields**     | Fields containing remote paths, separated by dots                                  | list\[str\] | N/A                                                      |
 | **src_fields**        | Fields containing local paths, separated by dots                                   | list\[str\] | N/A                                                      |
+
+## Node configuration
+
+```yaml
+...
+flb_minio:
+  verbose_plugin: false
+  time_format: "iso8601"
+  plugin: "dc_destinations/Flbminio"
+  inputs: ["/dc/group/cameras"]
+  endpoint: 127.0.0.1:9000
+  access_key_id: XEYqG4ZcPY5jiq5i
+  secret_access_key: ji011KCtI82ZeQS6UwsQAg8x9VR4lSaQ
+  use_ssl: false
+  create_bucket: true
+  bucket: "mybucket"
+  src_fields:
+    [
+      "camera.local_img_paths.raw",
+      "camera.local_img_paths.inspected"
+    ]
+  upload_fields: # Remote paths created by the measurement node configuration
+    [
+      "camera.minio_img_paths.raw",
+      "camera.minio_img_paths.inspected"
+    ]
+...
+```

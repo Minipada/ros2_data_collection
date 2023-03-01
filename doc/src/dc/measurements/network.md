@@ -39,3 +39,15 @@ Collects ping value, whether or not the PC is online and interfaces available.
     "type": "object"
 }
 ```
+
+## Measurement configuration
+
+```yaml
+...
+network:
+  plugin: "dc_measurements/Network"
+  topic_output: "/dc/measurement/network"
+  tags: ["flb_stdout"]
+  ping_address: 192.168.0.1
+  ping_timeout: 500
+```

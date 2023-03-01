@@ -3,7 +3,7 @@
 ## Description
 
 Records video in small segments (in case of a cut) and store it locally.
-They are first stored in a temporary folder. Once the sample (of e.g 10 seconds) is done, it is moved to another directory.
+They are first stored in a temporary folder. Once the record (of e.g 10 seconds) is done, it is moved to another directory.
 
 Compared to other plugins, the collect function only moves the files from the temporary location, it does not start the recording. It takes some time to establish connection, so we avoid doing this every time. Recording is started at initialization by an ffmpeg process and saved in [HLS format](https://www.wikiwand.com/en/HTTP_Live_Streaming).
 

@@ -8,8 +8,8 @@ Collect cpu usage: average cpu, number of processes running and processes sorted
 
 | Parameter         | Description                                                         | Type  | Default |
 | ----------------- | ------------------------------------------------------------------- | ----- | ------- |
-| **max_processes** | Max amount of processes to collect in the sorted field. -1 for all  | int   | 5       |
 | **cpu_min**       | Filters out processes using less than this cpu usage. -1 to disable | float | 5.0     |
+| **max_processes** | Max amount of processes to collect in the sorted field. -1 for all  | int   | 5       |
 
 ## Schema
 
@@ -71,4 +71,16 @@ Collect cpu usage: average cpu, number of processes running and processes sorted
     },
     "type": "object"
 }
+```
+
+## Measurement configuration
+
+```yaml
+...
+cpu:
+  plugin: "dc_measurements/Cpu"
+  topic_output: "/dc/measurement/cpu"
+  tags: ["flb_stdout"]
+  max_processes: 10
+  cpu_min: 10.0
 ```

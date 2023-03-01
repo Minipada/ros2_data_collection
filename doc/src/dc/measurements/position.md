@@ -1,4 +1,4 @@
-# Permissions
+# Position
 
 ## Description
 
@@ -35,4 +35,14 @@ Collect x, y and yaw of the robot.
     },
     "type": "object"
 }
+```
+
+## Measurement configuration
+
+```yaml
+...
+position:
+  plugin: "dc_measurements/Position"
+  topic_output: "/dc/measurement/position"
+  tags: ["flb_stdout"]
 ```

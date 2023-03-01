@@ -6,11 +6,10 @@ Collect UID, GID, if a file or directory exists and its permissions (in rwx or i
 
 ## Parameters
 
-| Parameter  | Description                                        | Type         | Default |
-| ---------- | -------------------------------------------------- | ------------ | ------- |
-| **path**   | Path to the file or directory to collect data from | str          | ""      |
-| **env**    | Environment from which to get the path from        | str          | ""      |
-| **format** | Format to collect permissions in. RWX = 0, INT = 1 | Enum(0 or 1) | 0       |
+| Parameter  | Description                                                                       | Type         | Default         |
+| ---------- | --------------------------------------------------------------------------------- | ------------ | --------------- |
+| **format** | Format to collect permissions in. RWX = 0, INT = 1                                | Enum(0 or 1) | 0               |
+| **path**   | Path to the file or directory to collect data from, support environment variables | str          | N/A (mandatory) |
 
 ## Schemas
 
@@ -39,4 +38,16 @@ Collect UID, GID, if a file or directory exists and its permissions (in rwx or i
     },
     "type": "object"
 }
+```
+
+## Measurement configuration
+
+```yaml
+...
+permission_home_dc:
+  plugin: "dc_measurements/Permissions"
+  topic_output: "/dc/measurement/permissions_home_dc"
+  tags: ["flb_stdout"]
+  path: "$HOME/dc"
+  format: 1
 ```

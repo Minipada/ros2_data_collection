@@ -6,7 +6,7 @@ Given that there is no apt packages available, you will need to build from sourc
 Download the repository in your workspace
 
 ```bash
-$ git clone github.com/brisa-robotics/ros2_data_collection.git
+$ git clone github.com/minipada/ros2_data_collection.git
 ```
 
 ## Install dependencies
@@ -35,5 +35,11 @@ If not, you can install python dependencies from the provided requirements.txt:
 $ colcon build
 ```
 
+## Run
+```bash
+source install/setup.bash
+ros2 launch dc_bringup bringup.launch.py
+```
+
 ## Issues
-If you run into any issues when building ROS2 Data Collection, you can use the search tool in the issues tab on [GitHub](https://github.com/minipada/ros2_data_collection) and always feel free to [open a ticket](https://github.com/minipada/ros2_data_collection).
+If you run into any issues when building ROS 2 Data Collection, you can use the search tool in the issues tab on [GitHub](https://github.com/minipada/ros2_data_collection) and always feel free to [open a ticket](https://github.com/minipada/ros2_data_collection).

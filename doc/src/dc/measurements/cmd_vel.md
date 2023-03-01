@@ -55,3 +55,13 @@ Collect command velocity sent to the robot by subscribing to cmd_vel topic.
     "type": "object"
 }
 ```
+
+## Measurement configuration
+
+```yaml
+...
+cmd_vel:
+  plugin: "dc_measurements/CmdVel"
+  group_key: "cmd_vel"
+  topic_output: "/dc/measurement/cmd_vel"
+```

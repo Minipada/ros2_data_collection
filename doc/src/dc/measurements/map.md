@@ -6,10 +6,12 @@ Save map using nav2_map_server and collect the map of the local map saved. The m
 
 ## Parameters
 
-| Parameter     | Description                                                                     | Type | Default                 |
-| ------------- | ------------------------------------------------------------------------------- | ---- | ----------------------- |
-| **topic**     | Topic to subscribe to to get the map                                            | str  | "/map"                  |
-| **save_path** | Path to save the map to. Environment variables and datetime format are expanded | str  | "map/%Y-%m-%dT%H:%M:%S" |
+| Parameter            | Description                                                                     | Type  | Default                 |
+| -------------------- | ------------------------------------------------------------------------------- | ----- | ----------------------- |
+| **quiet**            | Disable stdout for nav2 map saver                                               | bool  | true                    |
+| **save_path**        | Path to save the map to. Environment variables and datetime format are expanded | str   | "map/%Y-%m-%dT%H:%M:%S" |
+| **save_map_timeout** | Time to wait to save the map                                                    | float | 3.0                     |
+| **topic**            | Topic to subscribe to to get the map                                            | str   | "/map"                  |
 
 ## Schema
 
@@ -80,4 +82,19 @@ Save map using nav2_map_server and collect the map of the local map saved. The m
     },
     "type": "object"
 }
+```
+
+## Measurement configuration
+
+```yaml
+...
+map:
+  plugin: "dc_measurements/Map"
+  topic_output: "/dc/measurement/map"
+  tags: ["flb_stdout"]
+  topic: "/map"
+  save_map: "map/%Y-%m-%dT%H:%M:%S"
+  save_map_timeout: 0.2
+  quiet: true
+  remote_keys: ["s3"]
 ```

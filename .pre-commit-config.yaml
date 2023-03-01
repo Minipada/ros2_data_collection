@@ -1,4 +1,4 @@
-exclude: "doc/js/.*$"
+exclude: "doc/js/.*$|doc/theme/.*|doc/src/fonts/.*|doc/css/lineicon.css"
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1

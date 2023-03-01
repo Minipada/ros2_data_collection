@@ -28,3 +28,13 @@ Collects the Operating System information: cpus, operating system name and kerne
     "type": "object"
 }
 ```
+
+## Measurement configuration
+
+```yaml
+...
+os:
+  plugin: "dc_measurements/Os"
+  topic_output: "/dc/measurement/os"
+  tags: ["flb_stdout"]
+```

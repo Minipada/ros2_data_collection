@@ -59,3 +59,14 @@ Collect robot speed using the Odom topic.
     "type": "object"
 }
 ```
+
+## Measurement configuration
+
+```yaml
+...
+speed:
+  plugin: "dc_measurements/Speed"
+  topic_output: "/dc/measurement/speed"
+  tags: ["flb_stdout"]
+  odom_topic: "/odom"
+```
