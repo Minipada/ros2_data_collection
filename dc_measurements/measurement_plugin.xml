@@ -31,6 +31,14 @@
         </class>
     </library>
 
+    <library path="dc_ip_camera_measurement">
+        <class name="dc_measurements/IpCamera" type="dc_measurements::IpCamera" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_ip_camera
+            </description>
+        </class>
+    </library>
+
     <library path="dc_map_measurement">
         <class name="dc_measurements/Map" type="dc_measurements::Map" base_class_type="dc_core::Measurement">
             <description>
