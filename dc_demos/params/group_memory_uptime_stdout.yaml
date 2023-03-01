@@ -17,7 +17,7 @@ destination_server:
       in_storage_pause_on_chunks_overlimit: "off"
     destination_plugins: ["flb_stdout"]
     flb_stdout:
-      plugin: "dc_destinations/Flbstdout"
+      plugin: "dc_destinations/FlbStdout"
       inputs: ["/dc/group/memory_uptime"]
       time_format: "double"
       time_key: "date"

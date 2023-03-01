@@ -68,7 +68,7 @@ def generate_launch_description():
         "log_level", default_value="info", description="log level"
     )
     declare_group_node = DeclareLaunchArgument(
-        "group_node", default_value="False", description="Start group_node"
+        "group_node", default_value="True", description="Start group_node"
     )
 
     bringup_cmd = IncludeLaunchDescription(
