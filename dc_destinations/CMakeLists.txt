@@ -31,6 +31,9 @@ include_directories(include)
 add_library(dc_flb_file_destination SHARED plugins/flb_file.cpp)
 list(APPEND dc_destination_plugin_libs dc_flb_file_destination)
 
+add_library(dc_flb_files_metrics_destination SHARED plugins/flb_files_metrics.cpp)
+list(APPEND dc_destination_plugin_libs dc_flb_files_metrics_destination)
+
 add_library(dc_flb_http_destination SHARED plugins/flb_http.cpp)
 list(APPEND dc_destination_plugin_libs dc_flb_http_destination)
 
