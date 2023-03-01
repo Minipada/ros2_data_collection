@@ -1,6 +1,6 @@
 <class_libraries>
     <library path="dc_flb_file_destination">
-        <class name="dc_destinations/Flbfile" type="dc_destinations::Flbfile" base_class_type="dc_core::Destination">
+        <class name="dc_destinations/FlbFile" type="dc_destinations::FlbFile" base_class_type="dc_core::Destination">
             <description>
                 dc_destination_flb_file
             </description>
@@ -8,7 +8,7 @@
     </library>
 
     <library path="dc_flb_http_destination">
-        <class name="dc_destinations/Flbhttp" type="dc_destinations::Flbhttp" base_class_type="dc_core::Destination">
+        <class name="dc_destinations/FlbHTTP" type="dc_destinations::FlbHTTP" base_class_type="dc_core::Destination">
             <description>
                 dc_destination_flb_http
             </description>
@@ -32,7 +32,7 @@
     </library>
 
     <library path="dc_flb_pgsql_destination">
-        <class name="dc_destinations/Flbpgsql" type="dc_destinations::Flbpgsql" base_class_type="dc_core::Destination">
+        <class name="dc_destinations/FlbPgSQL" type="dc_destinations::FlbPgSQL" base_class_type="dc_core::Destination">
             <description>
                 dc_destination_flb_pgsql
             </description>
@@ -48,7 +48,7 @@
     </library>
 
     <library path="dc_flb_stdout_destination">
-        <class name="dc_destinations/Flbstdout" type="dc_destinations::Flbstdout" base_class_type="dc_core::Destination">
+        <class name="dc_destinations/FlbStdout" type="dc_destinations::FlbStdout" base_class_type="dc_core::Destination">
             <description>
                 dc_destination_flb_stdout
             </description>
@@ -56,7 +56,7 @@
     </library>
 
     <library path="dc_flb_slack_destination">
-        <class name="dc_destinations/Slack" type="dc_destinations::FlbSlack" base_class_type="dc_core::Destination">
+        <class name="dc_destinations/FlbSlack" type="dc_destinations::FlbSlack" base_class_type="dc_core::Destination">
             <description>
                 dc_destination_flb_slack
             </description>

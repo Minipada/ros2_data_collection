@@ -43,7 +43,8 @@ void FlbKinesisStreams::initFlbOutputPlugin()
   flb_output_set(ctx_, out_ffd_, "time_key_format", time_key_format_.c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "log_key", log_key_.c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "endpoint", endpoint_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "auto_retry_requests", auto_retry_requests_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "auto_retry_requests", dc_util::boolToString(auto_retry_requests_), NULL);
+
   if (out_ffd_ == -1)
   {
     flb_destroy(ctx_);

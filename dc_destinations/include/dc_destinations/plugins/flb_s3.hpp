@@ -42,7 +42,7 @@ protected:
   std::string upload_chunk_size_;
   std::string upload_timeout_;
   std::string store_dir_;
-  std::string store_dir_limit_size_;
+  int store_dir_limit_size_;
   std::string s3_key_format_;
   std::string s3_key_format_tag_delimiters_;
   bool static_file_path_;

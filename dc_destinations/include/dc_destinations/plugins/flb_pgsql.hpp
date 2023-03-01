@@ -24,11 +24,11 @@
 namespace dc_destinations
 {
 
-class Flbpgsql : public dc_destinations::FlbDestination
+class FlbPgSQL : public dc_destinations::FlbDestination
 {
 public:
-  Flbpgsql();
-  ~Flbpgsql();
+  FlbPgSQL();
+  ~FlbPgSQL();
 
 protected:
   /**

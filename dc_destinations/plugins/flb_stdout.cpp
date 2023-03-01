@@ -3,11 +3,11 @@
 namespace dc_destinations
 {
 
-Flbstdout::Flbstdout() : dc_destinations::FlbDestination()
+FlbStdout::FlbStdout() : dc_destinations::FlbDestination()
 {
 }
 
-void Flbstdout::onConfigure()
+void FlbStdout::onConfigure()
 {
   auto node = getNode();
 
@@ -21,7 +21,7 @@ void Flbstdout::onConfigure()
   node->get_parameter(destination_name_ + ".json_date_format", json_date_format_);
 }
 
-void Flbstdout::initFlbOutputPlugin()
+void FlbStdout::initFlbOutputPlugin()
 {
   out_ffd_ = flb_output(ctx_, "stdout", NULL);
   flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), NULL);
@@ -35,9 +35,9 @@ void Flbstdout::initFlbOutputPlugin()
   }
 }
 
-Flbstdout::~Flbstdout() = default;
+FlbStdout::~FlbStdout() = default;
 
 }  // namespace dc_destinations
 
 #include "pluginlib/class_list_macros.hpp"
-PLUGINLIB_EXPORT_CLASS(dc_destinations::Flbstdout, dc_core::Destination)
+PLUGINLIB_EXPORT_CLASS(dc_destinations::FlbStdout, dc_core::Destination)
