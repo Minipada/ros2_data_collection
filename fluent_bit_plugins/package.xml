@@ -7,6 +7,8 @@
     <maintainer email="d.bensoussan@proton.me">David Bensoussan</maintainer>
     <license>MPL-2.0</license>
 
+    <build_depend>golang-go</build_depend>
+
     <depend>dc_interfaces</depend>
     <depend>fluent_bit_vendor</depend>
     <depend>rcl</depend>

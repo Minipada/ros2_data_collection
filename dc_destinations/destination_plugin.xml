@@ -23,6 +23,14 @@
         </class>
     </library>
 
+    <library path="dc_flb_minio_destination">
+        <class name="dc_destinations/FlbMinIO" type="dc_destinations::FlbMinIO" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_minio
+            </description>
+        </class>
+    </library>
+
     <library path="dc_flb_null_destination">
         <class name="dc_destinations/FlbNull" type="dc_destinations::FlbNull" base_class_type="dc_core::Destination">
             <description>

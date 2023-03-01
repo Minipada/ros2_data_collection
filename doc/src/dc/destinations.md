@@ -91,7 +91,7 @@ destination_server:
       counter_path: "$HOME/run_id"
       uuid: false
     flb_minio:
-      plugin: "dc_destinations/Flbminio"
+      plugin: "dc_destinations/FlbMinIO"
       inputs: ["/dc/group/map"]
       plugin_path: "/root/ws/src/ros2_data_collection/dc_destinations/flb_plugins/lib/out_minio.so"
       endpoint: 127.0.0.1:9000
