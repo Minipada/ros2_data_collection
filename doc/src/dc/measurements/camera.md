@@ -58,7 +58,7 @@ Now that the path is set, it can be used to know where to send the image:
 flb_minio:
   verbose_plugin: false
   time_format: "iso8601"
-  plugin: "dc_destinations/Flbminio"
+  plugin: "dc_destinations/FlbMinIO"
   inputs: ["/dc/group/cameras"]
   endpoint: 127.0.0.1:9000
   access_key_id: XEYqG4ZcPY5jiq5i

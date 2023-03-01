@@ -37,6 +37,9 @@ list(APPEND dc_destination_plugin_libs dc_flb_http_destination)
 add_library(dc_flb_kinesis_streams_destination SHARED plugins/flb_kinesis_streams.cpp)
 list(APPEND dc_destination_plugin_libs dc_flb_kinesis_streams_destination)
 
+add_library(dc_flb_minio_destination SHARED plugins/flb_minio.cpp)
+list(APPEND dc_destination_plugin_libs dc_flb_minio_destination)
+
 add_library(dc_flb_null_destination SHARED plugins/flb_null.cpp)
 list(APPEND dc_destination_plugin_libs dc_flb_null_destination)
 

@@ -29,7 +29,7 @@ The [S3 plugin](https://docs.fluentbit.io/manual/pipeline/outputs/s3) sends data
 flb_minio:
   verbose_plugin: false
   time_format: "iso8601"
-  plugin: "dc_destinations/Flbminio"
+  plugin: "dc_destinations/FlbMinIO"
   inputs: ["/dc/group/cameras"]
   endpoint: 127.0.0.1:9000
   access_key_id: XEYqG4ZcPY5jiq5i
