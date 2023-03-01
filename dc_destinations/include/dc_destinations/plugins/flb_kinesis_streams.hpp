@@ -31,7 +31,7 @@ protected:
   std::string time_key_format_;
   std::string log_key_;
   std::string endpoint_;
-  std::string auto_retry_requests_;
+  bool auto_retry_requests_;
 };
 
 }  // namespace dc_destinations

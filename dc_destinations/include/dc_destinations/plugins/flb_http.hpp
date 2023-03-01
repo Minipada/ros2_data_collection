@@ -21,11 +21,11 @@
 namespace dc_destinations
 {
 
-class Flbhttp : public dc_destinations::FlbDestination
+class FlbHTTP : public dc_destinations::FlbDestination
 {
 public:
-  Flbhttp();
-  ~Flbhttp();
+  FlbHTTP();
+  ~FlbHTTP();
 
 protected:
   /**
@@ -37,7 +37,7 @@ protected:
   std::string format_;
   std::string host_;
   std::string body_key_;
-  std::string port_;
+  int port_;
   std::string uri_;
   std::string header_;
   std::string headers_key_;
@@ -45,8 +45,8 @@ protected:
   std::string json_date_key_;
   std::string http_user_;
   std::string http_passwd_;
-  std::string log_response_payload_;
-  std::string allow_duplicated_headers_;
+  bool log_response_payload_;
+  bool allow_duplicated_headers_;
 };
 
 }  // namespace dc_destinations

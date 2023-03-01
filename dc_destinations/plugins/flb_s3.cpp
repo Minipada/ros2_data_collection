@@ -26,13 +26,13 @@ void FlbS3::onConfigure()
   nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".store_dir",
                                                rclcpp::ParameterValue("/tmp/fluent-bit/s3"));
   nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".store_dir_limit_size",
-                                               rclcpp::ParameterValue("0"));
+                                               rclcpp::ParameterValue(0));
   nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".s3_key_format",
                                                rclcpp::ParameterValue("/fluent-bit-logs/$TAG/%Y/%m/%d/%H/%M/%S"));
-  nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".s3_key_format_tag_delimiters",
-                                               rclcpp::ParameterValue(""));
   nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".static_file_path",
                                                rclcpp::ParameterValue(false));
+  nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".s3_key_format_tag_delimiters",
+                                               rclcpp::ParameterValue(""));
   nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".use_put_object",
                                                rclcpp::ParameterValue(false));
   nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".role_arn", rclcpp::ParameterValue(""));
@@ -94,7 +94,7 @@ void FlbS3::initFlbOutputPlugin()
   flb_output_set(ctx_, out_ffd_, "upload_chunk_size", upload_chunk_size_.c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "upload_timeout", upload_timeout_.c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "store_dir", store_dir_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "store_dir_limit_size", store_dir_limit_size_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "store_dir_limit_size", std::to_string(store_dir_limit_size_).c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "s3_key_format", s3_key_format_.c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "s3_key_format_tag_delimiters", s3_key_format_tag_delimiters_.c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "static_file_path", dc_util::boolToString(static_file_path_), NULL);

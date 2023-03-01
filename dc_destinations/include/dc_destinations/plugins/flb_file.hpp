@@ -11,11 +11,11 @@
 namespace dc_destinations
 {
 
-class Flbfile : public dc_destinations::FlbDestination
+class FlbFile : public dc_destinations::FlbDestination
 {
 public:
-  Flbfile();
-  ~Flbfile();
+  FlbFile();
+  ~FlbFile();
 
 protected:
   /**
@@ -27,7 +27,9 @@ protected:
   std::string path_;
   std::string file_;
   std::string format_;
-  std::string mkdir_;
+  std::string delimiter_;
+  std::string label_delimiter_;
+  bool mkdir_;
 };
 
 }  // namespace dc_destinations

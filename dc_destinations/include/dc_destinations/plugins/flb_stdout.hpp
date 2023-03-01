@@ -21,11 +21,11 @@
 namespace dc_destinations
 {
 
-class Flbstdout : public dc_destinations::FlbDestination
+class FlbStdout : public dc_destinations::FlbDestination
 {
 public:
-  Flbstdout();
-  ~Flbstdout();
+  FlbStdout();
+  ~FlbStdout();
 
 protected:
   /**

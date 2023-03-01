@@ -3,11 +3,11 @@
 namespace dc_destinations
 {
 
-Flbpgsql::Flbpgsql() : dc_destinations::FlbDestination()
+FlbPgSQL::FlbPgSQL() : dc_destinations::FlbDestination()
 {
 }
 
-void Flbpgsql::onConfigure()
+void FlbPgSQL::onConfigure()
 {
   auto node = getNode();
   char username[MAX_USERID_LENGTH];
@@ -39,7 +39,7 @@ void Flbpgsql::onConfigure()
   node->get_parameter(destination_name_ + ".cockroachdb", cockroachdb_);
 }
 
-void Flbpgsql::initFlbOutputPlugin()
+void FlbPgSQL::initFlbOutputPlugin()
 {
   out_ffd_ = flb_output(ctx_, "pgsql", NULL);
   flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), NULL);
@@ -62,9 +62,9 @@ void Flbpgsql::initFlbOutputPlugin()
   }
 }
 
-Flbpgsql::~Flbpgsql() = default;
+FlbPgSQL::~FlbPgSQL() = default;
 
 }  // namespace dc_destinations
 
 #include "pluginlib/class_list_macros.hpp"
-PLUGINLIB_EXPORT_CLASS(dc_destinations::Flbpgsql, dc_core::Destination)
+PLUGINLIB_EXPORT_CLASS(dc_destinations::FlbPgSQL, dc_core::Destination)
