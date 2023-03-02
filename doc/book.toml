@@ -24,7 +24,7 @@ mathjax-support = true
 default-theme = "navy"
 git-repository-url = "https://github.com/minipada/ros2_data_collection"
 edit-url-template = "https://github.com/minipada/ros2_data_collection/edit/humble/guide/{path}"
-additional-css = ["open-in.css", "./css/mdbook-admonish.css", "css/logo.css", "css/lineicon.css"]
+additional-css = ["open-in.css", "./css/mdbook-admonish.css", "css/logo.css", "css/lineicon.css", "css/theme.css"]
 additional-js = ["js/mermaid.js", "js/mermaid-init.js", "js/theme.js"]
 
 [output.html.fold]
