@@ -3,8 +3,9 @@
 namespace dc_demos
 {
 
-void UptimeCustom::onFailedValidation()
+void UptimeCustom::onFailedValidation(json data_json)
 {
+  (void)data_json;
   RCLCPP_INFO(logger_, "Callback! Validation failed for uptime custom");
 }
 

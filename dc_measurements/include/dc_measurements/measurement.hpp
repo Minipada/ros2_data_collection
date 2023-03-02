@@ -81,8 +81,9 @@ public:
 
   // an opportunity for derived classes to do something on failed validation
   // if they chose
-  virtual void onFailedValidation()
+  virtual void onFailedValidation(json data_json)
   {
+    (void)data_json;  // Ignore error of variable being unused
   }
 
   std::shared_ptr<rclcpp_lifecycle::LifecycleNode> getNode()
@@ -256,16 +257,17 @@ public:
       // Publish when validation activated
       if (enable_validator_)
       {
+        auto json_data = json::parse(msg.data);
         try
         {
-          validator_.validate(json::parse(msg.data));
+          validator_.validate(json_data);
           data_pub_->publish(msg);
           init_counter_published_++;
         }
         catch (const std::exception& e)
         {
-          RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what());
-          onFailedValidation();
+          RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what() << "data=" << json_data.dump());
+          onFailedValidation(json_data);
         }
       }
       // Publish without validation
