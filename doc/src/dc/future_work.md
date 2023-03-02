@@ -1,7 +1,7 @@
 # Future work and Roadmap
 
 DC still being in early development, it requires:
-1. High code coverage with tests and codecov
+1. High test coverage
 2. Automation: docker image build, PR and commit builds
 3. More measurement plugins
 4. More destination plugins
