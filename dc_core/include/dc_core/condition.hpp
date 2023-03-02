@@ -45,8 +45,6 @@ public:
    * @brief Method to deactivate Condition and any threads involved in execution.
    */
   virtual void deactivate() = 0;
-
-  // virtual void collectDataCb() = 0;
 };
 }  // namespace dc_core
 
