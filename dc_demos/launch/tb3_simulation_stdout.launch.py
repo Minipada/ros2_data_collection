@@ -24,21 +24,7 @@ def generate_launch_description():
     container_name = LaunchConfiguration("container_name")
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
-
-    # Nav2
-    slam = LaunchConfiguration("slam")
-    use_namespace = LaunchConfiguration("use_namespace")
-    rviz_config_file = LaunchConfiguration("rviz_config_file")
-    use_simulator = LaunchConfiguration("use_simulator")
-    use_rviz = LaunchConfiguration("use_rviz")
-    headless = LaunchConfiguration("headless")
-    world = LaunchConfiguration("world")
-    x_pose = LaunchConfiguration("x_pose", default="-2.00")
-    y_pose = LaunchConfiguration("y_pose", default="-0.50")
-    z_pose = LaunchConfiguration("z_pose", default="0.01")
-    roll = LaunchConfiguration("roll", default="0.00")
-    pitch = LaunchConfiguration("pitch", default="0.00")
-    yaw = LaunchConfiguration("yaw", default="0.00")
+    group_node = LaunchConfiguration("group_node")
 
     declare_slam_cmd = DeclareLaunchArgument(
         "slam", default_value="False", description="Whether run a SLAM"
@@ -130,6 +116,10 @@ def generate_launch_description():
     declare_use_rviz_cmd = DeclareLaunchArgument(
         "use_rviz", default_value="True", description="Whether to start RVIZ"
     )
+    declare_group_node = DeclareLaunchArgument(
+        "group_node", default_value="True", description="Start group_node"
+    )
+
     dc_bringup_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(dc_bringup_dir, "launch", "dc_bringup.launch.py")
@@ -143,33 +133,7 @@ def generate_launch_description():
             "container_name": container_name,
             "use_respawn": use_respawn,
             "log_level": log_level,
-        }.items(),
-    )
-
-    nav2_bringup_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(nav2_bringup_dir, "launch", "tb3_simulation_launch.py")
-        ),
-        launch_arguments={
-            "namespace": namespace,
-            "use_namespace": use_namespace,
-            "slam": slam,
-            "use_sim_time": use_sim_time,
-            "autostart": autostart,
-            "use_composition": use_composition,
-            "use_respawn": use_respawn,
-            "log_level": log_level,
-            "rviz_config_file": rviz_config_file,
-            "use_simulator": use_simulator,
-            "use_rviz": use_rviz,
-            "headless": headless,
-            "world": world,
-            "x_pose": x_pose,
-            "y_pose": y_pose,
-            "z_pose": z_pose,
-            "roll": roll,
-            "pitch": pitch,
-            "yaw": yaw,
+            "group_node": group_node,
         }.items(),
     )
 
@@ -193,11 +157,11 @@ def generate_launch_description():
     ld.add_action(declare_use_simulator_cmd)
     ld.add_action(declare_use_rviz_cmd)
     ld.add_action(declare_world_cmd)
+    ld.add_action(declare_group_node)
 
     ld.add_action(declare_rviz_config_file_cmd)
 
     # Declare the launch options
     ld.add_action(dc_bringup_cmd)
-    ld.add_action(nav2_bringup_cmd)
 
     return ld
