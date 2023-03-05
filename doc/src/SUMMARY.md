@@ -62,5 +62,6 @@
   - [PostgreSQL](./dc/infrastructure_setup/postgresql.md)
 - [CLI tools](./dc/cli.md)
 - [Future work and Roadmap](./dc/future_work.md)
+- [Contributing](./dc/contributing.md)
 - [FAQ](./dc/faq.md)
 - [About and Contact](./dc/about_contact.md)
