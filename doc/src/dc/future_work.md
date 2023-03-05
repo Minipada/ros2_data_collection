@@ -9,7 +9,3 @@ DC still being in early development, it requires:
 6. Guide for the ROS developer: I would like DC to be simple enough so a ROS developer can collect data without the expertise of knowing how to manage databases
 7. Handle python destination plugins
 8. More use cases showcased in demos
-
-Since I want DC to be community driven, go to our [HelloNext](https://ros2-data-collection.hellonext.co) and vote for your needed features.
-
-It is a feedback tool where everyone can vote and comment on tasks. Note that to avoid re-voting, voting requires to log in, while comments don't.

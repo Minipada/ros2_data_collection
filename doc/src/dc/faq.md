@@ -17,7 +17,9 @@ Currently, from my knowledge, it is only possible to load a plugin using the C a
 
 Destination plugins can be written in C or Go. You can find examples in the fluent_bit_plugins package.
 
-The question becomes comes complex when dealing with destinations. I have not yet solved this problem and would welcome one, since many API libraries are available in this language.
+## How can I use a Python API with Fluent Bit
+
+Adding a destination plugin which uses a Python library is not cleared. We have not yet solved this problem and would welcome one, since many API libraries are available in this language.
 
 Note for the courageous ones: I tried once to create python-C bindings of Fluent Bit, by creating .h files like in the [fluent-bit-go](https://github.com/fluent/fluent-bit-go) and use ctypesgen(https://github.com/ctypesgen/ctypesgen), like this:
 
@@ -46,7 +48,7 @@ Whatever you write, feel free to make a Pull Request and share your work!
 
 ## My group data is not published on the group topic
 
-This may happen for many reasons:
+This may happen for different reasons:
 
 1. The group node is not started, be sure it is (ros2 node list), you will need to enable it in your launch file or using the `group_node:=true` when launching the bringup
 2. Data is not being published on all topics it subscribes to (use ros2 topic echo on each to ensure that). Currently, if all topics don't publish, there is no way to ignore that and still send the message partially full (see [here](https://answers.ros.org/question/410138/is-it-possible-to-drop-or-keep-message-in-approximatetimesynchronizer/)). Help is welcome here :)
