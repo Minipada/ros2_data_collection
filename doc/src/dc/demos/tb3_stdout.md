@@ -9,7 +9,7 @@ You will also need 2 terminal windows, to:
 
 Since rviz is pretty verbose, using 2 terminal windows will help reading the JSON printed on the terminal window.
 
-## Setup the environment,
+## Setup the environment
 
 In each, terminal, source your environment and setup turtlebot configuration:
 
