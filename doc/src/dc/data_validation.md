@@ -35,3 +35,6 @@ You might want to trigger some actions when a validation fails, e.g send the dat
 In this case, you will need to write your own plugin (inherit from an existing one or start from scratch) and define the `onFailedValidation` function in the class.
 
 This case is covered by the [custom plugin demo](./demos/custom_stdout.md)
+
+## Use a different Schema
+For each plugin, a default path is provided but this can be changed by passing the `json_schema_path` parameter in the measurement plugin parameter to the absolute path of your schema.
