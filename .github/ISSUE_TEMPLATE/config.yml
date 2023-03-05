@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Q&A
+    url: https://github.com/Minipada/ros2_data_collection/discussions/categories/q-a
+    about: Ask and answer questions
+  - name: Feature Requests
+    url: https://github.com/Minipada/ros2_data_collection/discussions/categories/ideas-and-feature-requests
+    about: Request a feature, the development team will respond asap.
+  - name: Share your work
+    url: https://github.com/Minipada/ros2_data_collection/discussions/categories/show-and-tell
+    about: Show off what you're doing with DC!
