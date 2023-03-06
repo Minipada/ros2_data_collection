@@ -10,7 +10,7 @@ Each condition is enabled or disabled through a pluginlib plugin. It has these c
 | Name                                                     | Description                                      |
 | -------------------------------------------------------- | ------------------------------------------------ |
 | [Robot moving](./conditions/moving.md)                   | Robot is moving                                  |
-| [Bool equal](./conditions/bool_equal.md.md)              | Value of a boolean key is equal to               |
+| [Bool equal](./conditions/bool_equal.md)                 | Value of a boolean key is equal to               |
 | [Double equal](./conditions/double_equal.md)             | Value of a double key is equal to                |
 | [Double inferior](./conditions/double_inferior.md)       | Value of a double key is inferior to             |
 | [Double superior](./conditions/double_superior.md)       | Value of a double key is superior to             |
