@@ -1,31 +1,56 @@
-# Introduction
+# DC
 
-The DC project aims at integrating data collection pipelines into ROS 2. This is meant to plug to existing APIs, for analytics, not for live monitoring (some awesome tools exist already). There is currently no generic ROS based framework used to collect data from ROS based robots that are aimed at being analyzed (ros bags are great for developers but not for other software developers who don't know about ROS). Understanding and improving operations for any type of machine in any environment has become an important reason companies move to autonomous robots. This involves mostly pick and drop and inspection operations. This framework aims at helping collecting, validating and sending reliably the data to create such APIs and dashboards.
+<p align="center">
+  <img height="300" src="doc/src/images/dc.png" />
+</p>
+
+**Documentation**: [https://minipada.github.io/ros2_data_collection/dc](https://minipada.github.io/ros2_data_collection/dc)
+
+**Source code**: [https://github.com/minipada/ros2_data_collection](https://github.com/minipada/ros2_data_collection)
+
+For detailed instructions:
+
+- [Build](https://minipada.github.io/ros2_data_collection/dc/build.html)
+- [Concepts](https://minipada.github.io/ros2_data_collection/dc/concepts.html)
+- [Data Pipeline](https://minipada.github.io/ros2_data_collection/dc/data_pipeline.html)
+- [Measurements](https://minipada.github.io/ros2_data_collection/dc/measurements.html)
+- [Conditions](https://minipada.github.io/ros2_data_collection/dc/conditions.html)
+- [Data validation](https://minipada.github.io/ros2_data_collection/dc/data_validation.html)
+- [Groups](https://minipada.github.io/ros2_data_collection/dc/groups.html)
+- [Destinations](https://minipada.github.io/ros2_data_collection/dc/destinations.html)
+- [Configuration examples](https://minipada.github.io/ros2_data_collection/dc/configuration_examples.html)
+- [Demos](https://minipada.github.io/ros2_data_collection/dc/demos.html)
+- [Infrastructure setup](https://minipada.github.io/ros2_data_collection/dc/infrastructure_setup.html)
+- [CLI tools](https://minipada.github.io/ros2_data_collection/dc/cli.html)
+- [Future work and Roadmap](https://minipada.github.io/ros2_data_collection/dc/future_work.html)
+- [Contributing](https://minipada.github.io/ros2_data_collection/dc/contributing.html)
+- [FAQ](https://minipada.github.io/ros2_data_collection/dc/faq.html)
+- [About and contact](https://minipada.github.io/ros2_data_collection/dc/about_contact.html)
+
+## Introduction
+
+The DC project aims at integrating data collection pipelines into ROS 2. This is meant to plug to existing APIs, for analytics, not for live monitoring (some awesome tools exist already). Understanding and improving operations for any type of machine in any environment has become an important reason companies move to autonomous robots. This involves mostly pick and drop and inspection operations. This framework aims at helping collecting, validating and sending reliably the data to create such APIs and dashboards.
 
 DC uses a modular approach, based on [pluginlib](https://index.ros.org/p/pluginlib/) and greatly inspired of [Nav2](https://navigation.ros.org/) for its architecture. Pluginlib is used to configure which measurements are collected and where the data goes. Measurements and destinations are pluginlib plugins. In addition to pluginlib, most plugins use [Fluent bit](https://fluentbit.io/) in the backend: *Fluent Bit is a super fast, lightweight, and highly scalable logging and metrics processor and forwarder. It is the preferred choice for cloud and containerized environments. Developed and interfaced in C, it has already many features we directly can use, especially: high performance, reliability and data integrity (backpressure handling and data buffering in memory and filesystem)*.
 
-# Main features
+## Main features
 
-* Can set polling interval for each measurement or get every measurement for StringStamped messages
-* Data is transported as JSON through ROS messages
-* Each measurement data can be validated through JSON schemas (based on [JSON schema 07](https://json-schema.org/draft-07/json-schema-release-notes.html))
-* The framework can be extended by loading custom plugins from other ROS packages
-* Adding a new measurement or destination requires only to add a plugin
-* Can get data from any ROS topics if published as a StringStamped message, then use the StringStamped plugin
-* Can exclude JSON fields for each measurement
-* Data can be collected on conditions: e.g if the robot is moving, if a field is equal to a value. Conditions are also plugins in the measurement node.
-* Data collection can be triggered if all, any or no condition are met
-* Can configure number of records to collect at start and when condition is activated
-* No 3rd party library to install except for Python: All 3rd party libraries have a [vendor](https://answers.ros.org/question/332915/what-does-the-_vendor-suffix-mean-in-a-package-name/) package.
-* Fluent bit outputs can be added by using the GO or C interface. A Fluent bit plugin needs to be written in this case
-* Measurements can be grouped using the group node based on the ApproximateTimeSynchronizer
-* Groups can exclude data
+* **Modular approach**: based on pluginlib and greatly inspired by Nav2 for its architecture
+* **Reliable data collection**: validate and send data to create APIs and dashboards
+* **Flexible data collection**: set polling interval for each measurement or collect every measurement with StringStamped messages
+* **Customizable validation**: validate data using existing or customized JSON schemas
+* **Easy to extend**: add new measurements or destinations by simply adding a plugin
+* **Flexible data collection conditions**: collect data based on conditions such as whether the robot is moving or if a field is equal to a value
+* **Trigger-based data collection**: collect data when a defined set of combination of all, any, or no condition are met
+* **Customizable record collection**: configure the number of records to collect at the start and when a condition is activated.
+* **Data inspection**: inspect data from camera input including barcode and QR codes
+* **Fast and efficient**: high performance, using Fluent Bit for backend processing, and designed to minimize code duplication and reduce human errors
+* **Grouped measurements**: measurements can be grouped using the group node based on the ApproximateTimeSynchronizer
+* **File saving**: files can be saved, including map_server maps, camera images, and any file produced by a measurement
+* **Easy to use**: designed to be easy to learn and use
+* **No C++ 3rd party library required**: all 3rd party libraries have a vendor package in the repository
 
-Some other features related to some plugins:
-* Data inspection is included in the camera input plugin. Currently, only barcode and QR codes can be analyzed.
-
-
-And inherited from Fluent Bit and ROS 2:
+And inherited from Fluent Bit:
 
 * [Backpressure handling](https://docs.fluentbit.io/manual/v/1.0/configuration/backpressure)
 * [Data buffering in memory and filesystem](https://docs.fluentbit.io/manual/v/1.0/configuration/buffering)
@@ -104,3 +129,6 @@ flowchart LR
     gr_inspection -- Raw, rotated and/or inspected images --> pl_minio
     gr_inspection -- Raw, rotated and/or inspected images --> pl_s3
 ```
+
+# License
+This program is under the terms of the [Mozilla Public License Version 2.0](https://www.mozilla.org/en-US/MPL/2.0/).
