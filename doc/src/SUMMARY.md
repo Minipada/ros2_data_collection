@@ -60,6 +60,7 @@
 - [Infrastructure setup](./dc/infrastructure_setup.md)
   - [MinIO](./dc/infrastructure_setup/minio.md)
   - [PostgreSQL](./dc/infrastructure_setup/postgresql.md)
+  - [Ip camera](./dc/infrastructure_setup/ip_camera.md)
 - [CLI tools](./dc/cli.md)
 - [Future work and Roadmap](./dc/future_work.md)
 - [Contributing](./dc/contributing.md)
