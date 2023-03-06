@@ -1,6 +1,6 @@
 # DC
 
-<p align="center">
+<p class="github-only" align="center">
   <img height="300" src="doc/src/images/dc.png" />
 </p>
 
