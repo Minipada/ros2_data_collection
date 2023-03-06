@@ -16,8 +16,8 @@ void Speed::odomCb(nav_msgs::msg::Odometry::SharedPtr msg)
   data_json["linear"]["y"] = msg->twist.twist.linear.y;
   data_json["linear"]["z"] = msg->twist.twist.linear.z;
   data_json["angular"]["x"] = msg->twist.twist.angular.x;
-  data_json["angular"]["x"] = msg->twist.twist.angular.y;
-  data_json["angular"]["x"] = msg->twist.twist.angular.z;
+  data_json["angular"]["y"] = msg->twist.twist.angular.y;
+  data_json["angular"]["z"] = msg->twist.twist.angular.z;
   data_json["computed"] = sqrt(msg->twist.twist.linear.x * msg->twist.twist.linear.x +
                                msg->twist.twist.linear.y * msg->twist.twist.linear.y);
   dc_interfaces::msg::StringStamped pub_msg;
