@@ -416,9 +416,8 @@ public:
     RCLCPP_INFO(logger_, "Activating %s", measurement_name_.c_str());
 
     data_pub_->on_activate();
-    enabled_ = true;
 
-    if (init_collect_)
+    if (enabled_ && init_collect_)
     {
       collectAndPublish();
     }
