@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <boost/asio.hpp>
 #include <boost/program_options.hpp>
 #include <chrono>
 #include <iostream>
@@ -31,6 +32,7 @@
 
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_util/string_utils.hpp"
 #include "nav2_util/node_utils.hpp"
 
 #define MAXPACKETLEN 4096
