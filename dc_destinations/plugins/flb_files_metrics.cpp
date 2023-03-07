@@ -3,11 +3,11 @@
 namespace dc_destinations
 {
 
-FlbFilesmetrics::FlbFilesmetrics() : dc_destinations::FlbDestination()
+FlbFilesMetrics::FlbFilesMetrics() : dc_destinations::FlbDestination()
 {
 }
 
-void FlbFilesmetrics::onConfigure()
+void FlbFilesMetrics::onConfigure()
 {
   auto node = getNode();
 
@@ -103,7 +103,7 @@ void FlbFilesmetrics::onConfigure()
   }
 }
 
-void FlbFilesmetrics::initFlbOutputPlugin()
+void FlbFilesMetrics::initFlbOutputPlugin()
 {
   RCLCPP_INFO(logger_, "Loading flb_metrics as GO proxy output %s", plugin_path_.c_str());
   if (flb_plugin_load_router(strdup(plugin_path_.c_str()), ctx_->config) != 0)
@@ -161,9 +161,9 @@ void FlbFilesmetrics::initFlbOutputPlugin()
   }
 }
 
-FlbFilesmetrics::~FlbFilesmetrics() = default;
+FlbFilesMetrics::~FlbFilesMetrics() = default;
 
 }  // namespace dc_destinations
 
 #include "pluginlib/class_list_macros.hpp"
-PLUGINLIB_EXPORT_CLASS(dc_destinations::FlbFilesmetrics, dc_core::Destination)
+PLUGINLIB_EXPORT_CLASS(dc_destinations::FlbFilesMetrics, dc_core::Destination)

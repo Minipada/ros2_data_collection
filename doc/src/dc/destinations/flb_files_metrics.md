@@ -65,7 +65,7 @@ erDiagram
 ## Example
 ```yaml
 flb_files_metrics:
-    plugin: "dc_destinations/FlbFilesmetrics"
+    plugin: "dc_destinations/FlbFilesMetrics"
     inputs: ["/dc/group/map"]
     file_storage: ["minio", "s3"]
     db_type: "pgsql"

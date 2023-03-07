@@ -26,11 +26,11 @@
 namespace dc_destinations
 {
 
-class FlbFilesmetrics : public dc_destinations::FlbDestination
+class FlbFilesMetrics : public dc_destinations::FlbDestination
 {
 public:
-  FlbFilesmetrics();
-  ~FlbFilesmetrics();
+  FlbFilesMetrics();
+  ~FlbFilesMetrics();
 
 protected:
   /**
