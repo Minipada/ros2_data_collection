@@ -126,7 +126,7 @@ protected:
   std::string condition_name_;
   rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::Bool>::SharedPtr condition_pub_;
 
-  double enabled_;
+  bool enabled_;
   std::string group_key_;
   std::vector<std::string> if_all_conditions_;
   std::vector<std::string> if_any_conditions_;

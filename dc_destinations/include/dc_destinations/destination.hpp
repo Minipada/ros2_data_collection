@@ -149,7 +149,7 @@ protected:
 
   std::string destination_name_;
   std::vector<std::string> inputs_;
-  double enabled_;
+  bool enabled_;
   bool run_id_enabled_;
   std::string run_id_;
 
