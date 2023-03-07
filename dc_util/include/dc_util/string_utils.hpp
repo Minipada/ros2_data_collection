@@ -145,6 +145,13 @@ std::string expand_values(std::string text, NodeT node)
   return text;
 }
 
+bool stringMatchesRegex(std::string regex, std::string value)
+{
+  const std::regex base_regex(regex);
+
+  return std::regex_match(value, base_regex);
+}
+
 }  // namespace dc_util
 
 #endif  // DC_UTIL__STRING_UTILS_HPP_
