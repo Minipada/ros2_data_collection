@@ -21,12 +21,6 @@
 namespace dc_measurements
 {
 
-enum class Formatpermissions
-{
-  RWX = 0,
-  INT = 1,
-};
-
 class Permissions : public dc_measurements::Measurement
 {
 public:
@@ -36,11 +30,10 @@ public:
 
 private:
   struct stat getOwner(const std::string& path);
-  std::string formatPermissions(const mode_t& perm, Formatpermissions format);
+  std::string formatPermissions(const mode_t& perm, std::string format);
   std::string path_;
   std::string full_path_;
-  Formatpermissions permission_format_;
-  int permission_format_setting_;
+  std::string permission_format_;
 
 protected:
   /**

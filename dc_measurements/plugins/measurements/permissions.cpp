@@ -3,7 +3,7 @@
 namespace dc_measurements
 {
 
-Permissions::Permissions() : dc_measurements::Measurement(), permission_format_(Formatpermissions::INT)
+Permissions::Permissions() : dc_measurements::Measurement()
 {
 }
 
@@ -13,10 +13,9 @@ void Permissions::onConfigure()
 {
   auto node = getNode();
   nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".path", rclcpp::PARAMETER_STRING);
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".format",
-                                               rclcpp::ParameterValue(static_cast<int>(permission_format_)));
+  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".format", rclcpp::ParameterValue("int"));
   node->get_parameter(measurement_name_ + ".path", path_);
-  node->get_parameter(measurement_name_ + ".format", permission_format_setting_);
+  node->get_parameter(measurement_name_ + ".format", permission_format_);
 
   full_path_ = dc_util::expand_env(path_);
 
@@ -46,10 +45,10 @@ struct stat Permissions::getOwner(const std::string& path)
   return info;
 }
 
-std::string Permissions::formatPermissions(const mode_t& perm, Formatpermissions format)
+std::string Permissions::formatPermissions(const mode_t& perm, std::string format)
 {
   std::string modeval;
-  if (format == Formatpermissions::RWX)
+  if (dc_util::stringMatchesRegex("[rR][wW][xX]", format))
   {
     modeval.push_back((perm & S_IRUSR) ? 'r' : '-');
     modeval.push_back((perm & S_IWUSR) ? 'w' : '-');
@@ -61,7 +60,7 @@ std::string Permissions::formatPermissions(const mode_t& perm, Formatpermissions
     modeval.push_back((perm & S_IWOTH) ? 'w' : '-');
     modeval.push_back((perm & S_IXOTH) ? 'x' : '-');
   }
-  else if (format == Formatpermissions::INT)
+  else if (format == "int")
   {
     int users = 0;
     users += (perm & S_IRUSR) ? 4 : 0;
@@ -109,8 +108,7 @@ dc_interfaces::msg::StringStamped Permissions::collect()
   data_json["uid"] = info.st_uid;
   data_json["gid"] = info.st_gid;
   data_json["exists"] = std::filesystem::exists(std::filesystem::path(full_path_));
-  data_json["permissions"] =
-      formatPermissions(info.st_mode, static_cast<Formatpermissions>(permission_format_setting_));
+  data_json["permissions"] = formatPermissions(info.st_mode, permission_format_);
   msg.data = data_json.dump(-1, ' ', true);
 
   return msg;
