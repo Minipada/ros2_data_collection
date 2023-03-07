@@ -16,6 +16,21 @@ void Network::onConfigure()
   node->get_parameter(measurement_name_ + ".ping_address", ping_address_);
   node->get_parameter(measurement_name_ + ".ping_timeout", ping_timeout_ms_);
 
+  // Validate parameters
+  // https://stackoverflow.com/questions/5284147/validating-ipv4-addresses-with-regexp
+  boost::system::error_code ec;
+  boost::asio::ip::address::from_string(ping_address_, ec);
+  if (ec)
+  {
+    RCLCPP_ERROR(logger_, "Must be a valid ip address");
+    throw std::runtime_error("Must be a valid ip address");
+  }
+  if (ping_timeout_ms_ < 1)
+  {
+    RCLCPP_ERROR(logger_, "Timeout must be an integer superior to 0");
+    throw std::runtime_error("Timeout must be an integer superior to 0");
+  }
+
   bzero((char*)&to_, sizeof(struct sockaddr_in));
   to_.sin_family = AF_INET;
   to_.sin_addr.s_addr = inet_addr(ping_address_.c_str());
@@ -32,7 +47,7 @@ void Network::onConfigure()
 
   if ((skt = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0)
   {
-    RCLCPP_ERROR(logger_, "ping: [ICMP] unknown protocol or Permission denied, try again with sudo");
+    RCLCPP_ERROR(logger_, "ping: [ICMP] unknown protocol or Permission denied, try again with root permissions");
   }
   setsockopt(skt, IPPROTO_IP, IP_TTL, (char*)&ttl, sizeof(ttl));
 }
