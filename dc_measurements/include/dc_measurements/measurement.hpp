@@ -424,7 +424,7 @@ protected:
 
   std::string measurement_name_;
   std::string measurement_plugin_;
-  double enabled_;
+  bool enabled_{ true };
   bool debug_;
   std::shared_ptr<tf2_ros::Buffer> tf_;
 
