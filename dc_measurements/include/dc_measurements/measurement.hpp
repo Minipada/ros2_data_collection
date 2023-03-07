@@ -366,9 +366,12 @@ public:
     if_none_conditions_ = if_none_conditions;
 
     timer_cb_group_ = timer_cb_group;
+    if (topic_output_ == "")
+    {
+      topic_output_ = std::string("/dc/measurement/") + measurement_name_;
+    }
 
-    data_pub_ = node->create_publisher<dc_interfaces::msg::StringStamped>(
-        std::string("/dc/measurement/") + measurement_name_, 1);
+    data_pub_ = node->create_publisher<dc_interfaces::msg::StringStamped>(topic_output_, 1);
     collect_timer_ =
         node->create_wall_timer(std::chrono::milliseconds(polling_interval_),
                                 std::bind(&dc_measurements::Measurement::collectAndPublish, this), timer_cb_group_);
