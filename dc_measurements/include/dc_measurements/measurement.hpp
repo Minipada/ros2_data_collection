@@ -386,7 +386,16 @@ public:
     {
       setValidationSchemaFromPath(json_schema_path_);
     }
-    onConfigure();
+    // If error during measurement initialization, stop it from publishing
+    try
+    {
+      onConfigure();
+    }
+    catch (std::runtime_error& error)
+    {
+      enabled_ = false;
+      collect_timer_.reset();
+    }
 
     if (enable_validator_ && schema_.empty())
     {
