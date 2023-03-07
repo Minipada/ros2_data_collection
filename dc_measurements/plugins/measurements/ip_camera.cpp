@@ -47,8 +47,21 @@ void IpCamera::onConfigure()
   node->get_parameter(measurement_name_ + ".segment_time", segment_time_);
   node->get_parameter(measurement_name_ + ".ffmpeg_log_level", ffmpeg_log_level_);
   node->get_parameter(measurement_name_ + ".ffmpeg_banner", ffmpeg_banner_);
-  // Cannot start with a % or contain a / inside
   node->get_parameter(measurement_name_ + ".save_path", save_path_);
+
+  // Validate parameters
+  if (dc_util::stringMatchesRegex(save_path_, "^(?!%).+"))
+  {
+    throw std::runtime_error("Save path cannot start with a % character");
+  }
+  if (dc_util::stringMatchesRegex(bitrate_video_, "[0-9]+[kmKM]"))
+  {
+    throw std::runtime_error("Video birate must be an integer followed by k, K, m or M");
+  }
+  if (dc_util::stringMatchesRegex(bitrate_audio_, "[0-9]+[kmKM]"))
+  {
+    throw std::runtime_error("Audio birate must be an integer followed by k, K, m or M");
+  }
 
   std::string absolute_path = getAbsolutePath("save_path");
   storage_dir_ = std::filesystem::path(absolute_path).parent_path().u8string();
