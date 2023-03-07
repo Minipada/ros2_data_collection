@@ -6,10 +6,10 @@ Collect UID, GID, if a file or directory exists and its permissions (in rwx or i
 
 ## Parameters
 
-| Parameter  | Description                                                                       | Type         | Default         |
-| ---------- | --------------------------------------------------------------------------------- | ------------ | --------------- |
-| **format** | Format to collect permissions in. RWX = 0, INT = 1                                | Enum(0 or 1) | 0               |
-| **path**   | Path to the file or directory to collect data from, support environment variables | str          | N/A (mandatory) |
+| Parameter  | Description                                                                       | Type            | Default         |
+| ---------- | --------------------------------------------------------------------------------- | --------------- | --------------- |
+| **format** | Format to collect permissions in                                                  | str(rwx or int) | "int"           |
+| **path**   | Path to the file or directory to collect data from, support environment variables | str             | N/A (mandatory) |
 
 ## Schemas
 
@@ -49,5 +49,5 @@ permission_home_dc:
   topic_output: "/dc/measurement/permissions_home_dc"
   tags: ["flb_stdout"]
   path: "$HOME/dc"
-  format: 1
+  format: "rwx"
 ```
