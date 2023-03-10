@@ -16,13 +16,30 @@ void Exist::onConfigure()
 
 bool Exist::getState(dc_interfaces::msg::StringStamped msg)
 {
-  json data_json = json::parse(msg.data);
-  json flat_json = data_json.flatten();
+  try
+  {
+    json data_json = json::parse(msg.data);
+    json flat_json = data_json.flatten();
+    std::string key_w_prefix = std::string("/") + key_ + "/";
 
-  std::string key_w_prefix = std::string("/") + key_;
+    bool found = false;
+    for (auto& x : flat_json.items())
+    {
+      if (x.key().rfind(key_w_prefix, 0) == 0)
+      {
+        found = true;
+        break;
+      }
+    }
+    active_ = found;
 
-  active_ = flat_json.contains(key_w_prefix);
-  publishActive();
+    publishActive();
+  }
+  catch (json::parse_error& e)
+  {
+    RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON: " << msg.data);
+    return false;
+  }
   return active_;
 }
 
