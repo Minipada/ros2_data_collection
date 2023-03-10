@@ -21,8 +21,8 @@ public:
 
 protected:
   std::string key_;
-  bool getState(dc_interfaces::msg::StringStamped msg);
-  void onConfigure();
+  bool getState(dc_interfaces::msg::StringStamped msg) override;
+  void onConfigure() override;
 };
 
 }  // namespace dc_conditions
