@@ -55,7 +55,7 @@
   - [Uptime](./dc/demos/uptime_stdout.md)
   - [Group memory and uptime](./dc/demos/memory_uptime_stdout.md)
   - [Turtlebot3](./dc/demos/tb3_stdout.md)
-  - [Turtlebot3 to PostgreSQL and MinIO](./dc/demos/tb3_stdout_minio_pgsql.md)
+  - [QRcodes to PostgreSQL/MinIO](./dc/demos/qrcodes_minio_pgsql.md)
   - [Custom plugin](./dc/demos/custom_stdout.md)
 - [Infrastructure setup](./dc/infrastructure_setup.md)
   - [MinIO](./dc/infrastructure_setup/minio.md)
