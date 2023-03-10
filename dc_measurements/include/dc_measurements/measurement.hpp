@@ -12,6 +12,7 @@
 
 #include "dc_core/condition.hpp"
 #include "dc_core/measurement.hpp"
+#include "dc_interfaces/msg/condition.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
@@ -132,37 +133,52 @@ public:
     std::string package_share_directory = ament_index_cpp::get_package_share_directory(package_name.c_str());
     std::string path = package_share_directory + "/plugins/measurements/json/" + json_filename.c_str();
     std::ifstream f(path.c_str());
-    schema_ = json::parse(f);
-    RCLCPP_INFO_STREAM(logger_, "Looking for schema at " << path);
-
-    RCLCPP_INFO_STREAM(logger_, "schema: " << schema_);
     try
     {
-      validator_.set_root_schema(schema_);
+      schema_ = json::parse(f);
+
+      RCLCPP_INFO_STREAM(logger_, "Looking for schema at " << path);
+
+      RCLCPP_INFO_STREAM(logger_, "schema: " << schema_);
+      try
+      {
+        validator_.set_root_schema(schema_);
+      }
+      catch (const std::exception& e)
+      {
+        std::string err = std::string("Validation of schema failed: ") + e.what();
+        RCLCPP_ERROR(logger_, "%s", err.c_str());
+        throw std::runtime_error{ err.c_str() };
+      }
     }
-    catch (const std::exception& e)
+    catch (json::parse_error& e)
     {
-      std::string err = std::string("Validation of schema failed: ") + e.what();
-      RCLCPP_ERROR(logger_, "%s", err.c_str());
-      throw std::runtime_error{ err.c_str() };
+      RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON from file path: " << schema_);
     }
   }
 
   void validateSchema(const std::string& json_schema_path)
   {
     std::ifstream f(json_schema_path.c_str());
-    schema_ = json::parse(f);
-
-    RCLCPP_INFO_STREAM(logger_, "schema: " << schema_);
     try
     {
-      validator_.set_root_schema(schema_);
+      schema_ = json::parse(f);
+
+      RCLCPP_INFO_STREAM(logger_, "schema: " << schema_);
+      try
+      {
+        validator_.set_root_schema(schema_);
+      }
+      catch (const std::exception& e)
+      {
+        std::string err = std::string("Validation of schema failed: ") + e.what();
+        RCLCPP_ERROR(logger_, "%s", err.c_str());
+        throw std::runtime_error{ err.c_str() };
+      }
     }
-    catch (const std::exception& e)
+    catch (json::parse_error& e)
     {
-      std::string err = std::string("Validation of schema failed: ") + e.what();
-      RCLCPP_ERROR(logger_, "%s", err.c_str());
-      throw std::runtime_error{ err.c_str() };
+      RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON file json_schema_path: " << json_schema_path);
     }
   }
 
@@ -212,12 +228,26 @@ public:
   {
     // Only put the tags in if the conditions are ok. This way, we still publish the data
     // and can check in conditions but with no tags, this is not received by the destination_server
-    if (tags_.size() != 0 && isConditionOn(msg))
+    if (tags_.size() != 0)  // && isConditionOn(msg))
     {
-      json data_json = json::parse(msg.data);
-      data_json["tags"] = tags_;
-      msg.data = data_json.dump(-1, ' ', true);
+      try
+      {
+        json data_json = json::parse(msg.data);
+        data_json["tags"] = tags_;
+        msg.data = data_json.dump(-1, ' ', true);
+      }
+      catch (json::parse_error& e)
+      {
+        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding tags: " << msg.data);
+      }
     }
+    // else if (tags_.size() == 0)
+    // {
+    //   std::vector<std::string> tag_flb_null = { "flb_null" };
+    //   json data_json = json::parse(msg.data);
+    //   data_json["tags"] = tag_flb_null;
+    //   msg.data = data_json.dump(-1, ' ', true);
+    // }
   }
 
   void addMeasurementName(dc_interfaces::msg::StringStamped& msg)
@@ -226,9 +256,17 @@ public:
     // and can check in conditions but with no tags, this is not received by the destination_server
     if (include_measurement_name_)
     {
-      json data_json = json::parse(msg.data);
-      data_json["name"] = measurement_name_;
-      msg.data = data_json.dump(-1, ' ', true);
+      try
+      {
+        json data_json = json::parse(msg.data);
+        data_json["name"] = measurement_name_;
+        msg.data = data_json.dump(-1, ' ', true);
+      }
+      catch (json::parse_error& e)
+      {
+        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding measurement name " << measurement_name_
+                                                                                        << " to data " << msg.data);
+      }
     }
   }
 
@@ -238,36 +276,54 @@ public:
     // and can check in conditions but with no tags, this is not received by the destination_server
     if (include_measurement_plugin_)
     {
-      json data_json = json::parse(msg.data);
-      data_json["plugin"] = measurement_plugin_;
-      msg.data = data_json.dump(-1, ' ', true);
+      try
+      {
+        json data_json = json::parse(msg.data);
+        data_json["plugin"] = measurement_plugin_;
+        msg.data = data_json.dump(-1, ' ', true);
+      }
+      catch (json::parse_error& e)
+      {
+        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding measurement plugin " << measurement_plugin_
+                                                                                          << "to data " << msg.data);
+      }
     }
   }
 
   void publish(dc_interfaces::msg::StringStamped msg)
   {
-    // Init publish
-    if (msg.data != "" && msg.data != "null" &&
-        (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_))
+    if (msg.data != "" && msg.data != "null")
     {
       addTags(msg);
       addMeasurementName(msg);
       addMeasurementPluginName(msg);
-
+    }
+    RCLCPP_INFO_STREAM(logger_, "msg.data: " << msg.data);
+    // Init publish
+    if (msg.data != "" && msg.data != "null" &&
+        (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_))
+    {
       // Publish when validation activated
       if (enable_validator_)
       {
-        auto json_data = json::parse(msg.data);
         try
         {
-          validator_.validate(json_data);
-          data_pub_->publish(msg);
-          init_counter_published_++;
+          auto json_data = json::parse(msg.data);
+          try
+          {
+            validator_.validate(json_data);
+            data_pub_->publish(msg);
+            init_counter_published_++;
+          }
+          catch (const std::exception& e)
+          {
+            RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what() << "data=" << json_data.dump());
+            onFailedValidation(json_data);
+          }
         }
-        catch (const std::exception& e)
+        catch (json::parse_error& e)
         {
-          RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what() << "data=" << json_data.dump());
-          onFailedValidation(json_data);
+          RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when publishing: " << msg.data);
         }
       }
       // Publish without validation
