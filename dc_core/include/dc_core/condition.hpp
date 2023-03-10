@@ -41,6 +41,8 @@ public:
 
   virtual bool getState(dc_interfaces::msg::StringStamped msg) = 0;
 
+  virtual void publishActive() = 0;
+
   /**
    * @brief Method to deactivate Condition and any threads involved in execution.
    */
