@@ -60,7 +60,6 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
 {
   RCLCPP_INFO(get_logger(), "Configuring");
   auto node = shared_from_this();
-  timer_cb_group_ = node->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
   tf_ = std::make_shared<tf2_ros::Buffer>(get_clock());
   auto timer_interface =
@@ -202,7 +201,7 @@ bool MeasurementServer::loadMeasurementPlugins()
           measurement_include_measurement_plugin_[i], measurement_condition_max_measurements_[i],
           measurement_if_all_conditions_[i], measurement_if_any_conditions_[i], measurement_if_none_conditions_[i],
           measurement_remote_keys_[i], measurement_remote_prefixes_[i], save_local_base_path_, all_base_path_,
-          all_base_path_expanded_, save_local_base_path_expanded_, timer_cb_group_);
+          all_base_path_expanded_, save_local_base_path_expanded_);
     }
     catch (const pluginlib::PluginlibException& ex)
     {
