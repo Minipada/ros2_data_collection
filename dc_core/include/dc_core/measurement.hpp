@@ -34,7 +34,6 @@ public:
    * @param  debug Print debug lines
    * @param  enable_validator Will validate the data against a JSON schema
    * @param  json_schema_path Path to the JSON schema
-   * @param  timer_cb_group Callback group, common to all measurements
    * @param  tags Used to match to destination
    * @param  init_collect Collect when the node starts instead of waiting for the polling_interval time to pass
    * @param  init_max_measurements Collect a maximum of n measurements when starting the node (-1 = never, 0 = infinite)
@@ -46,21 +45,19 @@ public:
    * @param  if_any_conditions Collect if any conditions is activated
    * @param  if_none_conditions Collect only if all conditions are not activated
    */
-  virtual void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
-                         const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
-                         std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
-                         const std::string& group_key, const std::string& topic_output, const int& polling_interval,
-                         const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
-                         const std::vector<std::string>& tags, const bool& init_collect,
-                         const int& init_max_measurements, const bool& include_measurement_name,
-                         const bool& include_measurement_plugin, const int& condition_max_measurements,
-                         const std::vector<std::string>& if_all_conditions,
-                         const std::vector<std::string>& if_any_conditions,
-                         const std::vector<std::string>& if_none_conditions,
-                         const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
-                         const std::string& save_local_base_path, const std::string& all_base_path,
-                         const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
-                         const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) = 0;
+  virtual void
+  configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
+            const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
+            std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin, const std::string& group_key,
+            const std::string& topic_output, const int& polling_interval, const bool& debug,
+            const bool& enable_validator, const std::string& json_schema_path, const std::vector<std::string>& tags,
+            const bool& init_collect, const int& init_max_measurements, const bool& include_measurement_name,
+            const bool& include_measurement_plugin, const int& condition_max_measurements,
+            const std::vector<std::string>& if_all_conditions, const std::vector<std::string>& if_any_conditions,
+            const std::vector<std::string>& if_none_conditions, const std::vector<std::string>& remote_keys,
+            const std::vector<std::string>& remote_prefixes, const std::string& save_local_base_path,
+            const std::string& all_base_path, const std::string& all_base_path_expanded,
+            const std::string& save_local_base_path_expanded) = 0;
 
   /**
    * @brief Method to cleanup resources used on shutdown.

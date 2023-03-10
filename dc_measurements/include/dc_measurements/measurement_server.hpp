@@ -111,8 +111,6 @@ protected:
   pluginlib::ClassLoader<dc_core::Condition> condition_plugin_loader_;
   std::vector<std::string> condition_ids_;
   std::vector<int> measurement_condition_max_measurements_;
-
-  rclcpp::CallbackGroup::SharedPtr timer_cb_group_;
 };
 
 }  // namespace measurement_server

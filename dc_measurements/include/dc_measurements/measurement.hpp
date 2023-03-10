@@ -328,8 +328,7 @@ public:
                  const std::vector<std::string>& if_any_conditions, const std::vector<std::string>& if_none_conditions,
                  const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
                  const std::string& save_local_base_path, const std::string& all_base_path,
-                 const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
-                 const rclcpp::CallbackGroup::SharedPtr& timer_cb_group) override
+                 const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -365,16 +364,14 @@ public:
     if_any_conditions_ = if_any_conditions;
     if_none_conditions_ = if_none_conditions;
 
-    timer_cb_group_ = timer_cb_group;
     if (topic_output_ == "")
     {
       topic_output_ = std::string("/dc/measurement/") + measurement_name_;
     }
 
     data_pub_ = node->create_publisher<dc_interfaces::msg::StringStamped>(topic_output_, 1);
-    collect_timer_ =
-        node->create_wall_timer(std::chrono::milliseconds(polling_interval_),
-                                std::bind(&dc_measurements::Measurement::collectAndPublish, this), timer_cb_group_);
+    collect_timer_ = node->create_wall_timer(std::chrono::milliseconds(polling_interval_),
+                                             std::bind(&dc_measurements::Measurement::collectAndPublish, this));
 
     RCLCPP_INFO(logger_, "Done configuring %s", measurement_name_.c_str());
 
@@ -471,9 +468,6 @@ protected:
 
   // Logger
   rclcpp::Logger logger_{ rclcpp::get_logger("dc_measurements") };
-
-  // CB
-  rclcpp::CallbackGroup::SharedPtr timer_cb_group_;
 
   // Validation
   bool enable_validator_;
