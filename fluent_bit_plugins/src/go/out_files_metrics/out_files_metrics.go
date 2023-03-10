@@ -116,21 +116,21 @@ func FLBPluginRegister(ctx unsafe.Pointer) int {
 
 func getDateFromPath(path string) string {
 	// Split the string by '/' character
-	fmt.Printf("path=%s\n", path)
+	fmt.Printf("[flb-files-metric] path=%s\n", path)
 	parts := strings.Split(path, "/")
 
 	// Get the last element in the slice
 	lastIndex := len(parts) - 1
 	dateTimeString := parts[lastIndex]
-	fmt.Printf("dateTimeString=%s\n", dateTimeString)
+	fmt.Printf("[flb-files-metric] dateTimeString=%s\n", dateTimeString)
 
 	// Find the index of the dot character
 	dotIndex := strings.Index(dateTimeString, ".")
-	fmt.Printf("dotIndex=%d\n", dotIndex)
+	fmt.Printf("[flb-files-metric] dotIndex=%d\n", dotIndex)
 
 	// Trim the characters starting from the dot character
 	dateTimeString = strings.TrimSuffix(dateTimeString[:dotIndex], ".")
-	fmt.Printf("dateTimeString=%s\n", dateTimeString)
+	fmt.Printf("[flb-files-metric] dateTimeString=%s\n", dateTimeString)
 
 	var layout string = "2006-01-02T15-04-05"
 
@@ -163,11 +163,13 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 		if strings.ToLower(val) == "minio" {
 			minio_config = MinioInitConf(plugin)
 			if minio_config.endpoint == "" {
+				fmt.Printf("[flb-files-metric] Failure when initializing Storage MinIO\n")
 				return output.FLB_RETRY
 			}
         } else if strings.ToLower(val) == "s3" {
 			s3_config = S3InitConf(plugin)
 			if s3_config.endpoint == "" {
+				fmt.Printf("[flb-files-metric] Failure when initializing Storage S3\n")
 				return output.FLB_RETRY
 			}
         }
@@ -248,9 +250,8 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 				split_input_names = s3_split_input_names
 			}
 
-			fmt.Printf("data: %s\n", data)
-			fmt.Printf("split_upload_fields: %s\n", split_upload_fields)
-			fmt.Printf("split_input_names: %s\n", split_input_names)
+			fmt.Printf("[flb-files-metric] split_upload_fields: %s\n", split_upload_fields)
+			fmt.Printf("[flb-files-metric] split_input_names: %s\n", split_input_names)
 			for split_src_fields_i, split_src_fields_v := range split_src_fields {
 				if data[split_src_fields_v] == nil {
 					data[split_src_fields_v] =  map[string]map[string]string{storage_v: {"remote_path": split_upload_fields[split_src_fields_i], "input_name": split_input_names[split_src_fields_i]}}
@@ -269,17 +270,11 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 			local_file, err := NestedMapLookup(record, strings.Split(data_src, ".")...)
 			if err != nil {
 				fmt.Printf("[flb-files-metric] Key %s not found!\n", local_file)
+				fmt.Printf("[flb-files-metric] err: %v",err)
 				retry = true
 				// Skip record but need to redo it later
 				continue
 			}
-			// input_name, err := NestedMapLookup(record, strings.Split(data_src, ".")...)
-			// if err != nil {
-			// 	fmt.Printf("[flb-files-metric] Key %s not found!\n", local_file)
-			// 	retry = true
-			// 	// Skip record but need to redo it later
-			// 	continue
-			// }
 
 			if _, err := os.Stat(fmt.Sprintf("%s", local_file)); errors.Is(err, os.ErrNotExist) {
 				// file does not exist
