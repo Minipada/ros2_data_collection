@@ -20,7 +20,7 @@ public:
 private:
   std::string odom_topic_;
   void odomCb(nav_msgs::msg::Odometry::SharedPtr msg);
-  void onConfigure();
+  void onConfigure() override;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscription_;
 
   float speed_threshold_;
