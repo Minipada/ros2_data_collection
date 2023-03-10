@@ -11,6 +11,7 @@
   <depend>launch</depend>
   <depend>pluginlib</depend>
 
+  <exec_depend>aws_robomaker_small_warehouse_world</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>dc_bringup</exec_depend>
   <exec_depend>dc_simulation</exec_depend>
