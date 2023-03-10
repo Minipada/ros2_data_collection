@@ -103,14 +103,15 @@ public:
   {
     enabled_ = false;
   }
-  bool getState(dc_interfaces::msg::StringStamped msg) override
+
+  virtual bool getState(dc_interfaces::msg::StringStamped msg)
   {
     (void)msg;  // Ignore error of variable being unused
     publishActive();
     return active_;
   }
 
-  void publishActive()
+  void publishActive() override
   {
     auto msg_condition = dc_interfaces::msg::Condition();
     msg_condition.data = active_;
