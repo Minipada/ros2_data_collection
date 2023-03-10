@@ -113,7 +113,7 @@ bool MeasurementServer::loadConditionPlugins()
     {
       RCLCPP_INFO(get_logger(), "Creating condition plugin %s: Type %s", condition_ids_[i].c_str(),
                   condition_types_[i].c_str());
-      conditions_[condition_ids_[i]] = condition_plugin_loader_.createSharedInstance(condition_types_[i]);
+      conditions_[condition_ids_[i]] = condition_plugin_loader_.createUniqueInstance(condition_types_[i]);
       conditions_[condition_ids_[i]]->configure(node, condition_ids_[i]);
     }
     catch (const pluginlib::PluginlibException& ex)
