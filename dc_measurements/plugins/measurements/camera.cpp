@@ -143,7 +143,7 @@ void Camera::saveRemoteKeys(json& data_json, const std::string& key, const std::
       new_value.erase(0, 1);
     }
     // e.g data_json["remote_keys"]["minio"]["rotated"]
-    data_json["remote_keys"][new_key][key] = dc_util::expand_time(new_value, now);
+    data_json["remote_paths"][new_key][key] = dc_util::expand_time(new_value, now);
   }
 }
 
