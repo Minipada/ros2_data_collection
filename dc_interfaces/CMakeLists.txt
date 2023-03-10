@@ -17,6 +17,7 @@ endforeach()
 rosidl_generate_interfaces(
   ${PROJECT_NAME}
   "msg/Barcode.msg"
+  "msg/Condition.msg"
   "srv/DetectBarcode.srv"
   "srv/DrawImage.srv"
   "srv/SaveImage.srv"

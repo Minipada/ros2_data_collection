@@ -6,9 +6,9 @@
 #include <nlohmann/json.hpp>
 
 #include "dc_core/condition.hpp"
+#include "dc_interfaces/msg/condition.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/bool.hpp"
 
 namespace dc_conditions
 {
@@ -75,7 +75,9 @@ public:
 
     condition_name_ = name;
 
-    condition_pub_ = node->create_publisher<std_msgs::msg::Bool>(std::string("/dc/condition/") + condition_name_, 1);
+    condition_pub_ =
+        node->create_publisher<dc_interfaces::msg::Condition>(std::string("/dc/condition/") + condition_name_, 1);
+
     RCLCPP_INFO(logger_, "Done configuring %s", condition_name_.c_str());
 
     onConfigure();
@@ -93,14 +95,12 @@ public:
   {
     RCLCPP_INFO(logger_, "Activating %s", condition_name_.c_str());
 
-    condition_pub_->on_activate();
     enabled_ = true;
   }
 
   // Deactivate server on lifecycle transition
   void deactivate() override
   {
-    condition_pub_->on_deactivate();
     enabled_ = false;
   }
   bool getState(dc_interfaces::msg::StringStamped msg) override
@@ -112,7 +112,7 @@ public:
 
   void publishActive()
   {
-    std_msgs::msg::Bool msg_condition = std_msgs::msg::Bool();
+    auto msg_condition = dc_interfaces::msg::Condition();
     msg_condition.data = active_;
     condition_pub_->publish(msg_condition);
   }
@@ -122,7 +122,7 @@ protected:
   rclcpp_lifecycle::LifecycleNode::WeakPtr node_;
 
   std::string condition_name_;
-  rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::Bool>::SharedPtr condition_pub_;
+  rclcpp::Publisher<dc_interfaces::msg::Condition>::SharedPtr condition_pub_;
 
   bool enabled_;
   std::string group_key_;
