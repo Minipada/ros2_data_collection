@@ -76,8 +76,6 @@ public:
     condition_name_ = name;
 
     condition_pub_ = node->create_publisher<std_msgs::msg::Bool>(std::string("/dc/condition/") + condition_name_, 1);
-    timer_cb_group_ = node->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-
     RCLCPP_INFO(logger_, "Done configuring %s", condition_name_.c_str());
 
     onConfigure();
@@ -143,9 +141,6 @@ protected:
 
   // Logger
   rclcpp::Logger logger_{ rclcpp::get_logger("dc_conditions") };
-
-  // CB
-  rclcpp::CallbackGroup::SharedPtr timer_cb_group_;
 };
 
 }  // namespace dc_conditions
