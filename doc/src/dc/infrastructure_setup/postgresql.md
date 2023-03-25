@@ -32,3 +32,5 @@ services:
 ```admonish info
 WIth this current deployment, your ROS 2 application will require to be able to reach the container. If it's running in a container, start it in the same docker network, or have all containers use network host (at your own risk)
 ```
+
+Note this also starts [Adminer](https://www.adminer.org/): *Adminer (formerly phpMinAdmin) is a full-featured database management tool written in PHP*. We will use it to ensure data is forwarded properly.

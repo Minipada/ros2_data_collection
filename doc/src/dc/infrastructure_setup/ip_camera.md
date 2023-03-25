@@ -2,7 +2,7 @@
 To start the ip camera example, to save video feeds from rtsp cameras, you can optionally create a virtual video feed if you don't have an ip camera, for testing purpose:
 
 ## Start RTSP Server
-0. A [rtsp](https://www.wikiwand.com/en/Real_Time_Streaming_Protocol) server. I use **rtsp-simple-server** available [here](https://github.com/aler9/rtsp-simple-server). Download from the [release page](https://github.com/aler9/rtsp-simple-server/releases) and start it:
+A [rtsp](https://www.wikiwand.com/en/Real_Time_Streaming_Protocol) server. I use **rtsp-simple-server** available [here](https://github.com/aler9/rtsp-simple-server). Download from the [release page](https://github.com/aler9/rtsp-simple-server/releases) and start it:
 
 ```bash
 $ ./rtsp-simple-server

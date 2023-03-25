@@ -16,6 +16,8 @@ Follow instructions from the official documentation available [here](https://git
 
 You can now access it by browsing to [http://localhost:9001](http://localhost:9001)
 
+Default login and password currently are **minioadmin** / **minioadmin**. Login and create a new access key.
+
 ```admonish info
 WIth this current deployment, your ROS 2 application will require to be able to reach the container. For this, either start it in the same docker network, or have all containers use network host (at your own risk)
 ```
