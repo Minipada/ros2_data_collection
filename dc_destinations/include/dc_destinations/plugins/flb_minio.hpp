@@ -47,6 +47,7 @@ protected:
   std::string plugin_path_default_;
   std::vector<std::string> upload_fields_;
   std::vector<std::string> src_fields_;
+  std::vector<std::string> groups_;
   bool verbose_plugin_;
 };
 
