@@ -310,7 +310,7 @@ dc_interfaces::msg::StringStamped Camera::collect()
         }
       }
 
-      if (save_detections_img_ && data_json.contains("inspected"))
+      if (!detection_modules_.empty() && save_detections_img_ && dc_util::fieldInJSON(data_json, "inspected"))
       {
         // Save image with detection
         // Get local and relative path
@@ -340,8 +340,6 @@ dc_interfaces::msg::StringStamped Camera::collect()
     {
       dc_interfaces::msg::StringStamped msg;
       return msg;
-      // SET last_data_ to null
-      // last_data_
     }
   }
   dc_interfaces::msg::StringStamped msg;

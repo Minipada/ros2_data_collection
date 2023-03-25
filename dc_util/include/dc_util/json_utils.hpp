@@ -146,6 +146,21 @@ TOJSON_NODISCARD inline std::string toyaml(const nlohmann::json& j)
 
 }  // namespace emitters
 }  // namespace tojson
+
+bool fieldInJSON(nlohmann::json j, const std::string& field)
+{
+  nlohmann::json flat_json = j.flatten();
+  for (auto& [key, val] : flat_json.items())
+  {
+    if (key.rfind(std::string("/") + field + "/", 0) == 0)
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 }  // namespace dc_util
 
 #endif
