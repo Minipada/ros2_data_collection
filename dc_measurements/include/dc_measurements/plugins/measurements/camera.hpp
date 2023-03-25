@@ -13,6 +13,7 @@
 #include "dc_interfaces/srv/save_image.hpp"
 #include "dc_measurements/measurement.hpp"
 #include "dc_util/image_utils.hpp"
+#include "dc_util/json_utils.hpp"
 #include "dc_util/service_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/image.hpp"
