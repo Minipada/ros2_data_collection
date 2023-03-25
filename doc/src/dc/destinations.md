@@ -98,7 +98,6 @@ destination_server:
       access_key_id: HgJdDWeDQBiBWCwm
       secret_access_key: plCMROO2VMZIKiqEwDd80dLJUCRvJ9iu
       use_ssl: false
-      create_bucket: true
       bucket: "mybucket"
       src_fields: ["camera.local_img_paths.raw","camera.local_img_paths.rotated", "map.local_map_paths.yaml", "map.local_map_paths.pgm"]
       upload_fields: ["camera.minio_img_paths.raw","camera.minio_img_paths.rotated", "map.minio_map_paths.yaml", "map.minio_map_paths.pgm"]
