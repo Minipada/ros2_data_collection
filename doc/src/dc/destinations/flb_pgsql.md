@@ -32,7 +32,7 @@ flb_pgsql:
   user: fluentbit
   password: password
   database: "fluentbit"
-  table: "wr_table"
+  table: "dc"
   timestamp_key: "date"
   async: false
   time_format: "double"
