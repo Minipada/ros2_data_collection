@@ -298,9 +298,8 @@ public:
       addMeasurementName(msg);
       addMeasurementPluginName(msg);
     }
-    RCLCPP_INFO_STREAM(logger_, "msg.data: " << msg.data);
     // Init publish
-    if (msg.data != "" && msg.data != "null" &&
+    if (init_max_measurements_ != -1 && msg.data != "" && msg.data != "null" &&
         (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_))
     {
       // Publish when validation activated
@@ -343,6 +342,9 @@ public:
     else if (msg.data != "" && msg.data != "null" &&
              (isAnyConditionSet() && isConditionOn(msg) && condition_counter_published_ < condition_max_measurements_))
     {
+      RCLCPP_DEBUG_STREAM(logger_, "condition_counter_published_=" << condition_counter_published_
+                                                                   << ", condition_max_measurements_="
+                                                                   << condition_max_measurements_);
       data_pub_->publish(msg);
       condition_counter_published_++;
     }
