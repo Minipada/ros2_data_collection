@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -28,8 +27,10 @@ var create_bucket string
 var bucket string
 var upload_fields string
 var src_fields string
+var groups string
 var split_upload_fields = make([]string, 0)
 var split_src_fields = make([]string, 0)
+var split_groups = make([]string, 0)
 var minio_client *minio.Client
 var ctx = context.Background()
 
@@ -42,7 +43,6 @@ func FLBPluginRegister(def unsafe.Pointer) int {
 // (fluentbit will call this)
 // plugin (context) pointer to fluentbit context (state/ c code)
 func FLBPluginInit(plugin unsafe.Pointer) int {
-	// Example to retrieve an optional configuration parameter
 	verbose = output.FLBPluginConfigKey(plugin, "verbose")
 	var err error
 	verbose_bool, err = strconv.ParseBool(verbose)
@@ -68,11 +68,15 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	fmt.Printf("[flb-minio] upload_fields = '%s'\n", upload_fields)
 	src_fields = output.FLBPluginConfigKey(plugin, "src_fields")
 	fmt.Printf("[flb-minio] src_fields = '%s'\n", src_fields)
+	groups = output.FLBPluginConfigKey(plugin, "groups")
+	fmt.Printf("[flb-minio] groups = '%s'\n", groups)
 
 	split_upload_fields = strings.Fields(upload_fields)
 	fmt.Printf("[flb-minio] split_upload_fields = '%v'\n", split_upload_fields)
 	split_src_fields = strings.Fields(src_fields)
 	fmt.Printf("[flb-minio] split_src_fields = '%v'\n", split_src_fields)
+	split_groups = strings.Fields(groups)
+	fmt.Printf("[flb-minio] split_groups = '%v'\n", split_groups)
 
 	return output.FLB_OK
 }
@@ -115,53 +119,6 @@ func MinioInit() error{
 	return nil
 }
 
-func NestedMapLookup(m map[interface{}]interface{}, ks ...string) (rval interface{}, err error) {
-	var ok bool
-
-	if len(ks) == 0 { // degenerate input
-		return nil, fmt.Errorf("NestedMapLookup needs at least one key")
-	}
-	if rval, ok = m[ks[0]]; !ok {
-		return nil, fmt.Errorf("key not found; remaining keys: %v", ks)
-	} else if len(ks) == 1 { // we've reached the final key
-		return rval, nil
-	} else if m, ok = rval.(map[interface{}]interface{}); !ok {
-		return nil, fmt.Errorf("malformed structure at %#v", rval)
-	} else { // 1+ more keys
-		return NestedMapLookup(m, ks[1:]...)
-	}
-}
-
-func get_file_content(path string) string {
-	file, err := os.Open(path)
-
-	defer file.Close()
-
-	if err != nil {
-	   panic(err)
-	}
-	// Get the file content
-	buf := make([]byte, 512)
-	_, err = file.Read(buf)
-
-	if err != nil {
-		panic(err)
-	}
-
-	contentType := http.DetectContentType(buf)
-
-	return contentType
-}
-
-func contains(elems []int, v int) bool {
-	for _, s := range elems {
-		if v == s {
-			return true
-		}
-	}
-	return false
-}
-
 //export FLBPluginFlush
 func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	init_err := MinioInit()
@@ -200,19 +157,38 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 			fmt.Printf("}\n")
 		}
 
+		var current_group string
+
 		// Indexes of paths to ignore
 		index_ignore := []int{}
 		src_paths := []string{}
 		index := 0
-		for _, split_src_field_v := range split_src_fields {
-			val, err := NestedMapLookup(record, strings.Split(split_src_field_v, ".")...)
-			if err == nil {
+		for split_src_field_i, split_src_field_v := range split_src_fields {
+			fmt.Printf("[flb-minio] current_group=%s\n", current_group)
+			// Set group if it is not yet done
+			if len(current_group) == 0 {
+				val, err := NestedMapLookup(record, strings.Split(split_src_field_v, ".")...)
 				val_str := fmt.Sprintf("%s", val)
-				if _, err := os.Stat(val_str); errors.Is(err, os.ErrNotExist) {
-				// File does not exist
-				index_ignore = append(index_ignore, index)
-				} else {
-					src_paths = append(src_paths, val_str)
+				if err == nil {
+					if _, err := os.Stat(val_str); errors.Is(err, os.ErrNotExist) {
+						// File does not exist
+					} else {
+						current_group = split_groups[split_src_field_i]
+					}
+				}
+			// Ignore fields that don't belong to the group. Since they are not in the JSON, we skip them to not create errors
+			}
+			if current_group == split_groups[split_src_field_i]{
+				fmt.Printf("[flb-minio] split_src_field_i match index %d: current_group=%s, split_src_field_v=%s\n",split_src_field_i, current_group, split_src_field_v)
+				val, err := NestedMapLookup(record, strings.Split(split_src_field_v, ".")...)
+				val_str := fmt.Sprintf("%s", val)
+				if err == nil {
+					if _, err := os.Stat(val_str); errors.Is(err, os.ErrNotExist) {
+						// File does not exist
+						index_ignore = append(index_ignore, index)
+					} else {
+						src_paths = append(src_paths, val_str)
+					}
 				}
 			}
 			index++
@@ -220,13 +196,17 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 
 		index = 0
 		upload_paths :=[]string{}
-		for _, split_upload_field_v := range split_upload_fields {
-			// Skip indexes of files that don't exist
-			if ! contains(index_ignore, index) {
-				val, err := NestedMapLookup(record, strings.Split(split_upload_field_v, ".")...)
-				if err == nil {
-					val_str := fmt.Sprintf("%s", val)
-					upload_paths = append(upload_paths, val_str)
+		for split_upload_field_i, split_upload_field_v := range split_upload_fields {
+			// Ignore fields that don't belong to the group. Since they are not in the JSON, we skip them to not create errors
+			if current_group == split_groups[split_upload_field_i]{
+				fmt.Printf("[flb-minio] split_upload_field_i match index %d: current_group=%s\n",split_upload_field_i, current_group)
+				// Skip indexes of files that don't exist
+				if ! contains(index_ignore, index) {
+					val, err := NestedMapLookup(record, strings.Split(split_upload_field_v, ".")...)
+					if err == nil {
+						val_str := fmt.Sprintf("%s", val)
+						upload_paths = append(upload_paths, val_str)
+					}
 				}
 			}
 			index++
@@ -265,10 +245,10 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 
 				// Compare the modification times
 				if !currentModTime.ModTime().Equal(initialModTime.ModTime()) {
-					fmt.Println("The file is being written to.")
+					fmt.Println("[flb-minio] The file is being written to.")
 					initialModTime = currentModTime
 				} else {
-					fmt.Println("The file is no longer being written to.")
+					fmt.Println("[flb-minio] The file is no longer being written to.")
 					_, err = minio_client.FPutObject(ctx, bucket, upload_paths[src_paths_i], src_paths_v, minio.PutObjectOptions{ContentType: get_file_content(src_paths_v)})
 					if err != nil {
 						fmt.Printf("[flb-minio] Could not upload %s to %s, format: %s\n", src_paths_v, upload_paths[src_paths_i], get_file_content(src_paths_v))
