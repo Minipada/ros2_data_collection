@@ -1,7 +1,7 @@
 exclude: "doc/js/.*$|doc/theme/.*|doc/src/fonts/.*|doc/css/lineicon.css"
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.4.0
     hooks:
       - id: check-merge-conflict
         name: Check that merge conflicts are not being committed
@@ -40,12 +40,12 @@ repos:
         name: Remove encoding header from python files
         args: ["--remove"]
   - repo: https://github.com/hadialqattan/pycln
-    rev: v1.3.4
+    rev: v2.1.3
     hooks:
       - id: pycln
         args: [--all]
   - repo: https://github.com/ikamensh/flynt
-    rev: "0.69"
+    rev: "0.78"
     hooks:
       - id: flynt
         name: Run flynt string format converter for Python
@@ -58,7 +58,7 @@ repos:
           - --line-length
           - "99999"
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.24.0
+    rev: v3.3.1
     hooks:
       - id: pyupgrade
         args: [--py310-plus]
@@ -101,16 +101,22 @@ repos:
     hooks:
       - id: python-no-log-warn
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.0
+    rev: v2.2.4
     hooks:
       - id: codespell
-        args: [-w, --ignore-words=.codespell.txt]
+        args:
+          [
+            -w,
+            --ignore-words=.codespell.txt,
+            -S,
+            "*.pgm,requirements.txt,poetry.lock",
+          ]
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v15.0.7
     hooks:
       - id: clang-format
   - repo: https://github.com/hadolint/hadolint
-    rev: v2.12.0
+    rev: v2.12.1-beta
     hooks:
       - id: hadolint-docker
         args: [--ignore, DL3008, --ignore, DL3005, --ignore, DL3013]
@@ -123,7 +129,9 @@ repos:
           (?x)
         additional_dependencies: ["flake8>=4.0.1"]
   - repo: https://github.com/minipada/ros2_pre-commit.git
-    rev: 1.0.1
+    rev: 1.0.2
     hooks:
-      - id: ros2_ws_same_versions_lint
+      - id: ros2_ws_same_versions
+        args: [--src=., --regex=dc_.*]
+      - id: ros2_ws_set_metadata
         args: [--src=., --regex=dc_.*]
