@@ -1,6 +1,6 @@
 # Turtlebot3
 
-In this example, we add a robot and start collecting robot data.
+In this example, we add a robot and start collecting robot data to Stdout.
 
 You will also need 2 terminal windows, to:
 
@@ -38,7 +38,7 @@ If any problem occur, please take a look at the [nav2 official documentation](ht
 
 ## Start DC
 
-Start DC:
+Execute
 
 ```bash
 $ ros2 launch dc_demos tb3_simulation_stdout.launch.py
@@ -179,7 +179,6 @@ measurement_server:
       save_map_timeout: 4.0
       remote_prefixes: [""]
       remote_keys: ["minio"]
-      include_measurement_name: true
 ```
 
 **save_local_base_path (Optional)**: Used as a common base for all saved files from measurement plugins. *all_base_path* is concatenated to it afterwards for defining the path where files are saved.
