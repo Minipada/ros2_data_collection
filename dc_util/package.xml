@@ -3,7 +3,7 @@
 <package format="3">
   <name>dc_util</name>
   <version>0.1.0</version>
-  <description>TODO</description>
+  <description>General headers used in DC</description>
   <maintainer email="d.bensoussan@proton.me">David Bensoussan</maintainer>
   <license>MPL-2.0</license>
 
