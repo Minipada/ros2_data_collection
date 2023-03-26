@@ -68,15 +68,11 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	fmt.Printf("[flb-minio] upload_fields = '%s'\n", upload_fields)
 	src_fields = output.FLBPluginConfigKey(plugin, "src_fields")
 	fmt.Printf("[flb-minio] src_fields = '%s'\n", src_fields)
-	groups = output.FLBPluginConfigKey(plugin, "groups")
-	fmt.Printf("[flb-minio] groups = '%s'\n", groups)
 
 	split_upload_fields = strings.Fields(upload_fields)
 	fmt.Printf("[flb-minio] split_upload_fields = '%v'\n", split_upload_fields)
 	split_src_fields = strings.Fields(src_fields)
 	fmt.Printf("[flb-minio] split_src_fields = '%v'\n", split_src_fields)
-	split_groups = strings.Fields(groups)
-	fmt.Printf("[flb-minio] split_groups = '%v'\n", split_groups)
 
 	return output.FLB_OK
 }
@@ -178,7 +174,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 				}
 			// Ignore fields that don't belong to the group. Since they are not in the JSON, we skip them to not create errors
 			}
-			if current_group == split_groups[split_src_field_i]{
+			if current_group == fmt.Sprintf("%s", record["name"]){
 				fmt.Printf("[flb-minio] split_src_field_i match index %d: current_group=%s, split_src_field_v=%s\n",split_src_field_i, current_group, split_src_field_v)
 				val, err := NestedMapLookup(record, strings.Split(split_src_field_v, ".")...)
 				val_str := fmt.Sprintf("%s", val)
@@ -198,7 +194,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		upload_paths :=[]string{}
 		for split_upload_field_i, split_upload_field_v := range split_upload_fields {
 			// Ignore fields that don't belong to the group. Since they are not in the JSON, we skip them to not create errors
-			if current_group == split_groups[split_upload_field_i]{
+			if current_group == fmt.Sprintf("%s", record["name"]){
 				fmt.Printf("[flb-minio] split_upload_field_i match index %d: current_group=%s\n",split_upload_field_i, current_group)
 				// Skip indexes of files that don't exist
 				if ! contains(index_ignore, index) {
