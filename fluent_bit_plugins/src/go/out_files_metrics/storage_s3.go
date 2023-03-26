@@ -30,10 +30,8 @@ var s3_create_bucket string
 var s3_bucket string
 var s3_upload_fields string
 var s3_src_fields string
-var s3_input_names string
 var s3_split_upload_fields = make([]string, 0)
 var s3_split_src_fields = make([]string, 0)
-var s3_split_input_names = make([]string, 0)
 
 func S3Init() error{
 	// Initialize s3 client object.
@@ -50,8 +48,6 @@ func S3InitConf(plugin unsafe.Pointer) S3Config {
     s3_split_src_fields = strings.Fields(s3_src_fields)
     s3_upload_fields = output.FLBPluginConfigKey(plugin, "s3_upload_fields")
     s3_split_upload_fields = strings.Fields(s3_upload_fields)
-    s3_input_names = output.FLBPluginConfigKey(plugin, "s3_input_names")
-    s3_split_input_names = strings.Fields(s3_input_names)
 
     s3_config = S3Config{
         endpoint: output.FLBPluginConfigKey(plugin, "s3_endpoint"),

@@ -33,10 +33,8 @@ var minio_create_bucket string
 var minio_bucket string
 var minio_upload_fields string
 var minio_src_fields string
-var minio_input_names string
 var minio_split_upload_fields = make([]string, 0)
 var minio_split_src_fields = make([]string, 0)
-var minio_split_input_names = make([]string, 0)
 
 func MinioInit() error{
 	// Initialize minio client object.
@@ -63,8 +61,6 @@ func MinioInitConf(plugin unsafe.Pointer) MinioConfig {
     minio_split_src_fields = strings.Fields(minio_src_fields)
     minio_upload_fields = output.FLBPluginConfigKey(plugin, "minio_upload_fields")
     minio_split_upload_fields = strings.Fields(minio_upload_fields)
-    minio_input_names = output.FLBPluginConfigKey(plugin, "minio_input_names")
-    minio_split_input_names = strings.Fields(minio_input_names)
 
     minio_config = MinioConfig{
         endpoint: output.FLBPluginConfigKey(plugin, "minio_endpoint"),
