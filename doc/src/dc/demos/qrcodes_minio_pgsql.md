@@ -81,11 +81,13 @@ With this, all data will be transmitted
 
 ## Understanding the configuration
 
+```admonish info
 The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/humble/dc_demos/params/qrcodes_minio_pgsql.yaml).
+```
 
 For this demo, we will reconstruct the yaml configuration element by element, given how large it is. Go through the explanation to understand how it works.
 
-### Collect command velocity, position and speed to PostgreSQL
+### Collect command velocity, position and speed to PostgreSQL as a group
 
 Similarly to the previous tutorial:
 
@@ -202,7 +204,7 @@ You can then click on a record, to take a look, edit or delete it:
 
 ![Adminer](../../images/qrcodes_pgsql_adminer_record.png)
 
-### Collect the map image and YAML from nav2_map_server to MinIO
+### Send the map image and YAML from nav2_map_server to MinIO
 
 First, we add the map measurement. We use 3 plugins here: flb_pgsql to send the data to PostgreSQL on the dc database, then flb_minio to send some files to MinIO and flb_files_metrics which will be used to autodelete the files once they reach their destination.
 
@@ -241,8 +243,8 @@ destination_server:
       delete_when_sent: true
       minio:
         endpoint: 127.0.0.1:9000
-        access_key_id: rQXPf1f730Yuu2yW
-        secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb
+        access_key_id: rQXPf1f730Yuu2yW # Change it
+        secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb # Change it
         use_ssl: false
         bucket: "mybucket"
         src_fields: ["local_paths.pgm", "local_paths.yaml"]
@@ -251,8 +253,8 @@ destination_server:
       pgsql:
         host: "127.0.0.1"
         port: "5432"
-        user: fluentbit
-        password: password
+        user: fluentbit # Change it
+        password: password # Change it
         database: "fluentbit"
         table: "files_metrics"
         timestamp_key: "date"
@@ -265,11 +267,11 @@ destination_server:
       plugin: "dc_destinations/FlbMinIO"
       inputs: ["/dc/measurement/map"]
       endpoint: 127.0.0.1:9000
-      access_key_id: rQXPf1f730Yuu2yW
-      secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb
+      access_key_id: rQXPf1f730Yuu2yW # Change it
+      secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb # Change it
       use_ssl: false
       create_bucket: true
-      bucket: "mybucket"
+      bucket: "mybucket" # Change it
       src_fields: ["local_paths.pgm", "local_paths.yaml"]
       upload_fields: ["remote_paths.minio.pgm", "remote_paths.minio.yaml"]
     flb_pgsql:
@@ -295,10 +297,193 @@ It will also save the map metadata on PostgreSQL, which you can later use to kno
 
 ![MapPostgreSQL](../../images/qrcodes_map_pgsql.png)
 
-We also transmit the metadata, to be fetched later on by the backend (map dimension). It is set in the flb_pgsql measurement plugin.
+We also transmit the metadata, to be fetched later on by the backend (map dimension and path). It is set in the flb_pgsql measurement plugin.
 
 The flb_metrics plugin is also enabled. We use it to track if the file is on the filesystem and also delete it once it reaches its destination, here MinIO. This plugins deletes file when they are sent with the `delete_when_sent` parameter. More about the plugin [here](../destinations/flb_files_metrics.md)
 
-Then, similarly, on Adminer, you can check the data is uploaded:
+Then, similarly, on Adminer, you can check the data is uploaded and deleted:
 
 ![MapAdminerFilesMetrics](../../images/qrcodes_pgsql_adminer_files_metrics.png)
+
+### Send QR code images to MinIO
+
+We want to collect pictures taken by the cameras
+
+```yaml
+measurement_server:
+  ros__parameters:
+  ...
+  measurement_plugins: ["right_camera", "left_camera"]
+  condition_plugins: ["moving", "inspected_exists"]
+  destinations:
+    minio:
+      bucket: mybucket
+  moving:
+    plugin: "dc_conditions/Moving"
+  inspected_exists:
+    plugin: "dc_conditions/Exist"
+    key: "inspected"
+  right_camera:
+    plugin: "dc_measurements/Camera"
+    group_key: "right_camera"
+    if_none_conditions: ["moving"]
+    if_all_conditions: ["inspected_exists"]
+    topic_output: "/dc/measurement/right_camera"
+    init_collect: false
+    init_max_measurements: -1
+    condition_max_measurements: 1
+    node_name: "dc_measurement_camera"
+    cam_topic: "/right_intel_realsense_r200_depth/image_raw"
+    cam_name: right_camera
+    enable_validator: true
+    draw_det_barcodes: true
+    save_raw_img: false
+    save_rotated_img: false
+    save_detections_img: true
+    save_inspected_path: "right_camera/inspected/%Y-%m-%dT%H-%M-%S"
+    rotation_angle: 0
+    detection_modules: ["barcode"]
+    remote_prefixes: [""]
+    remote_keys: ["minio"]
+    tags: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
+    include_measurement_name: true
+  left_camera:
+    plugin: "dc_measurements/Camera"
+    group_key: "left_camera"
+    if_none_conditions: ["moving"]
+    if_all_conditions: ["inspected_exists"]
+    topic_output: "/dc/measurement/left_camera"
+    init_collect: true
+    init_max_measurements: -1
+    condition_max_measurements: 1
+    node_name: "dc_measurement_camera"
+    cam_topic: "/left_intel_realsense_r200_depth/image_raw"
+    cam_name: left_camera
+    enable_validator: true
+    draw_det_barcodes: true
+    save_raw_img: false
+    save_rotated_img: false
+    save_detections_img: true
+    save_inspected_path: "left_camera/inspected/%Y-%m-%dT%H-%M-%S"
+    rotation_angle: 0
+    detection_modules: ["barcode"]
+    remote_prefixes: [""]
+    remote_keys: ["minio"]
+    tags: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
+    include_measurement_name: true
+  ...
+```
+
+Taking a look at the cameras, we can understand that:
+1. Data is only collected when the robot is not moving: `if_none_conditions: ["moving"]`
+2. Data is only collected when there is inspected data, so only when a QR code is detected: `if_all_conditions: ["inspected_exists"]`
+3. Data is not collected constantly: `init_max_measurements: -1`
+4. Only one record is collected when conditions are triggered: `condition_max_measurements: 1`
+5. Only images with inspected data are collected:
+   1. `save_raw_img: false`
+   2. `save_rotated_img: false`
+   3. `save_detections_img: true`
+6. Barcodes are scanned in each image: `detection_modules: ["barcode"]`
+
+For the files-metrics, it is very important to have `include_measurement_name` since it relies on it to know in which field needs the paths are.
+
+Then we add the destination:
+
+```yaml
+destination_server:
+  ros__parameters:
+  ...
+    destination_plugins: ["flb_minio", "flb_pgsql", "flb_files_metrics"]
+    custom_str_params_list: ["robot_name", "id"]
+    custom_str_params:
+      robot_name:
+        name: robot_name
+        value: "C3PO"
+      # Requires systemd package
+      id:
+        name: id
+        value_from_file: /etc/machine-id
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: "$HOME/run_id"
+      uuid: false
+    flb_files_metrics:
+      plugin: "dc_destinations/FlbFilesMetrics"
+      inputs:
+        [
+          "/dc/measurement/right_camera",
+          "/dc/measurement/left_camera",
+        ]
+      file_storage: ["minio"]
+      db_type: "pgsql"
+      delete_when_sent: true
+      minio:
+        endpoint: 127.0.0.1:9000
+        access_key_id: rQXPf1f730Yuu2yW
+        secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb
+        use_ssl: false
+        bucket: "mybucket"
+        src_fields:
+          [
+            "local_paths.inspected",
+            "local_paths.inspected"
+          ]
+        upload_fields:
+          [
+            "remote_paths.minio.inspected",
+            "remote_paths.minio.inspected"
+          ]
+      pgsql:
+        host: "127.0.0.1"
+        port: "5432"
+        user: fluentbit
+        password: password
+        database: "fluentbit"
+        table: "files_metrics"
+        timestamp_key: "date"
+        time_format: "double"
+        time_key: "date"
+        ssl: false
+    flb_minio:
+      verbose_plugin: false
+      time_format: "iso8601"
+      plugin: "dc_destinations/FlbMinIO"
+      inputs: ["/dc/measurement/right_camera", "/dc/measurement/left_camera"]
+      endpoint: 127.0.0.1:9000
+      access_key_id: rQXPf1f730Yuu2yW
+      secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb
+      use_ssl: false
+      bucket: "mybucket"
+      src_fields:
+        [
+          "local_paths.inspected",
+          "local_paths.inspected"
+        ]
+      upload_fields:
+        [
+          "remote_paths.minio.inspected",
+          "remote_paths.minio.inspected"
+        ]
+    flb_pgsql:
+      plugin: "dc_destinations/FlbPgSQL"
+      inputs:
+        [
+          "/dc/measurement/right_camera",
+          "/dc/measurement/left_camera",
+        ]
+      host: "127.0.0.1"
+      port: 5432
+      user: fluentbit
+      password: password
+      database: "fluentbit"
+      table: "dc"
+      timestamp_key: "date"
+      async: false
+      time_format: "double"
+      time_key: "date"
+```
+
+Here, we collect images with the MinIO plugin, also send metadata to PostreSQL.
+
+In addition, flb_files_metrics tracks when the files are sent to MinIO and deletes them when it is done. Note that multiple destinations can be configured for each field. Check the plugin documentation to see which remote destinations are supported.
