@@ -10,18 +10,17 @@ The [S3 plugin](https://docs.fluentbit.io/manual/pipeline/outputs/s3) sends data
 
 ## Parameters
 
-| Parameter             | Description                                                                                                                                                                        | Type        | Default                                                  |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------- |
-| **plugin_path**       | Shared library path compiled by go                                                                                                                                                 | str         | "{package_share_directory}/flb_plugins/lib/out_minio.so" |
-| **endpoint**          | Endpoint for the S3 API. An endpoint can contain scheme and port.                                                                                                                  | str         | "127.0.0.1:9000"                                         |
-| **access_key_id**     | Access keys are long-term credentials for an IAM user or the AWS account root user                                                                                                 | str         | N/A (mandatory)                                          |
-| **secret_access_key** | Secret-like password to connect along he access key id                                                                                                                             | str         | N/A (mandatory)                                          |
-| **use_ssl**           | If set to true, https is used instead of http. Default is true.                                                                                                                    | str         | "true"                                                   |
-| **create_bucket**     | Whether the bucket will be created                                                                                                                                                 | str         | "true"                                                   |
-| **bucket**            | Bucket name                                                                                                                                                                        | str         | "dc_bucket"                                              |
-| **upload_fields**     | Fields containing remote paths, separated by dots                                                                                                                                  | list\[str\] | N/A (mandatory)                                          |
-| **src_fields**        | Fields containing local paths, separated by dots                                                                                                                                   | list\[str\] | N/A (mandatory)                                          |
-| **groups**            | Matches each source and upload fields together by a group. When flushing data, will do group by group and then field by field. If a field is not in the group, it will be ignored. | list\[str\] | N/A (mandatory)                                          |
+| Parameter             | Description                                                                        | Type        | Default                                                  |
+| --------------------- | ---------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------- |
+| **plugin_path**       | Shared library path compiled by go                                                 | str         | "{package_share_directory}/flb_plugins/lib/out_minio.so" |
+| **endpoint**          | Endpoint for the S3 API. An endpoint can contain scheme and port.                  | str         | "127.0.0.1:9000"                                         |
+| **access_key_id**     | Access keys are long-term credentials for an IAM user or the AWS account root user | str         | N/A (mandatory)                                          |
+| **secret_access_key** | Secret-like password to connect along he access key id                             | str         | N/A (mandatory)                                          |
+| **use_ssl**           | If set to true, https is used instead of http. Default is true.                    | str         | "true"                                                   |
+| **create_bucket**     | Whether the bucket will be created                                                 | str         | "true"                                                   |
+| **bucket**            | Bucket name                                                                        | str         | "dc_bucket"                                              |
+| **upload_fields**     | Fields containing remote paths, separated by dots                                  | list\[str\] | N/A (mandatory)                                          |
+| **src_fields**        | Fields containing local paths, separated by dots                                   | list\[str\] | N/A (mandatory)                                          |
 
 ## Node configuration
 
@@ -50,7 +49,6 @@ flb_minio:
       "remote_paths.minio.pgm"
       "remote_paths.minio.yaml"
     ]
-  groups: ["camera", "map", "map"]
 ...
 ```
 
@@ -63,27 +61,20 @@ flowchart TB
     direction LR
     mp_src_fields["['local_paths.inspected', 'local_paths.minio.pgm', 'local_paths.minio.yaml']"]
     mp_upload_fields["['remote_paths.inspected', 'remote_paths.minio.pgm', 'remote_paths.minio.yaml']"]
-    mp_group_fields["['camera', 'map', 'map']"]
   end
 
   subgraph flb_plugin["Fluent Bit plugin"]
     direction LR
     flb_src_fields["'local_paths.inspected, local_paths.minio.pgm, local_paths.minio.yaml'"]
     flb_upload_fields["'remote_paths.inspected, remote_paths.minio.pgm, remote_paths.minio.yaml'"]
-    flb_group_fields["'camera, map, map'"]
 
     flb_split_src_fields["['local_paths.inspected', 'local_paths.minio.pgm', 'local_paths.minio.yaml']"]
     flb_split_upload_fields["['remote_paths.inspected', 'remote_paths.minio.pgm', 'remote_paths.minio.yaml']"]
-    flb_split_group_fields["['camera', 'map', 'map']"]
   end
 
   mp_src_fields--"to string"-->flb_src_fields
   mp_upload_fields--"to string"-->flb_upload_fields
-  mp_group_fields--"to string"-->flb_group_fields
   flb_src_fields--"to go array"-->flb_split_src_fields
   flb_upload_fields--"to go array"-->flb_split_upload_fields
-  flb_group_fields--"to go array"-->flb_split_group_fields
-
-
 
 ```
