@@ -53,7 +53,7 @@ protected:
   std::string minio_bucket_;
   std::vector<std::string> minio_upload_fields_;
   std::vector<std::string> minio_src_fields_;
-  std::vector<std::string> minio_input_names_;
+  std::vector<std::string> minio_groups_;
 
   std::string s3_endpoint_;
   std::string s3_access_key_id_;
@@ -62,6 +62,7 @@ protected:
   std::string s3_bucket_;
   std::vector<std::string> s3_upload_fields_;
   std::vector<std::string> s3_src_fields_;
+  std::vector<std::string> s3_groups_;
 
   std::string pgsql_host_;
   std::string pgsql_port_;
