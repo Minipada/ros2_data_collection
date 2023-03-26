@@ -43,8 +43,6 @@ void FlbFilesMetrics::onConfigure()
                                                  rclcpp::PARAMETER_STRING_ARRAY);
     nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".minio.src_fields",
                                                  rclcpp::PARAMETER_STRING_ARRAY);
-    nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".minio.input_names",
-                                                 rclcpp::PARAMETER_STRING_ARRAY);
 
     node->get_parameter(destination_name_ + ".minio.endpoint", minio_endpoint_);
     node->get_parameter(destination_name_ + ".minio.access_key_id", minio_access_key_id_);
@@ -53,7 +51,6 @@ void FlbFilesMetrics::onConfigure()
     node->get_parameter(destination_name_ + ".minio.bucket", minio_bucket_);
     node->get_parameter(destination_name_ + ".minio.upload_fields", minio_upload_fields_);
     node->get_parameter(destination_name_ + ".minio.src_fields", minio_src_fields_);
-    node->get_parameter(destination_name_ + ".minio.input_names", minio_input_names_);
   }
   if (std::find(file_storage_.begin(), file_storage_.end(), "s3") != file_storage_.end())
   {
@@ -132,8 +129,6 @@ void FlbFilesMetrics::initFlbOutputPlugin()
                    NULL);
     flb_output_set(ctx_, out_ffd_, "minio_upload_fields",
                    dc_util::to_space_separated_string(minio_upload_fields_).c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "minio_input_names", dc_util::to_space_separated_string(minio_input_names_).c_str(),
-                   NULL);
   }
 
   if (std::find(file_storage_.begin(), file_storage_.end(), "s3") != file_storage_.end())

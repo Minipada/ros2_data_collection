@@ -73,7 +73,7 @@ func PGSQLInit(plugin unsafe.Pointer) error{
 		timestamp TIMESTAMP NOT NULL,
 		robot_name TEXT NOT NULL,
 		robot_id TEXT NOT NULL,
-		input_name TEXT NOT NULL,
+		group_name TEXT NOT NULL,
 		duration FLOAT8,
 		local_path TEXT NOT NULL,
 		remote_path TEXT NOT NULL,

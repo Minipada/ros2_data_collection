@@ -15,7 +15,7 @@ erDiagram
         timestamp timestamp
         text robot_name
         text robot_id
-        text input_name
+        text group_name
         double duration
         text local_path
         text remote_path
@@ -41,7 +41,6 @@ erDiagram
 | **minio.access_key_id**     | Minio Access key ID                            | str                    | N/A (Mandatory)                         |
 | **minio.bucket**            | Minio bucket name                              | str                    | "dc_bucket"                             |
 | **minio.endpoint**          | Minio endpoint                                 | str                    | "127.0.0.1:9000"                        |
-| **minio.input_names**       | Seems not to be used, to cleanup               | list\[str\]            | N/A (Mandatory)                         |
 | **minio.secret_access_key** | Minio Secret access key                        | str                    | N/A (Mandatory)                         |
 | **minio.src_fields**        | JSON fields containing local paths for Minio   | str                    | N/A (Mandatory)                         |
 | **minio.upload_fields**     | JSON fields containing remote paths for Minio  | str                    | N/A (Mandatory)                         |
@@ -60,7 +59,6 @@ erDiagram
 | **s3.secret_access_key**    | S3 Secret access key                           | str                    | N/A (Mandatory)                         |
 | **s3.src_fields**           | JSON fields containing local paths for s3      | str                    | N/A (Mandatory)                         |
 | **s3.upload_fields**        | JSON fields containing remote paths for S3     | str                    | N/A (Mandatory)                         |
-
 
 ## Example
 ```yaml
