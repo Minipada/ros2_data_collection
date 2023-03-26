@@ -40,14 +40,13 @@ bool DoubleEqual::getState(dc_interfaces::msg::StringStamped msg)
       publishActive();
       return active_;
     }
+    return flat_json[key_w_prefix] == value_;
   }
   catch (json::parse_error& e)
   {
     RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON: " << msg.data);
     return false;
   }
-
-  return flat_json[key_w_prefix] == value_;
 }
 
 DoubleEqual::~DoubleEqual() = default;
