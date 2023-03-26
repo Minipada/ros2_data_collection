@@ -15,7 +15,7 @@ destination_server:
       http_port: 2020
       in_storage_type: "filesystem"
       in_storage_pause_on_chunks_overlimit: "off"
-    destination_plugins: ["flb_minio", "flb_pgsql"]
+    destination_plugins: ["flb_minio", "flb_pgsql", "flb_files_metrics"]
     custom_str_params_list: ["robot_name", "id"]
     custom_str_params:
       robot_name:
@@ -32,7 +32,12 @@ destination_server:
       uuid: false
     flb_files_metrics:
       plugin: "dc_destinations/FlbFilesMetrics"
-      inputs: ["/dc/measurement/map"]
+      inputs:
+        [
+          "/dc/measurement/map",
+          "/dc/measurement/right_camera",
+          "/dc/measurement/left_camera",
+        ]
       file_storage: ["minio"]
       db_type: "pgsql"
       delete_when_sent: true
@@ -42,9 +47,20 @@ destination_server:
         secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb
         use_ssl: false
         bucket: "mybucket"
-        src_fields: ["local_paths.pgm", "local_paths.yaml"]
-        upload_fields: ["remote_paths.minio.pgm", "remote_paths.minio.yaml"]
-        input_names: ["map", "map"]
+        src_fields:
+          [
+            "local_paths.pgm",
+            "local_paths.yaml",
+            "local_paths.inspected",
+            "local_paths.inspected",
+          ]
+        upload_fields:
+          [
+            "remote_paths.minio.pgm",
+            "remote_paths.minio.yaml",
+            "remote_paths.minio.inspected",
+            "remote_paths.minio.inspected",
+          ]
       pgsql:
         host: "127.0.0.1"
         port: "5432"
@@ -60,26 +76,35 @@ destination_server:
       verbose_plugin: false
       time_format: "iso8601"
       plugin: "dc_destinations/FlbMinIO"
-      # inputs: ["/dc/measurement/map", "/dc/measurement/right_camera"]
-      inputs: ["/dc/measurement/right_camera"]
+      inputs: ["/dc/measurement/right_camera", "/dc/measurement/left_camera"]
       endpoint: 127.0.0.1:9000
       access_key_id: rQXPf1f730Yuu2yW
       secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb
       use_ssl: false
       bucket: "mybucket"
       src_fields:
-        ["local_paths.pgm", "local_paths.yaml", "local_paths.inspected"]
-      # src_fields: ["local_paths.inspected"]
+        [
+          "local_paths.pgm",
+          "local_paths.yaml",
+          "local_paths.inspected",
+          "local_paths.inspected",
+        ]
       upload_fields:
         [
           "remote_paths.minio.pgm",
           "remote_paths.minio.yaml",
           "remote_paths.minio.inspected",
+          "remote_paths.minio.inspected",
         ]
-      groups: ["map", "map", "right_camera"]
     flb_pgsql:
       plugin: "dc_destinations/FlbPgSQL"
-      inputs: ["/dc/measurement/map", "/dc/measurement/right_camera"]
+      inputs:
+        [
+          "/dc/measurement/map",
+          "/dc/measurement/right_camera",
+          "/dc/measurement/left_camera",
+          "/dc/group/robot",
+        ]
       host: "127.0.0.1"
       port: 5432
       user: fluentbit
@@ -90,12 +115,6 @@ destination_server:
       async: false
       time_format: "double"
       time_key: "date"
-    # flb_stdout:
-    #   plugin: "dc_destinations/FlbStdout"
-    #   inputs: ["/dc/measurement/uptime"]
-    #   time_format: "double"
-    #   time_key: "date"
-    #   debug: false
 
 group_server:
   ros__parameters:
@@ -116,7 +135,7 @@ measurement_server:
   ros__parameters:
     custom_str_params: ["robot_name"]
     robot_name: "C3PO"
-    measurement_plugins: ["map", "right_camera"]
+    measurement_plugins: ["cmd_vel", "position", "speed", "map", "right_camera"]
     save_local_base_path: "$HOME/dc_data/"
     all_base_path: "=robot_name/%Y/%m/%d/%H"
     condition_plugins: ["moving", "inspected_exists"]
@@ -186,7 +205,7 @@ measurement_server:
       detection_modules: ["barcode"]
       remote_prefixes: [""]
       remote_keys: ["minio"]
-      tags: ["flb_pgsql", "flb_minio"]
+      tags: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
       include_measurement_name: true
     left_camera:
       plugin: "dc_measurements/Camera"
@@ -210,5 +229,5 @@ measurement_server:
       detection_modules: ["barcode"]
       remote_prefixes: [""]
       remote_keys: ["minio"]
-      tags: ["flb_pgsql", "flb_minio"]
+      tags: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
       include_measurement_name: true
