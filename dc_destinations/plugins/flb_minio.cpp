@@ -28,7 +28,6 @@ void FlbMinIO::onConfigure()
   nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".upload_fields",
                                                rclcpp::PARAMETER_STRING_ARRAY);
   nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".src_fields", rclcpp::PARAMETER_STRING_ARRAY);
-  nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".groups", rclcpp::PARAMETER_STRING_ARRAY);
 
   node->get_parameter(destination_name_ + ".verbose_plugin", verbose_plugin_);
   node->get_parameter(destination_name_ + ".plugin_path", plugin_path_);
@@ -40,7 +39,6 @@ void FlbMinIO::onConfigure()
   node->get_parameter(destination_name_ + ".bucket", bucket_);
   node->get_parameter(destination_name_ + ".upload_fields", upload_fields_);
   node->get_parameter(destination_name_ + ".src_fields", src_fields_);
-  node->get_parameter(destination_name_ + ".groups", groups_);
 }
 
 void FlbMinIO::initFlbOutputPlugin()
@@ -65,7 +63,6 @@ void FlbMinIO::initFlbOutputPlugin()
   flb_output_set(ctx_, out_ffd_, "bucket", bucket_.c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "src_fields", dc_util::to_space_separated_string(src_fields_).c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "upload_fields", dc_util::to_space_separated_string(upload_fields_).c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "groups", dc_util::to_space_separated_string(groups_).c_str(), NULL);
 }
 
 FlbMinIO::~FlbMinIO() = default;
