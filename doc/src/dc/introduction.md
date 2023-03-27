@@ -1,10 +1,10 @@
 # DC
 
 <p class="github-only" align="center">
-  <img height="300" src="doc/src/images/dc.png" />
+  <img height="300" src="./doc/src/images/dc.png" />
 </p>
 
-**Documentation**: [https://minipada.github.io/ros2_data_collection/dc](https://minipada.github.io/ros2_data_collection/dc)
+**Documentation**: [https://minipada.github.io/ros2_data_collection](https://minipada.github.io/ros2_data_collection)
 
 **Source code**: [https://github.com/minipada/ros2_data_collection](https://github.com/minipada/ros2_data_collection)
 
