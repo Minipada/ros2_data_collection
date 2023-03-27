@@ -1,0 +1,235 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Integer superior - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../open-in.css">
+        <link rel="stylesheet" href="../.././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../../css/logo.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a href="/"><img id="logo-dc" src="../../images/dc.png"></a>
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item "><a href="../../dc/introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item "><a href="../../dc/build.html"><strong aria-hidden="true">2.</strong> Build</a></li><li class="chapter-item "><a href="../../dc/concepts.html"><strong aria-hidden="true">3.</strong> Concepts</a></li><li class="chapter-item "><a href="../../dc/data_pipeline.html"><strong aria-hidden="true">4.</strong> Data Pipeline</a></li><li class="chapter-item "><a href="../../dc/measurements.html"><strong aria-hidden="true">5.</strong> Measurements</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../../dc/measurements/camera.html"><strong aria-hidden="true">5.1.</strong> Camera</a></li><li class="chapter-item "><a href="../../dc/measurements/cmd_vel.html"><strong aria-hidden="true">5.2.</strong> Command velocity</a></li><li class="chapter-item "><a href="../../dc/measurements/cpu.html"><strong aria-hidden="true">5.3.</strong> CPU</a></li><li class="chapter-item "><a href="../../dc/measurements/distance_traveled.html"><strong aria-hidden="true">5.4.</strong> Distance traveled</a></li><li class="chapter-item "><a href="../../dc/measurements/ip_camera.html"><strong aria-hidden="true">5.5.</strong> IP Camera</a></li><li class="chapter-item "><a href="../../dc/measurements/map.html"><strong aria-hidden="true">5.6.</strong> Map</a></li><li class="chapter-item "><a href="../../dc/measurements/memory.html"><strong aria-hidden="true">5.7.</strong> Memory</a></li><li class="chapter-item "><a href="../../dc/measurements/network.html"><strong aria-hidden="true">5.8.</strong> Network</a></li><li class="chapter-item "><a href="../../dc/measurements/os.html"><strong aria-hidden="true">5.9.</strong> OS</a></li><li class="chapter-item "><a href="../../dc/measurements/permissions.html"><strong aria-hidden="true">5.10.</strong> Permissions</a></li><li class="chapter-item "><a href="../../dc/measurements/position.html"><strong aria-hidden="true">5.11.</strong> Position</a></li><li class="chapter-item "><a href="../../dc/measurements/speed.html"><strong aria-hidden="true">5.12.</strong> Speed</a></li><li class="chapter-item "><a href="../../dc/measurements/storage.html"><strong aria-hidden="true">5.13.</strong> Storage</a></li><li class="chapter-item "><a href="../../dc/measurements/string_stamped.html"><strong aria-hidden="true">5.14.</strong> String stamped</a></li><li class="chapter-item "><a href="../../dc/measurements/uptime.html"><strong aria-hidden="true">5.15.</strong> Uptime</a></li></ol></li><li class="chapter-item expanded "><a href="../../dc/conditions.html"><strong aria-hidden="true">6.</strong> Conditions</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../../dc/conditions/bool_equal.html"><strong aria-hidden="true">6.1.</strong> Bool equal</a></li><li class="chapter-item "><a href="../../dc/conditions/double_equal.html"><strong aria-hidden="true">6.2.</strong> Double equal</a></li><li class="chapter-item "><a href="../../dc/conditions/double_inferior.html"><strong aria-hidden="true">6.3.</strong> Double inferior</a></li><li class="chapter-item "><a href="../../dc/conditions/double_superior.html"><strong aria-hidden="true">6.4.</strong> Double superior</a></li><li class="chapter-item "><a href="../../dc/conditions/exist.html"><strong aria-hidden="true">6.5.</strong> Exist</a></li><li class="chapter-item "><a href="../../dc/conditions/integer_equal.html"><strong aria-hidden="true">6.6.</strong> Integer equal</a></li><li class="chapter-item "><a href="../../dc/conditions/integer_inferior.html"><strong aria-hidden="true">6.7.</strong> Integer inferior</a></li><li class="chapter-item expanded "><a href="../../dc/conditions/integer_superior.html" class="active"><strong aria-hidden="true">6.8.</strong> Integer superior</a></li><li class="chapter-item "><a href="../../dc/conditions/list_bool_equal.html"><strong aria-hidden="true">6.9.</strong> List bool equal</a></li><li class="chapter-item "><a href="../../dc/conditions/list_double_equal.html"><strong aria-hidden="true">6.10.</strong> List double equal</a></li><li class="chapter-item "><a href="../../dc/conditions/list_integer_equal.html"><strong aria-hidden="true">6.11.</strong> List integer equal</a></li><li class="chapter-item "><a href="../../dc/conditions/list_string_equal.html"><strong aria-hidden="true">6.12.</strong> List string equal</a></li><li class="chapter-item "><a href="../../dc/conditions/moving.html"><strong aria-hidden="true">6.13.</strong> Moving</a></li><li class="chapter-item "><a href="../../dc/conditions/same_as_previous.html"><strong aria-hidden="true">6.14.</strong> Same as previous</a></li><li class="chapter-item "><a href="../../dc/conditions/string_match.html"><strong aria-hidden="true">6.15.</strong> String match</a></li></ol></li><li class="chapter-item "><a href="../../dc/data_validation.html"><strong aria-hidden="true">7.</strong> Data validation</a></li><li class="chapter-item "><a href="../../dc/groups.html"><strong aria-hidden="true">8.</strong> Groups</a></li><li class="chapter-item "><a href="../../dc/destinations.html"><strong aria-hidden="true">9.</strong> Destinations</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../../dc/destinations/flb_kinesis_data_streams.html"><strong aria-hidden="true">9.1.</strong> Fluent Bit AWS Kinesis Data Streams</a></li><li class="chapter-item "><a href="../../dc/destinations/flb_s3.html"><strong aria-hidden="true">9.2.</strong> Fluent Bit AWS S3</a></li><li class="chapter-item "><a href="../../dc/destinations/flb_file.html"><strong aria-hidden="true">9.3.</strong> Fluent Bit File</a></li><li class="chapter-item "><a href="../../dc/destinations/flb_files_metrics.html"><strong aria-hidden="true">9.4.</strong> Fluent Bit Files metrics</a></li><li class="chapter-item "><a href="../../dc/destinations/flb_http.html"><strong aria-hidden="true">9.5.</strong> Fluent Bit HTTP</a></li><li class="chapter-item "><a href="../../dc/destinations/flb_minio.html"><strong aria-hidden="true">9.6.</strong> Fluent Bit Minio</a></li><li class="chapter-item "><a href="../../dc/destinations/flb_null.html"><strong aria-hidden="true">9.7.</strong> Fluent Bit NULL</a></li><li class="chapter-item "><a href="../../dc/destinations/flb_pgsql.html"><strong aria-hidden="true">9.8.</strong> Fluent Bit PostgreSQL</a></li><li class="chapter-item "><a href="../../dc/destinations/flb_slack.html"><strong aria-hidden="true">9.9.</strong> Fluent Bit Slack</a></li><li class="chapter-item "><a href="../../dc/destinations/flb_stdout.html"><strong aria-hidden="true">9.10.</strong> Fluent Bit Stdout</a></li><li class="chapter-item "><a href="../../dc/destinations/rcl.html"><strong aria-hidden="true">9.11.</strong> RCL</a></li></ol></li><li class="chapter-item "><a href="../../dc/configuration_examples.html"><strong aria-hidden="true">10.</strong> Configuration examples</a></li><li class="chapter-item "><a href="../../dc/demos.html"><strong aria-hidden="true">11.</strong> Demos</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../../dc/demos/uptime_stdout.html"><strong aria-hidden="true">11.1.</strong> Uptime</a></li><li class="chapter-item "><a href="../../dc/demos/memory_uptime_stdout.html"><strong aria-hidden="true">11.2.</strong> Group memory and uptime</a></li><li class="chapter-item "><a href="../../dc/demos/tb3_stdout.html"><strong aria-hidden="true">11.3.</strong> Turtlebot3</a></li><li class="chapter-item "><a href="../../dc/demos/qrcodes_minio_pgsql.html"><strong aria-hidden="true">11.4.</strong> QRcodes to PostgreSQL/MinIO</a></li><li class="chapter-item "><a href="../../dc/demos/custom_stdout.html"><strong aria-hidden="true">11.5.</strong> Custom plugin</a></li></ol></li><li class="chapter-item "><a href="../../dc/infrastructure_setup.html"><strong aria-hidden="true">12.</strong> Infrastructure setup</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../../dc/infrastructure_setup/minio.html"><strong aria-hidden="true">12.1.</strong> MinIO</a></li><li class="chapter-item "><a href="../../dc/infrastructure_setup/postgresql.html"><strong aria-hidden="true">12.2.</strong> PostgreSQL</a></li><li class="chapter-item "><a href="../../dc/infrastructure_setup/ip_camera.html"><strong aria-hidden="true">12.3.</strong> Ip camera</a></li></ol></li><li class="chapter-item "><a href="../../dc/cli.html"><strong aria-hidden="true">13.</strong> CLI tools</a></li><li class="chapter-item "><a href="../../dc/future_work.html"><strong aria-hidden="true">14.</strong> Future work and Roadmap</a></li><li class="chapter-item "><a href="../../dc/contributing.html"><strong aria-hidden="true">15.</strong> Contributing</a></li><li class="chapter-item "><a href="../../dc/faq.html"><strong aria-hidden="true">16.</strong> FAQ</a></li><li class="chapter-item "><a href="../../dc/about_contact.html"><strong aria-hidden="true">17.</strong> About and Contact</a></li></ol>
+                <footer id="nav-separator"></footer>
+                <a style="margin-right: 10px;" href="https://github.com/minipada/ros2_data_collection" target="_blank"><i  class="lni lni-github-original lni-32"></i></a>
+                <a style="margin-right: 10px;" href="mailto:d.bensoussan@proton.me" target="_blank"><i  class="lni lni-envelope lni-32"></i></a>
+                <div>Under <a target="_blank" style="color: var(--sidebar-active);"
+                    href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                license</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/humble/guide/src/dc/conditions/integer_superior.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="integer-superior"><a class="header" href="#integer-superior">Integer superior</a></h1>
+<h2 id="description"><a class="header" href="#description">Description</a></h2>
+<p>Compare JSON key value to the value passed in parameter and returns true if superior.</p>
+<h2 id="parameters"><a class="header" href="#parameters">Parameters</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
+<tr><td><strong>key</strong></td><td>JSON key where value is located, separate nested dictionary with <strong>/</strong></td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>value</strong></td><td>Value to which compare the JSON value</td><td>int</td><td>N/A (Mandatory)</td></tr>
+</tbody></table>
+</div><footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/conditions/integer_superior.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../dc/conditions/integer_inferior.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../dc/conditions/list_bool_equal.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../dc/conditions/integer_inferior.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../dc/conditions/list_bool_equal.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../../ace.js"></script>
+        <script src="../../editor.js"></script>
+        <script src="../../mode-rust.js"></script>
+        <script src="../../theme-dawn.js"></script>
+        <script src="../../theme-tomorrow_night.js"></script>
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../js/mermaid.js"></script>
+        <script src="../../js/mermaid-init.js"></script>
+        <script src="../../js/theme.js"></script>
+
+
+    </body>
+</html>
