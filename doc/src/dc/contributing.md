@@ -18,7 +18,7 @@ Since I want DC to be community driven, go to [Github discussions](https://ros2-
 
 ### Found a bug?
 
-If you spot a problem, first search if an issue already exists. If a related issue doesn't exist, you can open a new issue using the [issue form](https://github.com/Minipada/ros2_data_collection/issues/new?assignees=&labels=bug&template=bug_report.md&title=).
+If you find a problem, first search if an issue already exists. If a related issue doesn't exist, you can open a new issue using the [issue form](https://github.com/Minipada/ros2_data_collection/issues/new?assignees=&labels=bug&template=bug_report.md&title=).
 
 ### General guidelines
 
