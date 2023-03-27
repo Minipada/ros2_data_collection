@@ -1,9 +1,0 @@
-<class_libraries>
-    <library path="dc_uptime_custom_measurement">
-        <class name="dc_demos/UptimeCustom" type="dc_demos::UptimeCustom" base_class_type="dc_core::Measurement">
-            <description>
-                dc_measurement_uptime_custom
-            </description>
-        </class>
-    </library>
-</class_libraries>

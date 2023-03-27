@@ -1,7 +1,0 @@
-measurement_server:
-  ros__parameters:
-    measurement_plugins: ["uptime"]
-    uptime:
-      plugin: "dc_measurements/Uptime"
-      group_key: "uptime"
-      topic_output: "/dc/measurement/uptime"

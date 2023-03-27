@@ -1,8 +1,0 @@
-#nav-separator{
-    border-top: 1px solid var(--sidebar-active);
-}
-
-/* Same Markdown page is used on Github and documentation, we just hide some elements on the doc */
-.github-only {
-    display: none !important;
-}

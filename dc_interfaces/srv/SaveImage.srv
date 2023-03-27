@@ -1,4 +1,0 @@
-sensor_msgs/Image frame
-string            path
----
-bool success
