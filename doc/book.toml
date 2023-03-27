@@ -59,12 +59,7 @@ traverse-parent-directories = false
 #
 # Hint: you can use TOML's raw strings (single quote) to avoid needing to
 # escape things twice.
-exclude = [
-  "https://github.com/[mM]inipada/ros2_data_collection.*",
-  "http://localhost*",
-  "https://github.com/users/[mM]inipada/projects.*",
-  "https://minipada.github.io/ros2_data_collection/.*"
-]
+exclude = ["http://localhost*"]
 
 # The User-Agent to use when sending web requests
 user-agent = "mdbook-linkcheck-0.4.0"
