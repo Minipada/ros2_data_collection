@@ -1,8 +1,8 @@
-# ghcr.io/minipada/dc:${ROS_DISTRO}-ci-testing
+# ghcr.io/minipada/ros2_data_collection:${ROS_DISTRO}-ci-testing
 # CI image using the ROS testing repository
 
 ARG ROS_DISTRO=humble
-FROM ghcr.io/minipada/dc:${ROS_DISTRO}-ci
+FROM ghcr.io/minipada/ros2_data_collection:${ROS_DISTRO}-ci
 
 # Switch to ros-testing
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
