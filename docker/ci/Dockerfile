@@ -5,10 +5,10 @@ ARG ROS_DISTRO=humble
 FROM ros:${ROS_DISTRO}-ros-base
 
 # Setup (temporary) ROS workspace
-WORKDIR /root/dc
+WORKDIR /root/ros2_data_collection
 
 # Copy DC sources from docker context
-COPY . src/dc
+COPY . src/ros2_data_collection
 
 # Commands are combined in single RUN statement with "apt/lists" folder removal to reduce image size
 # https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#minimize-the-number-of-layers
@@ -33,14 +33,14 @@ RUN \
     ccache && \
     # Install Python dependencies
     pip install --no-cache-dir testresources poetry==1.1.13 && \
-    cd src/dc && \
+    cd src/ros2_data_collection && \
     poetry config virtualenvs.create false --local && \
     poetry install && \
     apt-get remove --purge python3-pip -y && \
     cd ../.. && \
-    # Fetch all dependencies from dc.repos
-    if [ -r "src/dc/dc_${ROS_DISTRO}.repos" ] ; then vcs import src < src/dc/dc.repos ; fi && \
-    if [ -r "src/dc/dc_${ROS_DISTRO}.repos" ] ; then vcs import src < "src/dc/dc_${ROS_DISTRO}.repos" ; fi && \
+    # Fetch all dependencies from ros2_data_collection.repos
+    if [ -r "src/ros2_data_collection/ros2_data_collection.repos" ] ; then vcs import src < src/ros2_data_collection/ros2_data_collection.repos ; fi && \
+    if [ -r "src/ros2_data_collection/ros2_data_collection_${ROS_DISTRO}.repos" ] ; then vcs import src < "src/ros2_data_collection/ros2_data_collection_${ROS_DISTRO}.repos" ; fi && \
     # Download all dependencies of DC
     rosdep update && \
     DEBIAN_FRONTEND=noninteractive \
