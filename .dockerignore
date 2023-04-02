@@ -1,0 +1,29 @@
+# ignore everything
+*
+# but include these:
+!ros2_data_collection*.repos
+!.clang*
+!.codecov.yaml
+!humble.yaml
+!poetry.lock
+!pyproject.toml
+!setup.cfg
+!**/package.xml
+!**/COLCON_IGNORE
+
+# https://github.com/moby/moby/issues/42788
+!dc_bringup/package.xml
+!dc_simulation/package.xml
+!dc_demos/package.xml
+!dc_measurements/package.xml
+!dc_services/package.xml
+!dc_cli/package.xml
+!dc_destinations/package.xml
+!fluent_bit_plugins/package.xml
+!dc_common/package.xml
+!dc_interfaces/package.xml
+!dc_util/package.xml
+!dc_description/package.xml
+!dc_core/package.xml
+!dc_group/package.xml
+!fluent_bit_vendor/package.xml
