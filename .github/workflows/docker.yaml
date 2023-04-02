@@ -202,5 +202,5 @@ jobs:
           push: true
           no-cache: true
           # TODO also add a tag for project version
-          tags: ${{ steps.meta.outputs.tags }}-ci-testing
+          tags: ${{ steps.meta.outputs.tags }}-source
           labels: ${{ steps.meta.outputs.labels }}
