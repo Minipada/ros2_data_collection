@@ -136,7 +136,7 @@ repos:
       - id: ros2_ws_set_metadata
         args: [--src=., --regex=dc_.*]
   - repo: https://github.com/ehdgua01/poetry-export-requirements
-    rev: master
+    rev: v1.1.1
     hooks:
       - id: export-requirements # Export dev-dependencies without hashes
         args:
