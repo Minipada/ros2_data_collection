@@ -2,13 +2,13 @@
 To start the ip camera example, to save video feeds from rtsp cameras, you can optionally create a virtual video feed if you don't have an ip camera, for testing purpose:
 
 ## Start RTSP Server
-A [rtsp](https://www.wikiwand.com/en/Real_Time_Streaming_Protocol) server. I use **rtsp-simple-server** available [here](https://github.com/aler9/rtsp-simple-server). Download from the [release page](https://github.com/aler9/rtsp-simple-server/releases) and start it:
+A [rtsp](https://www.wikiwand.com/en/Real_Time_Streaming_Protocol) server. I use **rtsp-simple-server** available [here](https://github.com/aler9/rtsp-simple-server). Download from the [release page](https://github.com/aler9/mediamtx/releases) and start it:
 
 ```bash
 $ ./rtsp-simple-server
 ```
 
-If the port is already used, download the [configuration](https://github.com/aler9/rtsp-simple-server/blob/main/rtsp-simple-server.yml) and edit the `hlsAddress` parameter. You would then need to start it this way:
+If the port is already used, download the [configuration](https://github.com/aler9/mediamtx/blob/main/mediamtx.yml) and edit the `hlsAddress` parameter. You would then need to start it this way:
 
 ```bash
 $ ./rtsp-simple-server conf.yml
