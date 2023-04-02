@@ -1,0 +1,34 @@
+# Verifies the code follows our standards.
+# pre-commit: Runs pre-commit (https://pre-commit.com/). Configuration in .pre-commit-config.yaml
+
+name: Formatting (pre-commit)
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - humble
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    name: Format
+    runs-on: ubuntu-22.04
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install clang-format-14 graphviz-dev libxml2-utils -y
+      - uses: pre-commit/action@v3.0.0
+        id: precommit
+      - name: Upload pre-commit changes
+        if: failure() && steps.precommit.outcome == 'failure'
+        uses: rhaschke/upload-git-patch-action@main
+        with:
+          name: pre-commit
