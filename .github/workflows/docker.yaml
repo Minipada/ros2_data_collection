@@ -57,7 +57,7 @@ jobs:
             ROS_DISTRO=${{ matrix.ROS_DISTRO }}
           push: true
           # TODO also add a tag for project version
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}-ci
           labels: ${{ steps.meta.outputs.labels }}
 
   ci-testing:
@@ -106,5 +106,5 @@ jobs:
           push: true
           no-cache: true
           # TODO also add a tag for project version
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}-ci-testing
           labels: ${{ steps.meta.outputs.labels }}
