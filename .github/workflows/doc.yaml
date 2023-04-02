@@ -8,27 +8,23 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-22.04
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+    container:
+      image: ghcr.io/minipada/ros2_data_collection:humble-doc
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           path: .
-
-      - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@v1
-        with:
-          mdbook-version: "latest"
-
-      - run: cargo install mdbook-open-on-gh mdbook mdbook-admonish mdbook-linkcheck mdbook-mermaid
-
-      - run: mdbook build
-        working-directory: doc
-
+      - name: Build documentation
+        working-directory: ./doc
+        run: mdbook build
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
