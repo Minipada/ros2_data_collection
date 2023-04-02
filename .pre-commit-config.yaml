@@ -33,7 +33,7 @@ repos:
         name: Detect if mixed line ending is used (\r vs. \r\n)
       - id: end-of-file-fixer
         name: Make sure that there is an empty line at the end
-        exclude: "(.*.pgm|.*.dae|.*.sdf|.*.config|.*.svg|.*.mtl)"
+        exclude: "(.*.pgm|.*.dae|.*.sdf|.*.config|.*.svg|.*.mtl|requirements.txt)"
       - id: trailing-whitespace
         name: Remove trailing whitespace at end of line
       - id: fix-encoding-pragma
@@ -135,15 +135,8 @@ repos:
         args: [--src=., --regex=dc_.*]
       - id: ros2_ws_set_metadata
         args: [--src=., --regex=dc_.*]
-  - repo: https://github.com/ehdgua01/poetry-export-requirements
-    rev: v1.1.1
+  - repo: https://github.com/arrrrrmin/poetry-requirements
+    rev: 0.1.4
     hooks:
-      - id: export-requirements # Export dev-dependencies without hashes
-        args:
-          [
-            --without-hashes,
-            --dev,
-            --output,
-            requirements.txt,
-            requirements.txt,
-          ]
+      - id: poetry-requirements
+        args: [-o, requirements.txt, --dev, --without-hashes]
