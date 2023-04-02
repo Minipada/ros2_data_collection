@@ -1,4 +1,4 @@
-# ghcr.io/minipada/dc:${ROS_DISTRO}-ci
+# ghcr.io/minipada/ros2_data_collection:${ROS_DISTRO}-ci
 # ROS base image augmented with all DC dependencies to use for CI
 
 ARG ROS_DISTRO=humble
