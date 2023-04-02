@@ -8,6 +8,15 @@
 
 **Source code**: [https://github.com/minipada/ros2_data_collection](https://github.com/minipada/ros2_data_collection)
 
+[![ROS 2](https://img.shields.io/badge/ROS%202-humble-informational?style=for-the-badge)](https://docs.ros.org/en/humble/index.html) ![python](https://img.shields.io/badge/python-3.10.4-informational?style=for-the-badge) ![C++](https://img.shields.io/badge/C++-17-informational?style=for-the-badge)
+
+| Humble                                                                                                                                                                                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [![Docker](https://github.com/minipada/ros2_data_collection/actions/workflows/docker.yaml/badge.svg)](https://github.com/minipada/ros2_data_collection/actions/workflows/docker.yaml)                                         |
+| [![Format](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml/badge.svg)](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml)                                         |
+| [![Documentation](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml/badge.svg)](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml)                                        |
+| [![Github Pages](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment) |
+
 For detailed instructions:
 
 - [Build](https://minipada.github.io/ros2_data_collection/dc/build.html)
