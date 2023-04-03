@@ -72,7 +72,14 @@ void IpCamera::onConfigure()
 
   // TODO do a healthcheck to ensure it's available.
   // Cameras don't support ICMP, see https://stackoverflow.com/questions/11502856/is-there-such-a-rtsp-ping
-  std::string command = std::string("/usr/bin/ffmpeg");
+  std::string ffmpeg_path = "/usr/bin/ffmpeg";
+
+  if (!std::filesystem::exists(ffmpeg_path))
+  {
+    throw std::runtime_error{ "ffmpeg is not installed!" };
+  }
+
+  std::string command = std::string(ffmpeg_path);
 
   if (!ffmpeg_banner_)
   {
