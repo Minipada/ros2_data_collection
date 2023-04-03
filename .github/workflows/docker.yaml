@@ -24,6 +24,9 @@ jobs:
     permissions:
       packages: write
       contents: read
+    env:
+      GH_IMAGE: ghcr.io/minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
+      PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
         uses: docker/setup-buildx-action@v1
@@ -55,9 +58,9 @@ jobs:
           file: docker/${{ github.job }}/Dockerfile
           build-args: |
             ROS_DISTRO=${{ matrix.ROS_DISTRO }}
-          push: true
+          push: ${{ env.PUSH }}
           # TODO also add a tag for project version
-          tags: ${{ steps.meta.outputs.tags }}-doc
+          tags: ${{ env.GH_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
 
   ci:
@@ -100,9 +103,9 @@ jobs:
           file: docker/${{ github.job }}/Dockerfile
           build-args: |
             ROS_DISTRO=${{ matrix.ROS_DISTRO }}
-          push: true
+          push: ${{ env.PUSH }}
           # TODO also add a tag for project version
-          tags: ${{ steps.meta.outputs.tags }}-ci
+          tags: ${{ env.GH_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
 
   ci-testing:
@@ -148,10 +151,10 @@ jobs:
           file: docker/${{ github.job }}/Dockerfile
           build-args: |
             ROS_DISTRO=${{ matrix.ROS_DISTRO }}
-          push: true
+          push: ${{ env.PUSH }}
           no-cache: true
           # TODO also add a tag for project version
-          tags: ${{ steps.meta.outputs.tags }}-ci-testing
+          tags: ${{ env.GH_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
 
   source:
@@ -199,10 +202,10 @@ jobs:
           file: docker/${{ github.job }}/Dockerfile
           build-args: |
             ROS_DISTRO=${{ matrix.ROS_DISTRO }}
-          push: true
+          push: ${{ env.PUSH }}
           no-cache: true
           # TODO also add a tag for project version
-          tags: ${{ steps.meta.outputs.tags }}-source
+          tags: ${{ env.GH_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
 
   source-sim:
@@ -250,8 +253,8 @@ jobs:
           file: docker/${{ github.job }}/Dockerfile
           build-args: |
             ROS_DISTRO=${{ matrix.ROS_DISTRO }}
-          push: true
+          push: ${{ env.PUSH }}
           no-cache: true
           # TODO also add a tag for project version
-          tags: ${{ steps.meta.outputs.tags }}-source-sim
+          tags: ${{ env.GH_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
