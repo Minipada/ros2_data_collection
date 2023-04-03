@@ -77,6 +77,9 @@ jobs:
     permissions:
       packages: write
       contents: read
+    env:
+      GH_IMAGE: ghcr.io/minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
+      PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
         uses: docker/setup-buildx-action@v1
@@ -124,6 +127,9 @@ jobs:
     permissions:
       packages: write
       contents: read
+    env:
+      GH_IMAGE: ghcr.io/minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
+      PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
         uses: docker/setup-buildx-action@v1
@@ -173,6 +179,9 @@ jobs:
     permissions:
       packages: write
       contents: read
+    env:
+      GH_IMAGE: ghcr.io/minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
+      PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
         uses: docker/setup-buildx-action@v1
@@ -224,6 +233,9 @@ jobs:
     permissions:
       packages: write
       contents: read
+    env:
+      GH_IMAGE: ghcr.io/minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
+      PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
         uses: docker/setup-buildx-action@v1
@@ -265,7 +277,7 @@ jobs:
           tags: ${{ env.GH_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  delete_untagged:
+  delete-untagged:
     runs-on: ubuntu-latest
     needs:
       - source-sim
