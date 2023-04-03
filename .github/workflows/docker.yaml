@@ -13,6 +13,10 @@ on:
   push:
     branches:
       - humble
+  pull_request:
+    paths:
+      - docker/**
+      - .github/workflows/docker.yaml
 
 jobs:
   doc:
