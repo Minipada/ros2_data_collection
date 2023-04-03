@@ -33,7 +33,7 @@ jobs:
       PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - name: Workaround permission issue # https://github.com/actions/checkout/issues/760#issuecomment-1097501613
         run: |
           set -x
@@ -82,7 +82,7 @@ jobs:
       PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - name: Workaround permission issue # https://github.com/actions/checkout/issues/760#issuecomment-1097501613
         run: |
           set -x
@@ -132,7 +132,7 @@ jobs:
       PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - name: Workaround permission issue # https://github.com/actions/checkout/issues/760#issuecomment-1097501613
         run: |
           set -x
@@ -184,7 +184,7 @@ jobs:
       PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - name: Workaround permission issue # https://github.com/actions/checkout/issues/760#issuecomment-1097501613
         run: |
           set -x
@@ -238,7 +238,7 @@ jobs:
       PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - name: Workaround permission issue # https://github.com/actions/checkout/issues/760#issuecomment-1097501613
         run: |
           set -x
