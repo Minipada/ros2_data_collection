@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - humble
+    paths:
+      - doc/**
+      - .github/workflows/doc.yaml
 
 permissions:
   contents: write
