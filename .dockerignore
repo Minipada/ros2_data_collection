@@ -4,9 +4,9 @@
 !ros2_data_collection*.repos
 !.clang*
 !.codecov.yaml
+!requirements.txt
+!requirements-dev.txt
 !humble.yaml
-!poetry.lock
-!pyproject.toml
 !setup.cfg
 !**/package.xml
 !**/COLCON_IGNORE

@@ -109,7 +109,7 @@ repos:
             -w,
             --ignore-words=.codespell.txt,
             -S,
-            "*.pgm,requirements.txt,poetry.lock",
+            "*.pgm,requirements*.txt,poetry.lock",
           ]
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v15.0.7
@@ -139,4 +139,8 @@ repos:
     rev: 0.1.4
     hooks:
       - id: poetry-requirements
-        args: [-o, requirements.txt, --dev, --without-hashes]
+        name: Check requirements.txt
+        args: [-o, requirements.txt, --without-hashes]
+      - id: poetry-requirements
+        name: Check requirements-dev.txt
+        args: [-o, requirements-dev.txt, --dev, --without-hashes]

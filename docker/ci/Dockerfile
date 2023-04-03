@@ -32,12 +32,7 @@ RUN \
     clang clang-format-12 clang-tidy clang-tools graphviz-dev libxml2-utils libzbar0 \
     ccache && \
     # Install Python dependencies
-    pip install --no-cache-dir testresources poetry==1.1.13 && \
-    cd src/ros2_data_collection && \
-    poetry config virtualenvs.create false --local && \
-    poetry install && \
-    apt-get remove --purge python3-pip -y && \
-    cd ../.. && \
+    pip install --no-cache-dir -r src/ros2_data_collection/requirements.txt && \
     # Fetch all dependencies from ros2_data_collection.repos
     if [ -r "src/ros2_data_collection/ros2_data_collection.repos" ] ; then vcs import src < src/ros2_data_collection/ros2_data_collection.repos ; fi && \
     if [ -r "src/ros2_data_collection/ros2_data_collection_${ROS_DISTRO}.repos" ] ; then vcs import src < "src/ros2_data_collection/ros2_data_collection_${ROS_DISTRO}.repos" ; fi && \
