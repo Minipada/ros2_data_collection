@@ -5,7 +5,7 @@ Through minimal code examples, you will learn how to collect and send data with 
 It will progressively present all features.
 
 ```admonish info
-By here, you must have built the workspace following the [build guide](./build.md).
+By here, you must have built the workspace following the [setup guide](./setup.md).
 ```
 
 Copy the configuration and save it as a yaml file, and then run:

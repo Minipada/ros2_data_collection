@@ -35,7 +35,7 @@ You can contribute to the source code with Pull Requests, for example:
 
 ### Setup environment
 #### ROS
-Follow the steps to build your workspace and install dependencies in the [build section](./build.md)
+Follow the steps to build your workspace and install dependencies in the [setup section](./setup.md)
 
 Then, install the pre-commit hook:
 

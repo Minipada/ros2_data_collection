@@ -3,7 +3,7 @@
 # TODO Improve following https://github.com/ros-planning/navigation2/blob/main/tools/source.Dockerfile
 
 # ghcr.io/minipada/ros2_data_collection:${ROS_DISTRO}-source
-# Downloads the moveit source code and install remaining debian dependencies
+# DC source compiled
 
 ARG ROS_DISTRO=humble
 FROM ghcr.io/minipada/ros2_data_collection:${ROS_DISTRO}-ci-testing
