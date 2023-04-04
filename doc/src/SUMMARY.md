@@ -1,7 +1,7 @@
 # Summary
 
 - [Introduction](./dc/introduction.md)
-- [Build](./dc/build.md)
+- [Setup](./dc/setup.md)
 - [Concepts](./dc/concepts.md)
 - [Data Pipeline](./dc/data_pipeline.md)
 - [Measurements](./dc/measurements.md)
