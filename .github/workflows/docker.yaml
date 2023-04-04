@@ -30,6 +30,7 @@ jobs:
       contents: read
     env:
       GH_IMAGE: ghcr.io/minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
+      DH_IMAGE: minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
       PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
@@ -55,6 +56,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to DockerHub
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
@@ -79,6 +86,7 @@ jobs:
       contents: read
     env:
       GH_IMAGE: ghcr.io/minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
+      DH_IMAGE: minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
       PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
@@ -104,6 +112,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to DockerHub
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
@@ -129,6 +143,7 @@ jobs:
       contents: read
     env:
       GH_IMAGE: ghcr.io/minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
+      DH_IMAGE: minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
       PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
@@ -156,6 +171,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to DockerHub
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
@@ -181,6 +202,7 @@ jobs:
       contents: read
     env:
       GH_IMAGE: ghcr.io/minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
+      DH_IMAGE: minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
       PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
@@ -208,6 +230,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to DockerHub
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Remove .dockerignore
         run: rm .dockerignore # enforce full source context
       - name: Build and push
@@ -235,6 +263,7 @@ jobs:
       contents: read
     env:
       GH_IMAGE: ghcr.io/minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
+      DH_IMAGE: minipada/ros2_data_collection:${{ matrix.ROS_DISTRO }}-${{ github.job }}
       PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'minipada/ros2_data_collection') }}
     steps:
       - name: Set up docker buildx
@@ -262,6 +291,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to DockerHub
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Remove .dockerignore
         run: rm .dockerignore # enforce full source context
       - name: Build and push
