@@ -24,6 +24,7 @@ find_package(ament_cmake_ros REQUIRED)
 foreach(Dependency IN ITEMS ${dependencies})
   find_package(${Dependency} REQUIRED)
 endforeach()
+
 dc_package()
 
 set(library_name measurement_server_core)
