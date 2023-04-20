@@ -28,7 +28,8 @@ public:
    * @brief A constructor for dc_measurement::MeasurementNode
    * @param options Additional options to control creation of the node.
    */
-  explicit MeasurementServer(const rclcpp::NodeOptions& options = rclcpp::NodeOptions());
+  explicit MeasurementServer(const rclcpp::NodeOptions& options = rclcpp::NodeOptions(),
+                             const std::vector<std::string>& measurement_plugins = std::vector<std::string>());
   ~MeasurementServer();
 
   /**
@@ -42,6 +43,10 @@ public:
    * @return bool if successfully loaded the plugins
    */
   bool loadConditionPlugins();
+
+  std::vector<std::string> getMeasurementPlugins();
+  std::vector<std::string> getMeasurementTypes();
+  std::vector<std::string> getMeasurementGroupKeys();
 
 protected:
   /**
@@ -79,7 +84,7 @@ protected:
   // Measurements
   pluginlib::ClassLoader<dc_core::Measurement> measurement_plugin_loader_;
   std::vector<pluginlib::UniquePtr<dc_core::Measurement>> measurements_;
-  std::vector<std::string> measurement_plugins_;
+  // std::vector<std::string> measurement_plugins_;
   std::vector<std::string> measurement_group_key_;
   std::vector<std::string> measurement_ids_;
   std::vector<int> measurement_polling_interval_;

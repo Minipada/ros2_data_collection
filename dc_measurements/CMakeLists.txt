@@ -224,6 +224,19 @@ install(DIRECTORY plugins/measurements/json
   DESTINATION share/${PROJECT_NAME}/plugins/measurements/
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(${PROJECT_NAME}_os_test test/os_test.cpp)
+  target_include_directories(${PROJECT_NAME}_os_test PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+  ament_target_dependencies(${PROJECT_NAME}_os_test
+    std_msgs
+  )
+  target_link_libraries(${PROJECT_NAME}_os_test ${library_name})
+endif()
+
 ament_export_include_directories(include)
 ament_export_libraries(${library_name}
   ${dc_measurement_plugin_libs}
