@@ -8,12 +8,13 @@
 namespace measurement_server
 {
 
-MeasurementServer::MeasurementServer(const rclcpp::NodeOptions& options)
+MeasurementServer::MeasurementServer(const rclcpp::NodeOptions& options,
+                                     const std::vector<std::string>& measurement_plugins)
   : nav2_util::LifecycleNode("measurement_server", "", options)
   , measurement_plugin_loader_("dc_core", "dc_core::Measurement")
   , condition_plugin_loader_("dc_core", "dc_core::Condition")
 {
-  declare_parameter("measurement_plugins", measurement_plugins_);
+  declare_parameter("measurement_plugins", measurement_plugins);
   get_parameter("measurement_plugins", measurement_ids_);
   declare_parameter("condition_plugins", std::vector<std::string>());
   get_parameter("condition_plugins", condition_ids_);
@@ -259,6 +260,21 @@ nav2_util::CallbackReturn MeasurementServer::on_shutdown(const rclcpp_lifecycle:
 {
   RCLCPP_INFO(get_logger(), "Shutting down");
   return nav2_util::CallbackReturn::SUCCESS;
+}
+
+std::vector<std::string> MeasurementServer::getMeasurementPlugins()
+{
+  return measurement_ids_;
+}
+
+std::vector<std::string> MeasurementServer::getMeasurementTypes()
+{
+  return measurement_types_;
+}
+
+std::vector<std::string> MeasurementServer::getMeasurementGroupKeys()
+{
+  return measurement_group_key_;
 }
 
 }  // end namespace measurement_server
