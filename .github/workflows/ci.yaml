@@ -25,6 +25,11 @@ jobs:
             ROS_DISTRO: humble
           - IMAGE: humble-ci-testing
             ROS_DISTRO: humble
+            CLANG_TIDY: pedantic
+            # Silent gmock/gtest warnings: https://github.com/ament/googletest/pull/21
+            AFTER_BUILD_UPSTREAM_WORKSPACE: |
+              git clone --quiet --branch clalancette/update-to-gtest-1.11 https://github.com/ament/googletest "${BASEDIR}/upstream_ws/src/googletest"
+              builder_run_build "/opt/ros/${ROS_DISTRO}" "${BASEDIR}/upstream_ws" --packages-select gtest_vendor gmock_vendor
     permissions:
       packages: write
       contents: read
@@ -48,11 +53,10 @@ jobs:
         -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld
         -DCMAKE_MODULE_LINKER_FLAGS=-fuse-ld=lld
         -DCMAKE_BUILD_TYPE=${{ matrix.env.CCOV && 'Debug' || 'Release'}}
-        -DCMAKE_CXX_FLAGS="${{ matrix.env.CLANG_TIDY != 'pedantic' && '-Werror ' || '' }}$CXXFLAGS${{ matrix.env.CCOV && ' --coverage -O2 -fno-omit-frame-pointer'}}"
+        -DCMAKE_CXX_FLAGS="-Werror $CXXFLAGS${{ matrix.env.CCOV && ' --coverage -O2 -fno-omit-frame-pointer'}}"
       UPSTREAM_CMAKE_ARGS: "-DCMAKE_CXX_FLAGS=''"
       DOWNSTREAM_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-Wall -Wextra"
       CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_DIR_HOST: /mnt/storage/ccache
       BASEDIR: ${{ github.workspace }}/.work
       CLANG_TIDY_BASE_REF: ${{ github.event_name != 'workflow_dispatch' && (github.base_ref || github.ref) || '' }}
       BEFORE_CLANG_TIDY_CHECKS: |
@@ -83,7 +87,7 @@ jobs:
           key: ${{ env.CACHE_PREFIX }}-${{ github.run_id }}
           restore-keys: ${{ env.CACHE_PREFIX }}
         env:
-          CACHE_PREFIX: ${{ steps.rosdistro_release_date.outputs.date }}-upstream_ws-${{ steps.repos_edit_timestamp.outputs.timestamp }}-${{ matrix.env.IMAGE }}-${{ hashFiles('dc*.repos', '.github/workflows/ci.yaml') }}
+          CACHE_PREFIX: ${{ steps.rosdistro_release_date.outputs.date }}-upstream_ws-${{ steps.repos_edit_timestamp.outputs.timestamp }}-${{ matrix.env.IMAGE }}-${{ hashFiles('.github/workflows/ci.yaml') }}
       # The target directory cache doesn't include the source directory because
       # that comes from the checkout.  See "prepare target_ws for cache" task below
       - name: Cache target workspace

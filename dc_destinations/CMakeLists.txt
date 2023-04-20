@@ -20,12 +20,18 @@ foreach(Dependency IN ITEMS ${dependencies})
 endforeach()
 find_package(fluent_bit REQUIRED)
 
+find_package(PkgConfig REQUIRED)
+pkg_search_module(UUID REQUIRED uuid)
+
 dc_package()
 
 set(library_name destination_server_core)
 set(executable_name destination_server)
 
-include_directories(include)
+include_directories(
+  include
+  ${UUID_INCLUDE_DIRS}
+)
 
 # Plugins destinations
 add_library(dc_flb_file_destination SHARED plugins/flb_file.cpp)
@@ -66,6 +72,7 @@ foreach(destination_plugin ${dc_destination_plugin_libs})
   target_link_libraries(
     ${destination_plugin}
     fluent_bit::fluent_bit
+    ${UUID_LIBRARIES}
   )
   target_compile_definitions(${destination_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
