@@ -72,7 +72,9 @@ jobs:
           push: ${{ env.PUSH }}
           no-cache: true
           # TODO also add a tag for project version
-          tags: ${{ env.GH_IMAGE }}
+          tags: |
+            ${{ env.GH_IMAGE }}
+            ${{ env.DH_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
 
   ci:
@@ -128,7 +130,9 @@ jobs:
           push: ${{ env.PUSH }}
           no-cache: true
           # TODO also add a tag for project version
-          tags: ${{ env.GH_IMAGE }}
+          tags: |
+            ${{ env.GH_IMAGE }}
+            ${{ env.DH_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
 
   ci-testing:
@@ -187,7 +191,9 @@ jobs:
           push: ${{ env.PUSH }}
           no-cache: true
           # TODO also add a tag for project version
-          tags: ${{ env.GH_IMAGE }}
+          tags: |
+            ${{ env.GH_IMAGE }}
+            ${{ env.DH_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
 
   source:
@@ -248,7 +254,9 @@ jobs:
           push: ${{ env.PUSH }}
           no-cache: true
           # TODO also add a tag for project version
-          tags: ${{ env.GH_IMAGE }}
+          tags: |
+            ${{ env.GH_IMAGE }}
+            ${{ env.DH_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
 
   source-sim:
@@ -309,7 +317,9 @@ jobs:
           push: ${{ env.PUSH }}
           no-cache: true
           # TODO also add a tag for project version
-          tags: ${{ env.GH_IMAGE }}
+          tags: |
+            ${{ env.GH_IMAGE }}
+            ${{ env.DH_IMAGE }}
           labels: ${{ steps.meta.outputs.labels }}
 
   delete-untagged:
