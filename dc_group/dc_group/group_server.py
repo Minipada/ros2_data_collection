@@ -56,7 +56,7 @@ class GroupServer(Node):
                     data_dict = {
                         k: v
                         for k, v in data_dict.items()
-                        if not all([x in k for x in exclude_key.split("*")])
+                        if not all(x in k for x in exclude_key.split("*"))
                     }
         if self.params[group]["nested_data"]:
             data_dict = unflatten_list(flat_dict=data_dict, separator=".")
