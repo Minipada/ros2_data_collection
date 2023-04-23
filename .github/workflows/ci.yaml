@@ -143,6 +143,7 @@ jobs:
           path: ${{ env.BASEDIR }}/target_ws/src/$(basename $(pwd))
       - name: Workaround fix permission #https://github.com/actions/checkout/issues/211
         # Needed when fetching fluent_bit_vendor
+        if: always()
         run: |
           sudo chown -R $USER:$USER $GITHUB_WORKSPACE
       - name: Prepare target_ws for cache
