@@ -1,14 +1,14 @@
 #include "fluent_bit_plugins/in_ros2.h"
 
 // Ideally we pass pointers and not use global variables
-rclc_executor_t EXECUTOR;
-rcl_node_t NODE;
-rcl_init_options_t INIT_OPTIONS;
-rcl_context_t CONTEXT;
-rcl_allocator_t ALLOCATOR;
-rcl_node_options_t NODE_OPS;
-void* GLOB_CTX;
-static volatile bool NEW_DATA_FLAG = false;
+rclc_executor_t executor;
+rcl_node_t node;
+rcl_init_options_t init_options;
+rcl_context_t context;
+rcl_allocator_t allocator;
+rcl_node_options_t node_ops;
+void* glob_ctx;
+static volatile bool new_data_flag = false;
 
 static int config_destroy(struct flb_ros2* ctx)
 {
@@ -107,7 +107,7 @@ void data_callback(const void* msgin)
   {
     flb_debug("Callback: I heard: ts=%d.%d data=%s \n", msg->header.stamp.sec, msg->header.stamp.nanosec,
               msg->data.data);
-    struct flb_ros2* ctx = GLOB_CTX;
+    struct flb_ros2* ctx = glob_ctx;
 
     msgpack_sbuffer mp_sbuf;
     msgpack_unpacked result;
@@ -157,14 +157,14 @@ void data_callback(const void* msgin)
 static int ros2_rclc_init()
 {
   /* Initialize rclc */
-  ALLOCATOR = rcl_get_default_allocator();
-  NODE_OPS = rcl_node_get_default_options();
+  allocator = rcl_get_default_allocator();
+  node_ops = rcl_node_get_default_options();
 
   /* Define ROS context */
-  CONTEXT = rcl_get_zero_initialized_context();
+  context = rcl_get_zero_initialized_context();
 
   /* Create init_options */
-  rcl_ret_t rc = rcl_init_options_init(&INIT_OPTIONS, ALLOCATOR);
+  rcl_ret_t rc = rcl_init_options_init(&init_options, allocator);
   if (rc != RCL_RET_OK)
   {
     flb_error("Error rcl_init_options_init: %d.\n", rc);
@@ -172,7 +172,7 @@ static int ros2_rclc_init()
   }
 
   /* Create context */
-  rc = rcl_init(0, NULL, &INIT_OPTIONS, &CONTEXT);
+  rc = rcl_init(0, NULL, &init_options, &context);
   if (rc != RCL_RET_OK)
   {
     flb_error("Error in rcl_init.\n");
@@ -184,9 +184,9 @@ static int ros2_rclc_init()
 static int ros2_node_init(struct flb_ros2* ctx)
 {
   /* Create node */
-  NODE = rcl_get_zero_initialized_node();
+  node = rcl_get_zero_initialized_node();
   const char* node_name = ctx->node_name;
-  rcl_ret_t rc = rcl_node_init(&NODE, node_name, "/", &CONTEXT, &NODE_OPS);
+  rcl_ret_t rc = rcl_node_init(&node, node_name, "/", &context, &node_ops);
   if (rc != RCL_RET_OK)
   {
     flb_error("Error in rclc_node_init\n");
@@ -226,7 +226,7 @@ static int ros2_subscribers_init(struct flb_ros2* ctx)
     subscriber->data_type_support = ROSIDL_GET_MSG_TYPE_SUPPORT(dc_interfaces, msg, StringStamped);
     subscriber->subscription_options = rcl_subscription_get_default_options();
 
-    rcl_ret_t rc = rcl_subscription_init(&(subscriber->data_subscription), &NODE, subscriber->data_type_support,
+    rcl_ret_t rc = rcl_subscription_init(&(subscriber->data_subscription), &node, subscriber->data_type_support,
                                          topic->str, &(subscriber->subscription_options));
     if (rc != RCL_RET_OK)
     {
@@ -253,7 +253,7 @@ static int ros2_executor_init(struct flb_ros2* ctx)
 {
   /* Executor */
   int len = mk_list_size(ctx->topics_list);
-  rclc_executor_init(&EXECUTOR, &CONTEXT, len, &ALLOCATOR);
+  rclc_executor_init(&executor, &context, len, &allocator);
 
   /* Add subscriptions to executor */
   struct mk_list* head;
@@ -264,14 +264,14 @@ static int ros2_executor_init(struct flb_ros2* ctx)
   mk_list_foreach_safe(head, tmp, &ctx->topic_subs)
   {
     an_item = mk_list_entry(head, struct rclc_subscriber, _head);
-    rc = rclc_executor_add_subscription(&EXECUTOR, &an_item->data_subscription, &(an_item->data_msg), &data_callback,
+    rc = rclc_executor_add_subscription(&executor, &an_item->data_subscription, &(an_item->data_msg), &data_callback,
                                         ON_NEW_DATA);
     if (rc != RCL_RET_OK)
     {
       flb_error("Error in rclc_executor_add_subscription.\n");
     }
   }
-  rc = rclc_executor_prepare(&EXECUTOR);
+  rc = rclc_executor_prepare(&executor);
   if (rc != RCL_RET_OK)
   {
     flb_error("Error in rclc_executor_prepare.\n");
@@ -284,7 +284,7 @@ static int ros2_executor_init(struct flb_ros2* ctx)
 static int in_ros2_collect(struct flb_input_instance* ins, struct flb_config* config, void* in_context)
 {
   struct flb_ros2* ctx = in_context;
-  rclc_executor_spin_some(&EXECUTOR, RCL_MS_TO_NS(ctx->spin_time));
+  rclc_executor_spin_some(&executor, RCL_MS_TO_NS(ctx->spin_time));
   return 0;
 }
 
@@ -372,7 +372,7 @@ static int in_ros2_init(struct flb_input_instance* in, struct flb_config* config
     return -1;
   }
 
-  GLOB_CTX = ctx;
+  glob_ctx = ctx;
   /* Always initialize built-in JSON pack state */
   flb_pack_state_init(&ctx->pack_state);
   /* Load fluentbit context config */
@@ -401,16 +401,16 @@ static int in_ros2_exit(void* data, struct flb_config* config)
   mk_list_foreach_safe(head, tmp, &ctx->topic_subs)
   {
     an_item = mk_list_entry(head, struct rclc_subscriber, _head);
-    rc = rcl_subscription_fini(&an_item->data_subscription, &NODE);
+    rc = rcl_subscription_fini(&an_item->data_subscription, &node);
   }
-  rc += rcl_node_fini(&NODE);
-  rc += rcl_init_options_fini(&INIT_OPTIONS);
+  rc += rcl_node_fini(&node);
+  rc += rcl_init_options_fini(&init_options);
   mk_list_foreach_safe(head, tmp, &ctx->topic_subs)
   {
     an_item = mk_list_entry(head, struct rclc_subscriber, _head);
     dc_interfaces__msg__StringStamped__fini(&(an_item->data_msg));
   }
-  rc += rclc_executor_fini(&EXECUTOR);
+  rc += rclc_executor_fini(&executor);
 
   if (rc != RCL_RET_OK)
   {
@@ -422,7 +422,7 @@ static int in_ros2_exit(void* data, struct flb_config* config)
   return 0;
 }
 
-struct flb_input_plugin IN_ROS2_PLUGIN = { .name = "ros2",
+struct flb_input_plugin in_ros2_plugin = { .name = "ros2",
                                            .description = "ROS2 Input",
                                            .cb_init = in_ros2_init,
                                            .cb_pre_run = NULL,
