@@ -17,7 +17,7 @@ class SameAsPrevious : public dc_conditions::Condition
 {
 public:
   SameAsPrevious();
-  ~SameAsPrevious();
+  ~SameAsPrevious() override;
 
 protected:
   std::vector<std::string> exclude_;
@@ -25,8 +25,8 @@ protected:
   std::vector<std::string> keys_hash_;
   std::vector<std::string> previous_keys_hash_;
   std::string topic_;
-  bool getState(dc_interfaces::msg::StringStamped msg);
-  void onConfigure();
+  bool getState(dc_interfaces::msg::StringStamped msg) override;
+  void onConfigure() override;
   json previous_json_;
   bool file_hash_same_{ true };
 };

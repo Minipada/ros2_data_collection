@@ -9,6 +9,7 @@
 #include <memory>
 #include <nlohmann/json-schema.hpp>
 #include <nlohmann/json.hpp>
+#include <utility>
 
 #include "dc_core/condition.hpp"
 #include "dc_core/measurement.hpp"
@@ -54,7 +55,7 @@ public:
   {
   }
 
-  virtual ~Measurement() = default;
+  ~Measurement() override = default;
 
   // an opportunity for derived classes to set the validation schema
   // if they chose
@@ -130,7 +131,7 @@ public:
 
   void validateSchema(const std::string& package_name, const std::string& json_filename)
   {
-    std::string package_share_directory = ament_index_cpp::get_package_share_directory(package_name.c_str());
+    std::string package_share_directory = ament_index_cpp::get_package_share_directory(package_name);
     std::string path = package_share_directory + "/plugins/measurements/json/" + json_filename.c_str();
     std::ifstream f(path.c_str());
     try
@@ -182,7 +183,7 @@ public:
     }
   }
 
-  bool isConditionOn(dc_interfaces::msg::StringStamped msg)
+  bool isConditionOn(const dc_interfaces::msg::StringStamped& msg)
   {
     bool all_conditions_res = true;
     bool any_conditions_res = true;
@@ -359,7 +360,7 @@ public:
   {
     if (enabled_)
     {
-      publish(msg);
+      publish(std::move(msg));
     }
   }
 
@@ -376,15 +377,15 @@ public:
 
   // configure the server on lifecycle setup
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
-                 const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
-                 std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
+                 const std::map<std::string, std::shared_ptr<dc_core::Condition>>&  /*conditions*/,
+                 std::shared_ptr<tf2_ros::Buffer>  /*tf*/, const std::string& measurement_plugin,
                  const std::string& group_key, const std::string& topic_output, const int& polling_interval,
                  const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
-                 const std::vector<std::string>& tags, const bool& init_collect, const int& init_max_measurements,
+                 const std::vector<std::string>&  /*tags*/, const bool& init_collect, const int& init_max_measurements,
                  const bool& include_measurement_name, const bool& include_measurement_plugin,
-                 const int& condition_max_measurements, const std::vector<std::string>& if_all_conditions,
-                 const std::vector<std::string>& if_any_conditions, const std::vector<std::string>& if_none_conditions,
-                 const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
+                 const int& condition_max_measurements, const std::vector<std::string>&  /*if_all_conditions*/,
+                 const std::vector<std::string>&  /*if_any_conditions*/, const std::vector<std::string>&  /*if_none_conditions*/,
+                 const std::vector<std::string>&  /*remote_keys*/, const std::vector<std::string>&  /*remote_prefixes*/,
                  const std::string& save_local_base_path, const std::string& all_base_path,
                  const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded) override
   {

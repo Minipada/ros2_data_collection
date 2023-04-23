@@ -9,7 +9,7 @@ namespace measurement_server
 {
 
 MeasurementServer::MeasurementServer(const rclcpp::NodeOptions& options,
-                                     const std::vector<std::string>& measurement_plugins)
+                                     const std::vector<std::string>&  /*measurement_plugins*/)
   : nav2_util::LifecycleNode("measurement_server", "", options)
   , measurement_plugin_loader_("dc_core", "dc_core::Measurement")
   , condition_plugin_loader_("dc_core", "dc_core::Condition")
@@ -57,7 +57,7 @@ MeasurementServer::~MeasurementServer()
   measurements_.clear();
 }
 
-nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle::State&)
+nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Configuring");
   auto node = shared_from_this();
@@ -217,7 +217,7 @@ bool MeasurementServer::loadMeasurementPlugins()
   return true;
 }
 
-nav2_util::CallbackReturn MeasurementServer::on_activate(const rclcpp_lifecycle::State&)
+nav2_util::CallbackReturn MeasurementServer::on_activate(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Activating");
   std::vector<pluginlib::UniquePtr<dc_core::Measurement>>::iterator iter;
@@ -256,7 +256,7 @@ nav2_util::CallbackReturn MeasurementServer::on_cleanup(const rclcpp_lifecycle::
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
-nav2_util::CallbackReturn MeasurementServer::on_shutdown(const rclcpp_lifecycle::State&)
+nav2_util::CallbackReturn MeasurementServer::on_shutdown(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Shutting down");
   return nav2_util::CallbackReturn::SUCCESS;

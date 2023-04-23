@@ -117,7 +117,7 @@ void IpCamera::onConfigure()
 
   // Start the ffmpeg command in a separate thread
   ffmpeg_thread_ = std::thread(
-      [&](std::string command) {
+      [&](const std::string& command) {
         // Run the ffmpeg command
         if (std::system(command.c_str()) != 0)
         {

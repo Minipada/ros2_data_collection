@@ -39,7 +39,7 @@ public:
   {
   }
 
-  virtual ~Condition() = default;
+  ~Condition() override = default;
 
   // an opportunity for derived classes to do something on configuration
   // if they chose

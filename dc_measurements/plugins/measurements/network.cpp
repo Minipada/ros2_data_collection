@@ -100,7 +100,7 @@ json Network::getNetworkInterfaces()
   if_nidxs = if_nameindex();
   if (if_nidxs != nullptr)
   {
-    for (intf = if_nidxs; intf->if_index != 0 || intf->if_name != NULL; intf++)
+    for (intf = if_nidxs; intf->if_index != 0 || intf->if_name != nullptr; intf++)
     {
       interfaces.push_back(intf->if_name);
     }
@@ -140,7 +140,7 @@ int Network::unpack()
   timeout_str.tv_usec = ping_timeout_ms_ * 1000;
   for (;;)
   {
-    cc = select(32, &rfds, 0, 0, &timeout_str);
+    cc = select(32, &rfds, nullptr, nullptr, &timeout_str);
     if (cc == -1)
     {
       return -1;

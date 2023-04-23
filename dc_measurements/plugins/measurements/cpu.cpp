@@ -27,7 +27,7 @@ void Cpu::setValidationSchema()
   }
 }
 
-void Cpu::setAverageCpu(json& data_json)
+void Cpu::setAverageCpu(json&  /*data_json*/)
 {
   std::vector<float> values;
   int cpu_id{ 0 };
@@ -45,7 +45,7 @@ void Cpu::setAverageCpu(json& data_json)
   data_json["average"] = sum / values.size();
 }
 
-void Cpu::setProcessesUsage(json& data_json)
+void Cpu::setProcessesUsage(json&  /*data_json*/)
 {
   data_json["sorted"] = json::array();
   int count = 0;
@@ -70,7 +70,7 @@ void Cpu::setProcessesUsage(json& data_json)
   }
 }
 
-void setProcessesCount(json& data_json)
+void setProcessesCount(json&  /*data_json*/)
 {
   data_json["processes"] = lp::TotalProcesses();
 }

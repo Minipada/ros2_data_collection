@@ -137,7 +137,7 @@ void Processor::AddCpuSample(int cpu_id, int idle, int active)
  */
 int Processor::NumCpus()
 {
-  if (cpu_data_.size() == 0)
+  if (cpu_data_.empty())
   {
     UpdateData();
   }

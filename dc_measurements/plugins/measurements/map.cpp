@@ -103,7 +103,7 @@ int Map::getMapSize(const std::string& path_map)
   return std::stoi(width);
 }
 
-void Map::saveRemoteKeys(json& data_json, const std::string& key, const std::string& relative_path,
+void Map::saveRemoteKeys(json&  /*data_json*/, const std::string& key, const std::string& relative_path,
                          const rclcpp::Time& now)
 {
   for (auto it = remote_keys_.begin(); it != remote_keys_.end(); ++it)

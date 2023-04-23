@@ -25,7 +25,7 @@ class Camera : public dc_measurements::Measurement
 {
 public:
   Camera();
-  ~Camera();
+  ~Camera() override;
   dc_interfaces::msg::StringStamped collect() override;
 
 private:

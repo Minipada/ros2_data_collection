@@ -18,12 +18,12 @@ void ListStringEqual::onConfigure()
   node->get_parameter(condition_name_ + ".order_matters", order_matters_);
 }
 
-bool ListStringEqual::compareFunction(std::string a, std::string b)
+bool ListStringEqual::compareFunction(const std::string& a, const std::string& b)
 {
   return a < b;
 }
 
-void ListStringEqual::sortStringVector(std::vector<std::string>& str_vector)
+void ListStringEqual::sortStringVector(std::vector<std::string>&  /*str_vector*/)
 {
   std::sort(str_vector.begin(), str_vector.end(), this->compareFunction);
 }

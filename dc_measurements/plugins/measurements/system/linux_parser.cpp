@@ -113,7 +113,7 @@ float LinuxParser::MemoryUtilization()
   {
     while ((std::getline(fs, line)) && i < 2)
     {
-      auto pos = line.find(":");
+      auto pos = line.find(':');
       line_split = line.substr(pos + 1, -1);
 
       std::istringstream ss(line_split);
@@ -254,8 +254,8 @@ vector<long> LinuxParser::PidStat(int pid)
   if (fs.is_open())
   {
     std::getline(fs, line);
-    op = line.find("(");
-    cp = line.find(")");
+    op = line.find('(');
+    cp = line.find(')');
     line = line.replace(op + 1, cp - op - 1, "");
     result.clear();
     for (auto pos : token_pos)
@@ -298,9 +298,9 @@ string LinuxParser::Command(int pid)
       {
         if (std::getline(fs2, line))
         {
-          cp = line.find(")");
+          cp = line.find(')');
           line = line.substr(0, cp + 1);
-          op = line.find("(");
+          op = line.find('(');
           line = line.substr(op, line.size());
           command = line;
         }
@@ -426,7 +426,7 @@ long LinuxParser::StartTime(int pid)
  *          token to parse (count starts at 1).
  *  Outputs: A string representing a single token.
  */
-string LinuxParser::NthToken(string line, int token_pos)
+string LinuxParser::NthToken(const string& line, int token_pos)
 {
   string token = "";
   std::stringstream ss(line);

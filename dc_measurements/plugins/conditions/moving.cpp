@@ -24,7 +24,7 @@ void Moving::onConfigure()
       odom_topic_.c_str(), 10, std::bind(&Moving::odomCb, this, std::placeholders::_1));
 }
 
-void Moving::odomCb(nav_msgs::msg::Odometry::SharedPtr msg)
+void Moving::odomCb(nav_msgs::msg::Odometry::SharedPtr  /*msg*/)
 {
   float speed = sqrt(msg->twist.twist.linear.x * msg->twist.twist.linear.x +
                      msg->twist.twist.linear.y * msg->twist.twist.linear.y);

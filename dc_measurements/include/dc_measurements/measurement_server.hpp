@@ -30,7 +30,7 @@ public:
    */
   explicit MeasurementServer(const rclcpp::NodeOptions& options = rclcpp::NodeOptions(),
                              const std::vector<std::string>& measurement_plugins = std::vector<std::string>());
-  ~MeasurementServer();
+  ~MeasurementServer() override;
 
   /**
    * @brief Loads measurement plugins from parameter file

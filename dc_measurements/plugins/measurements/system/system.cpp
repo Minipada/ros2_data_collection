@@ -42,7 +42,7 @@ vector<Process>& System::Processes()
   vector<int> fresh_pids{ lp::Pids() };
   vector<int> remove_pids;
   vector<int> add_pids;
-  if (current_pids.size() == 0)
+  if (current_pids.empty())
   {
     AddProcs(fresh_pids);
   }
@@ -137,7 +137,7 @@ vector<int> System::DumpPids()
  *  Inputs: A vector of integers to be searched, and vector of search ints.
  *  Outputs: A vector of int from b that are not found in a.
  */
-vector<int> System::NoPartner(vector<int> partner_a, vector<int> partner_b)
+vector<int> System::NoPartner(vector<int> partner_a, const vector<int>& partner_b)
 {
   vector<int> not_list;
   std::vector<int>::iterator i;
@@ -158,7 +158,7 @@ vector<int> System::NoPartner(vector<int> partner_a, vector<int> partner_b)
  *  Inputs: A vector of PIDs as ints.
  *  Outputs: None.
  */
-void System::AddProcs(const vector<int> pid_list)
+void System::AddProcs(const vector<int>& pid_list)
 {
   for (int pid : pid_list)
   {

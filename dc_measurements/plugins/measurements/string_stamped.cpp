@@ -25,7 +25,7 @@ void StringStamped::setValidationSchema()
 {
 }
 
-void StringStamped::dataCb(dc_interfaces::msg::StringStamped::SharedPtr msg)
+void StringStamped::dataCb(dc_interfaces::msg::StringStamped::SharedPtr  /*msg*/)
 {
   last_data_ = *msg;
   if (!timer_based_)

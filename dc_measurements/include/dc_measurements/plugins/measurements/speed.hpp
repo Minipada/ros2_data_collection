@@ -14,7 +14,7 @@ class Speed : public dc_measurements::Measurement
 {
 public:
   Speed();
-  ~Speed();
+  ~Speed() override;
   dc_interfaces::msg::StringStamped collect() override;
 
 protected:

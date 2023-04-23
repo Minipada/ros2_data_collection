@@ -13,24 +13,24 @@
 class System
 {
 public:
-  Processor& Cpu();
-  std::vector<Process>& Processes();
-  float MemoryUtilization();
-  long UpTime();
-  int TotalProcesses();
-  int RunningProcesses();
-  std::string Kernel();
-  std::string OperatingSystem();
+  Processor& cpu();
+  std::vector<Process>& processes();
+  float memoryUtilization();
+  long upTime();
+  int totalProcesses();
+  int runningProcesses();
+  std::string kernel();
+  std::string operatingSystem();
 
 private:
   Processor cpu_ = {};
   std::vector<Process> processes_ = {};
 
-  std::vector<int> DumpPids();
-  std::vector<int> NoPartner(const std::vector<int> partner_a, const std::vector<int> partner_b);
-  void AddProcs(const std::vector<int> pid_list);
-  void PruneProcs(const std::vector<int> dead_pids);
-  void SortProcsByCpu();
+  std::vector<int> dumpPids();
+  std::vector<int> noPartner(const std::vector<int> partner_a, const std::vector<int>& partner_b);
+  void addProcs(const std::vector<int>& pid_list);
+  void pruneProcs(const std::vector<int> dead_pids);
+  void sortProcsByCpu();
 };
 
 #endif

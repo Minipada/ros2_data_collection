@@ -15,14 +15,14 @@ class DoubleInferior : public dc_conditions::Condition
 {
 public:
   DoubleInferior();
-  ~DoubleInferior();
+  ~DoubleInferior() override;
 
 protected:
   std::string key_;
   double value_;
   bool include_value_;
-  bool getState(dc_interfaces::msg::StringStamped msg);
-  void onConfigure();
+  bool getState(dc_interfaces::msg::StringStamped msg) override;
+  void onConfigure() override;
 };
 
 }  // namespace dc_conditions

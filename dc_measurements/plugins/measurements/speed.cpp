@@ -9,7 +9,7 @@ Speed::Speed() : dc_measurements::Measurement()
 
 Speed::~Speed() = default;
 
-void Speed::odomCb(nav_msgs::msg::Odometry::SharedPtr msg)
+void Speed::odomCb(nav_msgs::msg::Odometry::SharedPtr  /*msg*/)
 {
   json data_json;
   data_json["linear"]["x"] = msg->twist.twist.linear.x;

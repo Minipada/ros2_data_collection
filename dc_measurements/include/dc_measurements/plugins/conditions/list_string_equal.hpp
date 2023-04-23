@@ -17,15 +17,15 @@ class ListStringEqual : public dc_conditions::Condition
 {
 public:
   ListStringEqual();
-  ~ListStringEqual();
+  ~ListStringEqual() override;
 
 protected:
   std::string key_;
   std::vector<std::string> value_;
   bool order_matters_;
-  bool getState(dc_interfaces::msg::StringStamped msg);
-  void onConfigure();
-  static bool compareFunction(std::string a, std::string b);
+  bool getState(dc_interfaces::msg::StringStamped msg) override;
+  void onConfigure() override;
+  static bool compareFunction(const std::string& a, const std::string& b);
   void sortStringVector(std::vector<std::string>& str_vector);
 };
 

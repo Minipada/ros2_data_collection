@@ -15,7 +15,7 @@ class Moving : public dc_conditions::Condition
 {
 public:
   Moving();
-  ~Moving();
+  ~Moving() override;
 
 private:
   std::string odom_topic_;

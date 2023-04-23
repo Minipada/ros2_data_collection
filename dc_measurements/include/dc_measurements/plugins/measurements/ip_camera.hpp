@@ -21,7 +21,7 @@ class IpCamera : public dc_measurements::Measurement
 {
 public:
   IpCamera();
-  ~IpCamera();
+  ~IpCamera() override;
   dc_interfaces::msg::StringStamped collect() override;
   std::string getAbsolutePath(const std::string& param_reference);
 

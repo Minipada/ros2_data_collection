@@ -12,7 +12,7 @@ class StringStamped : public dc_measurements::Measurement
 {
 public:
   StringStamped();
-  ~StringStamped();
+  ~StringStamped() override;
   dc_interfaces::msg::StringStamped collect() override;
   void dataCb(dc_interfaces::msg::StringStamped::SharedPtr msg);
   void onConfigure() override;

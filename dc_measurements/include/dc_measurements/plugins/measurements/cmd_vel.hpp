@@ -17,7 +17,7 @@ class CmdVel : public dc_measurements::Measurement
 {
 public:
   CmdVel();
-  ~CmdVel();
+  ~CmdVel() override;
   dc_interfaces::msg::StringStamped collect() override;
 
 private:

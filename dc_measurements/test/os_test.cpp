@@ -10,7 +10,7 @@ protected:
     SetUp();
   }
 
-  ~MeasurementServerTest()
+  ~MeasurementServerTest() override
   {
   }
 
