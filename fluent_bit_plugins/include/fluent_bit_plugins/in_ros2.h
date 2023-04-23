@@ -62,6 +62,6 @@ struct flb_ros2
   struct flb_input_instance* ins;
 };
 
-extern struct flb_input_plugin in_ros2_plugin;
+extern struct flb_input_plugin IN_ROS2_PLUGIN;
 
 #endif

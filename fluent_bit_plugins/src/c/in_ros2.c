@@ -422,7 +422,7 @@ static int in_ros2_exit(void* data, struct flb_config* config)
   return 0;
 }
 
-struct flb_input_plugin in_ros2_plugin = { .name = "ros2",
+struct flb_input_plugin IN_ROS2_PLUGIN = { .name = "ros2",
                                            .description = "ROS2 Input",
                                            .cb_init = in_ros2_init,
                                            .cb_pre_run = NULL,
