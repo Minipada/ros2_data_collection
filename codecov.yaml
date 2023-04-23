@@ -1,0 +1,12 @@
+coverage:
+  precision: 2
+  round: up
+  range: "45...70"
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 5%
+    patch: off
+ignore:
+  - "moveit_planners/test_configs"
