@@ -125,8 +125,8 @@ std::string expand_env(std::string text)
   while (std::regex_search(text, match, env_re))
   {
     auto const from = match[0];
-    auto const var_name = match[1].str().c_str();
-    text.replace(from.first, from.second, std::getenv(var_name));
+
+    text.replace(from.first, from.second, std::getenv(match[1].str().c_str()));
   }
   return text;
 }
@@ -139,8 +139,7 @@ std::string expand_values(std::string text, NodeT node)
   while (std::regex_search(text, match, env_re))
   {
     auto const from = match[0];
-    auto const var_name = match[1].str().c_str();
-    text.replace(from.first, from.second, node->get_parameter(var_name).as_string());
+    text.replace(from.first, from.second, node->get_parameter(match[1].str().c_str()).as_string());
   }
   return text;
 }

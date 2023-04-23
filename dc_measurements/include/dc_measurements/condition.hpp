@@ -104,7 +104,7 @@ public:
     enabled_ = false;
   }
 
-  virtual bool getState(dc_interfaces::msg::StringStamped msg)
+  virtual bool getState(dc_interfaces::msg::StringStamped msg) override
   {
     (void)msg;  // Ignore error of variable being unused
     publishActive();
