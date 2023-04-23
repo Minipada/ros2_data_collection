@@ -282,7 +282,7 @@ public:
     }
   }
 
-  void onDestinationConfigure()
+  void onDestinationConfigure() override
   {
     initFlbFilters();
     initFlbDebug();

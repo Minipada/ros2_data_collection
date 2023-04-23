@@ -77,7 +77,7 @@ public:
     return node;
   }
 
-  virtual void sendData(dc_interfaces::msg::StringStamped::SharedPtr msg)
+  void sendData(dc_interfaces::msg::StringStamped::SharedPtr msg) override
   {
     RCLCPP_DEBUG(logger_, "msg: %s", msg->data.c_str());
   }
