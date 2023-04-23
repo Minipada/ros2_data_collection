@@ -356,11 +356,11 @@ public:
     }
   }
 
-  void publishFromMsg(dc_interfaces::msg::StringStamped msg)
+  void publishFromMsg(const dc_interfaces::msg::StringStamped& msg)
   {
     if (enabled_)
     {
-      publish(std::move(msg));
+      publish(msg);
     }
   }
 
@@ -377,15 +377,15 @@ public:
 
   // configure the server on lifecycle setup
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
-                 const std::map<std::string, std::shared_ptr<dc_core::Condition>>&  /*conditions*/,
-                 std::shared_ptr<tf2_ros::Buffer>  /*tf*/, const std::string& measurement_plugin,
+                 const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
+                 std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
                  const std::string& group_key, const std::string& topic_output, const int& polling_interval,
                  const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
-                 const std::vector<std::string>&  /*tags*/, const bool& init_collect, const int& init_max_measurements,
+                 const std::vector<std::string>& tags, const bool& init_collect, const int& init_max_measurements,
                  const bool& include_measurement_name, const bool& include_measurement_plugin,
-                 const int& condition_max_measurements, const std::vector<std::string>&  /*if_all_conditions*/,
-                 const std::vector<std::string>&  /*if_any_conditions*/, const std::vector<std::string>&  /*if_none_conditions*/,
-                 const std::vector<std::string>&  /*remote_keys*/, const std::vector<std::string>&  /*remote_prefixes*/,
+                 const int& condition_max_measurements, const std::vector<std::string>& if_all_conditions,
+                 const std::vector<std::string>& if_any_conditions, const std::vector<std::string>& if_none_conditions,
+                 const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
                  const std::string& save_local_base_path, const std::string& all_base_path,
                  const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded) override
   {

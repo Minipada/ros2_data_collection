@@ -25,7 +25,7 @@ using std::vector;
  *  Inputs: None.
  *  Outputs: A reference to the Processor object living inside the System.
  */
-Processor& System::Cpu()
+Processor& System::cpu()
 {
   return cpu_;
 }
@@ -36,24 +36,24 @@ Processor& System::Cpu()
  *  Inputs: None.
  *  Outputs: A reference to the System vector of Process objects.
  */
-vector<Process>& System::Processes()
+vector<Process>& System::processes()
 {
-  vector<int> current_pids{ DumpPids() };
+  vector<int> current_pids{ dumpPids() };
   vector<int> fresh_pids{ lp::Pids() };
   vector<int> remove_pids;
   vector<int> add_pids;
   if (current_pids.empty())
   {
-    AddProcs(fresh_pids);
+    addProcs(fresh_pids);
   }
   else
   {
-    remove_pids = NoPartner(fresh_pids, current_pids);
-    add_pids = NoPartner(current_pids, fresh_pids);
-    AddProcs(add_pids);
-    PruneProcs(remove_pids);
+    remove_pids = noPartner(fresh_pids, current_pids);
+    add_pids = noPartner(current_pids, fresh_pids);
+    addProcs(add_pids);
+    pruneProcs(remove_pids);
   }
-  SortProcsByCpu();
+  sortProcsByCpu();
   return processes_;
 }
 
@@ -62,7 +62,7 @@ vector<Process>& System::Processes()
  *  Inputs: None.
  *  Outputs: A string representing the system kernel version.
  */
-std::string System::Kernel()
+std::string System::kernel()
 {
   return lp::Kernel();
 }
@@ -72,7 +72,7 @@ std::string System::Kernel()
  *  Inputs: None.
  *  Outputs: A float of RAM percentage in use.
  */
-float System::MemoryUtilization()
+float System::memoryUtilization()
 {
   return lp::MemoryUtilization();
 }
@@ -82,7 +82,7 @@ float System::MemoryUtilization()
  *  Inputs: None.
  *  Outputs: A string containing the host OS name.
  */
-std::string System::OperatingSystem()
+std::string System::operatingSystem()
 {
   return lp::OperatingSystem();
 }
@@ -92,7 +92,7 @@ std::string System::OperatingSystem()
  *  Inputs: None.
  *  Outputs: Integer counting active processes.
  */
-int System::RunningProcesses()
+int System::runningProcesses()
 {
   return lp::RunningProcesses();
 }
@@ -102,7 +102,7 @@ int System::RunningProcesses()
  *  Inputs: None.
  *  Outputs: Integer of the number of processes.
  */
-int System::TotalProcesses()
+int System::totalProcesses()
 {
   return lp::TotalProcesses();
 }
@@ -112,7 +112,7 @@ int System::TotalProcesses()
  *  Inputs: None.
  *  Outputs: A long integer type of the system uptime in seconds.
  */
-long System::UpTime()
+long System::upTime()
 {
   return lp::UpTime();
 }
@@ -122,12 +122,12 @@ long System::UpTime()
  *  Inputs: None.
  *  Outputs: A vector of PIDs as ints.
  */
-vector<int> System::DumpPids()
+vector<int> System::dumpPids()
 {
   vector<int> pid_list = {};
   for (Process process : processes_)
   {
-    pid_list.push_back(process.Pid());
+    pid_list.push_back(process.pid());
   }
   return pid_list;
 }
@@ -137,7 +137,7 @@ vector<int> System::DumpPids()
  *  Inputs: A vector of integers to be searched, and vector of search ints.
  *  Outputs: A vector of int from b that are not found in a.
  */
-vector<int> System::NoPartner(vector<int> partner_a, const vector<int>& partner_b)
+vector<int> System::noPartner(vector<int> partner_a, const vector<int>& partner_b)
 {
   vector<int> not_list;
   std::vector<int>::iterator i;
@@ -158,7 +158,7 @@ vector<int> System::NoPartner(vector<int> partner_a, const vector<int>& partner_
  *  Inputs: A vector of PIDs as ints.
  *  Outputs: None.
  */
-void System::AddProcs(const vector<int>& pid_list)
+void System::addProcs(const vector<int>& pid_list)
 {
   for (int pid : pid_list)
   {
@@ -166,19 +166,19 @@ void System::AddProcs(const vector<int>& pid_list)
   }
 }
 
-/********* System::PruneProcs *******
+/********* System::pruneProcs *******
  *  Removes from the Process vector processes that are no longer running.
  *  Inputs: A vector of ints representing PIDs that have been terminated.
  *  Outputs: None.
  */
-void System::PruneProcs(vector<int> dead_pids)
+void System::pruneProcs(vector<int> dead_pids)
 {
   vector<Process> new_procs;
   std::vector<int>::iterator i;
 
   for (Process process : processes_)
   {
-    i = std::find(dead_pids.begin(), dead_pids.end(), process.Pid());
+    i = std::find(dead_pids.begin(), dead_pids.end(), process.pid());
     if (i == dead_pids.end())
     {
       new_procs.push_back(process);
@@ -193,11 +193,11 @@ void System::PruneProcs(vector<int> dead_pids)
  *  Inputs: None.
  *  Outputs: None.
  */
-void System::SortProcsByCpu()
+void System::sortProcsByCpu()
 {
   for (Process& process : processes_)
   {
-    process.UpdateCpuData();
+    process.updateCpuData();
   }
   std::sort(processes_.begin(), processes_.end());
 }

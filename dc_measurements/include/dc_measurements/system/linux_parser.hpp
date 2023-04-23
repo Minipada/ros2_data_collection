@@ -59,7 +59,7 @@ enum CPUState
   K_NICE,
   K_SYSTEM,
   K_IDLE,
-  K_I_OWAIT,
+  K_IO_WAIT,
   K_IRQ,
   K_SOFT_IRQ,
   K_STEAL,
@@ -112,6 +112,6 @@ long StartTime(int pid);
  */
 std::string NthToken(const std::string& line, int token_pos);
 int SysClk();
-}  // namespace LinuxParsere LinuxParser
+}  // namespace LinuxParser
 
 #endif

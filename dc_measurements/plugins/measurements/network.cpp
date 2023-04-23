@@ -45,11 +45,11 @@ void Network::onConfigure()
   else {}
   id_ = getpid() & 0xFFFF;
 
-  if ((skt = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0)
+  if ((skt_ = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0)
   {
     RCLCPP_ERROR(logger_, "ping: [ICMP] unknown protocol or Permission denied, try again with root permissions");
   }
-  setsockopt(skt, IPPROTO_IP, IP_TTL, (char*)&ttl, sizeof(ttl));
+  setsockopt(skt_, IPPROTO_IP, IP_TTL, (char*)&ttl_, sizeof(ttl_));
 }
 
 void Network::setValidationSchema()
@@ -79,7 +79,7 @@ bool Network::ping()
   gettimeofday(tp, &tz_);
   icmp_rout->icmp_cksum = inCksum((unsigned short*)icmp_rout, cc);
 
-  i = sendto(skt, (char*)outpack, cc, 0, (struct sockaddr*)&to_, (socklen_t)sizeof(struct sockaddr_in));
+  i = sendto(skt_, (char*)outpack, cc, 0, (struct sockaddr*)&to_, (socklen_t)sizeof(struct sockaddr_in));
   if (i < 0 || i != cc)
   {
     if (i < 0)
@@ -135,7 +135,7 @@ int Network::unpack()
   fd_set rfds;
 
   FD_ZERO(&rfds);
-  FD_SET(skt, &rfds);
+  FD_SET(skt_, &rfds);
   timeout_str.tv_sec = 0;
   timeout_str.tv_usec = ping_timeout_ms_ * 1000;
   for (;;)
@@ -150,7 +150,7 @@ int Network::unpack()
       struct icmp* icp;
       struct timeval tv;
       fromlen = sizeof(sockaddr_in);
-      if ((cc = recvfrom(skt, packet_, sizeof(packet_), 0, (struct sockaddr*)&from_, (socklen_t*)&fromlen)) < 0)
+      if ((cc = recvfrom(skt_, packet_, sizeof(packet_), 0, (struct sockaddr*)&from_, (socklen_t*)&fromlen)) < 0)
       {
         RCLCPP_ERROR(logger_, "ping: Error occurred in recvfrom call");
         return -1;
@@ -184,14 +184,14 @@ int Network::unpack()
       }
       tv.tv_sec -= ep->tv_sec;
       triptime = tv.tv_sec * 1000 + (tv.tv_usec / 1000);
-      tsum += triptime;
-      if (triptime < tmin)
-        tmin = triptime;
-      if (triptime > tmax)
-        tmax = triptime;
+      tsum_ += triptime;
+      if (triptime < tmin_)
+        tmin_ = triptime;
+      if (triptime > tmax_)
+        tmax_ = triptime;
 
-      RCLCPP_DEBUG(logger_, "%d bytes from_ %s, icmp_type=%d, icmp_code=%d, ttl=%d, triptime=%d ms", cc,
-                   inet_ntoa(from_.sin_addr), icp->icmp_type, icp->icmp_code, ttl, triptime);
+      RCLCPP_DEBUG(logger_, "%d bytes from_ %s, icmp_type=%d, icmp_code=%d, ttl_=%d, triptime=%d ms", cc,
+                   inet_ntoa(from_.sin_addr), icp->icmp_type, icp->icmp_code, ttl_, triptime);
       return triptime;
     }
     else

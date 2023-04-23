@@ -29,7 +29,7 @@ private:
   std::vector<int> dumpPids();
   std::vector<int> noPartner(const std::vector<int> partner_a, const std::vector<int>& partner_b);
   void addProcs(const std::vector<int>& pid_list);
-  void pruneProcs(const std::vector<int> dead_pids);
+  void pruneProcs(std::vector<int> dead_pids);
   void sortProcsByCpu();
 };
 

@@ -127,7 +127,7 @@ void Camera::setValidationSchema()
   }
 }
 
-void Camera::saveRemoteKeys(json&  /*data_json*/, const std::string& key, const std::string& relative_path,
+void Camera::saveRemoteKeys(json& data_json, const std::string& key, const std::string& relative_path,
                             const rclcpp::Time& now)
 {
   for (auto it = remote_keys_.begin(); it != remote_keys_.end(); ++it)

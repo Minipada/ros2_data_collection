@@ -18,19 +18,19 @@ namespace lp = LinuxParser;
  *  Inputs: None.
  *  Outputs: A vector of floats representing CPU usage for each processor.
  */
-std::vector<float> Processor::Utilization()
+std::vector<float> Processor::utilization()
 {
-  UpdateData();
-  UpdateResult();
+  updateData();
+  updateResult();
   return cpu_result_;
 }
 
-/********* Processor::UpdateData *******
+/********* Processor::updateData *******
  *  Updates CPU usage information, sampling CPU time for each processor.
  *  Inputs: None.
  *  Outputs: None.
  */
-void Processor::UpdateData()
+void Processor::updateData()
 {
   std::string line = "";
   std::string line_elements = "";
@@ -40,7 +40,7 @@ void Processor::UpdateData()
   int idle{ 0 };
   int active{ 0 };
 
-  std::ifstream fs(lp::kProcDirectory + lp::kStatFilename);
+  std::ifstream fs(lp::K_PROC_DIRECTORY + lp::K_STAT_FILENAME);
   if (fs.is_open())
   {
     std::getline(fs, line);
@@ -59,11 +59,11 @@ void Processor::UpdateData()
         cpu_state.push_back(state_value);
       }
 
-      idle = cpu_state[lp::kIdle_] + cpu_state[lp::kIOwait_];
-      active = cpu_state[lp::kUser_] + cpu_state[lp::kNice_] + cpu_state[lp::kSystem_] + cpu_state[lp::kIRQ_] +
-               cpu_state[lp::kSoftIRQ_] + cpu_state[lp::kSteal_];
+      idle = cpu_state[lp::K_IDLE] + cpu_state[lp::K_IO_WAIT];
+      active = cpu_state[lp::K_USER] + cpu_state[lp::K_NICE] + cpu_state[lp::K_SYSTEM] + cpu_state[lp::K_IRQ] +
+               cpu_state[lp::K_SOFT_IRQ] + cpu_state[lp::K_STEAL];
 
-      AddCpuSample(count, idle, active);
+      addCpuSample(count, idle, active);
       cpu_state.clear();
       count++;
     }
@@ -76,7 +76,7 @@ void Processor::UpdateData()
  *  Inputs: None.
  *  Outputs: None.
  */
-void Processor::UpdateResult()
+void Processor::updateResult()
 {
   float total{ 0.0f };
   float total_prev{ 0.0f };
@@ -87,10 +87,10 @@ void Processor::UpdateResult()
 
   for (std::vector<CpuNData> cpu : cpu_data_)
   {
-    total = cpu[lp::kPresent_].idle + cpu[lp::kPresent_].active;
-    total_prev = cpu[lp::kPast_].idle + cpu[lp::kPast_].active;
+    total = cpu[lp::K_PRESENT].idle + cpu[lp::K_PRESENT].active;
+    total_prev = cpu[lp::K_PAST].idle + cpu[lp::K_PAST].active;
     totald = total - total_prev;
-    idled = cpu[lp::kPresent_].idle - cpu[lp::kPast_].idle;
+    idled = cpu[lp::K_PRESENT].idle - cpu[lp::K_PAST].idle;
     cpu_usage_pct = (totald - idled) / totald;
     if (std::isnan(cpu_usage_pct))
     {
@@ -108,7 +108,7 @@ void Processor::UpdateResult()
  *  Adds a sample to the cpu_data_ vector, containing a vector for each CPU
  *  composed of two periodic samples of idle and active time.
  */
-void Processor::AddCpuSample(int cpu_id, int idle, int active)
+void Processor::addCpuSample(int cpu_id, int idle, int active)
 {
   size_t count = cpu_id;
   CpuNData data = { idle, active };
@@ -135,11 +135,11 @@ void Processor::AddCpuSample(int cpu_id, int idle, int active)
  *  Inputs: None.
  *  Outputs: Number of CPUs in the system.
  */
-int Processor::NumCpus()
+int Processor::numCpus()
 {
   if (cpu_data_.empty())
   {
-    UpdateData();
+    updateData();
   }
   return cpu_data_.size();
 }

@@ -2,6 +2,7 @@
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__STRING_STAMPED_HPP_
 
 #include "dc_core/measurement.hpp"
+#include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement.hpp"
 #include "nav2_util/node_utils.hpp"
 

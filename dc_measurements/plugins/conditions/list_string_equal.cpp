@@ -23,7 +23,7 @@ bool ListStringEqual::compareFunction(const std::string& a, const std::string& b
   return a < b;
 }
 
-void ListStringEqual::sortStringVector(std::vector<std::string>&  /*str_vector*/)
+void ListStringEqual::sortStringVector(std::vector<std::string>& str_vector)
 {
   std::sort(str_vector.begin(), str_vector.end(), this->compareFunction);
 }
