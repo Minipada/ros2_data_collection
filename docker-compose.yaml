@@ -10,7 +10,7 @@ x-stop-grace-period: &x-stop-grace-period "3s"
 
 services:
   ros2-data-collection:
-    image: ghcr.io/minipada/ros2_data_collection:humble-source-sim
+    image: minipada/ros2_data_collection:humble-source-sim
     privileged: true
     container_name: ros2-data-collection
     environment:

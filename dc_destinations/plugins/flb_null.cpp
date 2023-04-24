@@ -13,7 +13,7 @@ void FlbNull::onConfigure()
 
 void FlbNull::initFlbOutputPlugin()
 {
-  out_ffd_ = flb_output(ctx_, "null", NULL);
+  out_ffd_ = flb_output(ctx_, "null", nullptr);
   if (out_ffd_ == -1)
   {
     flb_destroy(ctx_);

@@ -10,9 +10,9 @@ Rcl::Rcl() : dc_destinations::Destination()
 {
 }
 
-void Rcl::sendData(dc_interfaces::msg::StringStamped::SharedPtr msg)
+void Rcl::sendData(const dc_interfaces::msg::StringStamped& msg)
 {
-  json data = json::parse(msg->data);
+  json data = json::parse(msg.data);
   if (!custom_params_.empty())
   {
     data.update(custom_params_);

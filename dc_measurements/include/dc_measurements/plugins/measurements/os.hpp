@@ -13,7 +13,7 @@ class OS : public dc_measurements::Measurement
 {
 public:
   OS();
-  ~OS();
+  ~OS() override;
   dc_interfaces::msg::StringStamped collect() override;
 
 protected:

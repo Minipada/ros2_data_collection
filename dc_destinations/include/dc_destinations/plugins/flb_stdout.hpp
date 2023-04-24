@@ -25,7 +25,7 @@ class FlbStdout : public dc_destinations::FlbDestination
 {
 public:
   FlbStdout();
-  ~FlbStdout();
+  ~FlbStdout() override;
 
 protected:
   /**

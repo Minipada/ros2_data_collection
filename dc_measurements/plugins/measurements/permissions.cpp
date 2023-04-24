@@ -45,7 +45,7 @@ struct stat Permissions::getOwner(const std::string& path)
   return info;
 }
 
-std::string Permissions::formatPermissions(const mode_t& perm, std::string format)
+std::string Permissions::formatPermissions(const mode_t& perm, const std::string& format)
 {
   std::string modeval;
   if (dc_util::stringMatchesRegex("[rR][wW][xX]", format))

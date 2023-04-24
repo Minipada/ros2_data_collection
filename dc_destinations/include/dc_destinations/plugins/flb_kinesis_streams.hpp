@@ -15,7 +15,7 @@ class FlbKinesisStreams : public dc_destinations::FlbDestination
 {
 public:
   FlbKinesisStreams();
-  ~FlbKinesisStreams();
+  ~FlbKinesisStreams() override;
 
 protected:
   /**

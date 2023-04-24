@@ -39,7 +39,7 @@ public:
   {
   }
 
-  virtual ~Condition() = default;
+  ~Condition() override = default;
 
   // an opportunity for derived classes to do something on configuration
   // if they chose
@@ -104,7 +104,7 @@ public:
     enabled_ = false;
   }
 
-  virtual bool getState(dc_interfaces::msg::StringStamped msg)
+  bool getState(dc_interfaces::msg::StringStamped msg) override
   {
     (void)msg;  // Ignore error of variable being unused
     publishActive();

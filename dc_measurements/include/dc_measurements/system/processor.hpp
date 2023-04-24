@@ -17,10 +17,10 @@ struct CpuNData
 class Processor
 {
 public:
-  std::vector<float> Utilization();
-  void UpdateData();
-  void UpdateResult();
-  int NumCpus();
+  std::vector<float> utilization();
+  void updateData();
+  void updateResult();
+  int numCpus();
 
 private:
   // Each vector represents CPU n, with a nested vector of CPU samples.
@@ -28,7 +28,7 @@ private:
   // Each float represents the percentage of active time for CPU n.
   std::vector<float> cpu_result_;
 
-  void AddCpuSample(int cpu_id, int idle, int active);
+  void addCpuSample(int cpu_id, int idle, int active);
 };
 
 #endif

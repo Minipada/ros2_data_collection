@@ -109,50 +109,50 @@ void FlbFilesMetrics::initFlbOutputPlugin()
     throw std::runtime_error("Cannot load plugin");
   }
 
-  out_ffd_ = flb_output(ctx_, "files_metrics", NULL);
-  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), NULL);
+  out_ffd_ = flb_output(ctx_, "files_metrics", nullptr);
+  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), nullptr);
 
-  flb_output_set(ctx_, out_ffd_, "retry_limit", "false", NULL);
-  flb_output_set(ctx_, out_ffd_, "file_storage", dc_util::to_space_separated_string(file_storage_).c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "db_type", db_type_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "delete_when_sent", dc_util::boolToString(delete_when_sent_), NULL);
+  flb_output_set(ctx_, out_ffd_, "retry_limit", "false", nullptr);
+  flb_output_set(ctx_, out_ffd_, "file_storage", dc_util::to_space_separated_string(file_storage_).c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "db_type", db_type_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "delete_when_sent", dc_util::boolToString(delete_when_sent_), nullptr);
 
   if (std::find(file_storage_.begin(), file_storage_.end(), "minio") != file_storage_.end())
   {
-    flb_output_set(ctx_, out_ffd_, "minio_endpoint", minio_endpoint_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "minio_access_key_id", minio_access_key_id_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "minio_secret_access_key", minio_secret_access_key_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "minio_use_ssl", dc_util::boolToString(minio_use_ssl_), NULL);
-    flb_output_set(ctx_, out_ffd_, "minio_create_bucket", minio_create_bucket_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "minio_bucket", minio_bucket_.c_str(), NULL);
+    flb_output_set(ctx_, out_ffd_, "minio_endpoint", minio_endpoint_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "minio_access_key_id", minio_access_key_id_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "minio_secret_access_key", minio_secret_access_key_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "minio_use_ssl", dc_util::boolToString(minio_use_ssl_), nullptr);
+    flb_output_set(ctx_, out_ffd_, "minio_create_bucket", minio_create_bucket_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "minio_bucket", minio_bucket_.c_str(), nullptr);
     flb_output_set(ctx_, out_ffd_, "minio_src_fields", dc_util::to_space_separated_string(minio_src_fields_).c_str(),
-                   NULL);
+                   nullptr);
     flb_output_set(ctx_, out_ffd_, "minio_upload_fields",
-                   dc_util::to_space_separated_string(minio_upload_fields_).c_str(), NULL);
+                   dc_util::to_space_separated_string(minio_upload_fields_).c_str(), nullptr);
   }
 
   if (std::find(file_storage_.begin(), file_storage_.end(), "s3") != file_storage_.end())
   {
-    flb_output_set(ctx_, out_ffd_, "s3_endpoint", s3_endpoint_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "s3_access_key_id", s3_access_key_id_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "s3_secret_access_key", s3_secret_access_key_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "s3_create_bucket", s3_create_bucket_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "s3_bucket", s3_bucket_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "s3_src_fields", dc_util::to_space_separated_string(s3_src_fields_).c_str(), NULL);
+    flb_output_set(ctx_, out_ffd_, "s3_endpoint", s3_endpoint_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "s3_access_key_id", s3_access_key_id_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "s3_secret_access_key", s3_secret_access_key_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "s3_create_bucket", s3_create_bucket_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "s3_bucket", s3_bucket_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "s3_src_fields", dc_util::to_space_separated_string(s3_src_fields_).c_str(), nullptr);
     flb_output_set(ctx_, out_ffd_, "s3_upload_fields", dc_util::to_space_separated_string(s3_upload_fields_).c_str(),
-                   NULL);
+                   nullptr);
   }
 
   if (db_type_ == "pgsql")
   {
     std::string pgsql_use_ssl_str = pgsql_use_ssl_ ? "require" : "disable";
-    flb_output_set(ctx_, out_ffd_, "pgsql_host", pgsql_host_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "pgsql_port", pgsql_port_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "pgsql_user", pgsql_user_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "pgsql_password", pgsql_password_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "pgsql_database", pgsql_database_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "pgsql_table", pgsql_table_.c_str(), NULL);
-    flb_output_set(ctx_, out_ffd_, "pgsql_use_ssl", pgsql_use_ssl_str.c_str(), NULL);
+    flb_output_set(ctx_, out_ffd_, "pgsql_host", pgsql_host_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "pgsql_port", pgsql_port_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "pgsql_user", pgsql_user_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "pgsql_password", pgsql_password_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "pgsql_database", pgsql_database_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "pgsql_table", pgsql_table_.c_str(), nullptr);
+    flb_output_set(ctx_, out_ffd_, "pgsql_use_ssl", pgsql_use_ssl_str.c_str(), nullptr);
   }
 }
 

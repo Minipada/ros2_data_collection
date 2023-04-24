@@ -15,11 +15,11 @@ class Moving : public dc_conditions::Condition
 {
 public:
   Moving();
-  ~Moving();
+  ~Moving() override;
 
 private:
   std::string odom_topic_;
-  void odomCb(nav_msgs::msg::Odometry::SharedPtr msg);
+  void odomCb(const nav_msgs::msg::Odometry& msg);
   void onConfigure() override;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscription_;
 

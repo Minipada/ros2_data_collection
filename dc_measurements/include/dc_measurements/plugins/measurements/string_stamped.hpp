@@ -2,6 +2,7 @@
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__STRING_STAMPED_HPP_
 
 #include "dc_core/measurement.hpp"
+#include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement.hpp"
 #include "nav2_util/node_utils.hpp"
 
@@ -12,10 +13,10 @@ class StringStamped : public dc_measurements::Measurement
 {
 public:
   StringStamped();
-  ~StringStamped();
+  ~StringStamped() override;
   dc_interfaces::msg::StringStamped collect() override;
-  void dataCb(dc_interfaces::msg::StringStamped::SharedPtr msg);
-  void onConfigure();
+  void dataCb(const dc_interfaces::msg::StringStamped& msg);
+  void onConfigure() override;
 
 protected:
   /**

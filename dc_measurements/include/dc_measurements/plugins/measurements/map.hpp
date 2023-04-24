@@ -17,7 +17,7 @@ class Map : public dc_measurements::Measurement
 {
 public:
   Map();
-  ~Map();
+  ~Map() override;
   dc_interfaces::msg::StringStamped collect() override;
 
 private:
