@@ -35,15 +35,15 @@ void FlbKinesisStreams::onConfigure()
 void FlbKinesisStreams::initFlbOutputPlugin()
 {
   /* Enable output plugin 'stdout' (print records to the standard output) */
-  out_ffd_ = flb_output(ctx_, "kinesis_streams", NULL);
-  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "stream", stream_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "role_arn", role_arn_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "time_key", time_key_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "time_key_format", time_key_format_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "log_key", log_key_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "endpoint", endpoint_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "auto_retry_requests", dc_util::boolToString(auto_retry_requests_), NULL);
+  out_ffd_ = flb_output(ctx_, "kinesis_streams", nullptr);
+  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "stream", stream_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "role_arn", role_arn_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "time_key", time_key_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "time_key_format", time_key_format_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "log_key", log_key_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "endpoint", endpoint_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "auto_retry_requests", dc_util::boolToString(auto_retry_requests_), nullptr);
 
   if (out_ffd_ == -1)
   {

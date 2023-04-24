@@ -9,6 +9,7 @@
 #include <memory>
 #include <nlohmann/json-schema.hpp>
 #include <nlohmann/json.hpp>
+#include <utility>
 
 #include "dc_core/condition.hpp"
 #include "dc_core/measurement.hpp"
@@ -54,7 +55,7 @@ public:
   {
   }
 
-  virtual ~Measurement() = default;
+  ~Measurement() override = default;
 
   // an opportunity for derived classes to set the validation schema
   // if they chose
@@ -130,8 +131,8 @@ public:
 
   void validateSchema(const std::string& package_name, const std::string& json_filename)
   {
-    std::string package_share_directory = ament_index_cpp::get_package_share_directory(package_name.c_str());
-    std::string path = package_share_directory + "/plugins/measurements/json/" + json_filename.c_str();
+    std::string package_share_directory = ament_index_cpp::get_package_share_directory(package_name);
+    std::string path = package_share_directory + "/plugins/measurements/json/" + json_filename;
     std::ifstream f(path.c_str());
     try
     {
@@ -182,7 +183,7 @@ public:
     }
   }
 
-  bool isConditionOn(dc_interfaces::msg::StringStamped msg)
+  bool isConditionOn(const dc_interfaces::msg::StringStamped& msg)
   {
     bool all_conditions_res = true;
     bool any_conditions_res = true;
@@ -193,7 +194,7 @@ public:
     {
       all_conditions_res =
           std::all_of(if_all_conditions_.begin(), if_all_conditions_.end(),
-                      [&](const std::string& condition) { return conditions_[condition]->getState(msg) == true; });
+                      [&](const std::string& condition) { return conditions_[condition]->getState(msg); });
     }
 
     // "Any" condition ON enable
@@ -202,7 +203,7 @@ public:
       // No "any" condition defined, activates
       any_conditions_res =
           std::any_of(if_any_conditions_.begin(), if_any_conditions_.end(),
-                      [&](const std::string& condition) { return conditions_[condition]->getState(msg) == true; });
+                      [&](const std::string& condition) { return conditions_[condition]->getState(msg); });
     }
 
     // All condition set to false condition ON enable
@@ -210,7 +211,7 @@ public:
     {
       none_conditions_res =
           std::all_of(if_none_conditions_.begin(), if_none_conditions_.end(),
-                      [&](const std::string& condition) { return conditions_[condition]->getState(msg) == false; });
+                      [&](const std::string& condition) { return !conditions_[condition]->getState(msg); });
     }
 
     RCLCPP_DEBUG(logger_, "all_conditions_res=%d, any_conditions_res=%d, none_conditions_res=%d", all_conditions_res,
@@ -228,7 +229,7 @@ public:
   {
     // Only put the tags in if the conditions are ok. This way, we still publish the data
     // and can check in conditions but with no tags, this is not received by the destination_server
-    if (tags_.size() != 0)  // && isConditionOn(msg))
+    if (!tags_.empty())  // && isConditionOn(msg))
     {
       try
       {
@@ -292,14 +293,14 @@ public:
 
   void publish(dc_interfaces::msg::StringStamped msg)
   {
-    if (msg.data != "" && msg.data != "null")
+    if (!msg.data.empty() && msg.data != "null")
     {
       addTags(msg);
       addMeasurementName(msg);
       addMeasurementPluginName(msg);
     }
     // Init publish
-    if (init_max_measurements_ != -1 && msg.data != "" && msg.data != "null" &&
+    if (init_max_measurements_ != -1 && !msg.data.empty() && msg.data != "null" &&
         (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_))
     {
       // Publish when validation activated
@@ -333,13 +334,13 @@ public:
       }
     }
     // Infinite measurements on condition
-    else if (msg.data != "" && msg.data != "null" &&
+    else if (!msg.data.empty() && msg.data != "null" &&
              (isAnyConditionSet() && isConditionOn(msg) && condition_max_measurements_ == 0))
     {
       data_pub_->publish(msg);
     }
     // Trigger publish with maximum
-    else if (msg.data != "" && msg.data != "null" &&
+    else if (!msg.data.empty() && msg.data != "null" &&
              (isAnyConditionSet() && isConditionOn(msg) && condition_counter_published_ < condition_max_measurements_))
     {
       RCLCPP_DEBUG_STREAM(logger_, "condition_counter_published_=" << condition_counter_published_
@@ -355,7 +356,7 @@ public:
     }
   }
 
-  void publishFromMsg(dc_interfaces::msg::StringStamped msg)
+  void publishFromMsg(const dc_interfaces::msg::StringStamped& msg)
   {
     if (enabled_)
     {
@@ -422,14 +423,14 @@ public:
     if_any_conditions_ = if_any_conditions;
     if_none_conditions_ = if_none_conditions;
 
-    if (topic_output_ == "")
+    if (topic_output_.empty())
     {
       topic_output_ = std::string("/dc/measurement/") + measurement_name_;
     }
 
     data_pub_ = node->create_publisher<dc_interfaces::msg::StringStamped>(topic_output_, 1);
-    collect_timer_ = node->create_wall_timer(std::chrono::milliseconds(polling_interval_),
-                                             std::bind(&dc_measurements::Measurement::collectAndPublish, this));
+    collect_timer_ =
+        node->create_wall_timer(std::chrono::milliseconds(polling_interval_), [this] { collectAndPublish(); });
 
     RCLCPP_INFO(logger_, "Done configuring %s", measurement_name_.c_str());
 

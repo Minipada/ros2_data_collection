@@ -27,7 +27,7 @@ dc_interfaces::msg::StringStamped OS::collect()
   json data_json;
   data_json["os"] = lp::OperatingSystem();
   data_json["kernel"] = lp::Kernel();
-  data_json["cpus"] = Processor().NumCpus();
+  data_json["cpus"] = Processor().numCpus();
   msg.data = data_json.dump(-1, ' ', true);
 
   return msg;

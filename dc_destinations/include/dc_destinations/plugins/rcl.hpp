@@ -17,13 +17,13 @@ class Rcl : public dc_destinations::Destination
 {
 public:
   Rcl();
-  ~Rcl();
+  ~Rcl() override;
 
 protected:
   /**
    * @brief Configuration of destination
    */
-  void sendData(dc_interfaces::msg::StringStamped::SharedPtr msg) override;
+  void sendData(const dc_interfaces::msg::StringStamped& msg) override;
 };
 
 }  // namespace dc_destinations

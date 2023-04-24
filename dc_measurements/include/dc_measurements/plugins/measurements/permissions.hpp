@@ -25,12 +25,12 @@ class Permissions : public dc_measurements::Measurement
 {
 public:
   Permissions();
-  ~Permissions();
+  ~Permissions() override;
   dc_interfaces::msg::StringStamped collect() override;
 
 private:
   struct stat getOwner(const std::string& path);
-  std::string formatPermissions(const mode_t& perm, std::string format);
+  std::string formatPermissions(const mode_t& perm, const std::string& format);
   std::string path_;
   std::string full_path_;
   std::string permission_format_;

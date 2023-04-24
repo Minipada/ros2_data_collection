@@ -15,7 +15,7 @@ class FlbFile : public dc_destinations::FlbDestination
 {
 public:
   FlbFile();
-  ~FlbFile();
+  ~FlbFile() override;
 
 protected:
   /**

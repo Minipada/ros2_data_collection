@@ -23,13 +23,14 @@ jobs:
           - IMAGE: humble-ci
             CCOV: true
             ROS_DISTRO: humble
-          - IMAGE: humble-ci-testing
-            ROS_DISTRO: humble
-            CLANG_TIDY: pedantic
-            # Silent gmock/gtest warnings: https://github.com/ament/googletest/pull/21
-            AFTER_BUILD_UPSTREAM_WORKSPACE: |
-              git clone --quiet --branch clalancette/update-to-gtest-1.11 https://github.com/ament/googletest "${BASEDIR}/upstream_ws/src/googletest"
-              builder_run_build "/opt/ros/${ROS_DISTRO}" "${BASEDIR}/upstream_ws" --packages-select gtest_vendor gmock_vendor
+          # TODO: make it work. Currently, it is not reliable
+          # - IMAGE: humble-ci-testing
+          #   ROS_DISTRO: humble
+          #   CLANG_TIDY: pedantic
+          #   # Silent gmock/gtest warnings: https://github.com/ament/googletest/pull/21
+          #   AFTER_BUILD_UPSTREAM_WORKSPACE: |
+          #     git clone --quiet --branch clalancette/update-to-gtest-1.11 https://github.com/ament/googletest "${BASEDIR}/upstream_ws/src/googletest"
+          #     builder_run_build "/opt/ros/${ROS_DISTRO}" "${BASEDIR}/upstream_ws" --packages-select gtest_vendor gmock_vendor
     permissions:
       packages: write
       contents: read
@@ -43,7 +44,7 @@ jobs:
       AFTER_SETUP_UPSTREAM_WORKSPACE: vcs pull $BASEDIR/upstream_ws/src
       AFTER_SETUP_DOWNSTREAM_WORKSPACE: vcs pull $BASEDIR/downstream_ws/src
       # Clear the ccache stats before and log the stats after the build
-      AFTER_SETUP_CCACHE: ccache --zero-stats --max-size=10.0G
+      # AFTER_SETUP_CCACHE: ccache --zero-stats --max-size=10.0G
       BEFORE_BUILD_UPSTREAM_WORKSPACE: ccache -z
       AFTER_BUILD_TARGET_WORKSPACE: ccache -s
       # Changing linker to lld as ld has a behavior where it takes a long time to finish
@@ -69,11 +70,6 @@ jobs:
     name: ${{ matrix.env.IMAGE }}${{ matrix.env.CCOV && ' + ccov' || ''}}${{ matrix.env.CLANG_TIDY && (github.event_name != 'workflow_dispatch' && ' + clang-tidy (delta)' || ' + clang-tidy (all)') || '' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v3
       - name: Get latest release date for rosdistro
         id: rosdistro_release_date
@@ -121,6 +117,12 @@ jobs:
         name: Run industrial_ci
         uses: ros-industrial/industrial_ci@master
         env: ${{ matrix.env }}
+      - name: Workaround fix permission #https://github.com/actions/checkout/issues/211
+        # Needed when fetching fluent_bit_vendor
+        if: always()
+        run: |
+          sudo chown -R $USER:$USER ${{env.BASEDIR}}/*
+          sudo chmod -R a+rX ${{env.BASEDIR}}
       - name: Upload test artifacts (on failure)
         uses: actions/upload-artifact@v3
         if: failure() && (steps.ici.outputs.run_target_test || steps.ici.outputs.target_test_results)

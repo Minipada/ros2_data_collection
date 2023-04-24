@@ -21,7 +21,7 @@ class IpCamera : public dc_measurements::Measurement
 {
 public:
   IpCamera();
-  ~IpCamera();
+  ~IpCamera() override;
   dc_interfaces::msg::StringStamped collect() override;
   std::string getAbsolutePath(const std::string& param_reference);
 
@@ -34,7 +34,6 @@ private:
   std::string ffmpeg_log_level_;
   bool ffmpeg_banner_;
   std::string save_path_;
-  bool print_ffmpeg_cmd_;
   std::string storage_dir_;
   std::thread ffmpeg_thread_;
   std::string bitrate_video_;

@@ -13,7 +13,7 @@ class DistanceTraveled : public dc_measurements::Measurement
 {
 public:
   DistanceTraveled();
-  ~DistanceTraveled();
+  ~DistanceTraveled() override;
   dc_interfaces::msg::StringStamped collect() override;
 
 protected:

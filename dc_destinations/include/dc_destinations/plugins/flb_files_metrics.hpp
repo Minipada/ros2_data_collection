@@ -30,7 +30,7 @@ class FlbFilesMetrics : public dc_destinations::FlbDestination
 {
 public:
   FlbFilesMetrics();
-  ~FlbFilesMetrics();
+  ~FlbFilesMetrics() override;
 
 protected:
   /**

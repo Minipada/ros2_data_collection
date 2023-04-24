@@ -50,19 +50,19 @@ void FlbMinIO::initFlbOutputPlugin()
     throw std::runtime_error("Cannot load plugin");
   }
 
-  out_ffd_ = flb_output(ctx_, "minio", NULL);
-  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), NULL);
+  out_ffd_ = flb_output(ctx_, "minio", nullptr);
+  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), nullptr);
 
-  flb_output_set(ctx_, out_ffd_, "verbose", dc_util::boolToString(verbose_plugin_), NULL);
-  flb_output_set(ctx_, out_ffd_, "retry_limit", "false", NULL);
-  flb_output_set(ctx_, out_ffd_, "endpoint", endpoint_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "access_key_id", access_key_id_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "secret_access_key", secret_access_key_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "use_ssl", dc_util::boolToString(use_ssl_), NULL);
-  flb_output_set(ctx_, out_ffd_, "create_bucket", dc_util::boolToString(create_bucket_), NULL);
-  flb_output_set(ctx_, out_ffd_, "bucket", bucket_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "src_fields", dc_util::to_space_separated_string(src_fields_).c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "upload_fields", dc_util::to_space_separated_string(upload_fields_).c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "verbose", dc_util::boolToString(verbose_plugin_), nullptr);
+  flb_output_set(ctx_, out_ffd_, "retry_limit", "false", nullptr);
+  flb_output_set(ctx_, out_ffd_, "endpoint", endpoint_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "access_key_id", access_key_id_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "secret_access_key", secret_access_key_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "use_ssl", dc_util::boolToString(use_ssl_), nullptr);
+  flb_output_set(ctx_, out_ffd_, "create_bucket", dc_util::boolToString(create_bucket_), nullptr);
+  flb_output_set(ctx_, out_ffd_, "bucket", bucket_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "src_fields", dc_util::to_space_separated_string(src_fields_).c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "upload_fields", dc_util::to_space_separated_string(upload_fields_).c_str(), nullptr);
 }
 
 FlbMinIO::~FlbMinIO() = default;
