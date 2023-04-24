@@ -227,15 +227,20 @@ install(DIRECTORY plugins/measurements/json
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
-  ament_add_gtest(${PROJECT_NAME}_os_test test/os_test.cpp)
-  target_include_directories(${PROJECT_NAME}_os_test PUBLIC
+  ament_add_gtest(${PROJECT_NAME}_test_os test/test_os.cpp)
+  target_include_directories(${PROJECT_NAME}_test_os PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
   )
-  ament_target_dependencies(${PROJECT_NAME}_os_test
-    std_msgs
+  ament_target_dependencies(${PROJECT_NAME}_test_os
+    ${dependencies}
   )
-  target_link_libraries(${PROJECT_NAME}_os_test ${library_name})
+  target_link_libraries(
+    ${PROJECT_NAME}_test_os
+    nlohmann_json::nlohmann_json
+    nlohmann_json_schema_validator
+    ${library_name}
+  )
 endif()
 
 ament_export_include_directories(include)
