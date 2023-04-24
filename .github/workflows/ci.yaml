@@ -120,7 +120,7 @@ jobs:
         # Needed when fetching fluent_bit_vendor
         if: always()
         run: |
-          sudo chown -R $USER:$USER $BASEDIR/*
+          sudo chown -R $USER:$USER ${{env.BASEDIR}}/*
       - name: Upload test artifacts (on failure)
         uses: actions/upload-artifact@v3
         if: failure() && (steps.ici.outputs.run_target_test || steps.ici.outputs.target_test_results)
