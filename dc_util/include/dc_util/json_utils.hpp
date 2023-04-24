@@ -3,6 +3,7 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <nlohmann/json.hpp>
 #include <regex>
 #if __has_cpp_attribute(nodiscard)
 #define TOJSON_NODISCARD [[nodiscard]]
