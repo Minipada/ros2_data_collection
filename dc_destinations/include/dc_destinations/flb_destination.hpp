@@ -98,7 +98,7 @@ public:
   void initTimestampFilter()
   {
     /* Filter for timestamp*/
-    int f_ffd = flb_filter(ctx_, (char*)"lua", NULL);
+    int f_ffd = flb_filter(ctx_, (char*)"lua", nullptr);
     if (f_ffd == -1)
     {
       flb_destroy(ctx_);
@@ -117,12 +117,12 @@ public:
     }
     std::string ts_lua_code =
         std::string("function replace_ts(tag, timestamp, record) ") + date_record + " return 2, timestamp, record end";
-    int ret = flb_filter_set(ctx_, f_ffd, "code", ts_lua_code.c_str(), NULL);
-    ret += flb_filter_set(ctx_, f_ffd, "call", "replace_ts", NULL);
-    ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
+    int ret = flb_filter_set(ctx_, f_ffd, "code", ts_lua_code.c_str(), nullptr);
+    ret += flb_filter_set(ctx_, f_ffd, "call", "replace_ts", nullptr);
+    ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), nullptr);
     if (time_format_ != "double")
     {
-      ret += flb_filter_set(ctx_, f_ffd, "time_as_table", "true", NULL);
+      ret += flb_filter_set(ctx_, f_ffd, "time_as_table", "true", nullptr);
     }
     if (ret != 0)
     {
@@ -133,7 +133,7 @@ public:
 
   void initRewriteTagFilter()
   {
-    int f_ffd = flb_filter(ctx_, (char*)"rewrite_tag", NULL);
+    int f_ffd = flb_filter(ctx_, (char*)"rewrite_tag", nullptr);
     if (f_ffd == -1)
     {
       flb_destroy(ctx_);
@@ -141,10 +141,10 @@ public:
     }
     std::string rule = "$tags .*(" + destination_name_ + ").* " + destination_name_ + " true";
 
-    int ret = flb_filter_set(ctx_, f_ffd, "Rule", rule.c_str(), NULL);
-    ret += flb_filter_set(ctx_, f_ffd, "Match", "ros2", NULL);
-    ret += flb_filter_set(ctx_, f_ffd, "emitter_storage.type", flb_in_storage_type_.c_str(), NULL);
-    ret += flb_filter_set(ctx_, f_ffd, "emitter_mem_buf_limit", "5M", NULL);
+    int ret = flb_filter_set(ctx_, f_ffd, "Rule", rule.c_str(), nullptr);
+    ret += flb_filter_set(ctx_, f_ffd, "Match", "ros2", nullptr);
+    ret += flb_filter_set(ctx_, f_ffd, "emitter_storage.type", flb_in_storage_type_.c_str(), nullptr);
+    ret += flb_filter_set(ctx_, f_ffd, "emitter_mem_buf_limit", "5M", nullptr);
     if (ret != 0)
     {
       flb_destroy(ctx_);
@@ -159,7 +159,7 @@ public:
     /* Filter rewrite tags as string configuration */
     /* ["tag1", "tag2"] -> "tag1,tag2" */
     /* and add timestamp in the field - Not sure this is needed */
-    int f_ffd = flb_filter(ctx_, (char*)"lua", NULL);
+    int f_ffd = flb_filter(ctx_, (char*)"lua", nullptr);
     if (f_ffd == -1)
     {
       flb_destroy(ctx_);
@@ -171,9 +171,9 @@ public:
                            "record[\"tags\"] = table.concat(record[\"tags\"], \",\") " + "end " +
                            " return 2, timestamp, record end";
 
-    int ret = flb_filter_set(ctx_, f_ffd, "code", lua_code.c_str(), NULL);
-    ret += flb_filter_set(ctx_, f_ffd, "call", "concatenate", NULL);
-    ret += flb_filter_set(ctx_, f_ffd, "Match", "ros2", NULL);
+    int ret = flb_filter_set(ctx_, f_ffd, "code", lua_code.c_str(), nullptr);
+    ret += flb_filter_set(ctx_, f_ffd, "call", "concatenate", nullptr);
+    ret += flb_filter_set(ctx_, f_ffd, "Match", "ros2", nullptr);
 
     if (ret != 0)
     {
@@ -187,21 +187,21 @@ public:
   {
     /* Filter modify configuration */
     // Remove the tag from the json message
-    int f_ffd = flb_filter(ctx_, (char*)"modify", NULL);
+    int f_ffd = flb_filter(ctx_, (char*)"modify", nullptr);
     if (f_ffd == -1)
     {
       flb_destroy(ctx_);
       throw std::runtime_error("Cannot start modify filter");
     }
 
-    int ret = flb_filter_set(ctx_, f_ffd, "Remove", "tags", NULL);
-    ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
+    int ret = flb_filter_set(ctx_, f_ffd, "Remove", "tags", nullptr);
+    ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), nullptr);
 
     for (auto param = custom_params_.begin(); param != custom_params_.end(); ++param)
     {
       std::string key = param.key();
       std::string value = param.value();
-      ret += flb_filter_set(ctx_, f_ffd, "Add", (key + " " + value).c_str(), NULL);
+      ret += flb_filter_set(ctx_, f_ffd, "Add", (key + " " + value).c_str(), nullptr);
     }
     if (ret != 0)
     {
@@ -211,8 +211,8 @@ public:
 
     if (run_id_enabled_)
     {
-      ret = flb_filter_set(ctx_, f_ffd, "Add", (std::string("run_id ") + run_id_).c_str(), NULL);
-      ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
+      ret = flb_filter_set(ctx_, f_ffd, "Add", (std::string("run_id ") + run_id_).c_str(), nullptr);
+      ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), nullptr);
       if (f_ffd == -1)
       {
         flb_destroy(ctx_);
@@ -225,14 +225,14 @@ public:
       }
     }
 
-    ret = flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
+    ret = flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), nullptr);
     for (auto param = custom_params_.begin(); param != custom_params_.end(); ++param)
     {
       std::string key = param.key();
       std::string value = param.value();
       if (!value.empty())
       {
-        ret += flb_filter_set(ctx_, f_ffd, "Add", (key + " " + value).c_str(), NULL);
+        ret += flb_filter_set(ctx_, f_ffd, "Add", (key + " " + value).c_str(), nullptr);
       }
       else
       {
@@ -267,8 +267,8 @@ public:
     /* Enable fluent bit debug */
     if (debug_)
     {
-      int f_ffd = flb_output(ctx_, (char*)"stdout", NULL);
-      int ret = flb_output_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
+      int f_ffd = flb_output(ctx_, (char*)"stdout", nullptr);
+      int ret = flb_output_set(ctx_, f_ffd, "Match", destination_name_.c_str(), nullptr);
       if (f_ffd == -1)
       {
         flb_destroy(ctx_);

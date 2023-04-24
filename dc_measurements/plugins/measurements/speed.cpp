@@ -37,7 +37,7 @@ void Speed::onConfigure()
   node->get_parameter(measurement_name_ + ".odom_topic", odom_topic_);
 
   subscription_ = node->create_subscription<nav_msgs::msg::Odometry>(
-      odom_topic_.c_str(), 10, std::bind(&Speed::odomCb, this, std::placeholders::_1));
+      odom_topic_, 10, std::bind(&Speed::odomCb, this, std::placeholders::_1));
 }
 
 void Speed::setValidationSchema()

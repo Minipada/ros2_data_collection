@@ -21,10 +21,10 @@ void Moving::onConfigure()
   node->get_parameter(condition_name_ + ".count_hysteresis", count_hysteresis_);
 
   subscription_ = node->create_subscription<nav_msgs::msg::Odometry>(
-      odom_topic_.c_str(), 10, std::bind(&Moving::odomCb, this, std::placeholders::_1));
+      odom_topic_, 10, std::bind(&Moving::odomCb, this, std::placeholders::_1));
 }
 
-void Moving::odomCb(nav_msgs::msg::Odometry::SharedPtr msg)
+void Moving::odomCb(const nav_msgs::msg::Odometry::SharedPtr& msg)
 {
   float speed = sqrt(msg->twist.twist.linear.x * msg->twist.twist.linear.x +
                      msg->twist.twist.linear.y * msg->twist.twist.linear.y);

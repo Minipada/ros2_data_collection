@@ -21,7 +21,7 @@ public:
   dc_interfaces::msg::StringStamped collect() override;
 
 private:
-  void cmdVelCb(geometry_msgs::msg::Twist::SharedPtr msg);
+  void cmdVelCb(const geometry_msgs::msg::Twist::SharedPtr& msg);
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_;
   dc_interfaces::msg::StringStamped last_data_;
   std::string cmd_vel_topic_;

@@ -55,7 +55,7 @@ static int set_timestamp(msgpack_packer* mp_pck, const dc_interfaces__msg__Strin
   return ret;
 }
 
-static inline int process_pack(msgpack_packer* mp_pck, struct flb_ros2* ctx, char* data, size_t data_size,
+static inline int process_pack(msgpack_packer* mp_pck, char* data, size_t data_size,
                                dc_interfaces__msg__StringStamped* msg)
 {
   size_t off = 0;
@@ -142,7 +142,7 @@ void data_callback(const void* msgin)
     {
       flb_debug("Data complete");
       /* Process valid packaged records */
-      process_pack(&mp_pck, ctx, pack, pack_size, msg);
+      process_pack(&mp_pck, pack, pack_size, msg);
 
       flb_pack_state_reset(&ctx->pack_state);
       flb_pack_state_init(&ctx->pack_state);

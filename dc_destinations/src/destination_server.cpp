@@ -229,7 +229,7 @@ void DestinationServer::initFlb()
                   "storage.backlog.mem_limit", flb_storage_backlog_mem_limit_.c_str(), "scheduler.cap",
                   std::to_string(flb_scheduler_cap_).c_str(), "scheduler.base",
                   std::to_string(flb_scheduler_base_).c_str(), "http_server", http_server.c_str(), "http_listen",
-                  flb_http_listen_.c_str(), "http_port", std::to_string(flb_http_port_).c_str(), NULL);
+                  flb_http_listen_.c_str(), "http_port", std::to_string(flb_http_port_).c_str(), nullptr);
 
   if (!ctx_)
   {
@@ -267,7 +267,7 @@ void DestinationServer::initFlbInputPlugin()
 
   RCLCPP_INFO(get_logger(), "Loaded input ros2 shared library %s", ros2_plugin_path_.c_str());
 
-  in_ffd = flb_input(ctx_, "ros2", NULL);
+  in_ffd = flb_input(ctx_, "ros2", nullptr);
   if (in_ffd == -1)
   {
     flb_destroy(ctx_);
@@ -276,13 +276,13 @@ void DestinationServer::initFlbInputPlugin()
 
   ros_topics_ = dc_util::remove_duplicates(dc_util::flatten(destination_inputs_));
 
-  ret += flb_input_set(ctx_, in_ffd, "tag", "ros2", NULL);
+  ret += flb_input_set(ctx_, in_ffd, "tag", "ros2", nullptr);
 
-  ret += flb_input_set(ctx_, in_ffd, "topics", dc_util::to_space_separated_string(ros_topics_).c_str(), NULL);
-  ret += flb_input_set(ctx_, in_ffd, "spin_time", std::to_string(ros2_plugin_spin_time_ms_).c_str(), NULL);
-  ret += flb_input_set(ctx_, in_ffd, "storage.type", flb_in_storage_type_.c_str(), NULL);
+  ret += flb_input_set(ctx_, in_ffd, "topics", dc_util::to_space_separated_string(ros_topics_).c_str(), nullptr);
+  ret += flb_input_set(ctx_, in_ffd, "spin_time", std::to_string(ros2_plugin_spin_time_ms_).c_str(), nullptr);
+  ret += flb_input_set(ctx_, in_ffd, "storage.type", flb_in_storage_type_.c_str(), nullptr);
   ret += flb_input_set(ctx_, in_ffd, "storage.pause_on_chunks_overlimit",
-                       flb_in_storage_pause_on_chunks_overlimit_.c_str(), NULL);
+                       flb_in_storage_pause_on_chunks_overlimit_.c_str(), nullptr);
 
   if (ret != 0)
   {

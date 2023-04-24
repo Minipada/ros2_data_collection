@@ -50,21 +50,21 @@ void Cpu::setProcessesUsage(json& data_json)
   data_json["sorted"] = json::array();
   int count = 0;
   auto processes = system_.processes();
-  for (long unsigned int index = 0; index < processes.size(); ++index)
+  for (auto& process : processes)
   {
     if (max_processes_ != -1 && count == max_processes_)
     {
       break;
     }
-    if (cpu_min_ == -1 || processes[index].cpuUtilization() >= cpu_min_)
+    if (cpu_min_ == -1 || process.cpuUtilization() >= cpu_min_)
     {
       json proc_json;
-      proc_json["pid"] = processes[index].pid();
-      proc_json["user"] = processes[index].user();
-      proc_json["cmd"] = processes[index].command();
-      proc_json["cpu"] = processes[index].cpuUtilization();
-      proc_json["ram"] = processes[index].ram();
-      proc_json["uptime"] = processes[index].upTime();
+      proc_json["pid"] = process.pid();
+      proc_json["user"] = process.user();
+      proc_json["cmd"] = process.command();
+      proc_json["cpu"] = process.cpuUtilization();
+      proc_json["ram"] = process.ram();
+      proc_json["uptime"] = process.upTime();
       data_json["sorted"].push_back(proc_json);
     }
   }

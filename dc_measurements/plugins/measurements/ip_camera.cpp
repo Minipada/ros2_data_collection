@@ -150,9 +150,9 @@ dc_interfaces::msg::StringStamped IpCamera::collect()
   for (const auto& entry : std::filesystem::directory_iterator(storage_dir_))
   {
     std::string entry_path = entry.path().u8string();
-    AVFormatContext* ifmt_ctx = NULL;
+    AVFormatContext* ifmt_ctx = nullptr;
     if (std::filesystem::path(entry_path).filename() != "playlist.m3u8" &&
-        avformat_open_input(&ifmt_ctx, entry_path.c_str(), NULL, NULL) >= 0)
+        avformat_open_input(&ifmt_ctx, entry_path.c_str(), nullptr, nullptr) >= 0)
     {
       try
       {
