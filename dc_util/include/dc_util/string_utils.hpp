@@ -75,7 +75,7 @@ std::vector<std::string> split(const std::string& str, const std::string& regex_
   return { std::sregex_token_iterator(str.begin(), str.end(), regexz, -1), std::sregex_token_iterator() };
 }
 
-std::string to_space_separated_string(std::vector<std::string> string_array)
+std::string to_space_separated_string(const std::vector<std::string>& string_array)
 {
   std::vector<char*> vc;
   std::transform(string_array.begin(), string_array.end(), std::back_inserter(vc), convert);
@@ -144,7 +144,7 @@ std::string expand_values(std::string text, NodeT node)
   return text;
 }
 
-bool stringMatchesRegex(std::string regex, std::string value)
+bool stringMatchesRegex(std::string regex, const std::string& value)
 {
   const std::regex base_regex(regex);
 

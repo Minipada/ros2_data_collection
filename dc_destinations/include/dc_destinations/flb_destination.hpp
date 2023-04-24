@@ -76,9 +76,7 @@ public:
     RCLCPP_INFO(logger_, "Done configuring Flb plugin %s", destination_name_.c_str());
   }
 
-  ~FlbDestination()
-  {
-  }
+  ~FlbDestination() override;
 
   std::string formatString(const dc_interfaces::msg::StringStamped::SharedPtr msg)
   {

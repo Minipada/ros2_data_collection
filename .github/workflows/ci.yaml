@@ -20,16 +20,17 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          # - IMAGE: humble-ci
-          #   CCOV: true
-          #   ROS_DISTRO: humble
-          - IMAGE: humble-ci-testing
+          - IMAGE: humble-ci
+            CCOV: true
             ROS_DISTRO: humble
-            CLANG_TIDY: pedantic
-            # Silent gmock/gtest warnings: https://github.com/ament/googletest/pull/21
-            AFTER_BUILD_UPSTREAM_WORKSPACE: |
-              git clone --quiet --branch clalancette/update-to-gtest-1.11 https://github.com/ament/googletest "${BASEDIR}/upstream_ws/src/googletest"
-              builder_run_build "/opt/ros/${ROS_DISTRO}" "${BASEDIR}/upstream_ws" --packages-select gtest_vendor gmock_vendor
+          # TODO: make it work. Currently, it is not reliable
+          # - IMAGE: humble-ci-testing
+          #   ROS_DISTRO: humble
+          #   CLANG_TIDY: pedantic
+          #   # Silent gmock/gtest warnings: https://github.com/ament/googletest/pull/21
+          #   AFTER_BUILD_UPSTREAM_WORKSPACE: |
+          #     git clone --quiet --branch clalancette/update-to-gtest-1.11 https://github.com/ament/googletest "${BASEDIR}/upstream_ws/src/googletest"
+          #     builder_run_build "/opt/ros/${ROS_DISTRO}" "${BASEDIR}/upstream_ws" --packages-select gtest_vendor gmock_vendor
     permissions:
       packages: write
       contents: read
@@ -75,39 +76,39 @@ jobs:
         uses: JafarAbdi/latest-rosdistro-release-date-action@main
         with:
           rosdistro: ${{ matrix.env.ROS_DISTRO }}
-      # - name: Cache upstream workspace
-      #   uses: pat-s/always-upload-cache@v3
-      #   with:
-      #     path: ${{ env.BASEDIR }}/upstream_ws
-      #     key: ${{ env.CACHE_PREFIX }}-${{ github.run_id }}
-      #     restore-keys: ${{ env.CACHE_PREFIX }}
-      #   env:
-      #     CACHE_PREFIX: ${{ steps.rosdistro_release_date.outputs.date }}-upstream_ws-${{ steps.repos_edit_timestamp.outputs.timestamp }}-${{ matrix.env.IMAGE }}-${{ hashFiles('.github/workflows/ci.yaml') }}
-      # # The target directory cache doesn't include the source directory because
-      # # that comes from the checkout.  See "prepare target_ws for cache" task below
-      # - name: Cache target workspace
-      #   if: "!matrix.env.CCOV"
-      #   uses: pat-s/always-upload-cache@v3
-      #   with:
-      #     path: ${{ env.BASEDIR }}/target_ws
-      #     key: ${{ env.CACHE_PREFIX }}-${{ github.run_id }}
-      #     restore-keys: ${{ env.CACHE_PREFIX }}
-      #   env:
-      #     CACHE_PREFIX: target_ws${{ matrix.env.CCOV && '-ccov' || '' }}-${{ matrix.env.IMAGE }}-${{ hashFiles('**/CMakeLists.txt', '**/package.xml', '.github/workflows/ci.yaml') }}
-      # - name: Cache ccache
-      #   uses: pat-s/always-upload-cache@v3
-      #   with:
-      #     path: ${{ env.CCACHE_DIR }}
-      #     key: ${{ env.CACHE_PREFIX }}-${{ github.sha }}-${{ github.run_id }}
-      #     restore-keys: |
-      #       ${{ env.CACHE_PREFIX }}-${{ github.sha }}
-      #       ${{ env.CACHE_PREFIX }}
-      #   env:
-      #     CACHE_PREFIX: ccache-${{ matrix.env.IMAGE }}${{ matrix.env.CCOV && '-ccov' || '' }}
-      # - name: Configure ccache
-      #   run: |
-      #     mkdir -p ${{ env.CCACHE_DIR }}
-      #     cp .github/ccache.conf ${{ env.CCACHE_DIR }}/ccache.conf
+      - name: Cache upstream workspace
+        uses: pat-s/always-upload-cache@v3
+        with:
+          path: ${{ env.BASEDIR }}/upstream_ws
+          key: ${{ env.CACHE_PREFIX }}-${{ github.run_id }}
+          restore-keys: ${{ env.CACHE_PREFIX }}
+        env:
+          CACHE_PREFIX: ${{ steps.rosdistro_release_date.outputs.date }}-upstream_ws-${{ steps.repos_edit_timestamp.outputs.timestamp }}-${{ matrix.env.IMAGE }}-${{ hashFiles('.github/workflows/ci.yaml') }}
+      # The target directory cache doesn't include the source directory because
+      # that comes from the checkout.  See "prepare target_ws for cache" task below
+      - name: Cache target workspace
+        if: "!matrix.env.CCOV"
+        uses: pat-s/always-upload-cache@v3
+        with:
+          path: ${{ env.BASEDIR }}/target_ws
+          key: ${{ env.CACHE_PREFIX }}-${{ github.run_id }}
+          restore-keys: ${{ env.CACHE_PREFIX }}
+        env:
+          CACHE_PREFIX: target_ws${{ matrix.env.CCOV && '-ccov' || '' }}-${{ matrix.env.IMAGE }}-${{ hashFiles('**/CMakeLists.txt', '**/package.xml', '.github/workflows/ci.yaml') }}
+      - name: Cache ccache
+        uses: pat-s/always-upload-cache@v3
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ env.CACHE_PREFIX }}-${{ github.sha }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ env.CACHE_PREFIX }}-${{ github.sha }}
+            ${{ env.CACHE_PREFIX }}
+        env:
+          CACHE_PREFIX: ccache-${{ matrix.env.IMAGE }}${{ matrix.env.CCOV && '-ccov' || '' }}
+      - name: Configure ccache
+        run: |
+          mkdir -p ${{ env.CCACHE_DIR }}
+          cp .github/ccache.conf ${{ env.CCACHE_DIR }}/ccache.conf
       - name: Workaround permission issue # https://github.com/actions/checkout/issues/760#issuecomment-1097501613
         run: |
           git config --global --add safe.directory '*'
@@ -147,11 +148,11 @@ jobs:
         with:
           name: clang-tidy
           path: ${{ env.BASEDIR }}/target_ws/src/$(basename $(pwd))
-      # - name: Prepare target_ws for cache
-      #   if: always() && !matrix.env.CCOV
-      #   run: |
-      #     mkdir target_ws
-      #     du -sh ${{ env.BASEDIR }}/target_ws
-      #     sudo find ${{ env.BASEDIR }}/target_ws -wholename '*/test_results/*' -delete
-      #     sudo rm -rf ${{ env.BASEDIR }}/target_ws/src
-      #     du -sh ${{ env.BASEDIR }}/target_ws
+      - name: Prepare target_ws for cache
+        if: always() && !matrix.env.CCOV
+        run: |
+          mkdir target_ws
+          du -sh ${{ env.BASEDIR }}/target_ws
+          sudo find ${{ env.BASEDIR }}/target_ws -wholename '*/test_results/*' -delete
+          sudo rm -rf ${{ env.BASEDIR }}/target_ws/src
+          du -sh ${{ env.BASEDIR }}/target_ws
