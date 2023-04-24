@@ -5,6 +5,7 @@ set(dependencies
   dc_common
   lifecycle_msgs
   nav2_util
+  nlohmann_json
   rclcpp
   rclcpp_lifecycle
   yaml_cpp_vendor
