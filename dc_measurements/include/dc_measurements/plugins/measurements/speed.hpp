@@ -23,7 +23,7 @@ protected:
    */
   void onConfigure() override;
   void setValidationSchema() override;
-  void odomCb(nav_msgs::msg::Odometry::SharedPtr msg);
+  void odomCb(const nav_msgs::msg::Odometry& msg);
 
   std::string odom_topic_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscription_;

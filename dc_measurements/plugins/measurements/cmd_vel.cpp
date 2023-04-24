@@ -9,9 +9,9 @@ CmdVel::CmdVel() : dc_measurements::Measurement()
 
 CmdVel::~CmdVel() = default;
 
-void CmdVel::cmdVelCb(geometry_msgs::msg::Twist::SharedPtr msg)
+void CmdVel::cmdVelCb(const geometry_msgs::msg::Twist& msg)
 {
-  std::string yaml_str = geometry_msgs::msg::to_yaml(*msg);
+  std::string yaml_str = geometry_msgs::msg::to_yaml(msg);
   YAML::Node yaml_node = YAML::Load(yaml_str);
   json data_json = dc_util::tojson::detail::yaml2json(yaml_node);
   dc_interfaces::msg::StringStamped pub_msg;

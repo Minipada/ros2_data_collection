@@ -25,12 +25,12 @@ void StringStamped::setValidationSchema()
 {
 }
 
-void StringStamped::dataCb(dc_interfaces::msg::StringStamped::SharedPtr msg)
+void StringStamped::dataCb(const dc_interfaces::msg::StringStamped& msg)
 {
-  last_data_ = *msg;
+  last_data_ = msg;
   if (!timer_based_)
   {
-    publishFromMsg(*msg);
+    publishFromMsg(msg);
   }
 }
 

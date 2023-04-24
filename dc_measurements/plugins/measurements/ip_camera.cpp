@@ -167,7 +167,7 @@ dc_interfaces::msg::StringStamped IpCamera::collect()
         // Extract the substring starting from the '/' character
         std::string date_time_string = collect_path.substr(index + 1);
         // Find the index of the dot character
-        std::size_t dot_index = date_time_string.find(".");
+        std::size_t dot_index = date_time_string.find('.');
         // Remove the characters starting from the dot character
         date_time_string.erase(dot_index);
 
