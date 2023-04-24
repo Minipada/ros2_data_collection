@@ -36,7 +36,7 @@ bool SameAsPrevious::getState(dc_interfaces::msg::StringStamped msg)
   for (auto& x : flat_json.items())
   {
     // Iterate through each exclude field and check if the json key matches the exclude regex
-    for (const auto exclude_field : exclude_)
+    for (const auto& exclude_field : exclude_)
     {
       // The prefix / is added by nlohmann when flattening
       flat_json_tmp =
