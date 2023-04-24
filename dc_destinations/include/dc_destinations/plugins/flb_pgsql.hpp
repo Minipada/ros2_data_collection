@@ -28,7 +28,7 @@ class FlbPgSQL : public dc_destinations::FlbDestination
 {
 public:
   FlbPgSQL();
-  ~FlbPgSQL();
+  ~FlbPgSQL() override;
 
 protected:
   /**

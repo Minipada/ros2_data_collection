@@ -36,11 +36,11 @@ bool SameAsPrevious::getState(dc_interfaces::msg::StringStamped msg)
   for (auto& x : flat_json.items())
   {
     // Iterate through each exclude field and check if the json key matches the exclude regex
-    for (auto exclude_field = exclude_.begin(); exclude_field != exclude_.end(); ++exclude_field)
+    for (const auto& exclude_field : exclude_)
     {
       // The prefix / is added by nlohmann when flattening
       flat_json_tmp =
-          dc_util::tojson::detail::remove_key_match_regex(flat_json_tmp, std::string("/") + *exclude_field, x.key());
+          dc_util::tojson::detail::remove_key_match_regex(flat_json_tmp, std::string("/") + exclude_field, x.key());
     }
   }
   flat_json = flat_json_tmp;

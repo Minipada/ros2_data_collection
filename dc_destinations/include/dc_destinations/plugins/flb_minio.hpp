@@ -28,7 +28,7 @@ class FlbMinIO : public dc_destinations::FlbDestination
 {
 public:
   FlbMinIO();
-  ~FlbMinIO();
+  ~FlbMinIO() override;
 
 protected:
   /**

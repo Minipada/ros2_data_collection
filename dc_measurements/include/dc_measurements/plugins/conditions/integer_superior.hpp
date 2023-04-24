@@ -15,14 +15,14 @@ class IntegerSuperior : public dc_conditions::Condition
 {
 public:
   IntegerSuperior();
-  ~IntegerSuperior();
+  ~IntegerSuperior() override;
 
 protected:
   std::string key_;
   int value_;
   bool include_value_;
-  bool getState(dc_interfaces::msg::StringStamped msg);
-  void onConfigure();
+  bool getState(dc_interfaces::msg::StringStamped msg) override;
+  void onConfigure() override;
 };
 
 }  // namespace dc_conditions

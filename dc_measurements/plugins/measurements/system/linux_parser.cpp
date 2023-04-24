@@ -27,7 +27,7 @@ string LinuxParser::OperatingSystem()
   string line;
   string key;
   string value = "";
-  std::ifstream fs(kOSPath);
+  std::ifstream fs(K_OS_PATH);
   if (fs.is_open())
   {
     while (std::getline(fs, line))
@@ -60,7 +60,7 @@ string LinuxParser::Kernel()
 {
   string os, kernel, version;
   string line;
-  std::ifstream fs(kProcDirectory + kVersionFilename);
+  std::ifstream fs(K_PROC_DIRECTORY + K_VERSION_FILENAME);
   if (fs.is_open())
   {
     std::getline(fs, line);
@@ -80,7 +80,7 @@ vector<int> LinuxParser::Pids()
 {
   vector<int> pids;
   string stem;
-  for (auto& p : std::filesystem::directory_iterator(kProcDirectory))
+  for (auto& p : std::filesystem::directory_iterator(K_PROC_DIRECTORY))
   {
     stem = p.path().stem();
     stem.erase(remove(stem.begin(), stem.end(), '\"'), stem.end());
@@ -108,12 +108,12 @@ float LinuxParser::MemoryUtilization()
   float mem_used{ 0.0f };
   float mem_usage_pct = 0.0f;
 
-  std::ifstream fs(kProcDirectory + kMeminfoFilename);
+  std::ifstream fs(K_PROC_DIRECTORY + K_MEMINFO_FILENAME);
   if (fs.is_open())
   {
     while ((std::getline(fs, line)) && i < 2)
     {
-      auto pos = line.find(":");
+      auto pos = line.find(':');
       line_split = line.substr(pos + 1, -1);
 
       std::istringstream ss(line_split);
@@ -124,8 +124,8 @@ float LinuxParser::MemoryUtilization()
     fs.close();
   }
 
-  mem_used = (mem_values[kMemTotal_] - mem_values[kMemFree_]);
-  mem_usage_pct = mem_used / mem_values[kMemTotal_];
+  mem_used = (mem_values[K_MEM_TOTAL] - mem_values[K_MEM_FREE]);
+  mem_usage_pct = mem_used / mem_values[K_MEM_TOTAL];
 
   if (std::isnan(mem_usage_pct))
   {
@@ -147,7 +147,7 @@ long LinuxParser::UpTime()
   string line;
   long long result{ 0ll };
 
-  std::ifstream fs(kProcDirectory + kUptimeFilename);
+  std::ifstream fs(K_PROC_DIRECTORY + K_UPTIME_FILENAME);
   if (fs.is_open())
   {
     std::getline(fs, line);
@@ -170,7 +170,7 @@ long LinuxParser::TotalJiffies()
   long token;
   long result{ 0l };
 
-  std::ifstream fs(kProcDirectory + kStatFilename);
+  std::ifstream fs(K_PROC_DIRECTORY + K_STAT_FILENAME);
   if (fs.is_open())
   {
     std::getline(fs, line);
@@ -196,7 +196,7 @@ int LinuxParser::TotalProcesses()
   int total_processes{ 0 };
   string stem;
 
-  for (auto& p : std::filesystem::directory_iterator(kProcDirectory))
+  for (auto& p : std::filesystem::directory_iterator(K_PROC_DIRECTORY))
   {
     stem = p.path().stem();
     if (std::all_of(stem.begin(), stem.end(), isdigit))
@@ -218,7 +218,7 @@ int LinuxParser::RunningProcesses()
   string key = "procs_running";
   int running_processes{ 0 };
 
-  std::ifstream fs(kProcDirectory + kStatFilename);
+  std::ifstream fs(K_PROC_DIRECTORY + K_STAT_FILENAME);
   if (fs.is_open())
   {
     while (std::getline(fs, line))
@@ -250,12 +250,12 @@ vector<long> LinuxParser::PidStat(int pid)
   string token;
   vector<long> result(5, 0);
 
-  std::ifstream fs(kProcDirectory + to_string(pid) + kStatFilename);
+  std::ifstream fs(K_PROC_DIRECTORY + to_string(pid) + K_STAT_FILENAME);
   if (fs.is_open())
   {
     std::getline(fs, line);
-    op = line.find("(");
-    cp = line.find(")");
+    op = line.find('(');
+    cp = line.find(')');
     line = line.replace(op + 1, cp - op - 1, "");
     result.clear();
     for (auto pos : token_pos)
@@ -284,7 +284,7 @@ string LinuxParser::Command(int pid)
   string chop;
   string command = "";
 
-  std::ifstream fs(kProcDirectory + to_string(pid) + kCmdlineFilename);
+  std::ifstream fs(K_PROC_DIRECTORY + to_string(pid) + K_CMDLINE_FILENAME);
   if (fs.is_open())
   {
     if (std::getline(fs, line))
@@ -293,14 +293,14 @@ string LinuxParser::Command(int pid)
     }
     else
     {
-      std::ifstream fs2(kProcDirectory + to_string(pid) + kStatFilename);
+      std::ifstream fs2(K_PROC_DIRECTORY + to_string(pid) + K_STAT_FILENAME);
       if (fs2.is_open())
       {
         if (std::getline(fs2, line))
         {
-          cp = line.find(")");
+          cp = line.find(')');
           line = line.substr(0, cp + 1);
-          op = line.find("(");
+          op = line.find('(');
           line = line.substr(op, line.size());
           command = line;
         }
@@ -326,7 +326,7 @@ int LinuxParser::Ram(int pid)
   vector<tuple<float, string>> units_in_kb{ { 1048576, "G" }, { 1024, "M" }, { 1, "K" } };
   string pretty_value;
 
-  std::ifstream fs(kProcDirectory + to_string(pid) + kStatusFilename);
+  std::ifstream fs(K_PROC_DIRECTORY + to_string(pid) + K_STATUS_FILENAME);
   if (fs.is_open())
   {
     for (int i = 0; i < 18; i++)
@@ -352,7 +352,7 @@ int LinuxParser::Uid(int pid)
   string line;
   string value;
 
-  std::ifstream fs(kProcDirectory + to_string(pid) + kStatusFilename);
+  std::ifstream fs(K_PROC_DIRECTORY + to_string(pid) + K_STATUS_FILENAME);
   if (fs.is_open())
   {
     for (int i = 0; i < 9; i++)
@@ -382,7 +382,7 @@ string LinuxParser::User(int uid)
   string user;
   string id;
 
-  std::ifstream fs(kPasswordPath);
+  std::ifstream fs(K_PASSWORD_PATH);
   if (fs.is_open())
   {
     while (std::getline(fs, line))
@@ -416,7 +416,7 @@ long LinuxParser::StartTime(int pid)
   int clock_ticks{ 1 };
 
   clock_ticks = LinuxParser::SysClk();
-  start = pid_stat[kStartTime_] / clock_ticks;
+  start = pid_stat[K_START_TIME] / clock_ticks;
   return start;
 }
 
@@ -426,7 +426,7 @@ long LinuxParser::StartTime(int pid)
  *          token to parse (count starts at 1).
  *  Outputs: A string representing a single token.
  */
-string LinuxParser::NthToken(string line, int token_pos)
+string LinuxParser::NthToken(const string& line, int token_pos)
 {
   string token = "";
   std::stringstream ss(line);

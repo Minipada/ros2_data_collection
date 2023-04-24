@@ -41,7 +41,7 @@ public:
    * @param options Additional options to control creation of the node.
    */
   explicit DestinationServer(const rclcpp::NodeOptions& options = rclcpp::NodeOptions());
-  ~DestinationServer();
+  ~DestinationServer() override;
 
   /**
    * @brief Loads destination plugins from parameter file

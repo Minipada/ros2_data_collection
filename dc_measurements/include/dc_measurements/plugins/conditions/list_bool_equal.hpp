@@ -17,14 +17,14 @@ class ListBoolEqual : public dc_conditions::Condition
 {
 public:
   ListBoolEqual();
-  ~ListBoolEqual();
+  ~ListBoolEqual() override;
 
 protected:
   std::string key_;
   std::vector<bool> value_;
   bool order_matters_;
-  bool getState(dc_interfaces::msg::StringStamped msg);
-  void onConfigure();
+  bool getState(dc_interfaces::msg::StringStamped msg) override;
+  void onConfigure() override;
 };
 
 }  // namespace dc_conditions

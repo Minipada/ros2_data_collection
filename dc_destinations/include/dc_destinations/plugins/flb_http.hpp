@@ -25,7 +25,7 @@ class FlbHTTP : public dc_destinations::FlbDestination
 {
 public:
   FlbHTTP();
-  ~FlbHTTP();
+  ~FlbHTTP() override;
 
 protected:
   /**

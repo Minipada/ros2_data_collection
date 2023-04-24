@@ -12,16 +12,16 @@ class Process
 {
 public:
   Process(int pid);
-  int Pid();
-  std::string User();
-  std::string Command();
-  float CpuUtilization() const;
-  std::string CpuPretty(int precision) const;
-  int Ram();
-  long UpTime();
+  int pid();
+  std::string user();
+  std::string command();
+  float cpuUtilization() const;
+  std::string cpuPretty(int precision) const;
+  int ram();
+  long upTime();
   bool operator<(Process const& that) const;
   bool operator>(Process const& that) const;
-  void UpdateCpuData();
+  void updateCpuData();
 
 private:
   int pid_{ 0 };
@@ -29,15 +29,15 @@ private:
   std::string command_ = "";
   long start_time_{ 0 };
 
-  void AddValue(int jiffy_type, long value);
+  void addValue(int jiffy_type, long value);
   std::vector<std::vector<long>> cpu_data_ = {};
   float cpu_util_{ 0 };
 };
 
 enum JiffyData
 {
-  kJiffiesSys_ = 0,
-  kJiffiesProc_
+  K_JIFFIES_SYS = 0,
+  K_JIFFIES_PROC
 };
 
 #endif

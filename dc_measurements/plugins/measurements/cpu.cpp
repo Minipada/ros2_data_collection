@@ -31,7 +31,7 @@ void Cpu::setAverageCpu(json& data_json)
 {
   std::vector<float> values;
   int cpu_id{ 0 };
-  for (float cpu : system_.Cpu().Utilization())
+  for (float cpu : system_.cpu().utilization())
   {
     std::string value = std::to_string(cpu * 100).substr(0, 4);
     if (cpu < 0.1 || cpu == 1.0)
@@ -49,22 +49,22 @@ void Cpu::setProcessesUsage(json& data_json)
 {
   data_json["sorted"] = json::array();
   int count = 0;
-  auto processes = system_.Processes();
-  for (long unsigned int index = 0; index < processes.size(); ++index)
+  auto processes = system_.processes();
+  for (auto& process : processes)
   {
     if (max_processes_ != -1 && count == max_processes_)
     {
       break;
     }
-    if (cpu_min_ == -1 || processes[index].CpuUtilization() >= cpu_min_)
+    if (cpu_min_ == -1 || process.cpuUtilization() >= cpu_min_)
     {
       json proc_json;
-      proc_json["pid"] = processes[index].Pid();
-      proc_json["user"] = processes[index].User();
-      proc_json["cmd"] = processes[index].Command();
-      proc_json["cpu"] = processes[index].CpuUtilization();
-      proc_json["ram"] = processes[index].Ram();
-      proc_json["uptime"] = processes[index].UpTime();
+      proc_json["pid"] = process.pid();
+      proc_json["user"] = process.user();
+      proc_json["cmd"] = process.command();
+      proc_json["cpu"] = process.cpuUtilization();
+      proc_json["ram"] = process.ram();
+      proc_json["uptime"] = process.upTime();
       data_json["sorted"].push_back(proc_json);
     }
   }

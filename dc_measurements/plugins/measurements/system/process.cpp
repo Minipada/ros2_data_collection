@@ -41,17 +41,17 @@ Process::Process(int pid) : pid_(pid)
  *  Inputs: None.
  *  Outputs: Integer representing the process ID of this Process.
  */
-int Process::Pid()
+int Process::pid()
 {
   return pid_;
 }
 
-/********* Process::CpuUtilization *******
+/********* Process::cpuUtilization *******
  *  Returns this process' current utilization as a percentage of total CPU time.
  *  Inputs: None.
  *  Outputs: A float representing process CPU usage.
  */
-float Process::CpuUtilization() const
+float Process::cpuUtilization() const
 {
   return cpu_util_;
 }
@@ -61,7 +61,7 @@ float Process::CpuUtilization() const
  *  Inputs: None.
  *  Outputs: String representation Process CPU usage in a rounded form.
  */
-string Process::CpuPretty(int precision) const
+string Process::cpuPretty(int precision) const
 {
   string cpu_usage = "";
   float cpu_float = cpu_util_;
@@ -77,7 +77,7 @@ string Process::CpuPretty(int precision) const
  *  Inputs: None.
  *  Outputs: String of this Process' invoking command.
  */
-string Process::Command()
+string Process::command()
 {
   return command_;
 }
@@ -87,7 +87,7 @@ string Process::Command()
  *  Inputs: None.
  *  Outputs: A string of Process RAM usage in giga, mega, or kilo-bytes.
  */
-int Process::Ram()
+int Process::ram()
 {
   return lp::Ram(pid_);
 }
@@ -99,7 +99,7 @@ int Process::Ram()
  *          function pointer callback to handle queue xfer from the scheduler.
  *  Outputs: None
  */
-string Process::User()
+string Process::user()
 {
   return user_;
 }
@@ -109,7 +109,7 @@ string Process::User()
  *  Inputs: None.
  *  Outputs: Long integer of Process uptime in seconds.
  */
-long Process::UpTime()
+long Process::upTime()
 {
   long now;
   long uptime{ 0l };
@@ -126,7 +126,7 @@ long Process::UpTime()
  */
 bool Process::operator>(Process const& that) const
 {
-  return (std::isless(CpuUtilization(), that.CpuUtilization()));
+  return (std::isless(cpuUtilization(), that.cpuUtilization()));
 }
 
 /********* Process::operator< *******
@@ -136,16 +136,16 @@ bool Process::operator>(Process const& that) const
  */
 bool Process::operator<(Process const& that) const
 {
-  return (std::isgreater(CpuUtilization(), that.CpuUtilization()));
+  return (std::isgreater(cpuUtilization(), that.cpuUtilization()));
 }
 
-/********* Process::UpdateCpuData *******
+/********* Process::updateCpuData *******
  *  Updates the relevant system data to maintain an accurate approximation of
  *  the CPU being used by this Process.
  *  Inputs: None.
  *  Outputs: None.
  */
-void Process::UpdateCpuData()
+void Process::updateCpuData()
 {
   std::vector<long> jiffies_proc;
   long jiffies_proc_total{ 0l };
@@ -153,13 +153,13 @@ void Process::UpdateCpuData()
   float cpu_util{ 0.0f };
 
   jiffies_system = lp::TotalJiffies();
-  AddValue(kJiffiesSys_, jiffies_system);
+  addValue(K_JIFFIES_SYS, jiffies_system);
   jiffies_proc = lp::PidStat(pid_);
   jiffies_proc_total = std::accumulate(jiffies_proc.begin(), jiffies_proc.end() - 1, 0);
-  AddValue(kJiffiesProc_, jiffies_proc_total);
+  addValue(K_JIFFIES_PROC, jiffies_proc_total);
 
-  cpu_util = 1000 * ((float)cpu_data_[kJiffiesProc_][lp::kPresent_] - (float)cpu_data_[kJiffiesProc_][lp::kPast_]) /
-             ((float)cpu_data_[kJiffiesSys_][lp::kPresent_] - (float)cpu_data_[kJiffiesSys_][lp::kPast_]);
+  cpu_util = 1000 * ((float)cpu_data_[K_JIFFIES_PROC][lp::K_PRESENT] - (float)cpu_data_[K_JIFFIES_PROC][lp::K_PAST]) /
+             ((float)cpu_data_[K_JIFFIES_SYS][lp::K_PRESENT] - (float)cpu_data_[K_JIFFIES_SYS][lp::K_PAST]);
 
   if (std::isnan(cpu_util))
   {
@@ -168,13 +168,13 @@ void Process::UpdateCpuData()
   cpu_util_ = cpu_util;
 }
 
-/********* Process::AddValue *******
+/********* Process::addValue *******
  *  Initializes a queue structure, preparing it for usage.
  *  Inputs: Type integer from enum JiffyData and a long integer representing
  *          total processor Jiffies for the process and systemwide.
  *  Outputs: None
  */
-void Process::AddValue(int jiffy_type, long value)
+void Process::addValue(int jiffy_type, long value)
 {
   if (cpu_data_[jiffy_type].size() != 2)
   {

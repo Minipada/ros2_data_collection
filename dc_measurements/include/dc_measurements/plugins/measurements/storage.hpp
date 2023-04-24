@@ -17,7 +17,7 @@ class Storage : public dc_measurements::Measurement
 {
 public:
   Storage();
-  ~Storage();
+  ~Storage() override;
   dc_interfaces::msg::StringStamped collect() override;
 
 private:

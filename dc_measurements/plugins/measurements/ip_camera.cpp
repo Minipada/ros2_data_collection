@@ -117,7 +117,7 @@ void IpCamera::onConfigure()
 
   // Start the ffmpeg command in a separate thread
   ffmpeg_thread_ = std::thread(
-      [&](std::string command) {
+      [&](const std::string& command) {
         // Run the ffmpeg command
         if (std::system(command.c_str()) != 0)
         {
@@ -150,9 +150,9 @@ dc_interfaces::msg::StringStamped IpCamera::collect()
   for (const auto& entry : std::filesystem::directory_iterator(storage_dir_))
   {
     std::string entry_path = entry.path().u8string();
-    AVFormatContext* ifmt_ctx = NULL;
+    AVFormatContext* ifmt_ctx = nullptr;
     if (std::filesystem::path(entry_path).filename() != "playlist.m3u8" &&
-        avformat_open_input(&ifmt_ctx, entry_path.c_str(), NULL, NULL) >= 0)
+        avformat_open_input(&ifmt_ctx, entry_path.c_str(), nullptr, nullptr) >= 0)
     {
       try
       {
@@ -163,15 +163,15 @@ dc_interfaces::msg::StringStamped IpCamera::collect()
         std::filesystem::rename(entry_path, collect_path);
         data_json["local_path"] = collect_path;
         // Find the index of the '/' character that precedes the date and time string
-        std::size_t index = collect_path.find_last_of("/");
+        std::size_t index = collect_path.find_last_of('/');
         // Extract the substring starting from the '/' character
-        std::string dateTimeString = collect_path.substr(index + 1);
+        std::string date_time_string = collect_path.substr(index + 1);
         // Find the index of the dot character
-        std::size_t dotIndex = dateTimeString.find(".");
+        std::size_t dot_index = date_time_string.find('.');
         // Remove the characters starting from the dot character
-        dateTimeString.erase(dotIndex);
+        date_time_string.erase(dot_index);
 
-        data_json["timestamp"] = dateTimeString;
+        data_json["timestamp"] = date_time_string;
         auto remote_path = collect_path;
         remote_path.replace(remote_path.find(save_local_base_path_expanded_), save_local_base_path_expanded_.size() - 1,
                             "");

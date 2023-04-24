@@ -229,7 +229,7 @@ void DestinationServer::initFlb()
                   "storage.backlog.mem_limit", flb_storage_backlog_mem_limit_.c_str(), "scheduler.cap",
                   std::to_string(flb_scheduler_cap_).c_str(), "scheduler.base",
                   std::to_string(flb_scheduler_base_).c_str(), "http_server", http_server.c_str(), "http_listen",
-                  flb_http_listen_.c_str(), "http_port", std::to_string(flb_http_port_).c_str(), NULL);
+                  flb_http_listen_.c_str(), "http_port", std::to_string(flb_http_port_).c_str(), nullptr);
 
   if (!ctx_)
   {
@@ -267,7 +267,7 @@ void DestinationServer::initFlbInputPlugin()
 
   RCLCPP_INFO(get_logger(), "Loaded input ros2 shared library %s", ros2_plugin_path_.c_str());
 
-  in_ffd = flb_input(ctx_, "ros2", NULL);
+  in_ffd = flb_input(ctx_, "ros2", nullptr);
   if (in_ffd == -1)
   {
     flb_destroy(ctx_);
@@ -276,26 +276,26 @@ void DestinationServer::initFlbInputPlugin()
 
   ros_topics_ = dc_util::remove_duplicates(dc_util::flatten(destination_inputs_));
 
-  ret += flb_input_set(ctx_, in_ffd, "tag", "ros2", NULL);
+  ret += flb_input_set(ctx_, in_ffd, "tag", "ros2", nullptr);
 
-  ret += flb_input_set(ctx_, in_ffd, "topics", dc_util::to_space_separated_string(ros_topics_).c_str(), NULL);
-  ret += flb_input_set(ctx_, in_ffd, "spin_time", std::to_string(ros2_plugin_spin_time_ms_).c_str(), NULL);
-  ret += flb_input_set(ctx_, in_ffd, "storage.type", flb_in_storage_type_.c_str(), NULL);
+  ret += flb_input_set(ctx_, in_ffd, "topics", dc_util::to_space_separated_string(ros_topics_).c_str(), nullptr);
+  ret += flb_input_set(ctx_, in_ffd, "spin_time", std::to_string(ros2_plugin_spin_time_ms_).c_str(), nullptr);
+  ret += flb_input_set(ctx_, in_ffd, "storage.type", flb_in_storage_type_.c_str(), nullptr);
   ret += flb_input_set(ctx_, in_ffd, "storage.pause_on_chunks_overlimit",
-                       flb_in_storage_pause_on_chunks_overlimit_.c_str(), NULL);
+                       flb_in_storage_pause_on_chunks_overlimit_.c_str(), nullptr);
 
   if (ret != 0)
   {
     throw std::runtime_error(std::string("Cannot initialize parameters Fluent Bit input ros2 plugin. topics: \"") +
                              dc_util::to_space_separated_string(ros_topics_) + "\", storage.type: \"" +
-                             flb_in_storage_type_.c_str() + "\", storage.pause_on_chunks_overlimit: \"" +
-                             flb_in_storage_pause_on_chunks_overlimit_.c_str() + "\"");
+                             flb_in_storage_type_ + "\", storage.pause_on_chunks_overlimit: \"" +
+                             flb_in_storage_pause_on_chunks_overlimit_ + "\"");
   }
 
   RCLCPP_INFO(get_logger(), "Flb ros2 plugin initialized. ret=%d", ret);
 }
 
-nav2_util::CallbackReturn DestinationServer::on_activate(const rclcpp_lifecycle::State&)
+nav2_util::CallbackReturn DestinationServer::on_activate(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Activating");
   std::vector<pluginlib::UniquePtr<dc_core::Destination>>::iterator iter;
@@ -333,7 +333,7 @@ nav2_util::CallbackReturn DestinationServer::on_cleanup(const rclcpp_lifecycle::
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
-nav2_util::CallbackReturn DestinationServer::on_shutdown(const rclcpp_lifecycle::State&)
+nav2_util::CallbackReturn DestinationServer::on_shutdown(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Shutting down");
   return nav2_util::CallbackReturn::SUCCESS;

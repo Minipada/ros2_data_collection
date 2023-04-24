@@ -133,7 +133,7 @@ dc_interfaces::msg::StringStamped Map::collect()
   auto file_save_path = saveMap();
   if (!file_save_path.empty())
   {
-    YAML::Node data_map = YAML::LoadFile((file_save_path + ".yaml").c_str());
+    YAML::Node data_map = YAML::LoadFile(file_save_path + ".yaml");
 
     data_json["resolution"] = data_map["resolution"].as<float>();
     data_json["origin"]["x"] = data_map["origin"][0].as<float>();

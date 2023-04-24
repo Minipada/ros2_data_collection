@@ -87,6 +87,7 @@ add_library(${library_name} SHARED
 target_link_libraries(
   ${library_name}
   fluent_bit::fluent_bit
+  ${UUID_LIBRARIES}
 )
 
 ament_target_dependencies(${library_name}

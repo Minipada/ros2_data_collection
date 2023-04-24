@@ -24,7 +24,7 @@ dc_interfaces::msg::StringStamped Memory::collect()
   msg.header.stamp = node->get_clock()->now();
   msg.group_key = group_key_;
   json data_json;
-  data_json["used"] = System().MemoryUtilization() * 100;
+  data_json["used"] = System().memoryUtilization() * 100;
   msg.data = data_json.dump(-1, ' ', true);
 
   return msg;

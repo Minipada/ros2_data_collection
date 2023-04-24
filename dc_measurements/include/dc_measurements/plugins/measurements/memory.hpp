@@ -15,7 +15,7 @@ class Memory : public dc_measurements::Measurement
 {
 public:
   Memory();
-  ~Memory();
+  ~Memory() override;
   dc_interfaces::msg::StringStamped collect() override;
 
 protected:

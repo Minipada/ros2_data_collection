@@ -9,9 +9,9 @@ CmdVel::CmdVel() : dc_measurements::Measurement()
 
 CmdVel::~CmdVel() = default;
 
-void CmdVel::cmdVelCb(geometry_msgs::msg::Twist::SharedPtr msg)
+void CmdVel::cmdVelCb(const geometry_msgs::msg::Twist& msg)
 {
-  std::string yaml_str = geometry_msgs::msg::to_yaml(*msg);
+  std::string yaml_str = geometry_msgs::msg::to_yaml(msg);
   YAML::Node yaml_node = YAML::Load(yaml_str);
   json data_json = dc_util::tojson::detail::yaml2json(yaml_node);
   dc_interfaces::msg::StringStamped pub_msg;
@@ -30,7 +30,7 @@ void CmdVel::onConfigure()
   node->get_parameter(measurement_name_ + ".topic", cmd_vel_topic_);
 
   subscription_ = node->create_subscription<geometry_msgs::msg::Twist>(
-      cmd_vel_topic_.c_str(), 10, std::bind(&CmdVel::cmdVelCb, this, std::placeholders::_1));
+      cmd_vel_topic_, 10, std::bind(&CmdVel::cmdVelCb, this, std::placeholders::_1));
 }
 
 void CmdVel::setValidationSchema()

@@ -2,6 +2,7 @@
 #define SYSTEM_PARSER_HPP
 
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <regex>
 #include <sstream>
@@ -18,16 +19,16 @@ namespace LinuxParser
  *          function pointer callback to handle queue xfer from the scheduler.
  *  Outputs: None
  */
-const std::string kProcDirectory{ "/proc/" };
-const std::string kCmdlineFilename{ "/cmdline" };
-const std::string kCpuinfoFilename{ "/cpuinfo" };
-const std::string kStatusFilename{ "/status" };
-const std::string kStatFilename{ "/stat" };
-const std::string kUptimeFilename{ "/uptime" };
-const std::string kMeminfoFilename{ "/meminfo" };
-const std::string kVersionFilename{ "/version" };
-const std::string kOSPath{ "/etc/os-release" };
-const std::string kPasswordPath{ "/etc/passwd" };
+const std::string K_PROC_DIRECTORY{ "/proc/" };
+const std::string K_CMDLINE_FILENAME{ "/cmdline" };
+const std::string K_CPUINFO_FILENAME{ "/cpuinfo" };
+const std::string K_STATUS_FILENAME{ "/status" };
+const std::string K_STAT_FILENAME{ "/stat" };
+const std::string K_UPTIME_FILENAME{ "/uptime" };
+const std::string K_MEMINFO_FILENAME{ "/meminfo" };
+const std::string K_VERSION_FILENAME{ "/version" };
+const std::string K_OS_PATH{ "/etc/os-release" };
+const std::string K_PASSWORD_PATH{ "/etc/passwd" };
 
 /********* System *******
  *  Initializes a queue structure, preparing it for usage.
@@ -54,37 +55,37 @@ std::string Kernel();
  */
 enum CPUState
 {
-  kUser_ = 0,
-  kNice_,
-  kSystem_,
-  kIdle_,
-  kIOwait_,
-  kIRQ_,
-  kSoftIRQ_,
-  kSteal_,
-  kGuest_,
-  kGuestNice_
+  K_USER = 0,
+  K_NICE,
+  K_SYSTEM,
+  K_IDLE,
+  K_IO_WAIT,
+  K_IRQ,
+  K_SOFT_IRQ,
+  K_STEAL,
+  K_GUEST,
+  K_GUEST_NICE
 };
 
 enum CPUData
 {
-  kPast_ = 0,
-  kPresent_
+  K_PAST = 0,
+  K_PRESENT
 };
 
 enum MemInfo
 {
-  kMemTotal_ = 0,
-  kMemFree_,
+  K_MEM_TOTAL = 0,
+  K_MEM_FREE,
 };
 
 enum PidStat
 {
-  kUTime_ = 0,
-  kSTime_,
-  kCUTime_,
-  kCSTime_,
-  kStartTime_
+  K_U_TIME = 0,
+  K_S_TIME,
+  K_CU_TIME,
+  K_CS_TIME,
+  K_START_TIME
 };
 
 /********* Queue_init *******
@@ -109,7 +110,7 @@ long StartTime(int pid);
  *          function pointer callback to handle queue xfer from the scheduler.
  *  Outputs: None
  */
-std::string NthToken(std::string line, int token_pos);
+std::string NthToken(const std::string& line, int token_pos);
 int SysClk();
 }  // namespace LinuxParser
 

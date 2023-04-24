@@ -111,7 +111,7 @@ void Camera::onConfigure()
 
   // Data subscriber
   subscription_ = node->create_subscription<sensor_msgs::msg::Image>(
-      cam_topic_.c_str(), 10, std::bind(&Camera::cameraCb, this, std::placeholders::_1));
+      cam_topic_, 10, std::bind(&Camera::cameraCb, this, std::placeholders::_1));
 }
 
 void Camera::cameraCb(const sensor_msgs::msg::Image& msg)

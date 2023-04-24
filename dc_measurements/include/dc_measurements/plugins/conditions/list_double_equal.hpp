@@ -17,14 +17,14 @@ class ListDoubleEqual : public dc_conditions::Condition
 {
 public:
   ListDoubleEqual();
-  ~ListDoubleEqual();
+  ~ListDoubleEqual() override;
 
 protected:
   std::string key_;
   std::vector<double> value_;
   bool order_matters_;
-  bool getState(dc_interfaces::msg::StringStamped msg);
-  void onConfigure();
+  bool getState(dc_interfaces::msg::StringStamped msg) override;
+  void onConfigure() override;
 };
 
 }  // namespace dc_conditions

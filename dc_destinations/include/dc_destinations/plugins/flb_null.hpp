@@ -25,7 +25,7 @@ class FlbNull : public dc_destinations::FlbDestination
 {
 public:
   FlbNull();
-  ~FlbNull();
+  ~FlbNull() override;
 
 protected:
   /**

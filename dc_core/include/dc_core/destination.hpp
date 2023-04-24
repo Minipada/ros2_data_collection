@@ -60,7 +60,7 @@ public:
    */
   virtual void deactivate() = 0;
 
-  virtual void sendData(dc_interfaces::msg::StringStamped::SharedPtr msg) = 0;
+  virtual void sendData(const dc_interfaces::msg::StringStamped& msg) = 0;
 };
 }  // namespace dc_core
 

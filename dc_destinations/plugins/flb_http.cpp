@@ -45,21 +45,21 @@ void FlbHTTP::onConfigure()
 
 void FlbHTTP::initFlbOutputPlugin()
 {
-  out_ffd_ = flb_output(ctx_, "http", NULL);
-  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "body_key", body_key_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "host", host_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "port", std::to_string(port_).c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "uri", uri_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "format", format_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "header", header_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "headers_key", headers_key_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "header_tag", header_tag_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "json_date_key", json_date_key_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "http_user", http_user_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "http_passwd", http_passwd_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "log_response_payload", dc_util::boolToString(log_response_payload_), NULL);
-  flb_output_set(ctx_, out_ffd_, "allow_duplicated_headers", dc_util::boolToString(allow_duplicated_headers_), NULL);
+  out_ffd_ = flb_output(ctx_, "http", nullptr);
+  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "body_key", body_key_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "host", host_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "port", std::to_string(port_).c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "uri", uri_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "format", format_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "header", header_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "headers_key", headers_key_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "header_tag", header_tag_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "json_date_key", json_date_key_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "http_user", http_user_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "http_passwd", http_passwd_.c_str(), nullptr);
+  flb_output_set(ctx_, out_ffd_, "log_response_payload", dc_util::boolToString(log_response_payload_), nullptr);
+  flb_output_set(ctx_, out_ffd_, "allow_duplicated_headers", dc_util::boolToString(allow_duplicated_headers_), nullptr);
   if (out_ffd_ == -1)
   {
     flb_destroy(ctx_);

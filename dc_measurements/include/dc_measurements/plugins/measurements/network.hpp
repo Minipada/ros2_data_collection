@@ -46,7 +46,7 @@ class Network : public dc_measurements::Measurement
 {
 public:
   Network();
-  ~Network();
+  ~Network() override;
   dc_interfaces::msg::StringStamped collect() override;
 
 private:
@@ -57,7 +57,7 @@ private:
   json getNetworkInterfaces();
   uint16_t inCksum(unsigned short* addr, unsigned int len);
 
-  int skt, ttl = TTL;
+  int skt_, ttl_ = TTL;
   struct sockaddr_in to_, from_;
   unsigned char packet_[MAXPACKETLEN];
   std::string hostname_;
@@ -65,7 +65,7 @@ private:
   struct timezone tz_;
   int id_, datalen_ = 56;
   int ntransmitted_ = 0;
-  int tmin = std::numeric_limits<int>::max(), tmax = 0, tsum = 0;
+  int tmin_ = std::numeric_limits<int>::max(), tmax_ = 0, tsum_ = 0;
 
 protected:
   /**

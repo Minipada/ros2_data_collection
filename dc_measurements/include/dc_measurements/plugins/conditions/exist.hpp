@@ -17,7 +17,7 @@ class Exist : public dc_conditions::Condition
 {
 public:
   Exist();
-  ~Exist();
+  ~Exist() override;
 
 protected:
   std::string key_;

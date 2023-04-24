@@ -15,7 +15,7 @@ class Cpu : public dc_measurements::Measurement
 {
 public:
   Cpu();
-  ~Cpu();
+  ~Cpu() override;
   dc_interfaces::msg::StringStamped collect() override;
 
 private:

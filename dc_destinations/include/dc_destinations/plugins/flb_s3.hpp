@@ -25,7 +25,7 @@ class FlbS3 : public dc_destinations::FlbDestination
 {
 public:
   FlbS3();
-  ~FlbS3();
+  ~FlbS3() override;
 
 protected:
   /**
