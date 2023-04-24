@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>dc_destinations</name>
+  <version>0.1.0</version>
+  <description>Send all data to destination plugins</description>
+  <maintainer email="d.bensoussan@proton.me">David Bensoussan</maintainer>
+  <license>MPL-2.0</license>
+
+  <buildtool_depend>ament_cmake_ros</buildtool_depend>
+
+  <depend>ament_index_cpp</depend>
+  <depend>dc_core</depend>
+  <depend>dc_interfaces</depend>
+  <depend>dc_util</depend>
+  <depend>fluent_bit_vendor</depend>
+  <depend>nav2_util</depend>
+  <depend>nlohmann-json-dev</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+
+  <exec_depend>systemd</exec_depend>
+
+  <exec_depend>fluent_bit_plugins</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <dc_core plugin="${prefix}/destination_plugin.xml" />
+  </export>
+</package>

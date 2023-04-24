@@ -1,0 +1,121 @@
+<class_libraries>
+    <library path="dc_bool_equal_condition">
+        <class name="dc_conditions/BoolEqual" type="dc_conditions::BoolEqual" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_bool_equal
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_double_equal_condition">
+        <class name="dc_conditions/DoubleEqual" type="dc_conditions::DoubleEqual" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_double_equal
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_double_inferior_condition">
+        <class name="dc_conditions/DoubleInferior" type="dc_conditions::DoubleInferior" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_double_inferior
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_double_superior_condition">
+        <class name="dc_conditions/DoubleSuperior" type="dc_conditions::DoubleSuperior" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_double_superior
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_exist_condition">
+        <class name="dc_conditions/Exist" type="dc_conditions::Exist" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_exist
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_integer_equal_condition">
+        <class name="dc_conditions/IntegerEqual" type="dc_conditions::IntegerEqual" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_integer_equal
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_integer_inferior_condition">
+        <class name="dc_conditions/IntegerInferior" type="dc_conditions::IntegerInferior" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_integer_inferior
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_integer_superior_condition">
+        <class name="dc_conditions/IntegerSuperior" type="dc_conditions::IntegerSuperior" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_integer_superior
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_list_bool_equal_condition">
+        <class name="dc_conditions/ListBoolEqual" type="dc_conditions::ListBoolEqual" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_list_bool_equal
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_list_double_equal_condition">
+        <class name="dc_conditions/ListDoubleEqual" type="dc_conditions::ListDoubleEqual" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_list_double_equal
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_list_integer_equal_condition">
+        <class name="dc_conditions/ListIntegerEqual" type="dc_conditions::ListIntegerEqual" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_list_integer_equal
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_list_bool_string_condition">
+        <class name="dc_conditions/ListStringEqual" type="dc_conditions::ListStringEqual" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_list_string_equal
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_moving_condition">
+        <class name="dc_conditions/Moving" type="dc_conditions::Moving" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_moving
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_same_as_previous_condition">
+        <class name="dc_conditions/SameAsPrevious" type="dc_conditions::SameAsPrevious" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_same_as_previous
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_str_match_condition">
+        <class name="dc_conditions/StringMatch" type="dc_conditions::StringMatch" base_class_type="dc_core::Condition">
+            <description>
+                dc_condition_string_match
+            </description>
+        </class>
+    </library>
+</class_libraries>

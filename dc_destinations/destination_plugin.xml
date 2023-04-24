@@ -1,0 +1,89 @@
+<class_libraries>
+    <library path="dc_flb_file_destination">
+        <class name="dc_destinations/FlbFile" type="dc_destinations::FlbFile" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_file
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_flb_files_metrics_destination">
+        <class name="dc_destinations/FlbFilesMetrics" type="dc_destinations::FlbFilesMetrics" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_files_metrics
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_flb_http_destination">
+        <class name="dc_destinations/FlbHTTP" type="dc_destinations::FlbHTTP" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_http
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_flb_kinesis_streams_destination">
+        <class name="dc_destinations/FlbKinesisStreams" type="dc_destinations::FlbKinesisStreams" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_kinesis_streams
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_flb_minio_destination">
+        <class name="dc_destinations/FlbMinIO" type="dc_destinations::FlbMinIO" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_minio
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_flb_null_destination">
+        <class name="dc_destinations/FlbNull" type="dc_destinations::FlbNull" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_null
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_flb_pgsql_destination">
+        <class name="dc_destinations/FlbPgSQL" type="dc_destinations::FlbPgSQL" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_pgsql
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_flb_s3_destination">
+        <class name="dc_destinations/FlbS3" type="dc_destinations::FlbS3" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_s3
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_flb_stdout_destination">
+        <class name="dc_destinations/FlbStdout" type="dc_destinations::FlbStdout" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_stdout
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_flb_slack_destination">
+        <class name="dc_destinations/FlbSlack" type="dc_destinations::FlbSlack" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_slack
+            </description>
+        </class>
+    </library>
+
+    <library path="dc_rcl_destination">
+        <class name="dc_destinations/Rcl" type="dc_destinations::Rcl" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_rcl
+            </description>
+        </class>
+    </library>
+</class_libraries>

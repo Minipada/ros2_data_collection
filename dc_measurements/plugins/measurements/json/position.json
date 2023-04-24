@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Position",
+  "description": "Position and orientation of the robot",
+  "properties": {
+    "x": {
+      "description": "X position of the robot",
+      "type": "number"
+    },
+    "y": {
+      "description": "Y position of the robot",
+      "type": "number"
+    },
+    "yaw": {
+      "description": "Yaw angle of the robot",
+      "type": "number"
+    }
+  },
+  "type": "object"
+}
