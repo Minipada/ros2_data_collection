@@ -57,7 +57,7 @@ MeasurementServer::~MeasurementServer()
   measurements_.clear();
 }
 
-nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle::State&)
+nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Configuring");
   auto node = shared_from_this();

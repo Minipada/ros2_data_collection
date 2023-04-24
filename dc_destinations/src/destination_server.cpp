@@ -288,14 +288,14 @@ void DestinationServer::initFlbInputPlugin()
   {
     throw std::runtime_error(std::string("Cannot initialize parameters Fluent Bit input ros2 plugin. topics: \"") +
                              dc_util::to_space_separated_string(ros_topics_) + "\", storage.type: \"" +
-                             flb_in_storage_type_.c_str() + "\", storage.pause_on_chunks_overlimit: \"" +
-                             flb_in_storage_pause_on_chunks_overlimit_.c_str() + "\"");
+                             flb_in_storage_type_ + "\", storage.pause_on_chunks_overlimit: \"" +
+                             flb_in_storage_pause_on_chunks_overlimit_ + "\"");
   }
 
   RCLCPP_INFO(get_logger(), "Flb ros2 plugin initialized. ret=%d", ret);
 }
 
-nav2_util::CallbackReturn DestinationServer::on_activate(const rclcpp_lifecycle::State&)
+nav2_util::CallbackReturn DestinationServer::on_activate(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Activating");
   std::vector<pluginlib::UniquePtr<dc_core::Destination>>::iterator iter;
@@ -333,7 +333,7 @@ nav2_util::CallbackReturn DestinationServer::on_cleanup(const rclcpp_lifecycle::
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
-nav2_util::CallbackReturn DestinationServer::on_shutdown(const rclcpp_lifecycle::State&)
+nav2_util::CallbackReturn DestinationServer::on_shutdown(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Shutting down");
   return nav2_util::CallbackReturn::SUCCESS;

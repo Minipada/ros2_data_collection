@@ -17,7 +17,7 @@ class Rcl : public dc_destinations::Destination
 {
 public:
   Rcl();
-  ~Rcl();
+  ~Rcl() override;
 
 protected:
   /**

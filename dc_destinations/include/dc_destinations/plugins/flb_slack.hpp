@@ -25,7 +25,7 @@ class FlbSlack : public dc_destinations::FlbDestination
 {
 public:
   FlbSlack();
-  ~FlbSlack();
+  ~FlbSlack() override;
 
 protected:
   /**

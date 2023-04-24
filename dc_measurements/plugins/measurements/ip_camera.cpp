@@ -163,15 +163,15 @@ dc_interfaces::msg::StringStamped IpCamera::collect()
         std::filesystem::rename(entry_path, collect_path);
         data_json["local_path"] = collect_path;
         // Find the index of the '/' character that precedes the date and time string
-        std::size_t index = collect_path.find_last_of("/");
+        std::size_t index = collect_path.find_last_of('/');
         // Extract the substring starting from the '/' character
-        std::string dateTimeString = collect_path.substr(index + 1);
+        std::string date_time_string = collect_path.substr(index + 1);
         // Find the index of the dot character
-        std::size_t dotIndex = dateTimeString.find(".");
+        std::size_t dot_index = date_time_string.find(".");
         // Remove the characters starting from the dot character
-        dateTimeString.erase(dotIndex);
+        date_time_string.erase(dot_index);
 
-        data_json["timestamp"] = dateTimeString;
+        data_json["timestamp"] = date_time_string;
         auto remote_path = collect_path;
         remote_path.replace(remote_path.find(save_local_base_path_expanded_), save_local_base_path_expanded_.size() - 1,
                             "");
