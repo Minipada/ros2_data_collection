@@ -18,7 +18,7 @@ public:
   float cpuUtilization() const;
   std::string cpuPretty(int precision) const;
   int ram();
-  long upTime();
+  unsigned int upTime();
   bool operator<(Process const& that) const;
   bool operator>(Process const& that) const;
   void updateCpuData();

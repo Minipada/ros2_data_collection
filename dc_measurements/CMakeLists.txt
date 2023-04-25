@@ -161,7 +161,10 @@ foreach(measurement_plugin ${dc_measurement_plugin_libs})
   )
   target_compile_definitions(${measurement_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
-
+foreach(condition_plugin ${dc_condition_plugin_libs})
+  ament_target_dependencies(${condition_plugin} ${dependencies})
+  target_compile_definitions(${condition_plugin} PRIVATE BT_PLUGIN_EXPORT)
+endforeach()
 foreach(condition_plugin ${dc_condition_plugin_libs})
   ament_target_dependencies(${condition_plugin} ${dependencies})
   target_compile_definitions(${condition_plugin} PRIVATE BT_PLUGIN_EXPORT)
@@ -225,22 +228,29 @@ install(DIRECTORY plugins/measurements/json
   DESTINATION share/${PROJECT_NAME}/plugins/measurements/
 )
 
+set(tests
+  test_os
+  test_uptime
+)
+
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
-  ament_add_gtest(${PROJECT_NAME}_test_os test/test_os.cpp)
-  target_include_directories(${PROJECT_NAME}_test_os PUBLIC
+  foreach(test ${tests})
+    ament_add_gtest(${PROJECT_NAME}_${test} test/${test}.cpp)
+    target_include_directories(${PROJECT_NAME}_${test} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
-  )
-  ament_target_dependencies(${PROJECT_NAME}_test_os
+    )
+    ament_target_dependencies(${PROJECT_NAME}_${test}
     ${dependencies}
-  )
-  target_link_libraries(
-    ${PROJECT_NAME}_test_os
-    nlohmann_json::nlohmann_json
-    nlohmann_json_schema_validator
-    ${library_name}
-  )
+    )
+    target_link_libraries(
+      ${PROJECT_NAME}_${test}
+      nlohmann_json::nlohmann_json
+      nlohmann_json_schema_validator
+      ${library_name}
+      )
+  endforeach()
 endif()
 
 ament_export_include_directories(include)
