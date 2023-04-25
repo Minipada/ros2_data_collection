@@ -40,6 +40,7 @@ cmake-format = "^0.6.13"
 codespell = "^2.2.2"
 flake8-bugbear = "^23.2.13"
 flake8-use-fstring = "^1.4"
+fastcov = "^1.14"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
