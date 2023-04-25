@@ -20,7 +20,7 @@ void Uptime::setValidationSchema()
 
 dc_interfaces::msg::StringStamped Uptime::collect()
 {
-  long uptime = system_.upTime();
+  auto uptime = system_.upTime();
 
   auto node = getNode();
   dc_interfaces::msg::StringStamped msg;

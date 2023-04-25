@@ -109,7 +109,7 @@ string Process::user()
  *  Inputs: None.
  *  Outputs: Long integer of Process uptime in seconds.
  */
-long Process::upTime()
+unsigned int Process::upTime()
 {
   long now;
   long uptime{ 0l };
