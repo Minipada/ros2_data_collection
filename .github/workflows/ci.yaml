@@ -71,6 +71,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Install Python dependencies
+        uses: py-actions/py-dependency-install@v4
+        with:
+          path: "requirements.txt"
+      - name: Install Python dependencies (dev)
+        uses: py-actions/py-dependency-install@v4
+        with:
+          path: "requirements-dev.txt"
+      - name: Setup ROS
+        uses: ros-tooling/setup-ros@v0.6
+        with:
+          required-ros-distributions: ${{env.ROS_DISTRO}}
       - name: Get latest release date for rosdistro
         id: rosdistro_release_date
         uses: JafarAbdi/latest-rosdistro-release-date-action@main
@@ -130,18 +142,26 @@ jobs:
           name: test-results-${{ matrix.env.IMAGE }}
           path: ${{ env.BASEDIR }}/target_ws/**/test_results/**/*.xml
       - name: Generate codecov report
-        uses: rhaschke/lcov-action@main
         if: always() && matrix.env.CCOV && steps.ici.outputs.target_test_results == '0'
-        with:
-          docker: $DOCKER_IMAGE
-          workdir: ${{ env.BASEDIR }}/target_ws
-          ignore: '"*/target_ws/build/*" "*/target_ws/install/*" "*/test/*"'
+        run: |
+          ${GITHUB_WORKSPACE}/tools/code_coverage_report.bash ci
+          cp lcov/total_coverage.info ${GITHUB_WORKSPACE}
+        working-directory: ${{ env.BASEDIR }}/target_ws
       - name: Upload codecov report
-        uses: codecov/codecov-action@v3
         if: always() && matrix.env.CCOV && steps.ici.outputs.target_test_results == '0'
+        uses: codecov/codecov-action@v3
         with:
-          files: ${{ env.BASEDIR }}/target_ws/coverage.info
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: total_coverage.info
+        # run: |
+        #   curl -s https://codecov.io/bash > codecov
+        #   codecov_version=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2)
+        #   shasum -a 512 -c <(curl -s "https://raw.githubusercontent.com/codecov/codecov-bash/${codecov_version}/SHA512SUM" | grep -w "codecov")
+        #   bash codecov \
+        #     -f total_coverage.info \
+        #     -R "${GITHUB_WORKSPACE}" \
+        #     -t ${{ secrets.CODECOV_TOKEN }} \
+        #     -Z || echo 'Codecov upload failed'
       - name: Upload clang-tidy changes
         uses: rhaschke/upload-git-patch-action@main
         if: always() && matrix.env.CLANG_TIDY
