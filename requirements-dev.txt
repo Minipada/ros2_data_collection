@@ -17,6 +17,7 @@ decorator==5.1.1; python_version >= "3.8"
 dill==0.3.6
 distlib==0.3.6; python_version >= "3.8"
 executing==1.2.0; python_version >= "3.8"
+fastcov==1.14; python_version >= "3.5"
 filelock==3.9.0; python_version >= "3.8"
 flake8-bugbear==23.2.13; python_version >= "3.7"
 flake8-comprehensions==3.10.1; python_version >= "3.7"
