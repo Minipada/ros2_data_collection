@@ -3,6 +3,8 @@
 
 #include <math.h>
 
+#include <filesystem>
+
 #include "dc_core/condition.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/condition.hpp"
