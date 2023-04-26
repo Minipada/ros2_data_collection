@@ -37,7 +37,7 @@ RUN \
     if [ -r "src/ros2_data_collection/ros2_data_collection.repos" ] ; then vcs import src < src/ros2_data_collection/ros2_data_collection.repos ; fi && \
     if [ -r "src/ros2_data_collection/ros2_data_collection_${ROS_DISTRO}.repos" ] ; then vcs import src < "src/ros2_data_collection/ros2_data_collection_${ROS_DISTRO}.repos" ; fi && \
     # Download all dependencies of DC
-    rosdep update && \
+    rosdep update --include-eol-distros && \
     DEBIAN_FRONTEND=noninteractive \
     rosdep install -y --from-paths src --ignore-src --rosdistro "${ROS_DISTRO}" --as-root=apt:false && \
     rm -rf src && \
