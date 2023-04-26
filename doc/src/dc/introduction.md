@@ -16,10 +16,14 @@
 | [![Format](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml/badge.svg)](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml)                                         |
 | [![Documentation](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml/badge.svg)](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml)                                        |
 | [![Github Pages](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment) |
+| [![CI](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml/badge.svg)](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml)                                                     |
+
+
+[![codecov](https://codecov.io/gh/Minipada/ros2_data_collection/branch/humble/graph/badge.svg?token=Y2UA5OE0KR)](https://codecov.io/gh/Minipada/ros2_data_collection)
 
 For detailed instructions:
 
-- [Build](https://minipada.github.io/ros2_data_collection/dc/build.html)
+- [Build](https://minipada.github.io/ros2_data_collection/dc/setup.html)
 - [Concepts](https://minipada.github.io/ros2_data_collection/dc/concepts.html)
 - [Data Pipeline](https://minipada.github.io/ros2_data_collection/dc/data_pipeline.html)
 - [Measurements](https://minipada.github.io/ros2_data_collection/dc/measurements.html)
