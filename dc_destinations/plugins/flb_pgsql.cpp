@@ -41,19 +41,19 @@ void FlbPgSQL::onConfigure()
 
 void FlbPgSQL::initFlbOutputPlugin()
 {
-  out_ffd_ = flb_output(ctx_, "pgsql", nullptr);
-  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "host", host_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "port", std::to_string(port_).c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "user", user_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "password", password_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "database", database_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "table", table_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "timestamp_key", timestamp_key_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "async", dc_util::boolToString(async_), nullptr);
-  flb_output_set(ctx_, out_ffd_, "min_pool_size", min_pool_size_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "max_pool_size", max_pool_size_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "cockroachdb", dc_util::boolToString(cockroachdb_), nullptr);
+  out_ffd_ = flb_output(ctx_, "pgsql", NULL);
+  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "host", host_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "port", std::to_string(port_).c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "user", user_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "password", password_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "database", database_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "table", table_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "timestamp_key", timestamp_key_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "async", dc_util::boolToString(async_), NULL);
+  flb_output_set(ctx_, out_ffd_, "min_pool_size", min_pool_size_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "max_pool_size", max_pool_size_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "cockroachdb", dc_util::boolToString(cockroachdb_), NULL);
 
   if (out_ffd_ == -1)
   {

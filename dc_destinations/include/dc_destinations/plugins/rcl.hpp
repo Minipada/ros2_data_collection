@@ -23,7 +23,7 @@ protected:
   /**
    * @brief Configuration of destination
    */
-  void sendData(const dc_interfaces::msg::StringStamped& msg) override;
+  void sendData(dc_interfaces::msg::StringStamped::SharedPtr msg) override;
 };
 
 }  // namespace dc_destinations

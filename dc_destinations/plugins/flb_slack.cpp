@@ -17,8 +17,8 @@ void FlbSlack::onConfigure()
 
 void FlbSlack::initFlbOutputPlugin()
 {
-  out_ffd_ = flb_output(ctx_, "slack", nullptr);
-  flb_output_set(ctx_, out_ffd_, "webhook", webhook_.c_str(), nullptr);
+  out_ffd_ = flb_output(ctx_, "slack", NULL);
+  flb_output_set(ctx_, out_ffd_, "webhook", webhook_.c_str(), NULL);
   if (out_ffd_ == -1)
   {
     flb_destroy(ctx_);

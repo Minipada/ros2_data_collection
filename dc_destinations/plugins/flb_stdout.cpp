@@ -23,11 +23,11 @@ void FlbStdout::onConfigure()
 
 void FlbStdout::initFlbOutputPlugin()
 {
-  out_ffd_ = flb_output(ctx_, "stdout", nullptr);
-  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "format", format_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "json_date_key", json_date_key_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "json_date_format", json_date_format_.c_str(), nullptr);
+  out_ffd_ = flb_output(ctx_, "stdout", NULL);
+  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "format", format_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "json_date_key", json_date_key_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "json_date_format", json_date_format_.c_str(), NULL);
   if (out_ffd_ == -1)
   {
     flb_destroy(ctx_);
