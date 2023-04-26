@@ -181,8 +181,8 @@
 </p>
 <p><strong>Documentation</strong>: <a href="https://minipada.github.io/ros2_data_collection">https://minipada.github.io/ros2_data_collection</a></p>
 <p><strong>Source code</strong>: <a href="https://github.com/minipada/ros2_data_collection">https://github.com/minipada/ros2_data_collection</a></p>
-<p><a href="https://docs.ros.org/en/humble/index.html"><img src="https://img.shields.io/badge/ROS%202-humble-informational?style=for-the-badge" alt="ROS 2" /></a> <img src="https://img.shields.io/badge/python-3.10.4-informational?style=for-the-badge" alt="python" /> <img src="https://img.shields.io/badge/C++-17-informational?style=for-the-badge" alt="C++" /> <a href="https://codecov.io/gh/Minipada/ros2_data_collection"><img src="https://codecov.io/gh/Minipada/ros2_data_collection/branch/humble/graph/badge.svg?token=Y2UA5OE0KR" alt="codecov" /></a></p>
-<div class="table-wrapper"><table><thead><tr><th>Humble</th></tr></thead><tbody>
+<p><a href="https://docs.ros.org/en/galactic/index.html"><img src="https://img.shields.io/badge/ROS%202-galactic-informational?style=for-the-badge" alt="ROS 2" /></a> <img src="https://img.shields.io/badge/python-3.10.4-informational?style=for-the-badge" alt="python" /> <img src="https://img.shields.io/badge/C++-17-informational?style=for-the-badge" alt="C++" /> <a href="https://codecov.io/gh/Minipada/ros2_data_collection"><img src="https://codecov.io/gh/Minipada/ros2_data_collection/branch/galactic/graph/badge.svg?token=Y2UA5OE0KR" alt="codecov" /></a></p>
+<div class="table-wrapper"><table><thead><tr><th>Galactic</th></tr></thead><tbody>
 <tr><td><a href="https://github.com/minipada/ros2_data_collection/actions/workflows/docker.yaml"><img src="https://github.com/minipada/ros2_data_collection/actions/workflows/docker.yaml/badge.svg" alt="Docker" /></a></td></tr>
 <tr><td><a href="https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml"><img src="https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml/badge.svg" alt="Format" /></a></td></tr>
 <tr><td><a href="https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml"><img src="https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml/badge.svg" alt="Documentation" /></a></td></tr>
@@ -315,11 +315,11 @@
 <h3 id="available-images"><a class="header" href="#available-images">Available images</a></h3>
 <p>Docker images with latest code are available on the <a href="https://hub.docker.com/repository/docker/minipada/ros2_data_collection">Docker public registry</a>:</p>
 <div class="table-wrapper"><table><thead><tr><th>Image</th><th>Description</th></tr></thead><tbody>
-<tr><td>minipada/ros2_data_collection:humble-ci</td><td>ROS base image augmented with all DC dependencies to use for CI</td></tr>
-<tr><td>minipada/ros2_data_collection:humble-ci-testing</td><td>CI image using the ROS testing repository</td></tr>
-<tr><td>minipada/ros2_data_collection:humble-source</td><td>DC source compiled</td></tr>
-<tr><td>minipada/ros2_data_collection:humble-source-sim</td><td>DC source compiled with all simulation packages</td></tr>
-<tr><td>minipada/ros2_data_collection:humble-doc</td><td>Documentation</td></tr>
+<tr><td>minipada/ros2_data_collection:galactic-ci</td><td>ROS base image augmented with all DC dependencies to use for CI</td></tr>
+<tr><td>minipada/ros2_data_collection:galactic-ci-testing</td><td>CI image using the ROS testing repository</td></tr>
+<tr><td>minipada/ros2_data_collection:galactic-source</td><td>DC source compiled</td></tr>
+<tr><td>minipada/ros2_data_collection:galactic-source-sim</td><td>DC source compiled with all simulation packages</td></tr>
+<tr><td>minipada/ros2_data_collection:galactic-doc</td><td>Documentation</td></tr>
 </tbody></table>
 </div>
 <p>Get any by running:</p>
@@ -331,7 +331,7 @@
 
 services:
   ros2-data-collection:
-    image: minipada/ros2_data_collection:humble-source-sim
+    image: minipada/ros2_data_collection:galactic-source-sim
     privileged: true
     container_name: ros2-data-collection
     environment:
@@ -2304,7 +2304,7 @@ measurement_server:
 </code></pre>
 <p>Now that you know how it works, you can set your own measurements and destinations.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/configuration_examples.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="demos"><a class="header" href="#demos">Demos</a></h1>
-<p>We will go together through some demos to get started with DC. You shall find them in the <em><a href="https://github.com/minipada/ros2_data_collection/tree/humble/dc_demos">dc_demos</a></em> package</p>
+<p>We will go together through some demos to get started with DC. You shall find them in the <em><a href="https://github.com/minipada/ros2_data_collection/tree/galactic/dc_demos">dc_demos</a></em> package</p>
 <div id="admonition-warning" class="admonition warning">
 <div class="admonition-title">
 <p>Warning</p>
@@ -2343,7 +2343,7 @@ measurement_server:
 [component_container_isolated-1] [{&quot;date&quot;:1677668921.700388,&quot;time&quot;:92410,&quot;id&quot;:&quot;be781e5ffb1e7ee4f817fe7b63e92c32&quot;,&quot;robot_name&quot;:&quot;C3PO&quot;,&quot;run_id&quot;:&quot;218&quot;}]
 [component_container_isolated-1] [{&quot;date&quot;:1677668926.700422,&quot;time&quot;:92415,&quot;id&quot;:&quot;be781e5ffb1e7ee4f817fe7b63e92c32&quot;,&quot;robot_name&quot;:&quot;C3PO&quot;,&quot;run_id&quot;:&quot;218&quot;}]
 </code></pre>
-<p>This launchfile is a wrapper of <a href="https://github.com/Minipada/ros2_data_collection/blob/humble/dc_bringup/launch/dc_bringup.launch.py">dc_bringup/launch/bringup.launch.py</a> which loads a <a href="https://github.com/Minipada/ros2_data_collection/blob/humble/dc_demos/params/uptime_stdout.yaml">custom yaml configuration</a></p>
+<p>This launchfile is a wrapper of <a href="https://github.com/Minipada/ros2_data_collection/blob/galactic/dc_bringup/launch/dc_bringup.launch.py">dc_bringup/launch/bringup.launch.py</a> which loads a <a href="https://github.com/Minipada/ros2_data_collection/blob/galactic/dc_demos/params/uptime_stdout.yaml">custom yaml configuration</a></p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <h3 id="measurement"><a class="header" href="#measurement">Measurement</a></h3>
 <pre><code class="language-yaml">measurement_server:
@@ -2362,7 +2362,7 @@ measurement_server:
 <p><strong>uptime.plugin (Mandatory)</strong>: Name of the plugin, if you are not sure which plugin is available, <a href="dc/demos/../cli.html">use the CLI tool</a> to list them</p>
 <p><strong>uptime.tags (Mandatory)</strong>: This is used by Fluent Bit, to match inputs and outputs. More <a href="dc/demos/../concepts.html#tags">here</a></p>
 <p><strong>uptime.polling_interval (Optional)</strong>: Interval to which data is collected in milliseconds</p>
-<p><strong>uptime.enable_validator (Optional)</strong>: Will validate the data against a JSON schema. This file is located in the <a href="https://github.com/Minipada/ros2_data_collection/tree/humble/dc_measurements/plugins/measurements/json">dc_measurements package</a>. You can provide your own using the <code>json_schema_path</code> parameter, which we will explore later on</p>
+<p><strong>uptime.enable_validator (Optional)</strong>: Will validate the data against a JSON schema. This file is located in the <a href="https://github.com/Minipada/ros2_data_collection/tree/galactic/dc_measurements/plugins/measurements/json">dc_measurements package</a>. You can provide your own using the <code>json_schema_path</code> parameter, which we will explore later on</p>
 <p><strong>uptime.debug (Optional)</strong>: More verbose output</p>
 <p><strong>uptime.init_collect (Optional)</strong>: Collect when the node starts instead of waiting for the polling_interval time to pass</p>
 <p>This will collect the uptime every 5 seconds (including when the node starts), will forward it to the <em>flb_stdout</em> destination.</p>
@@ -2471,7 +2471,7 @@ measurement_server:
 [component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
 [component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/destination_server' in container 'dc_container'
-[component_container_isolated-1] [INFO] [1677668906.684802172] [dc_container]: Load Library: /opt/ros/humble/lib/libnav2_lifecycle_manager_core.so
+[component_container_isolated-1] [INFO] [1677668906.684802172] [dc_container]: Load Library: /opt/ros/galactic/lib/libnav2_lifecycle_manager_core.so
 [component_container_isolated-1] [INFO] [1677668906.685487672] [dc_container]: Found class: rclcpp_components::NodeFactoryTemplate&lt;nav2_lifecycle_manager::LifecycleManager&gt;
 [component_container_isolated-1] [INFO] [1677668906.685510016] [dc_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate&lt;nav2_lifecycle_manager::LifecycleManager&gt;
 [component_container_isolated-1] [INFO] [1677668906.691075881] [lifecycle_manager_navigation]: Creating
@@ -2566,7 +2566,7 @@ measurement_server:
 [component_container_isolated-1] [{&quot;memory&quot;:{&quot;used&quot;:71.86643218994141},&quot;date&quot;:1677673414.869292,&quot;uptime&quot;:{&quot;time&quot;:96903},&quot;run_id&quot;:&quot;221&quot;}]
 [component_container_isolated-1] [{&quot;memory&quot;:{&quot;used&quot;:71.82553863525391},&quot;date&quot;:1677673417.869207,&quot;uptime&quot;:{&quot;time&quot;:96906},&quot;run_id&quot;:&quot;221&quot;}]
 </code></pre>
-<p>This launchfile is a wrapper of <a href="https://github.com/Minipada/ros2_data_collection/blob/humble/dc_bringup/launch/dc_bringup.launch.py">dc_bringup/launch/bringup.launch.py</a> which loads a <a href="https://github.com/Minipada/ros2_data_collection/blob/humble/dc_demos/params/group_memory_uptime_stdout.yaml">custom yaml configuration</a></p>
+<p>This launchfile is a wrapper of <a href="https://github.com/Minipada/ros2_data_collection/blob/galactic/dc_bringup/launch/dc_bringup.launch.py">dc_bringup/launch/bringup.launch.py</a> which loads a <a href="https://github.com/Minipada/ros2_data_collection/blob/galactic/dc_demos/params/group_memory_uptime_stdout.yaml">custom yaml configuration</a></p>
 <div id="admonition-info" class="admonition info">
 <div class="admonition-title">
 <p>Info</p>
@@ -2635,9 +2635,9 @@ measurement_server:
 <p>Since rviz is pretty verbose, using 2 terminal windows will help reading the JSON printed on the terminal window.</p>
 <h2 id="setup-the-environment"><a class="header" href="#setup-the-environment">Setup the environment</a></h2>
 <p>In each, terminal, source your environment and setup turtlebot configuration:</p>
-<pre><code class="language-bash">$ source /opt/ros/humble/setup.bash
+<pre><code class="language-bash">$ source /opt/ros/galactic/setup.bash
 $ source install/setup.bash
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/galactic/share/turtlebot3_gazebo/models
 $ export TURTLEBOT3_MODEL=waffle
 </code></pre>
 <h2 id="start-navigation"><a class="header" href="#start-navigation">Start Navigation</a></h2>
@@ -2865,7 +2865,7 @@ $ export TURTLEBOT3_MODEL=waffle
 [component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
 [component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/destination_server' in container 'dc_container'
-[component_container_isolated-1] [INFO] [1677696067.856784495] [dc_container]: Load Library: /opt/ros/humble/lib/libnav2_lifecycle_manager_core.so
+[component_container_isolated-1] [INFO] [1677696067.856784495] [dc_container]: Load Library: /opt/ros/galactic/lib/libnav2_lifecycle_manager_core.so
 [component_container_isolated-1] [INFO] [1677696067.857836219] [dc_container]: Found class: rclcpp_components::NodeFactoryTemplate&lt;nav2_lifecycle_manager::LifecycleManager&gt;
 [component_container_isolated-1] [INFO] [1677696067.857877118] [dc_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate&lt;nav2_lifecycle_manager::LifecycleManager&gt;
 [component_container_isolated-1] [INFO] [1677696067.875491851] [lifecycle_manager_navigation]: Creating
@@ -2993,10 +2993,10 @@ $ export TURTLEBOT3_MODEL=waffle
 <p>PostgreSQL will be used as database storage for our JSON. Later on, backend engineers can make requests on those JSON based on measurement requested and time range. To start it, <a href="dc/demos/../infrastructure_setup/postgresql.html">follow the steps</a></p>
 <h2 id="setup-the-ros-environment"><a class="header" href="#setup-the-ros-environment">Setup the ROS environment</a></h2>
 <p>In each, terminal, source your environment and setup turtlebot configuration:</p>
-<pre><code class="language-bash">$ source /opt/ros/humble/setup.bash
+<pre><code class="language-bash">$ source /opt/ros/galactic/setup.bash
 $ source install/setup.bash
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/aws_robomaker_small_warehouse_world/models/
+$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/galactic/share/turtlebot3_gazebo/models
+$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/galactic/share/aws_robomaker_small_warehouse_world/models/
 $ export TURTLEBOT3_MODEL=waffle
 </code></pre>
 <h2 id="start-rviz"><a class="header" href="#start-rviz">Start RVIZ</a></h2>
@@ -3033,7 +3033,7 @@ $ export TURTLEBOT3_MODEL=waffle
 <p><a class="admonition-anchor-link" href="dc/demos/qrcodes_minio_pgsql.html#admonition-info"></a></p>
 </div>
 <div>
-<p>The full configuration file can be found <a href="https://github.com/Minipada/ros2_data_collection/blob/humble/dc_demos/params/qrcodes_minio_pgsql.yaml">here</a>.</p>
+<p>The full configuration file can be found <a href="https://github.com/Minipada/ros2_data_collection/blob/galactic/dc_demos/params/qrcodes_minio_pgsql.yaml">here</a>.</p>
 </div>
 </div>
 <p>For this demo, we will reconstruct the yaml configuration element by element, given how large it is. Go through the explanation to understand how it works.</p>

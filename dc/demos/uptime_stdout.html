@@ -148,7 +148,7 @@
                         <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                        <a href="https://github.com/minipada/ros2_data_collection/edit/humble/doc/src/dc/demos/uptime_stdout.md" title="Suggest an edit" aria-label="Suggest an edit">
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/galactic/doc/src/dc/demos/uptime_stdout.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
 
@@ -189,7 +189,7 @@
 [component_container_isolated-1] [{&quot;date&quot;:1677668921.700388,&quot;time&quot;:92410,&quot;id&quot;:&quot;be781e5ffb1e7ee4f817fe7b63e92c32&quot;,&quot;robot_name&quot;:&quot;C3PO&quot;,&quot;run_id&quot;:&quot;218&quot;}]
 [component_container_isolated-1] [{&quot;date&quot;:1677668926.700422,&quot;time&quot;:92415,&quot;id&quot;:&quot;be781e5ffb1e7ee4f817fe7b63e92c32&quot;,&quot;robot_name&quot;:&quot;C3PO&quot;,&quot;run_id&quot;:&quot;218&quot;}]
 </code></pre>
-<p>This launchfile is a wrapper of <a href="https://github.com/Minipada/ros2_data_collection/blob/humble/dc_bringup/launch/dc_bringup.launch.py">dc_bringup/launch/bringup.launch.py</a> which loads a <a href="https://github.com/Minipada/ros2_data_collection/blob/humble/dc_demos/params/uptime_stdout.yaml">custom yaml configuration</a></p>
+<p>This launchfile is a wrapper of <a href="https://github.com/Minipada/ros2_data_collection/blob/galactic/dc_bringup/launch/dc_bringup.launch.py">dc_bringup/launch/bringup.launch.py</a> which loads a <a href="https://github.com/Minipada/ros2_data_collection/blob/galactic/dc_demos/params/uptime_stdout.yaml">custom yaml configuration</a></p>
 <h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
 <h3 id="measurement"><a class="header" href="#measurement">Measurement</a></h3>
 <pre><code class="language-yaml">measurement_server:
@@ -208,7 +208,7 @@
 <p><strong>uptime.plugin (Mandatory)</strong>: Name of the plugin, if you are not sure which plugin is available, <a href="../cli.html">use the CLI tool</a> to list them</p>
 <p><strong>uptime.tags (Mandatory)</strong>: This is used by Fluent Bit, to match inputs and outputs. More <a href="../concepts.html#tags">here</a></p>
 <p><strong>uptime.polling_interval (Optional)</strong>: Interval to which data is collected in milliseconds</p>
-<p><strong>uptime.enable_validator (Optional)</strong>: Will validate the data against a JSON schema. This file is located in the <a href="https://github.com/Minipada/ros2_data_collection/tree/humble/dc_measurements/plugins/measurements/json">dc_measurements package</a>. You can provide your own using the <code>json_schema_path</code> parameter, which we will explore later on</p>
+<p><strong>uptime.enable_validator (Optional)</strong>: Will validate the data against a JSON schema. This file is located in the <a href="https://github.com/Minipada/ros2_data_collection/tree/galactic/dc_measurements/plugins/measurements/json">dc_measurements package</a>. You can provide your own using the <code>json_schema_path</code> parameter, which we will explore later on</p>
 <p><strong>uptime.debug (Optional)</strong>: More verbose output</p>
 <p><strong>uptime.init_collect (Optional)</strong>: Collect when the node starts instead of waiting for the polling_interval time to pass</p>
 <p>This will collect the uptime every 5 seconds (including when the node starts), will forward it to the <em>flb_stdout</em> destination.</p>
@@ -317,7 +317,7 @@
 [component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
 [component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/destination_server' in container 'dc_container'
-[component_container_isolated-1] [INFO] [1677668906.684802172] [dc_container]: Load Library: /opt/ros/humble/lib/libnav2_lifecycle_manager_core.so
+[component_container_isolated-1] [INFO] [1677668906.684802172] [dc_container]: Load Library: /opt/ros/galactic/lib/libnav2_lifecycle_manager_core.so
 [component_container_isolated-1] [INFO] [1677668906.685487672] [dc_container]: Found class: rclcpp_components::NodeFactoryTemplate&lt;nav2_lifecycle_manager::LifecycleManager&gt;
 [component_container_isolated-1] [INFO] [1677668906.685510016] [dc_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate&lt;nav2_lifecycle_manager::LifecycleManager&gt;
 [component_container_isolated-1] [INFO] [1677668906.691075881] [lifecycle_manager_navigation]: Creating

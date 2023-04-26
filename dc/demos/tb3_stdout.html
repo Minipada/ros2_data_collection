@@ -148,7 +148,7 @@
                         <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                        <a href="https://github.com/minipada/ros2_data_collection/edit/humble/doc/src/dc/demos/tb3_stdout.md" title="Suggest an edit" aria-label="Suggest an edit">
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/galactic/doc/src/dc/demos/tb3_stdout.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
 
@@ -187,9 +187,9 @@
 <p>Since rviz is pretty verbose, using 2 terminal windows will help reading the JSON printed on the terminal window.</p>
 <h2 id="setup-the-environment"><a class="header" href="#setup-the-environment">Setup the environment</a></h2>
 <p>In each, terminal, source your environment and setup turtlebot configuration:</p>
-<pre><code class="language-bash">$ source /opt/ros/humble/setup.bash
+<pre><code class="language-bash">$ source /opt/ros/galactic/setup.bash
 $ source install/setup.bash
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/galactic/share/turtlebot3_gazebo/models
 $ export TURTLEBOT3_MODEL=waffle
 </code></pre>
 <h2 id="start-navigation"><a class="header" href="#start-navigation">Start Navigation</a></h2>
@@ -417,7 +417,7 @@ $ export TURTLEBOT3_MODEL=waffle
 [component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
 [component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/destination_server' in container 'dc_container'
-[component_container_isolated-1] [INFO] [1677696067.856784495] [dc_container]: Load Library: /opt/ros/humble/lib/libnav2_lifecycle_manager_core.so
+[component_container_isolated-1] [INFO] [1677696067.856784495] [dc_container]: Load Library: /opt/ros/galactic/lib/libnav2_lifecycle_manager_core.so
 [component_container_isolated-1] [INFO] [1677696067.857836219] [dc_container]: Found class: rclcpp_components::NodeFactoryTemplate&lt;nav2_lifecycle_manager::LifecycleManager&gt;
 [component_container_isolated-1] [INFO] [1677696067.857877118] [dc_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate&lt;nav2_lifecycle_manager::LifecycleManager&gt;
 [component_container_isolated-1] [INFO] [1677696067.875491851] [lifecycle_manager_navigation]: Creating
