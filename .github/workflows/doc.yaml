@@ -20,22 +20,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  login:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Log in to the Container registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
   deploy:
     runs-on: ubuntu-22.04
-    needs:
-      - login
     container:
-      image: ghcr.io/minipada/ros2_data_collection:humble-doc
+      image: minipada/ros2_data_collection:humble-doc
     steps:
       - name: Checkout
         uses: actions/checkout@v3
