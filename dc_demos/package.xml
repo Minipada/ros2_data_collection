@@ -9,6 +9,8 @@
 
   <depend>dc_measurements</depend>
   <depend>launch</depend>
+  <depend>nlohmann-json-dev</depend>
+  <depend>nlohmann_json_schema_validator_vendor</depend>
   <depend>pluginlib</depend>
 
   <exec_depend>aws_robomaker_small_warehouse_world</exec_depend>
