@@ -9,6 +9,8 @@ set(dependencies
   geometry_msgs
   dc_measurements
   dc_simulation
+  nlohmann_json
+  nlohmann_json_schema_validator
   nav2_bringup
   rclpy
   xacro
@@ -47,6 +49,8 @@ foreach(measurement_plugin ${dc_measurement_plugin_libs})
   ament_target_dependencies(${measurement_plugin} ${dependencies})
   target_link_libraries(
     ${measurement_plugin}
+    nlohmann_json::nlohmann_json
+    nlohmann_json_schema_validator
   )
   target_compile_definitions(${measurement_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()

@@ -5,6 +5,7 @@
 #include <cv_bridge/cv_bridge.h>
 
 #include <boost/algorithm/string/replace.hpp>
+#include <filesystem>
 #include <opencv2/highgui.hpp>
 
 #include "dc_core/measurement.hpp"
