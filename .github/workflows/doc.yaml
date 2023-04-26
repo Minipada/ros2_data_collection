@@ -7,6 +7,10 @@ on:
     paths:
       - doc/**
       - .github/workflows/doc.yaml
+  pull_request:
+    paths:
+      - doc/**
+      - .github/workflows/doc.yaml
 
 permissions:
   contents: write
@@ -41,6 +45,7 @@ jobs:
         working-directory: ./doc
         run: mdbook build
       - name: Deploy
+        if: github.event_name != 'pull_request'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
