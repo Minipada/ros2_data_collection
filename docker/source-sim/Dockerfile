@@ -25,7 +25,7 @@ RUN --mount=type=cache,target=/root/.ccache/ \
     if [ -r "src/ros2_data_collection/ros2_data_collection_${ROS_DISTRO}.repos" ] ; then vcs import src < "src/ros2_data_collection/ros2_data_collection_sim_${ROS_DISTRO}.repos" ; fi && \
     #
     apt-get update && \
-    rosdep update && \
+    rosdep update --include-eol-distros && \
     DEBIAN_FRONTEND=noninteractive \
     rosdep install -y --from-paths src --ignore-src --rosdistro "${ROS_DISTRO}" --as-root=apt:false && \
     . "/opt/ros/${ROS_DISTRO}/setup.sh" && \
