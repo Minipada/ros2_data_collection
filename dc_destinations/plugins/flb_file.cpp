@@ -42,12 +42,12 @@ void FlbFile::onConfigure()
 void FlbFile::initFlbOutputPlugin()
 {
   /* Enable output plugin 'stdout' (print records to the standard output) */
-  out_ffd_ = flb_output(ctx_, "file", nullptr);
-  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "path", path_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "file", file_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "format", format_.c_str(), nullptr);
-  flb_output_set(ctx_, out_ffd_, "mkdir", dc_util::boolToString(mkdir_), nullptr);
+  out_ffd_ = flb_output(ctx_, "file", NULL);
+  flb_output_set(ctx_, out_ffd_, "match", destination_name_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "path", path_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "file", file_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "format", format_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "mkdir", dc_util::boolToString(mkdir_), NULL);
   if (out_ffd_ == -1)
   {
     flb_destroy(ctx_);
