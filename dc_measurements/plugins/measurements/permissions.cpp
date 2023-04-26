@@ -96,11 +96,11 @@ dc_interfaces::msg::StringStamped Permissions::collect()
 
   // Not recognized by the system
   // Can happen if file owned by host system and not by container
-  if (pw != nullptr)
+  if (pw != NULL)
   {
     data_json["user"] = pw->pw_name;
   }
-  if (gr != nullptr)
+  if (gr != NULL)
   {
     data_json["group"] = gr->gr_name;
   }
