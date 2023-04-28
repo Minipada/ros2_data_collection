@@ -29,6 +29,7 @@ protected:
   std::string format_;
   std::string delimiter_;
   std::string label_delimiter_;
+  std::string template_;
   bool mkdir_;
 };
 

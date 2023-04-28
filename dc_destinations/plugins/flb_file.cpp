@@ -15,12 +15,14 @@ void FlbFile::onConfigure()
   nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".file", rclcpp::ParameterValue(""));
   nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".format", rclcpp::ParameterValue("out_file"));
   nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".mkdir", rclcpp::ParameterValue(true));
+  nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".template", rclcpp::ParameterValue(""));
 
   node->get_parameter(destination_name_ + ".path", path_);
   path_ = dc_util::expand_env(path_);
   node->get_parameter(destination_name_ + ".file", file_);
   node->get_parameter(destination_name_ + ".format", format_);
   node->get_parameter(destination_name_ + ".mkdir", mkdir_);
+  node->get_parameter(destination_name_ + ".template", template_);
 
   std::string default_delimiter = "";
   if (format_ == "ltsv")
@@ -48,6 +50,10 @@ void FlbFile::initFlbOutputPlugin()
   flb_output_set(ctx_, out_ffd_, "file", file_.c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "format", format_.c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "mkdir", dc_util::boolToString(mkdir_), NULL);
+  flb_output_set(ctx_, out_ffd_, "template", template_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "delimiter", delimiter_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "label_delimiter", label_delimiter_.c_str(), NULL);
+
   if (out_ffd_ == -1)
   {
     flb_destroy(ctx_);
