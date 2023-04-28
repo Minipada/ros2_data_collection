@@ -34,7 +34,7 @@ Collects the Operating System information: cpus, operating system name and kerne
 ```yaml
 ...
 os:
-  plugin: "dc_measurements/Os"
+  plugin: "dc_measurements/OS"
   topic_output: "/dc/measurement/os"
   tags: ["flb_stdout"]
 ```
