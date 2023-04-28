@@ -10,6 +10,8 @@
 #include <tuple>
 #include <vector>
 
+#include "dc_util/string_utils.hpp"
+
 using std::stof;
 using std::stol;
 using std::string;
@@ -272,6 +274,11 @@ vector<long> LinuxParser::PidStat(int pid)
   return result;
 }
 
+void stripNullUnicode(std::string& str)
+{
+  str.erase(std::remove_if(str.begin(), str.end(), [](char c) { return c == 0; }), str.end());
+}
+
 /********* LinuxParser::Command *******
  *  Returns the invoking command for the provided process ID.
  *  Inputs: Process ID int.
@@ -309,7 +316,7 @@ string LinuxParser::Command(int pid)
     }
     fs.close();
   }
-  // FIXME There are some unicode characters in here (space \u0000 to replace)
+  stripNullUnicode(command);
   return command;
 }
 
