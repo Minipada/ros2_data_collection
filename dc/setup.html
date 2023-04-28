@@ -148,7 +148,7 @@
                         <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                        <a href="https://github.com/minipada/ros2_data_collection/edit/galactic/doc/src/dc/setup.md" title="Suggest an edit" aria-label="Suggest an edit">
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/humble/doc/src/dc/setup.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
 
@@ -182,11 +182,11 @@
 <h3 id="available-images"><a class="header" href="#available-images">Available images</a></h3>
 <p>Docker images with latest code are available on the <a href="https://hub.docker.com/repository/docker/minipada/ros2_data_collection">Docker public registry</a>:</p>
 <div class="table-wrapper"><table><thead><tr><th>Image</th><th>Description</th></tr></thead><tbody>
-<tr><td>minipada/ros2_data_collection:galactic-ci</td><td>ROS base image augmented with all DC dependencies to use for CI</td></tr>
-<tr><td>minipada/ros2_data_collection:galactic-ci-testing</td><td>CI image using the ROS testing repository</td></tr>
-<tr><td>minipada/ros2_data_collection:galactic-source</td><td>DC source compiled</td></tr>
-<tr><td>minipada/ros2_data_collection:galactic-source-sim</td><td>DC source compiled with all simulation packages</td></tr>
-<tr><td>minipada/ros2_data_collection:galactic-doc</td><td>Documentation</td></tr>
+<tr><td>minipada/ros2_data_collection:humble-ci</td><td>ROS base image augmented with all DC dependencies to use for CI</td></tr>
+<tr><td>minipada/ros2_data_collection:humble-ci-testing</td><td>CI image using the ROS testing repository</td></tr>
+<tr><td>minipada/ros2_data_collection:humble-source</td><td>DC source compiled</td></tr>
+<tr><td>minipada/ros2_data_collection:humble-source-sim</td><td>DC source compiled with all simulation packages</td></tr>
+<tr><td>minipada/ros2_data_collection:humble-doc</td><td>Documentation</td></tr>
 </tbody></table>
 </div>
 <p>Get any by running:</p>
@@ -198,7 +198,7 @@
 
 services:
   ros2-data-collection:
-    image: minipada/ros2_data_collection:galactic-source-sim
+    image: minipada/ros2_data_collection:humble-source-sim
     privileged: true
     container_name: ros2-data-collection
     environment:

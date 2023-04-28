@@ -148,7 +148,7 @@
                         <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
                             <i id="git-repository-button" class="fa fa-github"></i>
                         </a>
-                        <a href="https://github.com/minipada/ros2_data_collection/edit/galactic/doc/src/dc/introduction.md" title="Suggest an edit" aria-label="Suggest an edit">
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/humble/doc/src/dc/introduction.md" title="Suggest an edit" aria-label="Suggest an edit">
                             <i id="git-edit-button" class="fa fa-edit"></i>
                         </a>
 
@@ -183,8 +183,8 @@
 </p>
 <p><strong>Documentation</strong>: <a href="https://minipada.github.io/ros2_data_collection">https://minipada.github.io/ros2_data_collection</a></p>
 <p><strong>Source code</strong>: <a href="https://github.com/minipada/ros2_data_collection">https://github.com/minipada/ros2_data_collection</a></p>
-<p><a href="https://docs.ros.org/en/galactic/index.html"><img src="https://img.shields.io/badge/ROS%202-galactic-informational?style=for-the-badge" alt="ROS 2" /></a> <img src="https://img.shields.io/badge/python-3.10.4-informational?style=for-the-badge" alt="python" /> <img src="https://img.shields.io/badge/C++-17-informational?style=for-the-badge" alt="C++" /> <a href="https://codecov.io/gh/Minipada/ros2_data_collection"><img src="https://codecov.io/gh/Minipada/ros2_data_collection/branch/galactic/graph/badge.svg?token=Y2UA5OE0KR" alt="codecov" /></a></p>
-<div class="table-wrapper"><table><thead><tr><th>Galactic</th></tr></thead><tbody>
+<p><a href="https://docs.ros.org/en/humble/index.html"><img src="https://img.shields.io/badge/ROS%202-humble-informational?style=for-the-badge" alt="ROS 2" /></a> <img src="https://img.shields.io/badge/python-3.10.4-informational?style=for-the-badge" alt="python" /> <img src="https://img.shields.io/badge/C++-17-informational?style=for-the-badge" alt="C++" /> <a href="https://codecov.io/gh/Minipada/ros2_data_collection"><img src="https://codecov.io/gh/Minipada/ros2_data_collection/branch/humble/graph/badge.svg?token=Y2UA5OE0KR" alt="codecov" /></a></p>
+<div class="table-wrapper"><table><thead><tr><th>Humble</th></tr></thead><tbody>
 <tr><td><a href="https://github.com/minipada/ros2_data_collection/actions/workflows/docker.yaml"><img src="https://github.com/minipada/ros2_data_collection/actions/workflows/docker.yaml/badge.svg" alt="Docker" /></a></td></tr>
 <tr><td><a href="https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml"><img src="https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml/badge.svg" alt="Format" /></a></td></tr>
 <tr><td><a href="https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml"><img src="https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml/badge.svg" alt="Documentation" /></a></td></tr>
@@ -214,8 +214,20 @@
 <h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
 <p>The DC (Data Collection) project aims at integrating data collection pipelines into ROS 2. The goal is to integrate data collection pipelines with existing APIs to enable data analytics, rather than live monitoring, which already has excellent tools available. As companies increasingly turn to autonomous robots, the ability to understand and improve operations for any type of machine in any environment has become crucial. This involves mostly pick and drop and inspection operations. This framework aims at helping collecting, validating (through JSON schemas) and sending reliably the data to create such APIs and dashboards.</p>
 <p>DC uses a modular approach, based on <a href="https://index.ros.org/p/pluginlib/">pluginlib</a> and greatly inspired by <a href="https://navigation.ros.org/">Nav2</a> for its architecture. Pluginlib is used to configure which measurements are collected and where the data goes. Measurements and destinations are pluginlib plugins. In addition to pluginlib, most plugins use <a href="https://fluentbit.io/">Fluent bit</a> in the backend: <em>Fluent Bit is a super fast, lightweight, and highly scalable logging and metrics processor and forwarder. It is the preferred choice for cloud and containerized environments. Developed and interfaced in C, it has already many features we directly can use, especially: high performance, reliability and data integrity (backpressure handling and data buffering in memory and filesystem)</em>.</p>
+<h2 id="why-collect-data-from-robots"><a class="header" href="#why-collect-data-from-robots">Why collect data from robots?</a></h2>
+<ol>
+<li><strong>Performance Monitoring</strong>: Collecting data from a robot allows you to monitor its performance and identify areas for improvement. For example, you can use data to analyze the robot's motion and identify areas where it may be experiencing issues or inefficiencies.</li>
+<li><strong>Fault Diagnosis</strong>: Data collection can also be used to diagnose faults and troubleshoot issues with the robot. By collecting data on various aspects of the robot's behavior, you can identify patterns or anomalies that may indicate problems with the system.</li>
+<li><strong>Machine Learning</strong>: Data collected from robots can be used to train machine learning models, which can be used to improve the robot's performance and behavior. For example, you can use data collected from sensors to train models for object detection or path planning.</li>
+<li><strong>Research and Development</strong>: Data collection is important for research and development in robotics. By collecting data on the behavior of robots in different scenarios, researchers can gain insights into how robots can be designed and optimized for different applications.</li>
+<li><strong>Inventory Management</strong>: Data collection can be used to monitor inventory levels and track the movement of goods within a warehouse. This can help managers identify which products are in high demand and optimize the placement of products to improve order fulfillment times.</li>
+<li><strong>Resource Allocation</strong>: Data collection can also help managers allocate resources more efficiently. For example, by monitoring the movement of people and goods within a warehouse, managers can identify bottlenecks and areas of congestion and adjust staffing and equipment allocation to address these issues.</li>
+<li><strong>Process Improvement</strong>: Data collection can be used to monitor and analyze the performance of various processes within a warehouse. By identifying areas of inefficiency or errors, managers can develop strategies for improving these processes and increasing productivity.</li>
+<li><strong>Predictive Maintenance</strong>: Data collection can be used to monitor the performance of equipment and identify potential maintenance issues before they occur. This can help managers schedule maintenance more effectively and avoid costly downtime due to equipment failure.</li>
+</ol>
 <h2 id="main-features"><a class="header" href="#main-features">Main features</a></h2>
 <ul>
+<li><strong>Open source</strong>: Currently all tools on the market are not open source. This project is in <a href="https://www.mozilla.org/en-US/MPL/2.0/">MPL-2.0 license</a>, in summary you can use without asking permission and without paying</li>
 <li><strong>Modular approach</strong>: based on pluginlib and greatly inspired by Nav2 for its architecture</li>
 <li><strong>Reliable data collection</strong>: validate and send data to create APIs and dashboards</li>
 <li><strong>Flexible data collection</strong>: set polling interval for each measurement or collect every measurement with StringStamped messages</li>
