@@ -140,6 +140,9 @@ list(APPEND dc_measurement_plugin_libs dc_speed_measurement)
 add_library(dc_storage_measurement SHARED plugins/measurements/storage.cpp)
 list(APPEND dc_measurement_plugin_libs dc_storage_measurement)
 
+add_library(dc_stops_measurement SHARED plugins/measurements/stops.cpp)
+list(APPEND dc_measurement_plugin_libs dc_stops_measurement)
+
 add_library(dc_string_stamped_measurement SHARED plugins/measurements/string_stamped.cpp)
 list(APPEND dc_measurement_plugin_libs dc_string_stamped_measurement)
 
