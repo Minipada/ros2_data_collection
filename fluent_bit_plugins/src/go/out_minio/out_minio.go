@@ -169,7 +169,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 					if _, err := os.Stat(val_str); errors.Is(err, os.ErrNotExist) {
 						// File does not exist
 					} else {
-						current_group = split_groups[split_src_field_i]
+						current_group = fmt.Sprintf("%s", record["name"])
 					}
 				}
 			// Ignore fields that don't belong to the group. Since they are not in the JSON, we skip them to not create errors
