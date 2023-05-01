@@ -18,6 +18,10 @@ Collect command velocity sent to the robot by subscribing to cmd_vel topic.
     "title": "Cmd_vel",
     "description": "Command velocity sent to the robot",
     "properties": {
+        "computed": {
+            "description": "Computed command velocity in meter/s",
+            "type": "number"
+        },
         "linear": {
             "description": "Linear velocity as a vector",
             "type": "object",
