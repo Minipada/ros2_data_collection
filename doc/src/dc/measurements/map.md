@@ -69,6 +69,10 @@ Save map using nav2_map_server and collect the map of the local map saved. The m
         "paths": {
             "type": "object",
             "properties": {
+                "png": {
+                    "description": "Path to the map PNG file containing the image",
+                    "type": "string"
+                },
                 "yaml": {
                     "description": "Path to the map YAML file containing map metadata",
                     "type": "string"

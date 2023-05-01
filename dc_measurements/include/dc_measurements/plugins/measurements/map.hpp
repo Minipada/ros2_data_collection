@@ -1,9 +1,10 @@
-
 #ifndef DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__MAP_HPP_
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__MAP_HPP_
 
 #include <filesystem>
 #include <fstream>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
