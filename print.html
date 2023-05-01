@@ -1065,6 +1065,10 @@ They are first stored in a temporary folder. Once the record (of e.g 10 seconds)
         &quot;paths&quot;: {
             &quot;type&quot;: &quot;object&quot;,
             &quot;properties&quot;: {
+                &quot;png&quot;: {
+                    &quot;description&quot;: &quot;Path to the map PNG file containing the image&quot;,
+                    &quot;type&quot;: &quot;string&quot;
+                },
                 &quot;yaml&quot;: {
                     &quot;description&quot;: &quot;Path to the map YAML file containing map metadata&quot;,
                     &quot;type&quot;: &quot;string&quot;
@@ -3033,6 +3037,7 @@ $ export TURTLEBOT3_MODEL=waffle
     world:=&quot;${PWD}/install/dc_simulation/share/dc_simulation/worlds/qrcodes.world&quot; \
     nav2_params_file:=&quot;${PWD}/install/dc_simulation/share/dc_demos/params/qrcodes_nav.yaml&quot; \
     dc_params_file:=&quot;${PWD}/install/dc_simulation/share/dc_demos/params/qrcodes_minio_pgsql.yaml&quot; \
+    rviz_config_file:=&quot;${PWD}/install/dc_simulation/share/dc_simulation/rviz/qrcodes.rviz&quot; \
     use_rviz:=False
 </code></pre>
 <p>Rviz and Gazebo will start: you should now see the robot in Gazebo, and the map on Rviz.</p>
