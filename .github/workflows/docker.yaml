@@ -18,6 +18,10 @@ on:
       - docker/**
       - .github/workflows/docker.yaml
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   doc:
     strategy:
