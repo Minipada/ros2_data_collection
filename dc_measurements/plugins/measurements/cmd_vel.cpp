@@ -14,6 +14,7 @@ void CmdVel::cmdVelCb(const geometry_msgs::msg::Twist& msg)
   std::string yaml_str = geometry_msgs::msg::to_yaml(msg);
   YAML::Node yaml_node = YAML::Load(yaml_str);
   json data_json = dc_util::tojson::detail::yaml2json(yaml_node);
+  data_json["computed"] = sqrt(msg.linear.x * msg.linear.x + msg.linear.y * msg.linear.y);
   dc_interfaces::msg::StringStamped pub_msg;
   pub_msg.group_key = group_key_;
   pub_msg.data = data_json.dump(-1, ' ', true);
