@@ -52,7 +52,7 @@ void Moving::odomCb(const nav_msgs::msg::Odometry& msg)
     RCLCPP_DEBUG(logger_, "Moving, was stopped");
     active_ = true;
   }
-  else if (moving_count_ <= -count_hysteresis_ and active_)
+  else if (moving_count_ <= -count_hysteresis_ && active_)
   {
     RCLCPP_DEBUG(logger_, "Stopped, was moving");
     active_ = false;
