@@ -328,10 +328,7 @@ string LinuxParser::Command(int pid)
 int LinuxParser::Ram(int pid)
 {
   string line;
-  string ram = "-------";
   string token = "";
-  vector<tuple<float, string>> units_in_kb{ { 1048576, "G" }, { 1024, "M" }, { 1, "K" } };
-  string pretty_value;
 
   std::ifstream fs(K_PROC_DIRECTORY + to_string(pid) + K_STATUS_FILENAME);
   if (fs.is_open())

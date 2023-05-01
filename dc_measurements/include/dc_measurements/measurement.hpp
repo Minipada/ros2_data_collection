@@ -229,7 +229,7 @@ public:
   {
     // Only put the tags in if the conditions are ok. This way, we still publish the data
     // and can check in conditions but with no tags, this is not received by the destination_server
-    if (!tags_.empty())  // && isConditionOn(msg))
+    if (!tags_.empty())
     {
       try
       {
