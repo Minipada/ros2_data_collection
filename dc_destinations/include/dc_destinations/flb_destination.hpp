@@ -105,15 +105,18 @@ public:
       throw std::runtime_error("Cannot start lua timestamp filter");
     }
     std::string date_record = "";
-    if (time_format_ == "double")
+    if (!time_key_.empty())
     {
-      date_record = "record[\"" + time_key_ + "\"] = timestamp ";
-    }
-    else if (time_format_ == "iso8601")
-    {
-      date_record = "record[\"" + time_key_ +
-                    "\"] = os.date('!%Y-%m-%dT%H:%M:%S', timestamp[\"sec\"]) .. \".\" .. "
-                    "tostring(math.floor(timestamp[\"nsec\"])) ";
+      if (time_format_ == "double")
+      {
+        date_record = "record[\"" + time_key_ + "\"] = timestamp ";
+      }
+      else if (time_format_ == "iso8601")
+      {
+        date_record = "record[\"" + time_key_ +
+                      "\"] = os.date('!%Y-%m-%dT%H:%M:%S', timestamp[\"sec\"]) .. \".\" .. "
+                      "tostring(math.floor(timestamp[\"nsec\"])) ";
+      }
     }
     std::string ts_lua_code =
         std::string("function replace_ts(tag, timestamp, record) ") + date_record + " return 2, timestamp, record end";
