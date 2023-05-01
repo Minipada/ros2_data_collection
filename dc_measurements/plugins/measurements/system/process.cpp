@@ -85,7 +85,7 @@ string Process::command()
 /********* Process::Ram *******
  *  A friendly output of memory in use by this process using SI units.
  *  Inputs: None.
- *  Outputs: A string of Process RAM usage in giga, mega, or kilo-bytes.
+ *  Outputs: RAM usage in kilo-bytes.
  */
 int Process::ram()
 {
