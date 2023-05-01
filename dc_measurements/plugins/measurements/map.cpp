@@ -76,12 +76,21 @@ std::string Map::saveMap()
     return "";
   }
 
+  cv::Mat img_pgm = cv::imread(absolute_path + ".pgm", cv::COLOR_BGR2GRAY);
+  cv::Mat img_png;
+  cv::cvtColor(img_pgm, img_png, cv::IMREAD_COLOR);
+  cv::imwrite(absolute_path + ".png", img_png);
+  img_pgm.release();
+  img_png.release();
+
   if (!std::filesystem::exists((absolute_path + ".pgm").c_str()) ||
-      !std::filesystem::exists((absolute_path + ".yaml").c_str()))
+      !std::filesystem::exists((absolute_path + ".yaml").c_str()) ||
+      !std::filesystem::exists((absolute_path + ".png").c_str()))
   {
     // Delete in case only one of them was saved
     std::remove((absolute_path + ".pgm").c_str());
     std::remove((absolute_path + ".yaml").c_str());
+    std::remove((absolute_path + ".png").c_str());
     RCLCPP_ERROR(logger_, "Map was not saved");
     return "";
   }
@@ -140,9 +149,11 @@ dc_interfaces::msg::StringStamped Map::collect()
     data_json["origin"]["y"] = data_map["origin"][1].as<float>();
     data_json["local_paths"]["yaml"] = (file_save_path + ".yaml").c_str();
     data_json["local_paths"]["pgm"] = (file_save_path + ".pgm").c_str();
+    data_json["local_paths"]["png"] = (file_save_path + ".png").c_str();
     std::string relative_path = getLocalPath("save_path", now);
     saveRemoteKeys(data_json, "yaml", relative_path + ".yaml", now);
     saveRemoteKeys(data_json, "pgm", relative_path + ".pgm", now);
+    saveRemoteKeys(data_json, "png", relative_path + ".png", now);
     int width = getMapSize(file_save_path + ".pgm");
     data_json["width"] = width;
     data_json["height"] = width;
