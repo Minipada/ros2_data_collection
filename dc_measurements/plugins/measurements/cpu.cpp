@@ -47,12 +47,16 @@ void Cpu::setAverageCpu(json& data_json)
 
 void Cpu::setProcessesUsage(json& data_json)
 {
+  if (max_processes_ == -1)
+  {
+    return;
+  }
   data_json["sorted"] = json::array();
   int count = 0;
   auto processes = system_.processes();
   for (auto& process : processes)
   {
-    if (max_processes_ != -1 && count == max_processes_)
+    if (count == max_processes_)
     {
       break;
     }
@@ -66,6 +70,7 @@ void Cpu::setProcessesUsage(json& data_json)
       proc_json["ram"] = process.ram();
       proc_json["uptime"] = process.upTime();
       data_json["sorted"].push_back(proc_json);
+      count++;
     }
   }
 }
@@ -81,6 +86,7 @@ dc_interfaces::msg::StringStamped Cpu::collect()
   dc_interfaces::msg::StringStamped msg;
   msg.header.stamp = node->get_clock()->now();
   msg.group_key = group_key_;
+
   json data_json;
   setAverageCpu(data_json);
   setProcessesCount(data_json);
