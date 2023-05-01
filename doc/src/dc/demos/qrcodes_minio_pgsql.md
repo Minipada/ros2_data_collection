@@ -43,7 +43,6 @@ $ export TURTLEBOT3_MODEL=waffle
 $ ros2 run rviz2 rviz2 -d ${PWD}/install/dc_simulation/share/dc_simulation/rviz/qrcodes.rviz
 ```
 
-
 ## Start Navigation
 
 Then, start the Turtlebot launchfile with custom parameters to start the QRcode world:
@@ -62,6 +61,7 @@ $ ros2 launch nav2_bringup tb3_simulation_launch.py \
     world:="${PWD}/install/dc_simulation/share/dc_simulation/worlds/qrcodes.world" \
     nav2_params_file:="${PWD}/install/dc_simulation/share/dc_demos/params/qrcodes_nav.yaml" \
     dc_params_file:="${PWD}/install/dc_simulation/share/dc_demos/params/qrcodes_minio_pgsql.yaml" \
+    rviz_config_file:="${PWD}/install/dc_simulation/share/dc_simulation/rviz/qrcodes.rviz" \
     use_rviz:=False
 ```
 
