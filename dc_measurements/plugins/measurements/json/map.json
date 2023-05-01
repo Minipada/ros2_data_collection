@@ -62,6 +62,10 @@
     "paths": {
       "type": "object",
       "properties": {
+        "png": {
+          "description": "Path to the map PNG file containing the image",
+          "type": "string"
+        },
         "yaml": {
           "description": "Path to the map YAML file containing map metadata",
           "type": "string"
