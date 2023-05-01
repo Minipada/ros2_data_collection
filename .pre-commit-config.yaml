@@ -129,7 +129,7 @@ repos:
           (?x)
         additional_dependencies: ["flake8>=4.0.1"]
   - repo: https://github.com/minipada/ros2_pre-commit.git
-    rev: 1.0.2
+    rev: 1.0.3
     hooks:
       - id: ros2_ws_same_versions
         args: [--src=., --regex=dc_.*]
