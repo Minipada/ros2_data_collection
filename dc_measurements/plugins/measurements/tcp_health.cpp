@@ -32,20 +32,18 @@ bool TCPHealth::getPortHealth(unsigned short port)
 {
   using namespace boost::asio;
   using ip::tcp;
-  using ec = boost::system::error_code;
 
   bool result = false;
 
   try
   {
     io_service svc;
-    tcp::socket s(svc);
-    deadline_timer tim(svc, boost::posix_time::seconds(1));
+    tcp::acceptor a(svc);
 
-    tim.async_wait([&](ec) { s.cancel(); });
-    s.async_connect({ {}, port }, [&](ec ec) { result = !ec; });
+    boost::system::error_code ec;
+    a.open(tcp::v4(), ec) || a.bind({ tcp::v4(), port }, ec);
 
-    svc.run();
+    return ec == error::address_in_use;
   }
   catch (...)
   {

@@ -45,6 +45,7 @@ Collects status of a TCP server.
 tcp_health:
   plugin: "dc_measurements/TCPHealth"
   topic_output: "/dc/measurement/minio_health"
+  group_key: "minio_health"
   tags: ["flb_stdout"]
   host: "127.0.0.1"
   port: 9000
