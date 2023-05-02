@@ -19,6 +19,7 @@
   - [Speed](./dc/measurements/speed.md)
   - [Storage](./dc/measurements/storage.md)
   - [String stamped](./dc/measurements/string_stamped.md)
+  - [TCP Health](./dc/measurements/tcp_health.md)
   - [Uptime](./dc/measurements/uptime.md)
 - [Conditions](./dc/conditions.md)
   - [Bool equal](./dc/conditions/bool_equal.md)

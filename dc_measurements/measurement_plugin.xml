@@ -111,6 +111,14 @@
         </class>
     </library>
 
+    <library path="dc_tcp_health_measurement">
+        <class name="dc_measurements/TCPHealth" type="dc_measurements::TCPHealth" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_tcp_health
+            </description>
+        </class>
+    </library>
+
     <library path="dc_uptime_measurement">
         <class name="dc_measurements/Uptime" type="dc_measurements::Uptime" base_class_type="dc_core::Measurement">
             <description>
