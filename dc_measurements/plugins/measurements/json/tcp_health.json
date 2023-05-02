@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TCP Health",
+  "description": "Status of a TCP server",
+  "properties": {
+    "host": {
+      "description": "Server hostname",
+      "type": "string"
+    },
+    "port": {
+      "description": "Port number",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65536
+    },
+    "server_name": {
+      "description": "Time the system has been up",
+      "type": "string"
+    }
+  },
+  "type": "object"
+}
