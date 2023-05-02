@@ -143,6 +143,9 @@ list(APPEND dc_measurement_plugin_libs dc_storage_measurement)
 add_library(dc_string_stamped_measurement SHARED plugins/measurements/string_stamped.cpp)
 list(APPEND dc_measurement_plugin_libs dc_string_stamped_measurement)
 
+add_library(dc_tcp_health_measurement SHARED plugins/measurements/tcp_health.cpp)
+list(APPEND dc_measurement_plugin_libs dc_tcp_health_measurement)
+
 add_library(dc_uptime_measurement SHARED
   plugins/measurements/uptime.cpp
   plugins/measurements/system/linux_parser.cpp

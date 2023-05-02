@@ -72,4 +72,5 @@ Each measurement is collected through a node and has these configuration paramet
 | [Speed](./measurements/speed.md)                         | Robot speed                                                                                             |
 | [Storage](./measurements/storage.md)                     | Available and used space in a directory                                                                 |
 | [String stamped](./measurements/string_stamped.md)       | Republish a string stamped message, can be used for external data                                       |
+| [TCP Health](./measurements/tcp_health.md)               | Health status of a TCP Server                                                                           |
 | [Uptime](./measurements/uptime.md)                       | How long the machine has been turned on                                                                 |
