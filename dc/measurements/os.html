@@ -182,25 +182,30 @@
 <p>Collects the Operating System information: cpus, operating system name and kernel information</p>
 <h2 id="schema"><a class="header" href="#schema">Schema</a></h2>
 <pre><code class="language-json">{
-    &quot;$schema&quot;: &quot;http://json-schema.org/draft-07/schema#&quot;,
-    &quot;title&quot;: &quot;OS&quot;,
-    &quot;description&quot;: &quot;OS, kernel and CPUs information&quot;,
-    &quot;properties&quot;: {
-        &quot;os&quot;: {
-            &quot;description&quot;: &quot;Host distribution name&quot;,
-            &quot;type&quot;: &quot;string&quot;
-        },
-        &quot;kernel&quot;: {
-            &quot;description&quot;: &quot;Kernel version&quot;,
-            &quot;type&quot;: &quot;string&quot;
-        },
-        &quot;cpu&quot;: {
-            &quot;description&quot;: &quot;number of CPUs&quot;,
-            &quot;type&quot;: &quot;integer&quot;,
-            &quot;minimum&quot;: 0
-        }
+  &quot;$schema&quot;: &quot;http://json-schema.org/draft-07/schema#&quot;,
+  &quot;title&quot;: &quot;OS&quot;,
+  &quot;description&quot;: &quot;OS, kernel and CPUs information&quot;,
+  &quot;properties&quot;: {
+    &quot;os&quot;: {
+      &quot;description&quot;: &quot;Host distribution name&quot;,
+      &quot;type&quot;: &quot;string&quot;
     },
-    &quot;type&quot;: &quot;object&quot;
+    &quot;kernel&quot;: {
+      &quot;description&quot;: &quot;Kernel version&quot;,
+      &quot;type&quot;: &quot;string&quot;
+    },
+    &quot;cpu&quot;: {
+      &quot;description&quot;: &quot;Number of CPUs&quot;,
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 0
+    },
+    &quot;memory&quot;: {
+      &quot;description&quot;: &quot;System memory&quot;,
+      &quot;type&quot;: &quot;number&quot;,
+      &quot;minimum&quot;: 0
+    }
+  },
+  &quot;type&quot;: &quot;object&quot;
 }
 </code></pre>
 <h2 id="measurement-configuration"><a class="header" href="#measurement-configuration">Measurement configuration</a></h2>
