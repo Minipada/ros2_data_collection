@@ -12,8 +12,13 @@
       "type": "string"
     },
     "cpu": {
-      "description": "number of CPUs",
+      "description": "Number of CPUs",
       "type": "integer",
+      "minimum": 0
+    },
+    "memory": {
+      "description": "System memory",
+      "type": "number",
       "minimum": 0
     }
   },
