@@ -318,7 +318,6 @@ dc_interfaces::msg::StringStamped Camera::collect()
         std::string relative_path = getSavePath("save_inspected_path", now);
 
         // Request to save image
-        // auto status_det = dc_util::req_save_image(cli_save_img_, last_data_, absolute_path, 500ms);
         std::string absolute_path_dir = std::filesystem::path(absolute_path).parent_path().u8string();
         std::filesystem::create_directories(absolute_path_dir);
         auto status_det = cv::imwrite(absolute_path, cv_ptr->image);
@@ -338,8 +337,13 @@ dc_interfaces::msg::StringStamped Camera::collect()
     }
   }
   dc_interfaces::msg::StringStamped msg;
+  if (data_json.empty())
+  {
+    return msg;
+  }
   msg.header.stamp = now;
   msg.group_key = group_key_;
+  data_json["camera_name"] = cam_name_;
   msg.data = data_json.dump(-1, ' ', true);
   return msg;
 }
