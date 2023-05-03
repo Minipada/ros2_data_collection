@@ -336,11 +336,6 @@ dc_interfaces::msg::StringStamped Camera::collect()
         }
       }
     }
-    else
-    {
-      dc_interfaces::msg::StringStamped msg;
-      return msg;
-    }
   }
   dc_interfaces::msg::StringStamped msg;
   msg.header.stamp = now;
