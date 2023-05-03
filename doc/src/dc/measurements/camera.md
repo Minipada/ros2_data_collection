@@ -87,6 +87,10 @@ flb_minio:
   "title":"Camera",
   "description":"Camera images with detected objects",
   "properties":{
+    "camera_name": {
+      "description": "Name of the camera",
+      "type": "string"
+    },
     "local_img_paths":{
       "description":"Paths of saved images",
       "type":"object",
