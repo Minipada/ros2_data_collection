@@ -71,6 +71,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: testspace-com/setup-testspace@v1
+        if: github.repository == 'minipada/ros2_data_collection'
+        with:
+          domain: Minipada
       - name: Install Python dependencies
         uses: py-actions/py-dependency-install@v4
         with:
@@ -129,6 +133,10 @@ jobs:
         name: Run industrial_ci
         uses: ros-industrial/industrial_ci@master
         env: ${{ matrix.env }}
+      - name: Push result to Testspace
+        if: always() && (github.repository == 'minipada/ros2_data_collection')
+        run: |
+          testspace "[ ${{ matrix.env.IMAGE }} ]${{ env.BASEDIR }}/target_ws/**/test_results/**/*.xml"
       - name: Workaround fix permission #https://github.com/actions/checkout/issues/211
         # Needed when fetching fluent_bit_vendor
         if: always()
