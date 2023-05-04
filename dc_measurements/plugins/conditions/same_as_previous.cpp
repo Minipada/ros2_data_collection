@@ -25,6 +25,10 @@ void SameAsPrevious::onConfigure()
 bool SameAsPrevious::getState(dc_interfaces::msg::StringStamped msg)
 {
   json data_json = json::parse(msg.data);
+  if (data_json.empty())
+  {
+    return false;
+  }
   data_json.erase("tags");
   previous_keys_hash_ = keys_hash_;
 
