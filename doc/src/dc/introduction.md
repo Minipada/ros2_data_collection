@@ -8,7 +8,9 @@
 
 **Source code**: [https://github.com/minipada/ros2_data_collection](https://github.com/minipada/ros2_data_collection)
 
-[![ROS 2](https://img.shields.io/badge/ROS%202-humble-informational?style=for-the-badge)](https://docs.ros.org/en/humble/index.html) ![python](https://img.shields.io/badge/python-3.10.4-informational?style=for-the-badge) ![C++](https://img.shields.io/badge/C++-17-informational?style=for-the-badge) [![codecov](https://codecov.io/gh/Minipada/ros2_data_collection/branch/humble/graph/badge.svg?token=Y2UA5OE0KR)](https://codecov.io/gh/Minipada/ros2_data_collection)
+[![ROS 2](https://img.shields.io/badge/ROS%202-humble-informational?style=for-the-badge)](https://docs.ros.org/en/humble/index.html) ![python](https://img.shields.io/badge/python-3.10.4-informational?style=for-the-badge) ![C++](https://img.shields.io/badge/C++-17-informational?style=for-the-badge)
+
+[![codecov](https://codecov.io/gh/Minipada/ros2_data_collection/branch/humble/graph/badge.svg?token=Y2UA5OE0KR)](https://codecov.io/gh/Minipada/ros2_data_collection) [![tests](https://minipada.testspace.com/spaces/219054/badge?token=8214fc76eff8c09b47136742d644d2a1ac0e38e3)](https://minipada.testspace.com/spaces/219054?utm_campaign=badge&utm_medium=referral&utm_source=test)
 
 | Humble                                                                                                                                                                                                                        |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
