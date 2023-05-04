@@ -154,7 +154,7 @@ bool MeasurementServer::loadMeasurementPlugins()
     measurement_init_max_measurements_[i] =
         dc_util::get_int_type_param(node, measurement_ids_[i], "init_max_measurements", 0);
     measurement_include_measurement_name_[i] =
-        dc_util::get_bool_type_param(node, measurement_ids_[i], "include_measurement_name", false);
+        dc_util::get_bool_type_param(node, measurement_ids_[i], "include_measurement_name", true);
     measurement_include_measurement_plugin_[i] =
         dc_util::get_bool_type_param(node, measurement_ids_[i], "include_measurement_plugin", false);
     measurement_remote_keys_[i] =
