@@ -5,7 +5,7 @@ description = ""
 authors = ["David Bensoussan <d.bensoussan@proton.me>"]
 
 [tool.poetry.dependencies]
-python = "^3.8.10"
+python = ">=3.8.10,<3.9.7 || >3.9.7,<4.0.0"
 pyzbar = "^0.1.9"
 opencv-python = "^4.7.0"
 numpy = "^1.24.2"
@@ -41,6 +41,12 @@ codespell = "^2.2.2"
 flake8-bugbear = "^23.2.13"
 flake8-use-fstring = "^1.4"
 fastcov = "^1.14"
+pandas = "<2"
+streamlit = "^1.21.0"
+plotly = "^5.14.1"
+SQLAlchemy = "^2.0.11"
+psycopg2 = "^2.9.6"
+minio = "^7.1.14"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
