@@ -13,6 +13,7 @@ repos:
         name: Detect if private key is added to the repository
       - id: check-added-large-files
         name: Detect if giant files are added
+        args: ["--maxkb=1000"]
       - id: check-docstring-first
         name: Checks for a common error of placing code before the docstring
       - id: check-executables-have-shebangs
