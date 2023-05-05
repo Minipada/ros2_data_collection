@@ -78,22 +78,6 @@ void Camera::onConfigure()
     RCLCPP_INFO(logger_, "Barcode detection service initialized");
   }
 
-  // Services
-  if (save_raw_img_ || save_rotated_img_ || save_detections_img_)
-  {
-    cli_save_img_ = node->create_client<dc_interfaces::srv::SaveImage>(
-        "/dc/service/save_image", rmw_qos_profile_services_default, client_cb_group_);
-    while (!cli_save_img_->wait_for_service(std::chrono::seconds(1)))
-    {
-      if (!rclcpp::ok())
-      {
-        throw std::runtime_error{ "Save image client interrupted while waiting for service to appear." };
-      }
-      RCLCPP_INFO(logger_, "Waiting for save image service to appear...");
-    }
-    RCLCPP_INFO(logger_, "Save image service initialized");
-  }
-
   if (draw_det_barcodes_)
   {
     cli_draw_image_ = node->create_client<dc_interfaces::srv::DrawImage>(
