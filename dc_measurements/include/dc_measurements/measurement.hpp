@@ -429,8 +429,9 @@ public:
     }
 
     data_pub_ = node->create_publisher<dc_interfaces::msg::StringStamped>(topic_output_, 1);
-    collect_timer_ =
-        node->create_wall_timer(std::chrono::milliseconds(polling_interval_), [this] { collectAndPublish(); });
+    client_cb_group_ = node->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+    collect_timer_ = node->create_wall_timer(
+        std::chrono::milliseconds(polling_interval_), [this] { collectAndPublish(); }, client_cb_group_);
 
     RCLCPP_INFO(logger_, "Done configuring %s", measurement_name_.c_str());
 
@@ -494,6 +495,7 @@ protected:
   bool enabled_{ true };
   bool debug_;
   std::shared_ptr<tf2_ros::Buffer> tf_;
+  rclcpp::CallbackGroup::SharedPtr client_cb_group_;
 
   // Publish data
   int polling_interval_;
