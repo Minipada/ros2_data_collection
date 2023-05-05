@@ -1,0 +1,329 @@
+destination_server:
+  ros__parameters:
+    flb:
+      flush: 1
+      flb_grace: 1
+      log_level: "info"
+      storage_path: "/var/log/flb-storage/"
+      storage_sync: "full"
+      storage_checksum: "off"
+      storage_backlog_mem_limit: "1M"
+      scheduler_cap: 200
+      scheduler_base: 5
+      http_server: true
+      http_listen: "0.0.0.0"
+      http_port: 2020
+      in_storage_type: "filesystem"
+      in_storage_pause_on_chunks_overlimit: "off"
+    destination_plugins: ["flb_pgsql", "flb_minio"]
+    custom_str_params_list: ["robot_name", "id"]
+    custom_str_params:
+      robot_name:
+        name: robot_name
+        value: "Turtlebot"
+      # Requires systemd package
+      id:
+        name: id
+        value_from_file: /etc/machine-id
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: "$HOME/run_id"
+      uuid: false
+    flb_files_metrics:
+      plugin: "dc_destinations/FlbFilesMetrics"
+      inputs:
+        [
+          "/dc/measurement/map",
+          "/dc/measurement/right_camera",
+          "/dc/measurement/left_camera",
+        ]
+      file_storage: ["minio"]
+      db_type: "pgsql"
+      delete_when_sent: true
+      minio:
+        endpoint: 127.0.0.1:9000
+        access_key_id: fyTGdQUk1nTOu3VO
+        secret_access_key: fRIS95M8Qmn5Uwqgi1aeUIIOvGejK4qa
+        use_ssl: false
+        bucket: "mybucket"
+        src_fields:
+          [
+            "local_paths.pgm",
+            "local_paths.yaml",
+            "local_paths.inspected",
+            "local_paths.inspected",
+          ]
+        upload_fields:
+          [
+            "remote_paths.minio.pgm",
+            "remote_paths.minio.yaml",
+            "remote_paths.minio.inspected",
+            "remote_paths.minio.inspected",
+          ]
+      pgsql:
+        host: "127.0.0.1"
+        port: "5432"
+        user: dc
+        password: password
+        database: "dc"
+        table: "files_metrics"
+        timestamp_key: "date"
+        time_format: "double"
+        time_key: "date"
+        ssl: false
+    flb_minio:
+      verbose_plugin: false
+      time_format: "iso8601"
+      plugin: "dc_destinations/FlbMinIO"
+      inputs: ["/dc/measurement/map", "/dc/measurement/camera"]
+      endpoint: 127.0.0.1:9000
+      access_key_id: fyTGdQUk1nTOu3VO
+      secret_access_key: fRIS95M8Qmn5Uwqgi1aeUIIOvGejK4qa
+      use_ssl: false
+      bucket: "mybucket"
+      src_fields:
+        [
+          "local_paths.pgm",
+          "local_paths.yaml",
+          "local_paths.png",
+          "local_paths.raw",
+        ]
+      upload_fields:
+        [
+          "remote_paths.minio.pgm",
+          "remote_paths.minio.yaml",
+          "remote_paths.minio.png",
+          "remote_paths.minio.raw",
+        ]
+    flb_pgsql:
+      plugin: "dc_destinations/FlbPgSQL"
+      inputs: [
+          # System
+          "/dc/measurement/cpu",
+          "/dc/measurement/memory",
+          "/dc/measurement/os",
+          "/dc/measurement/uptime",
+          # Robot
+          "/dc/measurement/camera",
+          "/dc/measurement/cmd_vel",
+          "/dc/measurement/distance_traveled",
+          "/dc/measurement/position",
+          "/dc/measurement/speed",
+          # Environment
+          "/dc/measurement/map",
+          # Infrastructure
+          "/dc/measurement/minio_api_health",
+          "/dc/measurement/minio_dashboard_health",
+          "/dc/measurement/pgsql_health",
+        ]
+      host: "127.0.0.1"
+      port: 5432
+      user: dc
+      password: password
+      database: "dc"
+      table: "dc"
+      timestamp_key: "date"
+      async: false
+      time_format: "double"
+      time_key: "date"
+
+measurement_server:
+  ros__parameters:
+    custom_str_params: ["robot_name"]
+    robot_name: "Turtlebot"
+    measurement_plugins: [
+        # System
+        "cpu",
+        "os",
+        "memory",
+        "uptime",
+        # Robot
+        "camera",
+        "cmd_vel",
+        "distance_traveled",
+        "position",
+        "speed",
+        # Environment
+        "map",
+        # Infrastructure
+        "minio_api_health",
+        "minio_dashboard_health",
+        "pgsql_health",
+      ]
+    save_local_base_path: "$HOME/dc_data/"
+    all_base_path: "=robot_name/%Y/%m/%d/%H"
+    condition_plugins:
+      ["moving", "min_distance_traveled", "max_distance_traveled"]
+    destinations:
+      minio:
+        bucket: mybucket
+    # Conditions
+    moving:
+      plugin: "dc_conditions/Moving"
+    min_distance_traveled:
+      plugin: "dc_conditions/DoubleSuperior"
+      key: "distance_traveled"
+      value: 0.01
+      include_value: true
+    max_distance_traveled:
+      plugin: "dc_conditions/DoubleInferior"
+      key: "distance_traveled"
+      value: 2.0
+      include_value: true
+    # System data
+    cpu:
+      plugin: "dc_measurements/Cpu"
+      topic_output: "/dc/measurement/cpu"
+      group_key: "cpu"
+      polling_interval: 5000
+      tags: ["flb_pgsql"]
+      include_measurement_name: true
+      init_collect: true
+      max_processes: 5
+      cpu_min: 5.0
+    memory:
+      plugin: "dc_measurements/Memory"
+      group_key: "memory"
+      topic_output: "/dc/measurement/memory"
+      polling_interval: 5000
+      node_name: "dc_measurement_memory"
+      tags: ["flb_pgsql"]
+      include_measurement_name: true
+      init_collect: true
+    os:
+      plugin: "dc_measurements/OS"
+      topic_output: "/dc/measurement/os"
+      group_key: "os"
+      tags: ["flb_pgsql"]
+      include_measurement_name: true
+      init_collect: true
+      init_max_measurements: 1
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      group_key: "uptime"
+      topic_output: "/dc/measurement/uptime"
+      polling_interval: 5000
+      enable_validator: true
+      debug: true
+      tags: ["flb_pgsql"]
+      init_collect: true
+      include_measurement_name: true
+    # Robot data
+    distance_traveled:
+      plugin: "dc_measurements/DistanceTraveled"
+      topic_output: "/dc/measurement/distance_traveled"
+      if_all_conditions: ["min_distance_traveled", "max_distance_traveled"]
+      tags: ["flb_pgsql"]
+      group_key: "distance_traveled"
+      global_frame: "map"
+      robot_base_frame: "base_link"
+      transform_timeout: 0.1
+      polling_interval: 5000
+      init_max_measurements: -1
+      condition_max_measurements: 0
+      include_measurement_name: true
+      init_collect: false
+    cmd_vel:
+      plugin: "dc_measurements/CmdVel"
+      group_key: "cmd_vel"
+      tags: ["flb_pgsql"]
+      enable_validator: true
+      polling_interval: 500
+      topic_output: "/dc/measurement/cmd_vel"
+      include_measurement_name: true
+    position:
+      plugin: "dc_measurements/Position"
+      group_key: "position"
+      topic_output: "/dc/measurement/position"
+      enable_validator: true
+      tags: ["flb_pgsql"]
+      init_collect: true
+      global_frame: "map"
+      robot_base_frame: "base_link"
+      transform_timeout: 0.1
+      include_measurement_name: true
+    stops:
+      plugin: "dc_measurements/Stops"
+      group_key: "stops"
+      tags: ["flb_pgsql"]
+      odom_topic: "/odom"
+      topic_output: "/dc/measurement/stops"
+      include_measurement_name: true
+    speed:
+      plugin: "dc_measurements/Speed"
+      group_key: "speed"
+      tags: ["flb_pgsql"]
+      odom_topic: "/odom"
+      polling_interval: 500
+      topic_output: "/dc/measurement/speed"
+      include_measurement_name: true
+    camera:
+      plugin: "dc_measurements/Camera"
+      group_key: "camera"
+      if_none_conditions: ["moving"]
+      topic_output: "/dc/measurement/camera"
+      init_collect: false
+      init_max_measurements: -1
+      condition_max_measurements: 1
+      node_name: "dc_measurement_camera"
+      cam_topic: "/intel_realsense_r200_depth/image_raw"
+      cam_name: "Intel Realsense"
+      enable_validator: true
+      draw_det_barcodes: false
+      save_raw_img: true
+      save_raw_path: "camera/raw/%Y-%m-%dT%H-%M-%S"
+      save_rotated_img: false
+      save_detections_img: false
+      rotation_angle: 0
+      remote_prefixes: [""]
+      remote_keys: ["minio"]
+      tags: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
+      include_measurement_name: true
+      include_measurement_plugin: true
+    # Environment data
+    map:
+      plugin: "dc_measurements/Map"
+      group_key: "map"
+      save_path: "map/%Y-%m-%dT%H-%M-%S"
+      topic_output: "/dc/measurement/map"
+      save_map_timeout: 4.0
+      init_collect: false
+      init_max_measurements: 1
+      remote_prefixes: [""]
+      remote_keys: ["minio"]
+      enable_validator: true
+      tags: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
+      include_measurement_name: true
+      quiet: true
+    # Infrastructure
+    minio_api_health:
+      plugin: "dc_measurements/TCPHealth"
+      topic_output: "/dc/measurement/minio_api_health"
+      group_key: "minio_api_health"
+      polling_interval: 5000
+      tags: ["flb_pgsql"]
+      host: "127.0.0.1"
+      port: 9000
+      name: "MinIO API"
+      include_measurement_plugin: true
+    minio_dashboard_health:
+      plugin: "dc_measurements/TCPHealth"
+      topic_output: "/dc/measurement/minio_dashboard_health"
+      group_key: "minio_dashboard_health"
+      polling_interval: 5000
+      tags: ["flb_pgsql"]
+      host: "127.0.0.1"
+      port: 9001
+      name: "MinIO Dashboard"
+      include_measurement_plugin: true
+    pgsql_health:
+      plugin: "dc_measurements/TCPHealth"
+      topic_output: "/dc/measurement/pgsql_health"
+      group_key: "pgsql_health"
+      polling_interval: 5000
+      tags: ["flb_pgsql"]
+      host: "127.0.0.1"
+      port: 5432
+      name: "PostgreSQL"
+      include_measurement_plugin: true
