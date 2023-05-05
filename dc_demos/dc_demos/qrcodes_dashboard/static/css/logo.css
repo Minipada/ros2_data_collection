@@ -1,0 +1,9 @@
+#logo-dc {
+    display: block;
+    margin: auto;
+    height: 150px;
+}
+
+.sidebar-scrollbox {
+    top: 150px !important;
+}
