@@ -45,8 +45,8 @@ pandas = "<2"
 streamlit = "^1.21.0"
 plotly = "^5.14.1"
 SQLAlchemy = "^2.0.11"
-psycopg2 = "^2.9.6"
 minio = "^7.1.14"
+psycopg2-binary = "^2.9.6"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
