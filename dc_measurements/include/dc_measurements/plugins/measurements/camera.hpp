@@ -11,7 +11,6 @@
 #include "dc_core/measurement.hpp"
 #include "dc_interfaces/srv/detect_barcode.hpp"
 #include "dc_interfaces/srv/draw_image.hpp"
-#include "dc_interfaces/srv/save_image.hpp"
 #include "dc_measurements/measurement.hpp"
 #include "dc_util/image_utils.hpp"
 #include "dc_util/json_utils.hpp"
@@ -60,7 +59,6 @@ protected:
   std::vector<std::string> detection_modules_;
   rclcpp::Client<dc_interfaces::srv::DrawImage>::SharedPtr cli_draw_image_;
   rclcpp::Client<dc_interfaces::srv::DetectBarcode>::SharedPtr cli_barcodes_;
-  rclcpp::Client<dc_interfaces::srv::SaveImage>::SharedPtr cli_save_img_;
 
   rclcpp::CallbackGroup::SharedPtr client_cb_group_;
 };
