@@ -11,7 +11,7 @@ from plotly.subplots import make_subplots
 
 class OS(Section):
     def __init__(self) -> None:
-        st.subheader("OS")
+        st.subheader("System")
         self.os = ""
         self.kernel = ""
         self.memory = ""
@@ -82,8 +82,9 @@ class Memory(Section):
         st.plotly_chart(self.fig, use_container_width=True)
 
 
-class CPU:
+class CPU(Section):
     def __init__(self) -> None:
+        st.subheader("CPU and processes over time")
         self.data = None
         self.processes = None
         self.df = None
@@ -92,12 +93,14 @@ class CPU:
         self.create_plotly_figure()
         self.display_data()
 
+    @Section.handler_load_data_none
     def load_data(self) -> None:
         if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            self.data = PGSQLService().get_cpu_average(
-                robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
-            )
-            self.df = pd.DataFrame(self.data, columns=["Date", "CPU", "Processes"])
+            if config.BACKEND == config.BACKEND.POSTGRESQL:
+                self.data = PGSQLService().get_cpu_average(
+                    robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
+                )
+                self.df = pd.DataFrame(self.data, columns=["Date", "CPU", "Processes"])
 
     def create_plotly_figure(self) -> None:
         # Create figure with secondary y-axis
@@ -133,9 +136,11 @@ class CPU:
             ),
             secondary_y=True,
         )
-        self.fig.update_layout(legend={"orientation": "h"}, title="CPU and processes over time")
+        self.fig.update_layout(legend={"orientation": "h"}, title="")
 
+    @Section.handler_display_data_none
     def display_data(self) -> None:
+        assert (self.df.empty) is False
         st.plotly_chart(self.fig, use_container_width=True)
 
 
