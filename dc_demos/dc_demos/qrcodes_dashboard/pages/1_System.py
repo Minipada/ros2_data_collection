@@ -3,41 +3,32 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from backend import PGSQLService
-from config import GetDataMode
+from config import GetDataMode, config
+from lib import Section
 from pages import Header, Sidebar
 from plotly.subplots import make_subplots
 
 
-class OS:
+class OS(Section):
     def __init__(self) -> None:
-        self.data = None
+        st.subheader("OS")
         self.os = ""
         self.kernel = ""
-        self.memory = None
-        self.cpu = None
+        self.memory = ""
+        self.cpu = ""
         self.load_data()
-        self.create_str_os()
-        self.create_str_cpu()
-        self.create_str_kernel()
-        self.create_str_memory()
         self.display_data()
 
+    @Section.handler_load_data_none
     def load_data(self) -> None:
-        self.data = PGSQLService().get_os(robot_name=st.session_state.robot_name)
+        if config.BACKEND == config.BACKEND.POSTGRESQL:
+            self.os, self.cpu, self.kernel, self.memory = PGSQLService().get_os(
+                robot_name=st.session_state.robot_name
+            )
 
-    def create_str_os(self) -> None:
-        self.os = self.data[0]
-
-    def create_str_cpu(self) -> None:
-        self.cpu = self.data[1]
-
-    def create_str_kernel(self) -> None:
-        self.kernel = self.data[2]
-
-    def create_str_memory(self) -> None:
-        self.memory = self.data[3]
-
+    @Section.handler_display_data_none
     def display_data(self) -> None:
+        assert all([self.os, self.kernel, self.memory, self.cpu])
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Operating System", self.os)
         col2.metric("Kernel", self.kernel)

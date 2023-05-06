@@ -57,6 +57,7 @@ class Sidebar:
                 [robot_name[1] for robot_name in self.run_ids],
                 key="run_id",
                 format_func=self.set_format_selectbox,
+                index=2,
             )
 
         if st.session_state.mode == GetDataMode.TIME_MODE:
@@ -78,12 +79,11 @@ class Sidebar:
             options=[robot_name[0] for robot_name in result],
             key="robot_name",
         )
-        # col2.radio(
-        #     f"{GetDataMode.TIME_MODE.value} or {GetDataMode.RUN_ID_MODE}",
-        #     (GetDataMode.RUN_ID_MODE.value, GetDataMode.TIME_MODE.value),
-        #     key="mode",
-        # )
-        st.session_state.mode = GetDataMode.RUN_ID_MODE
+        col2.radio(
+            f"{GetDataMode.TIME_MODE.value} or {GetDataMode.RUN_ID_MODE}",
+            (GetDataMode.RUN_ID_MODE.value, GetDataMode.TIME_MODE.value),
+            key="mode",
+        )
         self.time_run_id_mode()
 
     def set_sidebar(self) -> None:

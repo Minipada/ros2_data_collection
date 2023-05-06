@@ -14,18 +14,23 @@ class Storage(str, Enum):
     MINIO = "minio"
 
 
+class Data(str, Enum):
+    POSTGRESQL = "postgresql"
+
+
 class Config(BaseSettings):
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 80
     DEBUG: bool = True
-    ENV: str = "development"
+    ENV: str = "dev"
     MINIO_ACCESS_KEY: str = "fyTGdQUk1nTOu3VO"
     MINIO_SECRET_KEY: str = "fRIS95M8Qmn5Uwqgi1aeUIIOvGejK4qa"
     MINIO_URL: str = "localhost:9000"
     MINIO_BUCKET: str = "mybucket"
     PGSQL_TABLE: str = "dc"
     READER_DB_URL_DATA: str = "postgresql+psycopg2://dc:password@localhost:5432/dc"
-    STORAGE: Storage = "minio"
+    STORAGE: Storage = Storage.MINIO
+    BACKEND: Data = Data.POSTGRESQL
 
 
 # Edit here if you have different configuration for development
