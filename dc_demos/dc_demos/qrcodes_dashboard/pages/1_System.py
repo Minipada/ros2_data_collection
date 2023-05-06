@@ -36,8 +36,9 @@ class OS(Section):
         col4.metric("Memory", f"{self.memory}Gb")
 
 
-class Memory:
+class Memory(Section):
     def __init__(self) -> None:
+        st.subheader("Memory over time")
         self.data = None
         self.df = None
         self.fig = None
@@ -45,19 +46,21 @@ class Memory:
         self.create_plotly_figure()
         self.display_data()
 
+    @Section.handler_load_data_none
     def load_data(self) -> None:
         if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            self.data = PGSQLService().get_memory(
-                robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
-            )
-            self.df = pd.DataFrame(self.data, columns=["Date", "Memory used"])
+            if config.BACKEND == config.BACKEND.POSTGRESQL:
+                self.data = PGSQLService().get_memory(
+                    robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
+                )
+                self.df = pd.DataFrame(self.data, columns=["Date", "Memory used"])
 
     def create_plotly_figure(self) -> None:
         self.fig = px.line(
             self.df,
             x="Date",
             y="Memory used",
-            title="Memory used over time",
+            title="",
             markers=True,
         )
         self.fig.update_xaxes(
@@ -73,7 +76,9 @@ class Memory:
             title_text=None,
         )
 
+    @Section.handler_display_data_none
     def display_data(self) -> None:
+        assert (self.df.empty) is False
         st.plotly_chart(self.fig, use_container_width=True)
 
 
