@@ -87,21 +87,6 @@ class Section(metaclass=ABCMeta):
         return wrapper
 
     @staticmethod
-    def handler_display_data_none_cols(func):
-        def wrapper(self):
-            try:
-                func(self)
-            except AssertionError:
-                with self.col:
-                    st.metric(
-                        self.cols_data[self.count]["title"],
-                        "",
-                    )
-                    st.info("No data")
-
-        return wrapper
-
-    @staticmethod
     def display_if_data_in_df(*var_names: str):
         def decorator(func):
             def wrapper(self):

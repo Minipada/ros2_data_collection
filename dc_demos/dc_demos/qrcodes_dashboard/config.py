@@ -5,8 +5,14 @@ from pydantic import BaseSettings
 
 
 class GetDataMode(str, Enum):
-    RUN_ID_MODE = "Run id"
-    TIME_MODE = "Time"
+    TODAY = "Today"
+    YESTERDAY = "Yesterday"
+    THIS_WEEK = "This week"
+    LAST_WEEK = "Last week"
+    THIS_MONTH = "This month"
+    LAST_3_MONTHS = "Last 3 months"
+    SELECT_TIME = "Select time"
+    RUN_ID = "Run id"
 
 
 class Storage(str, Enum):

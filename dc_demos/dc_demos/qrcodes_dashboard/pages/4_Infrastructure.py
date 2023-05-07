@@ -25,15 +25,17 @@ class TCPServerHealth(Section):
     @Section.handler_load_data_none
     def load_data(self) -> None:
         if self.backend == Backend.POSTGRESQL:
-            self.data = PGSQLService.get_tcp_health(
+            data = PGSQLService.get_tcp_health(
                 robot_name=st.session_state.robot_name,
                 run_id=st.session_state.get("run_id", ""),
                 start_date=st.session_state.get("start_date", None),
                 end_date=st.session_state.get("end_date", None),
             )
             self.df = pd.DataFrame(
-                self.data, columns=["Server Name", "Host", "Port", "Active", "Date"]
+                data,
+                columns=["Date", "Active", "Server Name", "Host", "Port"],
             )
+        assert self.df.empty is False
 
     @Section.display_if_data_in_df("df")
     def create_plotly_figures(self) -> None:

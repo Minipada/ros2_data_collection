@@ -336,11 +336,11 @@ class PGSQLService:
     ):
         query = (
             select(
+                RobotData.time.label("time"),
+                RobotData.data["active"],
                 RobotData.data["server_name"],
                 RobotData.data["host"],
                 RobotData.data["port"],
-                RobotData.data["active"],
-                RobotData.time.label("time"),
             )
             .where(RobotData.data["robot_name"].as_string() == robot_name)
             .where(RobotData.data["server_name"].isnot(None))
@@ -365,6 +365,7 @@ class PGSQLService:
     ):
         query = (
             select(
+                RobotData.time.label("time"),
                 RobotData.data["camera_name"].label("camera_name"),
                 RobotData.data["remote_paths"][storage]["raw"].label(f"remote_paths.{storage}.raw"),
                 RobotData.data["remote_paths"][storage]["rotated"].label(
@@ -374,7 +375,6 @@ class PGSQLService:
                     f"remote_paths.{storage}.inspected"
                 ),
                 RobotData.data["run_id"],
-                RobotData.time.label("time"),
             )
             .where(RobotData.data["robot_name"].as_string() == robot_name)
             .where(RobotData.data["camera_name"].isnot(None))
