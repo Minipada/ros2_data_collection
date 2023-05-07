@@ -39,7 +39,6 @@ class OS(Section):
 class Memory(Section):
     def __init__(self) -> None:
         st.subheader("Memory over time")
-        self.data = None
         self.df = None
         self.fig = None
         self.load_data()
@@ -50,10 +49,10 @@ class Memory(Section):
     def load_data(self) -> None:
         if st.session_state.mode == GetDataMode.RUN_ID_MODE:
             if config.BACKEND == config.BACKEND.POSTGRESQL:
-                self.data = PGSQLService().get_memory(
+                memory = PGSQLService().get_memory(
                     robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
                 )
-                self.df = pd.DataFrame(self.data, columns=["Date", "Memory used"])
+                self.df = pd.DataFrame(memory, columns=["Date", "Memory used"])
 
     def create_plotly_figure(self) -> None:
         self.fig = px.line(
@@ -85,7 +84,6 @@ class Memory(Section):
 class CPU(Section):
     def __init__(self) -> None:
         st.subheader("CPU and processes over time")
-        self.data = None
         self.processes = None
         self.df = None
         self.fig = None
@@ -97,10 +95,10 @@ class CPU(Section):
     def load_data(self) -> None:
         if st.session_state.mode == GetDataMode.RUN_ID_MODE:
             if config.BACKEND == config.BACKEND.POSTGRESQL:
-                self.data = PGSQLService().get_cpu_average(
+                cpu_average = PGSQLService().get_cpu_average(
                     robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
                 )
-                self.df = pd.DataFrame(self.data, columns=["Date", "CPU", "Processes"])
+                self.df = pd.DataFrame(cpu_average, columns=["Date", "CPU", "Processes"])
 
     def create_plotly_figure(self) -> None:
         # Create figure with secondary y-axis

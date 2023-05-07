@@ -199,8 +199,9 @@ class PGSQLService:
 
         result = pgsql_session.execute(query)
         result = result.one()[0]
+
         if not result:
-            result = 0
+            result = -1
 
         return result
 
@@ -219,7 +220,7 @@ class PGSQLService:
         result = result.one()[0]
 
         if not result:
-            result = 0
+            result = -1
 
         return result
 

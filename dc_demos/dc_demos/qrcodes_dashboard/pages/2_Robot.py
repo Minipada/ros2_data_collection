@@ -3,11 +3,12 @@ import plotly.graph_objects as go
 import streamlit as st
 from backend import PGSQLService, minio_client
 from config import GetDataMode, Storage, config
+from lib import Section
 from pages import Header, Sidebar
 from plotly.subplots import make_subplots
 
 
-class Speed:
+class Speed(Section):
     def __init__(self) -> None:
         self.speed = None
         self.speed_df = None
@@ -18,6 +19,7 @@ class Speed:
             self.create_plotly_figure()
             self.display_data()
 
+    @Section.handler_load_data_none
     def load_data(self) -> None:
         if st.session_state.mode == GetDataMode.RUN_ID_MODE:
             self.speed = PGSQLService().get_speed(
@@ -102,17 +104,22 @@ class Speed:
             legend={"orientation": "h"}, title="Speed and command velocity over time"
         )
 
+    @Section.handler_display_data_none
     def display_data(self) -> None:
         if self.fig:
             st.plotly_chart(self.fig, use_container_width=True)
 
 
-class Robot:
+class Robot(Section):
     def __init__(self) -> None:
-        self.total_distance = 0
+        self.total_distance = -1
+        self.average_speed = -1
+        self.cols_data = []
+        self.col = None
         self.load_data()
         self.display_metrics()
 
+    @Section.handler_load_data_none
     def load_data(self):
         self.total_distance = PGSQLService().get_total_distance(
             robot_name=st.session_state.robot_name
@@ -120,11 +127,39 @@ class Robot:
         self.average_speed = PGSQLService().get_average_speed(
             robot_name=st.session_state.robot_name
         )
+        self.cols_data = [
+            {
+                "title": "Average speed",
+                "prefix": "",
+                "suffix": "m/s",
+                "value": round(self.average_speed, 2),
+                "err_value": -1,
+            },
+            {
+                "title": "Total distance traveled",
+                "prefix": "",
+                "suffix": "m",
+                "value": round(self.total_distance, 2),
+                "err_value": -1,
+            },
+        ]
+        # Data we have first and unknown later
+        self.cols_data = sorted(self.cols_data, key=lambda x: x["value"] != x["err_value"])[::-1]
 
+    @Section.handler_display_data_none_cols
     def display_metrics(self):
-        col1, col2, _ = st.columns(3)
-        col1.metric("Total distance traveled", f"{round(self.total_distance, 2)}m")
-        col2.metric("Average speed", f"{round(self.average_speed, 2)}m/s")
+        cols = st.columns(len(self.cols_data))
+        for count, col in enumerate(cols):
+            with col:
+                self.col = col
+                self.count = count
+                assert self.cols_data[count]["value"] != self.cols_data[count]["err_value"]
+                st.metric(
+                    self.cols_data[count]["title"],
+                    f"{self.cols_data[count]['prefix']}"
+                    f"{self.cols_data[count]['value']}"
+                    f"{self.cols_data[count]['suffix']}",
+                )
 
 
 class CameraImages:

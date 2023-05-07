@@ -9,7 +9,7 @@ class Section(metaclass=ABCMeta):
     def handler_load_data_none(func):
         def wrapper(self):
             try:
-                return func(self)
+                func(self)
             except TypeError:
                 logging.warning("No data")
 
@@ -19,9 +19,24 @@ class Section(metaclass=ABCMeta):
     def handler_display_data_none(func):
         def wrapper(self):
             try:
-                return func(self)
+                func(self)
             except AssertionError:
                 st.warning("No data", icon="⚠️")
+
+        return wrapper
+
+    @staticmethod
+    def handler_display_data_none_cols(func):
+        def wrapper(self):
+            try:
+                func(self)
+            except AssertionError:
+                with self.col:
+                    st.metric(
+                        self.cols_data[self.count]["title"],
+                        "",
+                    )
+                    st.warning("No data")
 
         return wrapper
 
