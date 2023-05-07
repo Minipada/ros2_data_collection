@@ -3,41 +3,38 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from backend import PGSQLService
-from config import GetDataMode
+from config import Backend, GetDataMode, config
+from lib import Section
 from pages import Header, Sidebar
 from plotly.subplots import make_subplots
 
 
-class OS:
-    def __init__(self) -> None:
-        self.data = None
+class OS(Section):
+    supported_backends = [Backend.POSTGRESQL]
+    supported_storages = []
+
+    def __init__(self, backend: Backend = config.BACKEND) -> None:
+        super().__init__(backend=backend)
+        st.subheader("System")
         self.os = ""
         self.kernel = ""
-        self.memory = None
-        self.cpu = None
+        self.memory = ""
+        self.cpu = ""
         self.load_data()
-        self.create_str_os()
-        self.create_str_cpu()
-        self.create_str_kernel()
-        self.create_str_memory()
         self.display_data()
 
+    @Section.handler_load_data_backend_not_implemented
+    @Section.handler_load_data_none
     def load_data(self) -> None:
-        self.data = PGSQLService().get_os(robot_name=st.session_state.robot_name)
+        if self.backend == Backend.POSTGRESQL:
+            self.os, self.cpu, self.kernel, self.memory = PGSQLService.get_os(
+                robot_name=st.session_state.robot_name
+            )
 
-    def create_str_os(self) -> None:
-        self.os = self.data[0]
-
-    def create_str_cpu(self) -> None:
-        self.cpu = self.data[1]
-
-    def create_str_kernel(self) -> None:
-        self.kernel = self.data[2]
-
-    def create_str_memory(self) -> None:
-        self.memory = self.data[3]
-
+    @Section.handler_display_data_backend_not_implemented
+    @Section.handler_display_data_none
     def display_data(self) -> None:
+        assert all([self.os, self.kernel, self.memory, self.cpu])
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Operating System", self.os)
         col2.metric("Kernel", self.kernel)
@@ -45,28 +42,36 @@ class OS:
         col4.metric("Memory", f"{self.memory}Gb")
 
 
-class Memory:
-    def __init__(self) -> None:
-        self.data = None
+class Memory(Section):
+    supported_backends = [Backend.POSTGRESQL]
+    supported_storages = []
+
+    def __init__(self, backend: Backend = config.BACKEND) -> None:
+        super().__init__(backend=backend)
+        st.subheader("Memory over time")
         self.df = None
         self.fig = None
         self.load_data()
         self.create_plotly_figure()
         self.display_data()
 
+    @Section.handler_load_data_backend_not_implemented
+    @Section.handler_load_data_none
     def load_data(self) -> None:
         if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            self.data = PGSQLService().get_memory(
-                robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
-            )
-            self.df = pd.DataFrame(self.data, columns=["Date", "Memory used"])
+            if self.backend == Backend.POSTGRESQL:
+                memory = PGSQLService().get_memory(
+                    robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
+                )
+                self.df = pd.DataFrame(memory, columns=["Date", "Memory used"])
 
+    @Section.display_if_data_in_df("df")
     def create_plotly_figure(self) -> None:
         self.fig = px.line(
             self.df,
             x="Date",
             y="Memory used",
-            title="Memory used over time",
+            title="",
             markers=True,
         )
         self.fig.update_xaxes(
@@ -82,13 +87,20 @@ class Memory:
             title_text=None,
         )
 
+    @Section.handler_display_data_backend_not_implemented
+    @Section.handler_display_data_none
     def display_data(self) -> None:
+        assert (self.df.empty) is False
         st.plotly_chart(self.fig, use_container_width=True)
 
 
-class CPU:
-    def __init__(self) -> None:
-        self.data = None
+class CPU(Section):
+    supported_backends = [Backend.POSTGRESQL]
+    supported_storages = []
+
+    def __init__(self, backend: Backend = config.BACKEND) -> None:
+        super().__init__(backend=backend)
+        st.subheader("CPU and processes over time")
         self.processes = None
         self.df = None
         self.fig = None
@@ -96,13 +108,17 @@ class CPU:
         self.create_plotly_figure()
         self.display_data()
 
+    @Section.handler_load_data_backend_not_implemented
+    @Section.handler_load_data_none
     def load_data(self) -> None:
         if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            self.data = PGSQLService().get_cpu_average(
-                robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
-            )
-            self.df = pd.DataFrame(self.data, columns=["Date", "CPU", "Processes"])
+            if config.BACKEND == Backend.POSTGRESQL:
+                cpu_average = PGSQLService().get_cpu_average(
+                    robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
+                )
+                self.df = pd.DataFrame(cpu_average, columns=["Date", "CPU", "Processes"])
 
+    @Section.display_if_data_in_df("df")
     def create_plotly_figure(self) -> None:
         # Create figure with secondary y-axis
         self.fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -137,9 +153,12 @@ class CPU:
             ),
             secondary_y=True,
         )
-        self.fig.update_layout(legend={"orientation": "h"}, title="CPU and processes over time")
+        self.fig.update_layout(legend={"orientation": "h"}, title="")
 
+    @Section.handler_display_data_backend_not_implemented
+    @Section.handler_display_data_none
     def display_data(self) -> None:
+        assert self.df.empty is False
         st.plotly_chart(self.fig, use_container_width=True)
 
 

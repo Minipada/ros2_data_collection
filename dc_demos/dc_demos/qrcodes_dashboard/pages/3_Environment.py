@@ -2,30 +2,42 @@ import pathlib
 
 import streamlit as st
 from backend import PGSQLService, minio_client
-from config import Storage, config
+from config import Backend, GetDataMode, Storage, config
+from lib import Section
 from pages import Header, Sidebar
 
 
-class Map:
-    def __init__(self) -> None:
+class Map(Section):
+    supported_backends = [Backend.POSTGRESQL]
+    supported_storages = [Storage.MINIO]
+
+    def __init__(
+        self, backend: Backend = config.BACKEND, storage: Storage = config.STORAGE
+    ) -> None:
+        super().__init__(backend=backend, storage=storage)
         self.last_map_url_png = None
         self.base_file_name = None
         self.last_map_png = None
         self.last_map_pgm = None
         self.last_map_yaml = None
+        st.subheader("Map")
         self.load_data()
-        if self.last_map_paths:
-            self.display_map()
+        # if self.last_map_paths:
+        self.display_data()
 
+    @Section.handler_load_data_backend_not_implemented
+    @Section.handler_load_data_storage_not_implemented
+    @Section.handler_load_data_none
     def load_data(self):
-        self.last_map_paths = PGSQLService().get_last_map(
-            robot_name=st.session_state.robot_name,
-            storage=config.STORAGE,
-        )
-        if not self.last_map_paths:
-            return
+        if st.session_state.mode == GetDataMode.RUN_ID_MODE:
+            if self.backend == Backend.POSTGRESQL and self.storage == Storage.MINIO:
+                self.last_map_paths = PGSQLService().get_last_map(
+                    robot_name=st.session_state.robot_name,
+                    run_id=st.session_state.run_id,
+                    storage=self.storage,
+                )
 
-        if config.STORAGE == Storage.MINIO:
+        if self.storage == Storage.MINIO:
             self.last_map_url_png = minio_client.get_presigned_url(
                 "GET",
                 config.MINIO_BUCKET,
@@ -36,7 +48,7 @@ class Map:
             f"{pathlib.Path(self.last_map_url_png.split('/')[-1]).with_suffix('')}"
         )
 
-        if config.STORAGE == Storage.MINIO:
+        if self.storage == Storage.MINIO:
             self.last_map_png = minio_client.get_object(
                 config.MINIO_BUCKET,
                 self.last_map_paths[0],
@@ -50,8 +62,17 @@ class Map:
                 self.last_map_paths[2],
             )
 
-    def display_map(self):
-        st.header("Map")
+    @Section.handler_display_data_backend_not_implemented
+    @Section.handler_display_data_storage_not_implemented
+    @Section.handler_display_data_none
+    def display_data(self):
+        assert all(
+            [
+                self.last_map_png is not None,
+                self.last_map_pgm is not None,
+                self.last_map_yaml is not None,
+            ]
+        )
         col1, col2, col3, _, _, _ = st.columns(6)
 
         col1.download_button(
