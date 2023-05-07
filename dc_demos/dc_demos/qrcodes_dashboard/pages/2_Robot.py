@@ -164,10 +164,13 @@ class Robot(Section):
 
 class CameraImages:
     def __init__(self) -> None:
+        st.subheader("Camera images")
+        self.image_data = []
+        self.df = None
         self.load_data()
-        if self.image_data:
-            self.display_data()
+        self.display_data()
 
+    @Section.handler_load_data_none
     def load_data(self) -> None:
         self.image_data = PGSQLService().get_camera_images(
             robot_name=st.session_state.robot_name,
@@ -185,8 +188,11 @@ class CameraImages:
                 "Date",
             ],
         )
+        assert self.image_data != []
 
+    @Section.handler_display_data_none
     def display_data(self) -> None:
+        assert self.df.empty is False
         # Create a tab for each camera
         camera_names = self.df["Camera Name"].unique()
         if not camera_names.any():
@@ -252,8 +258,8 @@ def main():
     Sidebar()
     Robot()
     st.divider()
-    Speed()
-    # CameraImages()
+    # Speed()
+    CameraImages()
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ class Section(metaclass=ABCMeta):
         def wrapper(self):
             try:
                 func(self)
-            except TypeError:
+            except (TypeError, AssertionError):
                 logging.warning("No data")
 
         return wrapper

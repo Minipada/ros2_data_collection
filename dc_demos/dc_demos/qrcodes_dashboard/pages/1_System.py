@@ -138,7 +138,7 @@ class CPU(Section):
 
     @Section.handler_display_data_none
     def display_data(self) -> None:
-        assert (self.df.empty) is False
+        assert self.df.empty is False
         st.plotly_chart(self.fig, use_container_width=True)
 
 
