@@ -7,7 +7,8 @@ from sqlalchemy import asc, desc, func, select
 
 
 class PGSQLService:
-    def get_unique_robots(self):
+    @staticmethod
+    def get_unique_robots():
         query = select(RobotData.data["robot_name"].label("robot_name"))
 
         query = query.group_by("robot_name").order_by(asc("robot_name"))
@@ -16,8 +17,8 @@ class PGSQLService:
 
         return result
 
+    @staticmethod
     def get_start_end_time(
-        self,
         *,
         robot_name: str | None = "",
     ):
@@ -35,8 +36,8 @@ class PGSQLService:
 
         return result
 
+    @staticmethod
     def get_unique_run_ids(
-        self,
         *,
         robot_name: str | None = "",
         start_date: str | None = "",
@@ -80,7 +81,8 @@ class PGSQLService:
 
         return result
 
-    def get_os(self, *, robot_name: str):
+    @staticmethod
+    def get_os(*, robot_name: str):
         # Find last time with os present
         subquery_last = (
             select(
@@ -112,7 +114,8 @@ class PGSQLService:
 
         return result
 
-    def get_memory(self, *, robot_name: str, run_id: str):
+    @staticmethod
+    def get_memory(*, robot_name: str, run_id: str):
         query = (
             select(
                 RobotData.time.label("time"),
@@ -130,7 +133,8 @@ class PGSQLService:
 
         return result
 
-    def get_cpu_average(self, *, robot_name: str, run_id: str):
+    @staticmethod
+    def get_cpu_average(*, robot_name: str, run_id: str):
         query = (
             select(
                 RobotData.time.label("time"),
@@ -150,7 +154,8 @@ class PGSQLService:
 
         return result
 
-    def get_speed(self, *, robot_name: str, run_id: str):
+    @staticmethod
+    def get_speed(*, robot_name: str, run_id: str):
         query = (
             select(
                 RobotData.time.label("time"),
@@ -168,7 +173,8 @@ class PGSQLService:
 
         return result
 
-    def get_cmd_vel(self, *, robot_name: str, run_id: str):
+    @staticmethod
+    def get_cmd_vel(*, robot_name: str, run_id: str):
         query = (
             select(
                 RobotData.time.label("time"),
@@ -186,7 +192,8 @@ class PGSQLService:
 
         return result
 
-    def get_total_distance(self, *, robot_name: str, run_id: str | None = ""):
+    @staticmethod
+    def get_total_distance(*, robot_name: str, run_id: str | None = ""):
         query = (
             select(func.sum(RobotData.data["distance_traveled"].as_float()))
             .where(RobotData.data["robot_name"].as_string() == robot_name)
@@ -199,12 +206,14 @@ class PGSQLService:
 
         result = pgsql_session.execute(query)
         result = result.one()[0]
+
         if not result:
-            result = 0
+            result = -1
 
         return result
 
-    def get_average_speed(self, *, robot_name: str, run_id: str | None = ""):
+    @staticmethod
+    def get_average_speed(*, robot_name: str, run_id: str | None = ""):
         query = (
             select(func.avg(RobotData.data["computed"].as_float()))
             .where(RobotData.data["robot_name"].as_string() == robot_name)
@@ -219,13 +228,12 @@ class PGSQLService:
         result = result.one()[0]
 
         if not result:
-            result = 0
+            result = -1
 
         return result
 
-    def get_last_map(
-        self, *, robot_name: str, run_id: str | None = "", storage: Storage = Storage.MINIO
-    ):
+    @staticmethod
+    def get_last_map(*, robot_name: str, run_id: str | None = "", storage: Storage = Storage.MINIO):
         # Find last time with map present
         subquery_last = (
             select(
@@ -259,7 +267,8 @@ class PGSQLService:
 
         return result
 
-    def get_tcp_health(self, *, robot_name: str, run_id: str | None = ""):
+    @staticmethod
+    def get_tcp_health(*, robot_name: str, run_id: str | None = ""):
         query = (
             select(
                 RobotData.data["server_name"],
@@ -280,8 +289,8 @@ class PGSQLService:
 
         return result
 
+    @staticmethod
     def get_camera_images(
-        self,
         *,
         robot_name: str,
         camera_name: str | None = "",
