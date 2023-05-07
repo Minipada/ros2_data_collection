@@ -11,6 +11,8 @@ from config import GetDataMode
 class Header:
     def __init__(self) -> None:
         self.set_css()
+        self.start_dom = None
+        self.end_dom = None
 
     def set_css(self) -> None:
         """Set CSS used by the whole application."""
@@ -48,26 +50,89 @@ class Sidebar:
         end_time = [x[3] for x in self.run_ids if x[1] == run_id][0]
         return f"{run_id} ({self.format_ts(start_time)} -> {self.format_ts(end_time)})"
 
+    def set_dates(self) -> None:
+        st.session_state.start_date = st.session_state.date_range[0]
+        st.session_state.end_date = st.session_state.date_range[1]
+
     def time_run_id_mode(self) -> None:
         """Show selectbox when Run ID mode selected and time range when time mode selected."""
-        if st.session_state.mode == GetDataMode.RUN_ID_MODE:
+        if st.session_state.mode == GetDataMode.RUN_ID:
             self.run_ids = PGSQLService.get_unique_run_ids(robot_name=st.session_state.robot_name)
             st.selectbox(
                 "Select a run id",
-                [robot_name[1] for robot_name in self.run_ids],
+                options=[robot_name[1] for robot_name in self.run_ids],
                 key="run_id",
                 format_func=self.set_format_selectbox,
             )
+            st.session_state.start_date = ""
+            st.session_state.end_date = ""
+        else:
+            # if st.session_state.mode == GetDataMode.TIME_MODE:
+            now: datetime.datetime = datetime.datetime.now()
+            if st.session_state.mode == GetDataMode.TODAY:
+                st.session_state.start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                st.session_state.end_date = now
+            elif st.session_state.mode == GetDataMode.YESTERDAY:
+                yesterday: datetime.datetime = now - datetime.timedelta(days=1)
+                st.session_state.start_date = datetime.datetime(
+                    yesterday.year, yesterday.month, yesterday.day, 0, 0, 0
+                )
+                st.session_state.end_date = datetime.datetime(
+                    yesterday.year, yesterday.month, yesterday.day, 23, 59, 59
+                )
+            elif st.session_state.mode == GetDataMode.THIS_WEEK:
+                monday = now.date() - datetime.timedelta(days=now.weekday())
+                st.session_state.start_date = datetime.datetime(
+                    monday.year, monday.month, monday.day, 0, 0, 0
+                )
+                st.session_state.end_date = st.session_state.start_date + datetime.timedelta(
+                    days=6, hours=23, minutes=59, seconds=59
+                )
+            elif st.session_state.mode == GetDataMode.LAST_WEEK:
+                last_monday = now.date() - datetime.timedelta(days=now.weekday() + 7)
+                st.session_state.start_date = datetime.datetime(
+                    last_monday.year, last_monday.month, last_monday.day, 0, 0, 0
+                )
+                st.session_state.end_date = st.session_state.start_date + datetime.timedelta(
+                    days=6, hours=23, minutes=59, seconds=59
+                )
+            elif st.session_state.mode == GetDataMode.THIS_MONTH:
+                start_of_month = datetime.datetime(now.year, now.month, 1, 0, 0, 0)
+                # We get the last day of the month by adding 4 days to the 28th day
+                # of the current month, which handles edge cases like leap years.
+                last_day_of_month = datetime.date(now.year, now.month, 28) + datetime.timedelta(
+                    days=4
+                )
+                st.session_state.start_date = start_of_month
+                st.session_state.end_date = datetime.datetime.combine(
+                    last_day_of_month, datetime.datetime.max.time()
+                )
+            elif st.session_state.mode == GetDataMode.LAST_3_MONTHS:
+                # Calculate the start of the month 3 months ago
+                start_of_month_3_months_ago = datetime.date(
+                    now.year, now.month, 1
+                ) - datetime.timedelta(days=7 * 4 * 3)
+                # Calculate the start and end of the previous 3 months
+                start_of_3_months_ago = datetime.datetime(
+                    start_of_month_3_months_ago.year, start_of_month_3_months_ago.month, 1, 0, 0, 0
+                )
 
-        if st.session_state.mode == GetDataMode.TIME_MODE:
-            result = PGSQLService.get_start_end_time(robot_name=st.session_state.robot_name)
-            st.slider(
-                label="Time range",
-                min_value=result[0],
-                max_value=result[1],
-                value=(result[0], result[1]),
-                format="YYYY-MM-DD HH:mm:ss",
-            )
+                st.session_state.start_date = start_of_3_months_ago
+                st.session_state.end_date = now
+            elif st.session_state.mode == GetDataMode.SELECT_TIME:
+                result = PGSQLService.get_start_end_date(robot_name=st.session_state.robot_name)
+                slider = st.slider(
+                    label="Time range",
+                    min_value=result[0],
+                    max_value=result[1],
+                    value=(result[0], result[1]),
+                    format="YYYY-MM-DD HH:mm",
+                    key="date_range",
+                    on_change=self.set_dates,
+                )
+                st.session_state.start_date = slider[0]
+                st.session_state.end_date = slider[1]
+            st.session_state.pop("run_id", None)
 
     def select_robot_mode_columns(self) -> None:
         """Create selectbox for Run ID and radio button to select mode."""
@@ -79,9 +144,14 @@ class Sidebar:
             key="robot_name",
         )
         col2.radio(
-            f"{GetDataMode.TIME_MODE.value} or {GetDataMode.RUN_ID_MODE}",
-            (GetDataMode.RUN_ID_MODE.value, GetDataMode.TIME_MODE.value),
+            "Data filter",
+            [x.value for x in GetDataMode],
             key="mode",
+            # Keep the state when switching pages
+            # Defaults to the first value
+            index=[x.value for x in GetDataMode].index(
+                st.session_state.get("mode", list(GetDataMode)[0].value)
+            ),
         )
         self.time_run_id_mode()
 
