@@ -27,7 +27,7 @@ class Section(metaclass=ABCMeta):
             try:
                 func(self)
             except (TypeError, AssertionError):
-                logging.warning("No data")
+                logging.info("No data")
 
         return wrapper
 
@@ -37,7 +37,7 @@ class Section(metaclass=ABCMeta):
             try:
                 func(self)
             except AssertionError:
-                st.warning("No data", icon="⚠️")
+                st.info("No data")
 
         return wrapper
 
@@ -63,7 +63,7 @@ class Section(metaclass=ABCMeta):
                         self.cols_data[self.count]["title"],
                         "",
                     )
-                    st.warning("No data")
+                    st.info("No data")
 
         return wrapper
 
