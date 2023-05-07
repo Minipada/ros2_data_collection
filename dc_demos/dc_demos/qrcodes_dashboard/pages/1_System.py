@@ -10,9 +10,11 @@ from plotly.subplots import make_subplots
 
 
 class OS(Section):
+    supported_backends = [Backend.POSTGRESQL]
+    supported_storages = []
+
     def __init__(self, backend: Backend = config.BACKEND) -> None:
         super().__init__(backend=backend)
-        self.supported_backends = [config.BACKEND.POSTGRESQL]
         st.subheader("System")
         self.os = ""
         self.kernel = ""
@@ -21,15 +23,15 @@ class OS(Section):
         self.load_data()
         self.display_data()
 
-    @Section.handler_load_data_not_implemented
+    @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_none
     def load_data(self) -> None:
-        if self.backend == config.BACKEND.POSTGRESQL:
+        if self.backend == Backend.POSTGRESQL:
             self.os, self.cpu, self.kernel, self.memory = PGSQLService.get_os(
                 robot_name=st.session_state.robot_name
             )
 
-    @Section.handler_display_data_not_implemented
+    @Section.handler_display_data_backend_not_implemented
     @Section.handler_display_data_none
     def display_data(self) -> None:
         assert all([self.os, self.kernel, self.memory, self.cpu])
@@ -41,9 +43,11 @@ class OS(Section):
 
 
 class Memory(Section):
+    supported_backends = [Backend.POSTGRESQL]
+    supported_storages = []
+
     def __init__(self, backend: Backend = config.BACKEND) -> None:
         super().__init__(backend=backend)
-        self.supported_backends = [config.BACKEND.POSTGRESQL]
         st.subheader("Memory over time")
         self.df = None
         self.fig = None
@@ -51,17 +55,17 @@ class Memory(Section):
         self.create_plotly_figure()
         self.display_data()
 
-    @Section.handler_load_data_not_implemented
+    @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_none
     def load_data(self) -> None:
         if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            if self.backend == config.BACKEND.POSTGRESQL:
+            if self.backend == Backend.POSTGRESQL:
                 memory = PGSQLService().get_memory(
                     robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
                 )
                 self.df = pd.DataFrame(memory, columns=["Date", "Memory used"])
 
-    @Section.draw_figure_if_data
+    @Section.display_if_data_in_df("df")
     def create_plotly_figure(self) -> None:
         self.fig = px.line(
             self.df,
@@ -83,7 +87,7 @@ class Memory(Section):
             title_text=None,
         )
 
-    @Section.handler_display_data_not_implemented
+    @Section.handler_display_data_backend_not_implemented
     @Section.handler_display_data_none
     def display_data(self) -> None:
         assert (self.df.empty) is False
@@ -91,9 +95,11 @@ class Memory(Section):
 
 
 class CPU(Section):
+    supported_backends = [Backend.POSTGRESQL]
+    supported_storages = []
+
     def __init__(self, backend: Backend = config.BACKEND) -> None:
         super().__init__(backend=backend)
-        self.supported_backends = [config.BACKEND.POSTGRESQL]
         st.subheader("CPU and processes over time")
         self.processes = None
         self.df = None
@@ -102,17 +108,17 @@ class CPU(Section):
         self.create_plotly_figure()
         self.display_data()
 
-    @Section.handler_load_data_not_implemented
+    @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_none
     def load_data(self) -> None:
         if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            if config.BACKEND == config.BACKEND.POSTGRESQL:
+            if config.BACKEND == Backend.POSTGRESQL:
                 cpu_average = PGSQLService().get_cpu_average(
                     robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
                 )
                 self.df = pd.DataFrame(cpu_average, columns=["Date", "CPU", "Processes"])
 
-    @Section.draw_figure_if_data
+    @Section.display_if_data_in_df("df")
     def create_plotly_figure(self) -> None:
         # Create figure with secondary y-axis
         self.fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -149,7 +155,7 @@ class CPU(Section):
         )
         self.fig.update_layout(legend={"orientation": "h"}, title="")
 
-    @Section.handler_display_data_not_implemented
+    @Section.handler_display_data_backend_not_implemented
     @Section.handler_display_data_none
     def display_data(self) -> None:
         assert self.df.empty is False

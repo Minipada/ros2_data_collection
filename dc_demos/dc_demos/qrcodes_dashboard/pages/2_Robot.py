@@ -2,14 +2,18 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from backend import PGSQLService, minio_client
-from config import GetDataMode, Storage, config
+from config import Backend, GetDataMode, Storage, config
 from lib import Section
 from pages import Header, Sidebar
 from plotly.subplots import make_subplots
 
 
 class Speed(Section):
-    def __init__(self) -> None:
+    supported_backends = [config.BACKEND.POSTGRESQL]
+    supported_storages = []
+
+    def __init__(self, backend: Backend = config.BACKEND) -> None:
+        super().__init__(backend=backend)
         st.subheader("Speed and command velocity over time")
         self.speed = None
         self.speed_df = None
@@ -20,10 +24,11 @@ class Speed(Section):
         self.create_plotly_figure()
         self.display_data()
 
+    @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_none
     def load_data(self) -> None:
         if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            if config.BACKEND == config.BACKEND.POSTGRESQL:
+            if self.backend == config.BACKEND.POSTGRESQL:
                 self.speed = PGSQLService().get_speed(
                     robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
                 )
@@ -33,7 +38,7 @@ class Speed(Section):
                 )
                 self.cmd_vel_df = pd.DataFrame(self.cmd_vel, columns=["Date", "Command velocity"])
 
-    @Section.handler_display_data_none
+    @Section.display_if_data_in_df("speed_df", "cmd_vel_df")
     def create_plotly_figure(self) -> None:
         if self.cmd_vel_df.empty or self.speed_df.empty:
             secondary_y = False
@@ -105,6 +110,7 @@ class Speed(Section):
             self.fig["data"][0]["showlegend"] = True
         self.fig.update_layout(legend={"orientation": "h"}, title="")
 
+    @Section.handler_display_data_backend_not_implemented
     @Section.handler_display_data_none
     def display_data(self) -> None:
         assert any([not self.cmd_vel_df.empty, not self.speed_df.empty])
@@ -112,43 +118,51 @@ class Speed(Section):
 
 
 class Robot(Section):
-    def __init__(self) -> None:
+    supported_backends = [Backend.POSTGRESQL]
+    supported_storages = []
+
+    def __init__(self, backend: Backend = config.BACKEND) -> None:
+        super().__init__(backend=backend)
         self.total_distance = -1
         self.average_speed = -1
         self.cols_data = []
         self.col = None
         self.load_data()
-        self.display_metrics()
+        self.display_data()
 
+    @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_none
     def load_data(self):
-        self.total_distance = PGSQLService().get_total_distance(
-            robot_name=st.session_state.robot_name
-        )
-        self.average_speed = PGSQLService().get_average_speed(
-            robot_name=st.session_state.robot_name
-        )
-        self.cols_data = [
-            {
-                "title": "Average speed",
-                "prefix": "",
-                "suffix": "m/s",
-                "value": round(self.average_speed, 2),
-                "err_value": -1,
-            },
-            {
-                "title": "Total distance traveled",
-                "prefix": "",
-                "suffix": "m",
-                "value": round(self.total_distance, 2),
-                "err_value": -1,
-            },
-        ]
-        # Data we have first and unknown later
-        self.cols_data = sorted(self.cols_data, key=lambda x: x["value"] != x["err_value"])[::-1]
+        if self.backend == Backend.POSTGRESQL:
+            self.total_distance = PGSQLService().get_total_distance(
+                robot_name=st.session_state.robot_name
+            )
+            self.average_speed = PGSQLService().get_average_speed(
+                robot_name=st.session_state.robot_name
+            )
+            self.cols_data = [
+                {
+                    "title": "Average speed",
+                    "prefix": "",
+                    "suffix": "m/s",
+                    "value": round(self.average_speed, 2),
+                    "err_value": -1,
+                },
+                {
+                    "title": "Total distance traveled",
+                    "prefix": "",
+                    "suffix": "m",
+                    "value": round(self.total_distance, 2),
+                    "err_value": -1,
+                },
+            ]
+            # Data we have first and unknown later
+            self.cols_data = sorted(self.cols_data, key=lambda x: x["value"] != x["err_value"])[
+                ::-1
+            ]
 
     @Section.handler_display_data_none_cols
-    def display_metrics(self):
+    def display_data(self):
         cols = st.columns(len(self.cols_data))
         for count, col in enumerate(cols):
             with col:
@@ -163,92 +177,113 @@ class Robot(Section):
                 )
 
 
-class CameraImages:
-    def __init__(self) -> None:
+class CameraImages(Section):
+    supported_backends = [Backend.POSTGRESQL]
+    supported_storages = [Storage.MINIO]
+
+    def __init__(
+        self, backend: Backend = config.BACKEND, storage: Storage = config.STORAGE
+    ) -> None:
+        super().__init__(backend=backend, storage=storage)
         st.subheader("Camera images")
         self.image_data = []
         self.df = None
         self.load_data()
         self.display_data()
 
+    @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_none
     def load_data(self) -> None:
-        self.image_data = PGSQLService().get_camera_images(
-            robot_name=st.session_state.robot_name,
-            run_id=st.session_state.run_id,
-            storage=config.STORAGE,
-        )
-        self.df = pd.DataFrame(
-            self.image_data,
-            columns=[
-                "Camera Name",
-                "Raw remote path",
-                "Rotated remote path",
-                "Inspected remote path",
-                "Run ID",
-                "Date",
-            ],
-        )
-        assert self.image_data != []
+        if st.session_state.mode == GetDataMode.RUN_ID_MODE:
+            if self.backend == Backend.POSTGRESQL:
+                self.image_data = PGSQLService().get_camera_images(
+                    robot_name=st.session_state.robot_name,
+                    run_id=st.session_state.run_id,
+                    storage=config.STORAGE,
+                )
+                self.df = pd.DataFrame(
+                    self.image_data,
+                    columns=[
+                        "Camera Name",
+                        "Raw remote path",
+                        "Rotated remote path",
+                        "Inspected remote path",
+                        "Run ID",
+                        "Date",
+                    ],
+                )
 
+    @Section.handler_display_data_backend_not_implemented
+    @Section.handler_display_data_storage_not_implemented
     @Section.handler_display_data_none
+    @Section.display_if_data_in_df("df")
     def display_data(self) -> None:
-        assert self.df.empty is False
-        # Create a tab for each camera
         camera_names = self.df["Camera Name"].unique()
-        if not camera_names.any():
-            return
-        camera_tabs = st.tabs(camera_names)
+        if self.storage == Storage.MINIO:
+            camera_tabs = st.tabs(camera_names)
 
-        for camera_tab_index, camera_tab in enumerate(camera_tabs):
-            with camera_tab:
-                images_camera = self.df[self.df["Camera Name"] == camera_names[camera_tab_index]]
-                df_images_camera_raw = images_camera[images_camera["Raw remote path"].notna()]
-                df_images_camera_rotated = images_camera[
-                    images_camera["Rotated remote path"].notna()
-                ]
-                df_images_camera_inspected = images_camera[
-                    images_camera["Inspected remote path"].notna()
-                ]
+            for camera_tab_index, camera_tab in enumerate(camera_tabs):
+                with camera_tab:
+                    images_camera = self.df[
+                        self.df["Camera Name"] == camera_names[camera_tab_index]
+                    ]
+                    df_images_camera_raw = images_camera[images_camera["Raw remote path"].notna()]
+                    df_images_camera_rotated = images_camera[
+                        images_camera["Rotated remote path"].notna()
+                    ]
+                    df_images_camera_inspected = images_camera[
+                        images_camera["Inspected remote path"].notna()
+                    ]
 
-                raw_tab, rotated_tab, inspected_tab = st.tabs(["Raw", "Rotated", "Inspected"])
+                    raw_tab, rotated_tab, inspected_tab = st.tabs(["Raw", "Rotated", "Inspected"])
 
-                with raw_tab:
-                    if config.STORAGE == Storage.MINIO:
-                        cols = raw_tab.columns(3)
-                        for i in range(len(df_images_camera_raw)):
-                            cols[i % 3].image(
-                                image=minio_client.get_presigned_url(
-                                    "GET",
-                                    config.MINIO_BUCKET,
-                                    df_images_camera_raw.loc[i, "Raw remote path"],
-                                ),
-                                caption=df_images_camera_raw.loc[i, "Date"],
-                            )
-                with rotated_tab:
-                    if config.STORAGE == Storage.MINIO:
-                        cols = rotated_tab.columns(3)
-                        for i in range(len(df_images_camera_rotated)):
-                            cols[i % 3].image(
-                                image=minio_client.get_presigned_url(
-                                    "GET",
-                                    config.MINIO_BUCKET,
-                                    df_images_camera_rotated.loc[i, "Rotated remote path"],
-                                ),
-                                caption=df_images_camera_raw.loc[i, "Date"],
-                            )
-                with inspected_tab:
-                    if config.STORAGE == Storage.MINIO:
-                        cols = inspected_tab.columns(3)
-                        for i in range(len(df_images_camera_inspected)):
-                            cols[i % 3].image(
-                                image=minio_client.get_presigned_url(
-                                    "GET",
-                                    config.MINIO_BUCKET,
-                                    df_images_camera_inspected.loc[i, "Rotated remote path"],
-                                ),
-                                caption=df_images_camera_inspected.loc[i, "Date"],
-                            )
+                    with raw_tab:
+                        if self.storage == Storage.MINIO:
+                            if len(df_images_camera_raw):
+                                cols = raw_tab.columns(3)
+                                for i in range(len(df_images_camera_raw)):
+                                    cols[i % 3].image(
+                                        image=minio_client.get_presigned_url(
+                                            "GET",
+                                            config.MINIO_BUCKET,
+                                            df_images_camera_raw.loc[i, "Raw remote path"],
+                                        ),
+                                        caption=df_images_camera_raw.loc[i, "Date"],
+                                    )
+                            else:
+                                st.info("No data")
+                    with rotated_tab:
+                        if self.storage == Storage.MINIO:
+                            if len(df_images_camera_rotated):
+                                cols = rotated_tab.columns(3)
+                                for i in range(len(df_images_camera_rotated)):
+                                    cols[i % 3].image(
+                                        image=minio_client.get_presigned_url(
+                                            "GET",
+                                            config.MINIO_BUCKET,
+                                            df_images_camera_rotated.loc[i, "Rotated remote path"],
+                                        ),
+                                        caption=df_images_camera_raw.loc[i, "Date"],
+                                    )
+                            else:
+                                st.info("No data")
+                    with inspected_tab:
+                        if self.storage == Storage.MINIO:
+                            cols = inspected_tab.columns(3)
+                            if len(df_images_camera_inspected):
+                                for i in range(len(df_images_camera_inspected)):
+                                    cols[i % 3].image(
+                                        image=minio_client.get_presigned_url(
+                                            "GET",
+                                            config.MINIO_BUCKET,
+                                            df_images_camera_inspected.loc[
+                                                i, "Rotated remote path"
+                                            ],
+                                        ),
+                                        caption=df_images_camera_inspected.loc[i, "Date"],
+                                    )
+                            else:
+                                st.info("No data")
 
 
 def main():

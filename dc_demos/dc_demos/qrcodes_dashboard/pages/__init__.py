@@ -57,7 +57,6 @@ class Sidebar:
                 [robot_name[1] for robot_name in self.run_ids],
                 key="run_id",
                 format_func=self.set_format_selectbox,
-                index=2,
             )
 
         if st.session_state.mode == GetDataMode.TIME_MODE:
