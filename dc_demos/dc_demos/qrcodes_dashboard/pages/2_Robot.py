@@ -23,14 +23,15 @@ class Speed(Section):
     @Section.handler_load_data_none
     def load_data(self) -> None:
         if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            self.speed = PGSQLService().get_speed(
-                robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
-            )
-            self.speed_df = pd.DataFrame(self.speed, columns=["Date", "Speed"])
-            self.cmd_vel = PGSQLService().get_cmd_vel(
-                robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
-            )
-            self.cmd_vel_df = pd.DataFrame(self.cmd_vel, columns=["Date", "Command velocity"])
+            if config.BACKEND == config.BACKEND.POSTGRESQL:
+                self.speed = PGSQLService().get_speed(
+                    robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
+                )
+                self.speed_df = pd.DataFrame(self.speed, columns=["Date", "Speed"])
+                self.cmd_vel = PGSQLService().get_cmd_vel(
+                    robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
+                )
+                self.cmd_vel_df = pd.DataFrame(self.cmd_vel, columns=["Date", "Command velocity"])
 
     @Section.handler_display_data_none
     def create_plotly_figure(self) -> None:
@@ -258,7 +259,7 @@ def main():
     Sidebar()
     Robot()
     st.divider()
-    # Speed()
+    Speed()
     CameraImages()
 
 

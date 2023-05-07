@@ -14,7 +14,7 @@ class Storage(str, Enum):
     MINIO = "minio"
 
 
-class Data(str, Enum):
+class Backend(str, Enum):
     POSTGRESQL = "postgresql"
 
 
@@ -30,7 +30,7 @@ class Config(BaseSettings):
     PGSQL_TABLE: str = "dc"
     READER_DB_URL_DATA: str = "postgresql+psycopg2://dc:password@localhost:5432/dc"
     STORAGE: Storage = Storage.MINIO
-    BACKEND: Data = Data.POSTGRESQL
+    BACKEND: Backend = Backend.POSTGRESQL
 
 
 # Edit here if you have different configuration for development
