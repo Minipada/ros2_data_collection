@@ -10,14 +10,15 @@ from plotly.subplots import make_subplots
 
 class Speed(Section):
     def __init__(self) -> None:
+        st.subheader("Speed and command velocity over time")
         self.speed = None
         self.speed_df = None
         self.cmd_vel = None
+        self.cmd_vel_df = None
         self.fig = None
         self.load_data()
-        if not self.cmd_vel_df.empty or not self.speed_df.empty:
-            self.create_plotly_figure()
-            self.display_data()
+        self.create_plotly_figure()
+        self.display_data()
 
     @Section.handler_load_data_none
     def load_data(self) -> None:
@@ -31,6 +32,7 @@ class Speed(Section):
             )
             self.cmd_vel_df = pd.DataFrame(self.cmd_vel, columns=["Date", "Command velocity"])
 
+    @Section.handler_display_data_none
     def create_plotly_figure(self) -> None:
         if self.cmd_vel_df.empty or self.speed_df.empty:
             secondary_y = False
@@ -100,14 +102,12 @@ class Speed(Section):
         # https://stackoverflow.com/a/61312761/1717026
         if unique_plot:
             self.fig["data"][0]["showlegend"] = True
-        self.fig.update_layout(
-            legend={"orientation": "h"}, title="Speed and command velocity over time"
-        )
+        self.fig.update_layout(legend={"orientation": "h"}, title="")
 
     @Section.handler_display_data_none
     def display_data(self) -> None:
-        if self.fig:
-            st.plotly_chart(self.fig, use_container_width=True)
+        assert any([not self.cmd_vel_df.empty, not self.speed_df.empty])
+        st.plotly_chart(self.fig, use_container_width=True)
 
 
 class Robot(Section):
@@ -253,7 +253,7 @@ def main():
     Robot()
     st.divider()
     Speed()
-    CameraImages()
+    # CameraImages()
 
 
 if __name__ == "__main__":
