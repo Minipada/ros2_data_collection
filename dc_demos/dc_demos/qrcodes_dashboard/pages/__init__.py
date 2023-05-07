@@ -48,6 +48,10 @@ class Sidebar:
         end_time = [x[3] for x in self.run_ids if x[1] == run_id][0]
         return f"{run_id} ({self.format_ts(start_time)} -> {self.format_ts(end_time)})"
 
+    def set_dates(self) -> None:
+        st.session_state.start_date = st.session_state.date_range[0]
+        st.session_state.end_date = st.session_state.date_range[1]
+
     def time_run_id_mode(self) -> None:
         """Show selectbox when Run ID mode selected and time range when time mode selected."""
         if st.session_state.mode == GetDataMode.RUN_ID_MODE:
@@ -58,16 +62,21 @@ class Sidebar:
                 key="run_id",
                 format_func=self.set_format_selectbox,
             )
+            st.session_state.start_date = ""
+            st.session_state.end_date = ""
 
         if st.session_state.mode == GetDataMode.TIME_MODE:
-            result = PGSQLService.get_start_end_time(robot_name=st.session_state.robot_name)
+            result = PGSQLService.get_start_end_date(robot_name=st.session_state.robot_name)
             st.slider(
                 label="Time range",
                 min_value=result[0],
                 max_value=result[1],
                 value=(result[0], result[1]),
                 format="YYYY-MM-DD HH:mm:ss",
+                key="date_range",
+                on_change=self.set_dates,
             )
+            st.session_state.run_id = ""
 
     def select_robot_mode_columns(self) -> None:
         """Create selectbox for Run ID and radio button to select mode."""

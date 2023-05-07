@@ -3,7 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from backend import PGSQLService
-from config import Backend, GetDataMode, config
+from config import Backend, config
 from lib import Section
 from pages import Header, Sidebar
 from plotly.subplots import make_subplots
@@ -28,7 +28,10 @@ class OS(Section):
     def load_data(self) -> None:
         if self.backend == Backend.POSTGRESQL:
             self.os, self.cpu, self.kernel, self.memory = PGSQLService.get_os(
-                robot_name=st.session_state.robot_name
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
             )
 
     @Section.handler_display_data_backend_not_implemented
@@ -58,12 +61,14 @@ class Memory(Section):
     @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_none
     def load_data(self) -> None:
-        if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            if self.backend == Backend.POSTGRESQL:
-                memory = PGSQLService().get_memory(
-                    robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
-                )
-                self.df = pd.DataFrame(memory, columns=["Date", "Memory used"])
+        if self.backend == Backend.POSTGRESQL:
+            memory = PGSQLService.get_memory(
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
+            )
+            self.df = pd.DataFrame(memory, columns=["Date", "Memory used"])
 
     @Section.display_if_data_in_df("df")
     def create_plotly_figure(self) -> None:
@@ -75,7 +80,6 @@ class Memory(Section):
             markers=True,
         )
         self.fig.update_xaxes(
-            # dtick=30 * 60 * 1000,
             showgrid=True,
             title_text=None,
         )
@@ -111,12 +115,14 @@ class CPU(Section):
     @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_none
     def load_data(self) -> None:
-        if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            if config.BACKEND == Backend.POSTGRESQL:
-                cpu_average = PGSQLService().get_cpu_average(
-                    robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
-                )
-                self.df = pd.DataFrame(cpu_average, columns=["Date", "CPU", "Processes"])
+        if config.BACKEND == Backend.POSTGRESQL:
+            cpu_average = PGSQLService.get_cpu_average(
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
+            )
+            self.df = pd.DataFrame(cpu_average, columns=["Date", "CPU", "Processes"])
 
     @Section.display_if_data_in_df("df")
     def create_plotly_figure(self) -> None:
@@ -135,7 +141,6 @@ class CPU(Section):
         )
         self.fig.update_xaxes(
             range=[self.df["Date"].min(), self.df["Date"].max()],
-            # dtick=30 * 60 * 1000,
             tick0=self.df["Date"].min(),
             showgrid=True,
         )

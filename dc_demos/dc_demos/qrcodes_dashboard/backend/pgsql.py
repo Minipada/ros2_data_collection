@@ -6,6 +6,22 @@ from models import RobotData
 from sqlalchemy import asc, desc, func, select
 
 
+def add_mode_query(
+    query,
+    run_id: str | None = "",
+    start_date: datetime.datetime | None = None,
+    end_date: datetime.datetime | None = None,
+):
+    if run_id:
+        query = query.where(RobotData.data["run_id"].as_string() == run_id)
+    else:
+        if start_date:
+            query = query.where(RobotData.time >= start_date)
+        if end_date:
+            query = query.where(RobotData.time <= end_date)
+    return query
+
+
 class PGSQLService:
     @staticmethod
     def get_unique_robots():
@@ -18,19 +34,18 @@ class PGSQLService:
         return result
 
     @staticmethod
-    def get_start_end_time(
+    def get_start_end_date(
         *,
         robot_name: str | None = "",
     ):
         query = select(
-            func.min(RobotData.time).label("start_time"),
-            func.max(RobotData.time).label("end_time"),
+            func.min(RobotData.time).label("start_date"),
+            func.max(RobotData.time).label("end_date"),
         )
 
         if robot_name:
             query = query.where(RobotData.data["robot_name"].as_string() == robot_name)
 
-        # query = query..order_by(desc("start_time"))
         result = pgsql_session.execute(query)
         result = result.one()
 
@@ -64,8 +79,8 @@ class PGSQLService:
         query = select(
             RobotData.data["robot_name"].label("robot_name"),
             RobotData.data["run_id"].label("run_id"),
-            func.min(RobotData.time).label("start_time"),
-            func.max(RobotData.time).label("end_time"),
+            func.min(RobotData.time).label("start_date"),
+            func.max(RobotData.time).label("end_date"),
         )
 
         if start_date:
@@ -75,29 +90,20 @@ class PGSQLService:
         if robot_name:
             query = query.where(RobotData.data["robot_name"].as_string() == robot_name)
 
-        query = query.group_by("run_id", "robot_name").order_by(desc("start_time"))
+        query = query.group_by("run_id", "robot_name").order_by(desc("start_date"))
         result = pgsql_session.execute(query)
         result = result.all()
 
         return result
 
     @staticmethod
-    def get_os(*, robot_name: str):
-        # Find last time with os present
-        subquery_last = (
-            select(
-                RobotData.data["robot_name"].label("robot_name"),
-                func.max(RobotData.time).label("max_time"),
-            )
-            .where(RobotData.data["robot_name"].as_string() == robot_name)
-            .where(RobotData.data["os"].isnot(None))
-            .where(RobotData.data["cpus"].isnot(None))
-            .where(RobotData.data["kernel"].isnot(None))
-            .where(RobotData.data["memory"].isnot(None))
-            .group_by("robot_name")
-            .alias("subquery_last")
-        )
-
+    def get_os(
+        *,
+        robot_name: str,
+        run_id: str | None = "",
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
+    ):
         query = (
             select(
                 RobotData.data["os"].label("os"),
@@ -106,8 +112,14 @@ class PGSQLService:
                 RobotData.data["memory"].label("memory"),
             )
             .where(RobotData.data["robot_name"].as_string() == robot_name)
-            .where(RobotData.time == subquery_last.c.max_time)
+            .where(RobotData.data["os"].isnot(None))
+            .where(RobotData.data["cpus"].isnot(None))
+            .where(RobotData.data["kernel"].isnot(None))
+            .where(RobotData.data["memory"].isnot(None))
+            .order_by(desc("time"))
         )
+
+        query = add_mode_query(query, run_id=run_id, start_date=start_date, end_date=end_date)
 
         result = pgsql_session.execute(query)
         result = result.first()
@@ -115,7 +127,13 @@ class PGSQLService:
         return result
 
     @staticmethod
-    def get_memory(*, robot_name: str, run_id: str):
+    def get_memory(
+        *,
+        robot_name: str,
+        run_id: str | None = "",
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
+    ):
         query = (
             select(
                 RobotData.time.label("time"),
@@ -124,9 +142,10 @@ class PGSQLService:
             .where(RobotData.data["robot_name"].as_string() == robot_name)
             .where(RobotData.data["name"].as_string() == "memory")
             .where(RobotData.data["used"].isnot(None))
-            .where(RobotData.data["run_id"].as_string() == run_id)
             .order_by(asc("time"))
         )
+
+        query = add_mode_query(query, run_id=run_id, start_date=start_date, end_date=end_date)
 
         result = pgsql_session.execute(query)
         result = result.all()
@@ -134,7 +153,13 @@ class PGSQLService:
         return result
 
     @staticmethod
-    def get_cpu_average(*, robot_name: str, run_id: str):
+    def get_cpu_average(
+        *,
+        robot_name: str,
+        run_id: str | None = "",
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
+    ):
         query = (
             select(
                 RobotData.time.label("time"),
@@ -145,9 +170,10 @@ class PGSQLService:
             .where(RobotData.data["name"].as_string() == "cpu")
             .where(RobotData.data["average"].isnot(None))
             .where(RobotData.data["processes"].isnot(None))
-            .where(RobotData.data["run_id"].as_string() == run_id)
             .order_by(asc("time"))
         )
+
+        query = add_mode_query(query, run_id=run_id, start_date=start_date, end_date=end_date)
 
         result = pgsql_session.execute(query)
         result = result.all()
@@ -155,7 +181,13 @@ class PGSQLService:
         return result
 
     @staticmethod
-    def get_speed(*, robot_name: str, run_id: str):
+    def get_speed(
+        *,
+        robot_name: str,
+        run_id: str | None = "",
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
+    ):
         query = (
             select(
                 RobotData.time.label("time"),
@@ -164,9 +196,10 @@ class PGSQLService:
             .where(RobotData.data["robot_name"].as_string() == robot_name)
             .where(RobotData.data["name"].as_string() == "speed")
             .where(RobotData.data["computed"].isnot(None))
-            .where(RobotData.data["run_id"].as_string() == run_id)
             .order_by(asc("time"))
         )
+
+        query = add_mode_query(query, run_id=run_id, start_date=start_date, end_date=end_date)
 
         result = pgsql_session.execute(query)
         result = result.all()
@@ -174,7 +207,13 @@ class PGSQLService:
         return result
 
     @staticmethod
-    def get_cmd_vel(*, robot_name: str, run_id: str):
+    def get_cmd_vel(
+        *,
+        robot_name: str,
+        run_id: str | None = "",
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
+    ):
         query = (
             select(
                 RobotData.time.label("time"),
@@ -183,9 +222,10 @@ class PGSQLService:
             .where(RobotData.data["robot_name"].as_string() == robot_name)
             .where(RobotData.data["name"].as_string() == "cmd_vel")
             .where(RobotData.data["computed"].isnot(None))
-            .where(RobotData.data["run_id"].as_string() == run_id)
             .order_by(asc("time"))
         )
+
+        query = add_mode_query(query, run_id=run_id, start_date=start_date, end_date=end_date)
 
         result = pgsql_session.execute(query)
         result = result.all()
@@ -193,7 +233,13 @@ class PGSQLService:
         return result
 
     @staticmethod
-    def get_total_distance(*, robot_name: str, run_id: str | None = ""):
+    def get_total_distance(
+        *,
+        robot_name: str,
+        run_id: str | None = "",
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
+    ):
         query = (
             select(func.sum(RobotData.data["distance_traveled"].as_float()))
             .where(RobotData.data["robot_name"].as_string() == robot_name)
@@ -201,8 +247,7 @@ class PGSQLService:
             .where(RobotData.data["distance_traveled"].isnot(None))
         )
 
-        if run_id:
-            query = query.where(RobotData.data["run_id"].as_string() == run_id)
+        query = add_mode_query(query, run_id=run_id, start_date=start_date, end_date=end_date)
 
         result = pgsql_session.execute(query)
         result = result.one()[0]
@@ -213,7 +258,13 @@ class PGSQLService:
         return result
 
     @staticmethod
-    def get_average_speed(*, robot_name: str, run_id: str | None = ""):
+    def get_average_speed(
+        *,
+        robot_name: str,
+        run_id: str | None = "",
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
+    ):
         query = (
             select(func.avg(RobotData.data["computed"].as_float()))
             .where(RobotData.data["robot_name"].as_string() == robot_name)
@@ -221,8 +272,7 @@ class PGSQLService:
             .where(RobotData.data["computed"].isnot(None))
         )
 
-        if run_id:
-            query = query.where(RobotData.data["run_id"].as_string() == run_id)
+        query = add_mode_query(query, run_id=run_id, start_date=start_date, end_date=end_date)
 
         result = pgsql_session.execute(query)
         result = result.one()[0]
@@ -233,7 +283,14 @@ class PGSQLService:
         return result
 
     @staticmethod
-    def get_last_map(*, robot_name: str, run_id: str | None = "", storage: Storage = Storage.MINIO):
+    def get_last_map(
+        *,
+        robot_name: str,
+        run_id: str | None = "",
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
+        storage: Storage = Storage.MINIO,
+    ):
         # Find last time with map present
         subquery_last = (
             select(
@@ -244,8 +301,13 @@ class PGSQLService:
             .where(RobotData.data["remote_paths"][storage]["png"].isnot(None))
             .where(RobotData.data["remote_paths"][storage]["pgm"].isnot(None))
             .where(RobotData.data["remote_paths"][storage]["yaml"].isnot(None))
-            .alias("subquery_last")
         )
+
+        subquery_last = add_mode_query(
+            subquery_last, run_id=run_id, start_date=start_date, end_date=end_date
+        )
+        subquery_last.alias("subquery_last")
+
         query = (
             select(
                 RobotData.data["remote_paths"][storage]["png"],
@@ -259,16 +321,19 @@ class PGSQLService:
             .where(RobotData.time == subquery_last.c.max_time)
         )
 
-        if run_id:
-            query = query.where(RobotData.data["run_id"].as_string() == run_id)
-
         result = pgsql_session.execute(query)
         result = result.first()
 
         return result
 
     @staticmethod
-    def get_tcp_health(*, robot_name: str, run_id: str | None = ""):
+    def get_tcp_health(
+        *,
+        robot_name: str,
+        run_id: str | None = "",
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
+    ):
         query = (
             select(
                 RobotData.data["server_name"],
@@ -281,8 +346,7 @@ class PGSQLService:
             .where(RobotData.data["server_name"].isnot(None))
             .order_by(asc("time"))
         )
-        if run_id:
-            query = query.where(RobotData.data["run_id"].as_string() == run_id)
+        query = add_mode_query(query, run_id=run_id, start_date=start_date, end_date=end_date)
 
         result = pgsql_session.execute(query)
         result = result.all()
@@ -295,6 +359,8 @@ class PGSQLService:
         robot_name: str,
         camera_name: str | None = "",
         run_id: str | None = "",
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
         storage: Storage = Storage.MINIO,
     ):
         query = (
@@ -318,8 +384,7 @@ class PGSQLService:
         if camera_name:
             query = query.where(RobotData.data["camera_name"] == camera_name)
 
-        if run_id:
-            query = query.where(RobotData.data["run_id"].as_string() == run_id)
+        query = add_mode_query(query, run_id=run_id, start_date=start_date, end_date=end_date)
 
         result = pgsql_session.execute(query)
         result = result.all()

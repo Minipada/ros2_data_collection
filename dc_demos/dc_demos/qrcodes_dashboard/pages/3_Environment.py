@@ -2,7 +2,7 @@ import pathlib
 
 import streamlit as st
 from backend import PGSQLService, minio_client
-from config import Backend, GetDataMode, Storage, config
+from config import Backend, Storage, config
 from lib import Section
 from pages import Header, Sidebar
 
@@ -22,20 +22,20 @@ class Map(Section):
         self.last_map_yaml = None
         st.subheader("Map")
         self.load_data()
-        # if self.last_map_paths:
         self.display_data()
 
     @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_storage_not_implemented
     @Section.handler_load_data_none
     def load_data(self):
-        if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            if self.backend == Backend.POSTGRESQL and self.storage == Storage.MINIO:
-                self.last_map_paths = PGSQLService().get_last_map(
-                    robot_name=st.session_state.robot_name,
-                    run_id=st.session_state.run_id,
-                    storage=self.storage,
-                )
+        if self.backend == Backend.POSTGRESQL and self.storage == Storage.MINIO:
+            self.last_map_paths = PGSQLService.get_last_map(
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
+                storage=self.storage,
+            )
 
         if self.storage == Storage.MINIO:
             self.last_map_url_png = minio_client.get_presigned_url(

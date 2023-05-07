@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from backend import PGSQLService, minio_client
-from config import Backend, GetDataMode, Storage, config
+from config import Backend, Storage, config
 from lib import Section
 from pages import Header, Sidebar
 from plotly.subplots import make_subplots
@@ -27,16 +27,21 @@ class Speed(Section):
     @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_none
     def load_data(self) -> None:
-        if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            if self.backend == config.BACKEND.POSTGRESQL:
-                self.speed = PGSQLService().get_speed(
-                    robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
-                )
-                self.speed_df = pd.DataFrame(self.speed, columns=["Date", "Speed"])
-                self.cmd_vel = PGSQLService().get_cmd_vel(
-                    robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
-                )
-                self.cmd_vel_df = pd.DataFrame(self.cmd_vel, columns=["Date", "Command velocity"])
+        if self.backend == config.BACKEND.POSTGRESQL:
+            self.speed = PGSQLService.get_speed(
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
+            )
+            self.speed_df = pd.DataFrame(self.speed, columns=["Date", "Speed"])
+            self.cmd_vel = PGSQLService.get_cmd_vel(
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
+            )
+            self.cmd_vel_df = pd.DataFrame(self.cmd_vel, columns=["Date", "Command velocity"])
 
     @Section.display_if_data_in_df("speed_df", "cmd_vel_df")
     def create_plotly_figure(self) -> None:
@@ -70,8 +75,11 @@ class Speed(Section):
                 dtick=0.1,
                 secondary_y=False,
             )
-            average_speed_run = PGSQLService().get_average_speed(
-                robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
+            average_speed_run = PGSQLService.get_average_speed(
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
             )
             if average_speed_run:
                 speed_annotation_text = f"Avg speed ({round(average_speed_run,2)})"
@@ -134,11 +142,17 @@ class Robot(Section):
     @Section.handler_load_data_none
     def load_data(self):
         if self.backend == Backend.POSTGRESQL:
-            self.total_distance = PGSQLService().get_total_distance(
-                robot_name=st.session_state.robot_name
+            self.total_distance = PGSQLService.get_total_distance(
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
             )
-            self.average_speed = PGSQLService().get_average_speed(
-                robot_name=st.session_state.robot_name
+            self.average_speed = PGSQLService.get_average_speed(
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
             )
             self.cols_data = [
                 {
@@ -149,7 +163,7 @@ class Robot(Section):
                     "err_value": -1,
                 },
                 {
-                    "title": "Total distance traveled",
+                    "title": "Distance traveled",
                     "prefix": "",
                     "suffix": "m",
                     "value": round(self.total_distance, 2),
@@ -194,24 +208,25 @@ class CameraImages(Section):
     @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_none
     def load_data(self) -> None:
-        if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            if self.backend == Backend.POSTGRESQL:
-                self.image_data = PGSQLService().get_camera_images(
-                    robot_name=st.session_state.robot_name,
-                    run_id=st.session_state.run_id,
-                    storage=config.STORAGE,
-                )
-                self.df = pd.DataFrame(
-                    self.image_data,
-                    columns=[
-                        "Camera Name",
-                        "Raw remote path",
-                        "Rotated remote path",
-                        "Inspected remote path",
-                        "Run ID",
-                        "Date",
-                    ],
-                )
+        if self.backend == Backend.POSTGRESQL:
+            self.image_data = PGSQLService.get_camera_images(
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
+                storage=config.STORAGE,
+            )
+            self.df = pd.DataFrame(
+                self.image_data,
+                columns=[
+                    "Camera Name",
+                    "Raw remote path",
+                    "Rotated remote path",
+                    "Inspected remote path",
+                    "Run ID",
+                    "Date",
+                ],
+            )
 
     @Section.handler_display_data_backend_not_implemented
     @Section.handler_display_data_storage_not_implemented
