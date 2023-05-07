@@ -3,8 +3,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from backend import PGSQLService
-from config import Backend, GetDataMode, config
-from lib import Section
+from config import Backend, config
+from lib import Section, resample
 from pages import Header, Sidebar
 from plotly.subplots import make_subplots
 
@@ -28,7 +28,10 @@ class OS(Section):
     def load_data(self) -> None:
         if self.backend == Backend.POSTGRESQL:
             self.os, self.cpu, self.kernel, self.memory = PGSQLService.get_os(
-                robot_name=st.session_state.robot_name
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
             )
 
     @Section.handler_display_data_backend_not_implemented
@@ -58,24 +61,26 @@ class Memory(Section):
     @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_none
     def load_data(self) -> None:
-        if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            if self.backend == Backend.POSTGRESQL:
-                memory = PGSQLService().get_memory(
-                    robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
-                )
-                self.df = pd.DataFrame(memory, columns=["Date", "Memory used"])
+        if self.backend == Backend.POSTGRESQL:
+            memory = PGSQLService.get_memory(
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
+            )
+            self.df = resample(pd.DataFrame(memory, columns=["Date", "Memory used"]))
+        assert self.df.empty is False
 
     @Section.display_if_data_in_df("df")
     def create_plotly_figure(self) -> None:
         self.fig = px.line(
             self.df,
-            x="Date",
+            x=self.df.index,
             y="Memory used",
             title="",
             markers=True,
         )
         self.fig.update_xaxes(
-            # dtick=30 * 60 * 1000,
             showgrid=True,
             title_text=None,
         )
@@ -90,7 +95,7 @@ class Memory(Section):
     @Section.handler_display_data_backend_not_implemented
     @Section.handler_display_data_none
     def display_data(self) -> None:
-        assert (self.df.empty) is False
+        assert self.df.empty is False
         st.plotly_chart(self.fig, use_container_width=True)
 
 
@@ -111,12 +116,15 @@ class CPU(Section):
     @Section.handler_load_data_backend_not_implemented
     @Section.handler_load_data_none
     def load_data(self) -> None:
-        if st.session_state.mode == GetDataMode.RUN_ID_MODE:
-            if config.BACKEND == Backend.POSTGRESQL:
-                cpu_average = PGSQLService().get_cpu_average(
-                    robot_name=st.session_state.robot_name, run_id=st.session_state.run_id
-                )
-                self.df = pd.DataFrame(cpu_average, columns=["Date", "CPU", "Processes"])
+        if config.BACKEND == Backend.POSTGRESQL:
+            cpu_average = PGSQLService.get_cpu_average(
+                robot_name=st.session_state.robot_name,
+                run_id=st.session_state.get("run_id", ""),
+                start_date=st.session_state.get("start_date", None),
+                end_date=st.session_state.get("end_date", None),
+            )
+            self.df = resample(pd.DataFrame(cpu_average, columns=["Date", "CPU", "Processes"]))
+        assert self.df.empty is False
 
     @Section.display_if_data_in_df("df")
     def create_plotly_figure(self) -> None:
@@ -126,7 +134,7 @@ class CPU(Section):
         # Add traces
         self.fig.add_trace(
             go.Scatter(
-                x=self.df["Date"],
+                x=self.df.index,
                 y=self.df["CPU"],
                 name="CPU over time",
                 mode="lines+markers",
@@ -134,9 +142,8 @@ class CPU(Section):
             secondary_y=False,
         )
         self.fig.update_xaxes(
-            range=[self.df["Date"].min(), self.df["Date"].max()],
-            # dtick=30 * 60 * 1000,
-            tick0=self.df["Date"].min(),
+            range=[self.df.index.min(), self.df.index.max()],
+            tick0=self.df.index.min(),
             showgrid=True,
         )
         self.fig.update_yaxes(
@@ -149,7 +156,7 @@ class CPU(Section):
 
         self.fig.add_trace(
             go.Scatter(
-                x=self.df["Date"], y=self.df["Processes"], name="Processes", mode="lines+markers"
+                x=self.df.index, y=self.df["Processes"], name="Processes", mode="lines+markers"
             ),
             secondary_y=True,
         )
