@@ -8,29 +8,25 @@
 PostgreSQL is a powerful, open source object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads. The origins of PostgreSQL date back to 1986 as part of the POSTGRES project at the University of California at Berkeley and has more than 35 years of active development on the core platform.
 
 ## Start with docker compose
+Execute:
 
-```yaml
-version: '3.1'
-
-services:
-  db:
-    image: postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: fluentbit
-      POSTGRES_PASSWORD: password
-    ports:
-      - 5432:5432
-
-  adminer:
-    image: adminer
-    restart: unless-stopped
-    ports:
-      - 8080:8080
+```bash
+$ ./tools/infrastructure/scripts/install_infrastructure.bash --tool=minio --install-type=docker
 ```
 
-```admonish info
-WIth this current deployment, your ROS 2 application will require to be able to reach the container. If it's running in a container, start it in the same docker network, or have all containers use network host (at your own risk)
-```
+This will start MinIO API and dashboard (a GUI to see and interact with the data)
 
-Note this also starts [Adminer](https://www.adminer.org/): *Adminer (formerly phpMinAdmin) is a full-featured database management tool written in PHP*. We will use it to ensure data is forwarded properly.
+By accessing [localhost:9001](http://localhost:9001), you should be able to see this page:
+
+![MinIO](../../images/minio.png)
+
+Username: *minioadmin*
+Password: *minioadmin*
+
+## Create an access key
+
+Go to the Access Keys page and click on "Create access key"
+
+![MinIO Access Keys](../../images/minio-access-keys.png)
+
+Take note of the access and secret key and add them in your required launch file configuration late on.

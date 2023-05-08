@@ -32,19 +32,14 @@ destination_server:
       uuid: false
     flb_files_metrics:
       plugin: "dc_destinations/FlbFilesMetrics"
-      inputs:
-        [
-          "/dc/measurement/map",
-          "/dc/measurement/right_camera",
-          "/dc/measurement/left_camera",
-        ]
+      inputs: ["/dc/measurement/map", "/dc/measurement/camera"]
       file_storage: ["minio"]
       db_type: "pgsql"
       delete_when_sent: true
       minio:
         endpoint: 127.0.0.1:9000
-        access_key_id: fyTGdQUk1nTOu3VO
-        secret_access_key: fRIS95M8Qmn5Uwqgi1aeUIIOvGejK4qa
+        access_key_id: cGOKzLMRiie1BgR3
+        secret_access_key: wP4IsaPOCedsSu5vopWeA29IIxs4OImw
         use_ssl: false
         bucket: "mybucket"
         src_fields:
@@ -78,23 +73,23 @@ destination_server:
       plugin: "dc_destinations/FlbMinIO"
       inputs: ["/dc/measurement/map", "/dc/measurement/camera"]
       endpoint: 127.0.0.1:9000
-      access_key_id: fyTGdQUk1nTOu3VO
-      secret_access_key: fRIS95M8Qmn5Uwqgi1aeUIIOvGejK4qa
+      access_key_id: cGOKzLMRiie1BgR3
+      secret_access_key: wP4IsaPOCedsSu5vopWeA29IIxs4OImw
       use_ssl: false
       bucket: "mybucket"
       src_fields:
         [
+          "local_paths.raw",
           "local_paths.pgm",
           "local_paths.yaml",
           "local_paths.png",
-          "local_paths.raw",
         ]
       upload_fields:
         [
+          "remote_paths.minio.raw",
           "remote_paths.minio.pgm",
           "remote_paths.minio.yaml",
           "remote_paths.minio.png",
-          "remote_paths.minio.raw",
         ]
     flb_pgsql:
       plugin: "dc_destinations/FlbPgSQL"
@@ -153,14 +148,11 @@ measurement_server:
       ]
     save_local_base_path: "$HOME/dc_data/"
     all_base_path: "=robot_name/%Y/%m/%d/%H"
-    condition_plugins:
-      ["moving", "min_distance_traveled", "max_distance_traveled"]
+    condition_plugins: ["min_distance_traveled", "max_distance_traveled"]
     destinations:
       minio:
         bucket: mybucket
     # Conditions
-    moving:
-      plugin: "dc_conditions/Moving"
     min_distance_traveled:
       plugin: "dc_conditions/DoubleSuperior"
       key: "distance_traveled"
@@ -261,11 +253,10 @@ measurement_server:
     camera:
       plugin: "dc_measurements/Camera"
       group_key: "camera"
-      if_none_conditions: ["moving"]
       topic_output: "/dc/measurement/camera"
       init_collect: false
-      init_max_measurements: -1
-      condition_max_measurements: 1
+      init_max_measurements: 0
+      polling_interval: 3000
       node_name: "dc_measurement_camera"
       cam_topic: "/intel_realsense_r200_depth/image_raw"
       cam_name: "Intel Realsense"
