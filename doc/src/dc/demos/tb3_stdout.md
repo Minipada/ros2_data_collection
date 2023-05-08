@@ -4,10 +4,10 @@ In this example, we add a robot and start collecting robot data to Stdout.
 
 You will also need 2 terminal windows, to:
 
-1. Run the Nav2 turtlebot3 launchfile: it starts localization, navigation and rviz
+1. Run the Nav2 turtlebot3 launchfile: it starts localization, navigation and RViz
 2. Run DC
 
-Since rviz is pretty verbose, using 2 terminal windows will help reading the JSON printed on the terminal window.
+Since RViz is pretty verbose, using 2 terminal windows will help reading the JSON printed on the terminal window.
 
 ## Setup the environment
 
@@ -28,7 +28,7 @@ Then, start the Turtlebot launchfile:
 $ ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False
 ```
 
-Rviz and Gazebo will start: you should now see the robot in Gazebo, and the map on Rviz.
+RViz and Gazebo will start: you should now see the robot in Gazebo, and the map on RViz.
 
 Set the robot position using the "2D Pose Estimate" button.
 
@@ -395,7 +395,7 @@ Finally, we see the data:
 
 So...what happened?
 
-1. The Nav2 turtlebot3 simulation starts, a robot is able to localize and move (once you use the 2-D pose estimate on Rviz)
+1. The Nav2 turtlebot3 simulation starts, a robot is able to localize and move (once you use the 2-D pose estimate on RViz)
 2. The measurement plugins start publishing data to /dc/measurement/map, /dc/measurement/cmd_vel, /dc/measurement/position and /dc/measurement/speed, which contain the JSONs, tags and timestamp of the message
 3. In parallel, each time the map plugin sends a ROS message, it also saves the files on the filesystem. Open a file browser to the path you set in the configuration to a path mentioned in the map JSON
 4. The "robot" group node subscribes to /dc/measurement/cmd_vel, /dc/measurement/position and /dc/measurement/speed and publish on /dc/group/robot when it collects data from all 3 topics
