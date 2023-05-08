@@ -32,7 +32,6 @@ $ pip3 install -r requirements.txt -r requirements-dev.txt
 ```
 
 ### Setup Infrastructure
-
 #### MinIO
 
 MinIO will be used as storage for images and other files. To start it, [follow the steps](../infrastructure_setup/minio.md)
@@ -45,7 +44,6 @@ Once you have your keys, edit the yaml configuration file at [dc_demos/params/tb
 #### PostgreSQL
 
 PostgreSQL will be used as database storage for our JSON. Later on, backend engineers can make requests on those JSON based on measurement requested and time range. To start it, [follow the steps](../infrastructure_setup/postgresql.md)
-
 
 The default yaml configuration file does not need change as it also uses default values.
 
@@ -175,7 +173,7 @@ $ streamlit run Streamlit_ROS_2.py
 
 Reach the address on your browser: [localhost:8502](http://localhost:8502). Here is a video of it:
 
-<video src="/images/demos-tb3_aws_minio_pgsql-streamlit.webm" controls="controls"></video>
+<video src="../../images/demos-tb3_aws_minio_pgsql-streamlit.webm" controls="controls"></video>
 
 That's it! Now you can collect your data!
 
