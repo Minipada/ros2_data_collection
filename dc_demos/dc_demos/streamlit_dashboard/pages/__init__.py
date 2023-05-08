@@ -121,6 +121,13 @@ class Sidebar:
                 st.session_state.end_date = now
             elif st.session_state.mode == GetDataMode.SELECT_TIME:
                 result = PGSQLService.get_start_end_date(robot_name=st.session_state.robot_name)
+                if (result[1] - result[0]) > datetime.timedelta(days=1):
+                    step = datetime.timedelta(days=1)
+                elif (result[1] - result[0]) > datetime.timedelta(hours=1):
+                    step = datetime.timedelta(minutes=30)
+                else:
+                    step = datetime.timedelta(minutes=1)
+
                 slider = st.slider(
                     label="Time range",
                     min_value=result[0],
@@ -129,6 +136,7 @@ class Sidebar:
                     format="YYYY-MM-DD HH:mm",
                     key="date_range",
                     on_change=self.set_dates,
+                    step=step,
                 )
                 st.session_state.start_date = slider[0]
                 st.session_state.end_date = slider[1]
