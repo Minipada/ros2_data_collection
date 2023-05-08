@@ -29,8 +29,8 @@ class Config(BaseSettings):
     APP_PORT: int = 80
     DEBUG: bool = True
     ENV: str = "dev"
-    MINIO_ACCESS_KEY: str = "fyTGdQUk1nTOu3VO"
-    MINIO_SECRET_KEY: str = "fRIS95M8Qmn5Uwqgi1aeUIIOvGejK4qa"
+    MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "fyTGdQUk1nTOu3VO")
+    MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "fRIS95M8Qmn5Uwqgi1aeUIIOvGejK4qa")
     MINIO_URL: str = "localhost:9000"
     MINIO_BUCKET: str = "mybucket"
     PGSQL_TABLE: str = "dc"
