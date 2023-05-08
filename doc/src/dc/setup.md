@@ -51,7 +51,7 @@ services:
     working_dir: /root/ws
 ```
 
-Then, to allow GUI (rviz, Gazebo) to work in the container, execute:
+Then, to allow GUI (RViz, Gazebo) to work in the container, execute:
 
 ```bash
 $ xhost +

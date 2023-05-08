@@ -4,14 +4,14 @@ In this example, we add a robot and start collecting robot data to PostgreSQL an
 
 You will also need 2 terminal windows, to:
 
-1. Run the Nav2 turtlebot3 launchfile: it starts localization, navigation and rviz
+1. Run the Nav2 turtlebot3 launchfile: it starts localization, navigation and RViz
 2. Run DC
 
-Since rviz is pretty verbose, using 3 terminal windows will help reading the JSON printed on the terminal window.
+Since RViz is pretty verbose, using 3 terminal windows will help reading the JSON printed on the terminal window.
 
 | Terminal | Description                                     |
 | -------- | ----------------------------------------------- |
-| Rviz     | Start it independently because of its verbosity |
+| RViz     | Start it independently because of its verbosity |
 | Nav2     | Localization and navigation                     |
 | DC       | Data collection                                 |
 
@@ -65,7 +65,7 @@ $ ros2 launch nav2_bringup tb3_simulation_launch.py \
     use_rviz:=False
 ```
 
-Rviz and Gazebo will start: you should now see the robot in Gazebo, and the map on Rviz.
+RViz and Gazebo will start: you should now see the robot in Gazebo, and the map on RViz.
 
 Set the robot position using the "2D Pose Estimate" button.
 
