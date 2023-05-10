@@ -65,16 +65,22 @@ TEST_F(MeasurementOSTest, ParametersSaved)
 {
   ms_node_->declare_parameter("os.plugin", std::string("dc_measurements/OS"));
   ms_node_->declare_parameter("os.group_key", std::string("os"));
+  ms_node_->declare_parameter("os.topic_output", std::string("operating_system"));
+  ms_node_->declare_parameter("os.polling_interval", std::string("polling_interval"));
 
   startLifecycleNode();
 
   std::vector<std::string> ms_plugins_desired = { "os" };
   std::vector<std::string> ms_types_desired = { "dc_measurements/OS" };
   std::vector<std::string> ms_group_key_desired = { "os" };
+  std::vector<std::string> ms_topic_output_desired = { "operating_system" };
+  std::vector<int> ms_polling_interval_desired = { 2000 };
 
   EXPECT_EQ(ms_plugins_desired, ms_node_->getMeasurementPlugins());
   EXPECT_EQ(ms_types_desired, ms_node_->getMeasurementTypes());
   EXPECT_EQ(ms_group_key_desired, ms_node_->getMeasurementGroupKeys());
+  EXPECT_EQ(ms_topic_output_desired, ms_node_->getMeasurementTopicOutput());
+  EXPECT_EQ(ms_polling_interval_desired, ms_node_->getMeasurementPollingInterval());
 }
 
 int main(int argc, char** argv)
