@@ -47,6 +47,7 @@ protected:
     RCLCPP_INFO_STREAM(ms_node_->get_logger(), "Value: " << data_str);
     cpu_count_ = data_json["cpus"];
     kernel_ = data_json["kernel"];
+    memory_ = data_json["memory"];
     os_callback_ = true;
   }
 
@@ -54,6 +55,7 @@ protected:
   rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   unsigned int cpu_count_;
   std::string kernel_;
+  float memory_;
 
 public:
   bool os_callback_{ false };
@@ -73,27 +75,6 @@ TEST_F(MeasurementOSTest, ParametersSaved)
   EXPECT_EQ(ms_plugins_desired, ms_node_->getMeasurementPlugins());
   EXPECT_EQ(ms_types_desired, ms_node_->getMeasurementTypes());
   EXPECT_EQ(ms_group_key_desired, ms_node_->getMeasurementGroupKeys());
-}
-
-TEST_F(MeasurementOSTest, OSDataCorrect)
-{
-  ms_node_->declare_parameter("os.plugin", std::string("dc_measurements/OS"));
-  ms_node_->declare_parameter("os.group_key", std::string("os"));
-  ms_node_->declare_parameter("os.topic_output", std::string("/dc/measurement/os"));
-
-  startLifecycleNode();
-
-  while (!os_callback_)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
-
-  EXPECT_EQ(cpu_count_, std::thread::hardware_concurrency());
-
-  utsname result;
-  uname(&result);
-
-  EXPECT_EQ(kernel_, result.release);
 }
 
 int main(int argc, char** argv)

@@ -232,8 +232,9 @@ install(DIRECTORY plugins/measurements/json
 )
 
 set(tests
-  test_os
-  test_uptime
+  test_measurement_os
+  test_measurement_parameters
+  test_measurement_uptime
 )
 
 if(BUILD_TESTING)
