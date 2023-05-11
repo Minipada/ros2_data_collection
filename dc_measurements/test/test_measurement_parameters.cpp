@@ -48,7 +48,8 @@ protected:
     cpu_count_ = data_json["cpus"];
     kernel_ = data_json["kernel"];
     memory_ = data_json["memory"];
-    os_callback_ = true;
+    callback_active_ = true;
+    count_measurement_callback_++;
   }
 
   std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
@@ -58,29 +59,38 @@ protected:
   float memory_;
 
 public:
-  bool os_callback_{ false };
+  bool callback_active_{ false };
+  int count_measurement_callback_{ 0 };
 };
 
 TEST_F(MeasurementOSTest, ParametersSaved)
 {
-  ms_node_->declare_parameter("os.plugin", std::string("dc_measurements/OS"));
-  ms_node_->declare_parameter("os.group_key", std::string("os"));
-  ms_node_->declare_parameter("os.topic_output", std::string("operating_system"));
-  ms_node_->declare_parameter("os.polling_interval", std::string("polling_interval"));
+  unsigned int polling_interval = 2000;
+  nav2_util::declare_parameter_if_not_declared(ms_node_, measurement_name_ + ".os.plugin",
+                                               rclcpp::ParameterValue("dc_measurements/OS"));
+  nav2_util::declare_parameter_if_not_declared("os.group_key", rclcpp::ParameterValue("os"));
+  nav2_util::declare_parameter_if_not_declared("os.topic_output", rclcpp::ParameterValue("operating_system"));
+  nav2_util::declare_parameter_if_not_declared("os.polling_interval", polling_interval);
 
   startLifecycleNode();
 
+  // Verify parameters are set properly
   std::vector<std::string> ms_plugins_desired = { "os" };
   std::vector<std::string> ms_types_desired = { "dc_measurements/OS" };
   std::vector<std::string> ms_group_key_desired = { "os" };
   std::vector<std::string> ms_topic_output_desired = { "operating_system" };
-  std::vector<int> ms_polling_interval_desired = { 2000 };
+  std::vector<int> ms_polling_interval_desired = { polling_interval };
 
   EXPECT_EQ(ms_plugins_desired, ms_node_->getMeasurementPlugins());
   EXPECT_EQ(ms_types_desired, ms_node_->getMeasurementTypes());
   EXPECT_EQ(ms_group_key_desired, ms_node_->getMeasurementGroupKeys());
   EXPECT_EQ(ms_topic_output_desired, ms_node_->getMeasurementTopicOutput());
   EXPECT_EQ(ms_polling_interval_desired, ms_node_->getMeasurementPollingInterval());
+
+  // Verify that in a certain amount of time, only a certain amount of samples are collected
+  rclcpp::sleep_for(std::chrono::milliseconds(polling_interval * 2.05));
+
+  EXPECT_EQ(count_measurement_callback_, 2);
 }
 
 int main(int argc, char** argv)
