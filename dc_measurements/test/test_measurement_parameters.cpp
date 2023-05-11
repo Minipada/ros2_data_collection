@@ -63,14 +63,14 @@ public:
   int count_measurement_callback_{ 0 };
 };
 
-TEST_F(MeasurementOSTest, ParametersSaved)
+TEST_F(MeasurementOSTest, PollingIntervalOnePercentError)
 {
-  unsigned int polling_interval = 2000;
-  nav2_util::declare_parameter_if_not_declared(ms_node_, measurement_name_ + ".os.plugin",
-                                               rclcpp::ParameterValue("dc_measurements/OS"));
-  nav2_util::declare_parameter_if_not_declared("os.group_key", rclcpp::ParameterValue("os"));
-  nav2_util::declare_parameter_if_not_declared("os.topic_output", rclcpp::ParameterValue("operating_system"));
-  nav2_util::declare_parameter_if_not_declared("os.polling_interval", polling_interval);
+  int polling_interval = 2000;
+  nav2_util::declare_parameter_if_not_declared(ms_node_, ".os.plugin", rclcpp::ParameterValue("dc_measurements/OS"));
+  nav2_util::declare_parameter_if_not_declared(ms_node_, "os.group_key", rclcpp::ParameterValue("os"));
+  nav2_util::declare_parameter_if_not_declared(ms_node_, "os.topic_output", rclcpp::ParameterValue("operating_system"));
+  nav2_util::declare_parameter_if_not_declared(ms_node_, "os.polling_interval",
+                                               rclcpp::ParameterValue(polling_interval));
 
   startLifecycleNode();
 
@@ -88,7 +88,7 @@ TEST_F(MeasurementOSTest, ParametersSaved)
   EXPECT_EQ(ms_polling_interval_desired, ms_node_->getMeasurementPollingInterval());
 
   // Verify that in a certain amount of time, only a certain amount of samples are collected
-  rclcpp::sleep_for(std::chrono::milliseconds(polling_interval * 2.05));
+  rclcpp::sleep_for(std::chrono::milliseconds((unsigned int)(polling_interval * 2.01)));
 
   EXPECT_EQ(count_measurement_callback_, 2);
 }

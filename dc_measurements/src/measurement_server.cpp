@@ -279,7 +279,7 @@ std::vector<std::string> MeasurementServer::getMeasurementGroupKeys()
 
 std::vector<std::string> MeasurementServer::getMeasurementTopicOutput()
 {
-  return measurement_topic_output_;
+  return measurement_topic_outputs_;
 }
 
 std::vector<int> MeasurementServer::getMeasurementPollingInterval()
