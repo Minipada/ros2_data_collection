@@ -66,7 +66,7 @@ public:
 TEST_F(MeasurementOSTest, PollingIntervalOnePercentError)
 {
   int polling_interval = 2000;
-  nav2_util::declare_parameter_if_not_declared(ms_node_, ".os.plugin", rclcpp::ParameterValue("dc_measurements/OS"));
+  nav2_util::declare_parameter_if_not_declared(ms_node_, "os.plugin", rclcpp::ParameterValue("dc_measurements/OS"));
   nav2_util::declare_parameter_if_not_declared(ms_node_, "os.group_key", rclcpp::ParameterValue("os"));
   nav2_util::declare_parameter_if_not_declared(ms_node_, "os.topic_output", rclcpp::ParameterValue("operating_system"));
   nav2_util::declare_parameter_if_not_declared(ms_node_, "os.polling_interval",
