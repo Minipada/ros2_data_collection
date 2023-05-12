@@ -277,6 +277,21 @@ std::vector<std::string> MeasurementServer::getMeasurementGroupKeys()
   return measurement_group_key_;
 }
 
+std::vector<std::string> MeasurementServer::getMeasurementTopicOutput()
+{
+  return measurement_topic_outputs_;
+}
+
+std::vector<int> MeasurementServer::getMeasurementPollingInterval()
+{
+  return measurement_polling_interval_;
+}
+
+std::vector<bool> MeasurementServer::getMeasurementInitCollect()
+{
+  return measurement_init_collect_;
+}
+
 }  // end namespace measurement_server
 
 #include "rclcpp_components/register_node_macro.hpp"
