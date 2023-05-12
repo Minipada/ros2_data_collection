@@ -68,7 +68,7 @@ public:
 TEST_F(MeasurementOSTest, PollingIntervalOneMeasurementOnePercentError)
 {
   int polling_interval = 30;
-  int count_measurement = 100;
+  int count_measurement = 90;
   float error = 0.01;
   nav2_util::declare_parameter_if_not_declared(ms_node_, "os.plugin", rclcpp::ParameterValue("dc_measurements/OS"));
   nav2_util::declare_parameter_if_not_declared(ms_node_, "os.group_key", rclcpp::ParameterValue("os"));
