@@ -49,6 +49,7 @@ public:
   std::vector<std::string> getMeasurementGroupKeys();
   std::vector<std::string> getMeasurementTopicOutput();
   std::vector<int> getMeasurementPollingInterval();
+  std::vector<bool> getMeasurementInitCollect();
 
 protected:
   /**
