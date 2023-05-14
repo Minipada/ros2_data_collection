@@ -1,0 +1,378 @@
+/* form */
+
+sdoc-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,.5);
+  z-index: 99999;
+}
+
+sdoc-modal {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: min-content 1fr min-content;
+  grid-template-areas:
+    "modal-header"
+    "modal-content"
+    "modal-footer";
+  place-items: stretch stretch;
+  place-content: stretch stretch;
+
+  background-color: var(--color-bg-contrast);
+  border-radius: 8px;
+  max-width: 90vw;
+  max-height: 90vh;
+  box-shadow: var(--base-elevation-modal);
+
+  min-width: 375px;
+  overflow: hidden;
+}
+
+sdoc-modal-container {
+  padding: calc(var(--base-rhythm)*4);
+}
+
+sdoc-modal-header {
+  grid-area: modal-header;
+  padding-top: calc(var(--base-rhythm)*2);
+  padding-bottom: calc(var(--base-rhythm)*2);
+  padding-left: calc(var(--base-rhythm)*4);
+  padding-right: calc(var(--base-rhythm)*4);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+sdoc-modal-content {
+  grid-area: modal-content;
+  border-top: var(--base-border);
+  border-bottom: var(--base-border);
+  padding-top: calc(var(--base-rhythm)*2);
+  padding-bottom: calc(var(--base-rhythm)*2);
+  overflow: auto;
+  scroll-behavior: smooth;
+}
+
+sdoc-modal-message {
+  display: block;
+  padding-left: calc(var(--base-rhythm)*4);
+  padding-right: calc(var(--base-rhythm)*4);
+}
+
+sdoc-modal-footer {
+  grid-area: modal-footer;
+  display: flex;
+  justify-content: flex-end; /* buttons to right */
+  padding-top: calc(var(--base-rhythm)*2);
+  padding-bottom: calc(var(--base-rhythm)*2);
+  padding-left: calc(var(--base-rhythm)*4);
+  padding-right: calc(var(--base-rhythm)*3); /* buttons to right */
+  column-gap: var(--base-rhythm);
+}
+
+/* sdoc-form  */
+
+sdoc-form {
+  display: block;
+  position: relative;
+  padding-top: var(--base-rhythm);
+  padding-bottom: calc(var(--base-rhythm)*2);
+  background-color: var(--color-bg-contrast);
+  border-radius: 4px;
+  z-index: 11;
+  border: 1px solid var(--color-fg-accent);
+}
+
+sdoc-form-header {
+  display: block;
+  padding-top: 0;
+  padding-left: calc(var(--base-rhythm)*4);
+  padding-right: calc(var(--base-rhythm)*4);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+sdoc-form-descr {
+  display: block;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: calc(var(--base-rhythm)*4);
+  padding-right: calc(var(--base-rhythm)*4);
+  margin-top: 0;
+  margin-bottom: calc(var(--base-rhythm)*4);
+}
+
+sdoc-form-footer {
+  display: flex;
+  justify-content: flex-start; /* buttons to left */
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: calc(var(--base-rhythm)*3); /* buttons to left */
+  padding-right: calc(var(--base-rhythm)*4);
+  column-gap: var(--base-rhythm);
+}
+
+sdoc-form-field {
+  display: block;
+  position: relative;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: calc(var(--base-rhythm)*4);
+  padding-right: calc(var(--base-rhythm)*4);
+  margin-top: calc(var(--base-rhythm)*4);
+  margin-bottom: calc(var(--base-rhythm)*4);
+}
+
+sdoc-form-row-main {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 2;
+}
+
+sdoc-form-row-aside {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  position: relative;
+}
+
+sdoc-form-row-aside [data-action-type="delete"]:hover,
+sdoc-form-row-aside [data-action-type="delete"] {
+  color: var(--color-danger);
+}
+
+sdoc-form-row-aside [data-action-type="move_up"]:hover,
+sdoc-form-row-aside [data-action-type="move_up"] {
+  color: var(--color-green);
+}
+
+sdoc-form-row-aside [data-action-type="move_down"]:hover,
+sdoc-form-row-aside [data-action-type="move_down"] {
+  color: var(--color-blue);
+}
+
+sdoc-form-error {
+  display: block;
+  color: var(--color-danger);
+  font-size: 12px;
+  /*
+    set 'order' to be displayed after any other items,
+    in the context of <sdoc-form-row-main> using flex:
+  */
+  order: 11;
+}
+
+sdoc-form-error + sdoc-form-error {
+  margin-top: var(--base-rhythm);
+}
+
+sdoc-form-row [data-action-type="add_field"]:only-child {
+  /*
+    It is expected to be a button (.action_button)
+    to add fields like "comment" or "link"
+    to the requirement edit form.
+  */
+  justify-content: flex-start;
+  /* color: rgba(0,0,0,0.5) !important; */
+  border: none;
+  top: -40%;
+}
+
+/*
+   fields grid:
+   inside sdoc-form-grid
+*/
+
+sdoc-form-grid {
+  display: grid;
+  place-items: stretch stretch;
+  place-content: stretch stretch;
+  grid-template-columns:  minmax(0, min-content)
+                          1fr
+                          minmax(0, min-content);
+  gap:
+          calc(var(--base-rhythm)*4)
+          var(--base-rhythm);
+
+  padding:
+          calc(var(--base-rhythm)*4)
+          calc(var(--base-rhythm)*3); /* (4-1) related to column gap */
+  overflow-x: hidden; /* related to field_action::before */
+}
+
+sdoc-form-grid
+  sdoc-form-field {
+    padding: 0;
+    margin: 0;
+  }
+
+sdoc-form-grid
+  sdoc-form-row {
+    display: contents;
+  }
+
+sdoc-form-grid
+  sdoc-form-row-aside:first-of-type {
+    grid-column: 1 / 2; /* left */
+  }
+
+sdoc-form-grid
+  sdoc-form-row-main {
+    grid-column: 2 / 3; /* center */
+  }
+
+sdoc-form-grid
+  sdoc-form-row-aside:last-of-type {
+    grid-column: 3 / 4; /* right */
+  }
+
+/**
+ * sdoc-contenteditable
+ */
+
+sdoc-contenteditable {
+  display: block;
+  position: relative;
+}
+
+sdoc-contenteditable[contenteditable="false"] {
+  color: var(--color-fg-secondary);
+}
+
+.monospace {
+  font-family: var(--code-font-family);
+}
+
+.form__requirement_title {
+  font-size: 1.125em;
+  font-weight: 700;
+}
+
+/* field name // before */
+
+sdoc-contenteditable::before {
+  content: attr(data-field-label);
+  position: absolute;
+  font-family: var(--code-font-family);
+  font-size: var(--font-size-xsm);
+  font-weight: 500;
+  color: var(--color-placeholder);
+  text-transform: uppercase;
+  top: calc(var(--base-rhythm)*(-2.25));
+  transition: color .2s ease;
+}
+
+sdoc-contenteditable:focus::before {
+  color: var(--color-fg-accent);
+}
+
+sdoc-form-error + sdoc-form-field sdoc-contenteditable::before {
+  color: var(--color-danger);
+}
+
+/* placeholder // after */
+
+[placeholder]:empty::after {
+  content: attr(placeholder);
+  pointer-events: none;
+  color: var(--color-placeholder);
+  /* For Firefox: */
+  display: block;
+}
+
+[placeholder]:empty:focus::after {
+  color: rgba(242, 100, 42,.2);
+}
+
+[contenteditable=true] {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  outline: none;
+  /* Without this hack ( display: inline-block )
+     Chrome generates duplicated new lines when Enter pressed.
+     Add style "display:inline-block;" to contenteditable,
+     it will not generate div, p, span automatic in chrome */
+  /* https://stackoverflow.com/a/24689390/598057 */
+  /* Also, the parent element should not be allowed to have a flex display.
+     In order to isolate the 'contenteditable,
+     the structure "sdoc-form-row-main > sdoc-form-field > contenteditable"
+     is implemented.
+  */
+  display: inline-block;
+  /* This is to prevent the field from shifting when the second line appears while typing: */
+  vertical-align: top;
+  width: 100%;
+}
+
+[contenteditable=true][data-field-type="multiline"] {
+  font-family: var(--code-font-family);
+}
+
+/* field_action */
+/* TODO: optimize code with .action_icon & .action_button */
+
+.field_action {  /* button */
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-box-align: center;
+  -webkit-box-pack: center;
+  backface-visibility: hidden;
+  user-select: none;
+  cursor: pointer;
+  appearance: none;
+  border: none;
+  border-color: transparent;
+  background-color: rgba(0,0,0,0);
+  background: rgba(0,0,0,0);
+  box-shadow: none;
+  background-clip: padding-box;
+
+  color: var(--color-action);
+  transition: 0.2s;
+  padding: calc(var(--base-rhythm)*.5);
+  z-index: 2;
+}
+
+.field_action:hover,
+a.field_action:hover {
+  color: var(--color-hover);
+  z-index: 6;
+}
+
+.field_action::before {
+  content: '';
+  position: absolute;
+  /* The element is expected to be placed in a context
+     that defines the top and bottom boundaries.
+
+     The width of the element must be enough
+     to cover the entire available context,
+     and will be cut off by the parent element via overflow.
+  */
+  top: 0;
+  bottom: 0;
+  left: -100vw;
+  right: -100vw;
+  z-index: 0;
+  pointer-events: none;
+  /* Determines the shade of the color through the opacity of the element.
+     The color is passed from the parent.
+  */
+  transition: background-color 0.3s;
+  background-color: transparent;
+  opacity: .1; /* Defines the color shade. */
+}
+
+.field_action:hover::before {
+  background: currentcolor;
+}

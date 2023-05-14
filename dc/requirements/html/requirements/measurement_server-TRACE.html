@@ -1,0 +1,2388 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="UTF-8"/>
+
+  <link rel="shortcut icon" href="../_static/favicon.ico" type="image/x-icon"/>
+
+  
+  
+  <link rel="stylesheet" href="../_static/base.css"/>
+  <link rel="stylesheet" href="../_static/layout.css"/>
+  <link rel="stylesheet" href="../_static/content.css"/>
+  <link rel="stylesheet" href="../_static/node.css"/>
+  <link rel="stylesheet" href="../_static/requirement.css"/>
+  <link rel="stylesheet" href="../_static/requirement__temporary.css"/>
+  <link rel="stylesheet" href="../_static/element.css"/>
+  <link rel="stylesheet" href="../_static/form.css"/>
+  
+  <link rel="stylesheet" href="../_static/requirement-tree.css"/>
+
+
+  
+  <script type="text/javascript" src="../_static/viewtype_menu.js"></script>
+  <script type="text/javascript" src="../_static/toc.js"></script><script id="MathJax-script" async src="../_static/mathjax/tex-mml-chtml.js"></script>
+  
+  
+  
+
+
+  <title>Measurement server - Traceability</title>
+
+  
+</head>
+
+<body data-viewtype="traceability" data-turbo="false">
+<script>document.body.dataset.toc_state = sessionStorage.getItem('tocState') || 'open';</script><div class="layout" id="layout">
+
+    <nav class="layout_nav">
+      <div class="nav">
+
+
+
+  <a
+    data-link="index"
+    class="nav_button"
+    href="../index.html"
+    title="Project index">
+    <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <line x1="9" y1="4" x2="7" y2="4"></line>
+  <line x1="12" y1="9" x2="12" y2="7"></line>
+  <line x1="6" y1="10" x2="10" y2="6"></line>
+  <circle cx="4" cy="12" r="2.25"></circle>
+  <circle cx="12" cy="4" r="2.25"></circle>
+  <circle cx="4" cy="4" r="2.25"></circle>
+  <circle cx="12" cy="12" r="2.25"></circle>
+</svg>
+  </a><a
+    data-link="requirements_coverage"
+    class="nav_button"
+    href="../requirements_coverage.html"
+    title="Requirements coverage">
+    
+<svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <line x1="2" y1="11" x2="14" y2="11"></line>
+    <line x1="10" y1="8" x2="14" y2="8"></line>
+    <line x1="2" y1="14" x2="14" y2="14"></line>
+    <polyline points="2 6 4.5 8 9.5 2"></polyline>
+</svg>
+  </a>
+  <a
+    data-link="source_coverage"
+    class="nav_button"
+    href="../source_coverage.html"
+    title="Source coverage">
+    
+<svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <path d="M6,2 C5.5,2 5,2 5,2 C4.5,2 4,2.5 4,3 C4,5 4,6 4,6 C4,6.5 3.5,7.5 2,8 C3.5,8.5 4,9.5 4,10 C4,10 4,11 4,13 C4,13.5 4.5,14 5,14 C5,14 5.5,14 6,14"></path>
+    <line x1="8" y1="8" x2="14" y2="8"></line>
+    <line x1="10" y1="4" x2="14" y2="4"></line>
+    <line x1="10" y1="12" x2="14" y2="12"></line>
+</svg>
+  </a></div>
+    </nav>
+
+    <div class="layout_toc">
+      
+  
+
+
+
+<div class="toc_panel">
+
+<div
+  data-testid="toc-handler"
+  js-toc-handler='true' 
+  class="toc_handler nav_button"
+>
+  <svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+            <line class="horz" x1="2" y1="12" x2="14" y2="12" id="q3"></line>
+            <line x1="2" y1="8" x2="14" y2="8" id="q2"></line>
+            <line class="horz" x1="2" y1="4" x2="14" y2="4" id="q1"></line>
+            <line class="arrw" x1="2" y1="8" x2="8" y2="14" id="q33"></line>
+            <line class="arrw" x1="2" y1="8" x2="8" y2="2" id="q11"></line>
+</svg>
+</div>
+
+<turbo-frame
+  id="frame-toc"
+  style="display: contents"
+  js-collapsible_list='true' 
+  data-controller="collapsible_list"
+>
+
+  <div class="toc_panel__overlay">
+    <div class="toc_panel__control">
+      <div
+        js-collapsible_list-control='true' 
+      ></div>
+    </div>
+  </div>
+
+  <div
+    js-collapsible_list-container='true' 
+    class="toc_panel__content"
+  >
+
+    <ul
+      data-testid="toc-list"
+      js-collapsible_list-list='true' 
+      class="toc"
+    ><li><a href="#1-Node-parameters" data-turbo="false">
+              <span class="section-number">1</span>
+              Node parameters
+            </a><ul><li>
+        <a href="#1.1-MS-REQ-001" data-turbo="false">
+          <span class="section-number">1.1</span>Can load any number of measurement plugins</a></li><li>
+        <a href="#1.2-MS-REQ-002" data-turbo="false">
+          <span class="section-number">1.2</span>Can only load existing measurement plugins</a></li><li>
+        <a href="#1.3-MS-REQ-003" data-turbo="false">
+          <span class="section-number">1.3</span>Can load any number of condition plugins</a></li><li>
+        <a href="#1.4-MS-REQ-004" data-turbo="false">
+          <span class="section-number">1.4</span>Can only load existing condition plugins</a></li><li>
+        <a href="#1.5-MS-REQ-005" data-turbo="false">
+          <span class="section-number">1.5</span>Can set local base path used by all nodes</a></li><li>
+        <a href="#1.6-MS-REQ-006" data-turbo="false">
+          <span class="section-number">1.6</span>Can set local base path used by all nodes and expand with time variable</a></li><li>
+        <a href="#1.7-MS-REQ-007" data-turbo="false">
+          <span class="section-number">1.7</span>Can set local base path used by all nodes and expand environment variables</a></li><li>
+        <a href="#1.8-MS-REQ-008" data-turbo="false">
+          <span class="section-number">1.8</span>Can load custom variables</a></li><li>
+        <a href="#1.9-MS-REQ-009" data-turbo="false">
+          <span class="section-number">1.9</span>Can load custom variables from file</a></li><li>
+        <a href="#1.10-MS-REQ-010" data-turbo="false">
+          <span class="section-number">1.10</span>Can load custom variables from a fixed string</a></li><li>
+        <a href="#1.11-MS-REQ-011" data-turbo="false">
+          <span class="section-number">1.11</span>Each measurement can be grouped by setting a group key parameter</a></li><li>
+        <a href="#1.12-MS-REQ-012" data-turbo="false">
+          <span class="section-number">1.12</span>Each data sample can be validated through a JSON schema</a></li><li>
+        <a href="#1.13-MS-REQ-013" data-turbo="false">
+          <span class="section-number">1.13</span>Can pass a custom JSON schema</a></li><li>
+        <a href="#1.14-MS-REQ-014" data-turbo="false">
+          <span class="section-number">1.14</span>Can filter any sample by keeping only certain key values, before validation</a></li><li>
+        <a href="#1.15-MS-REQ-015" data-turbo="false">
+          <span class="section-number">1.15</span>Can remove a field through a filter</a></li><li>
+        <a href="#1.16-MS-REQ-016" data-turbo="false">
+          <span class="section-number">1.16</span>Match measurement samples to destination</a></li><li>
+        <a href="#1.17-MS-REQ-017" data-turbo="false">
+          <span class="section-number">1.17</span>Match measurement samples to destination</a></li><li>
+        <a href="#1.18-MS-REQ-018" data-turbo="false">
+          <span class="section-number">1.18</span>Can collect also when the node starts</a></li><li>
+        <a href="#1.19-MS-REQ-019" data-turbo="false">
+          <span class="section-number">1.19</span>Can collect also when the node starts</a></li><li>
+        <a href="#1.20-MS-REQ-020" data-turbo="false">
+          <span class="section-number">1.20</span>Can collect when the node starts a certain amount of samples</a></li><li>
+        <a href="#1.21-MS-REQ-021" data-turbo="false">
+          <span class="section-number">1.21</span>Publisher is deleted when max samples reached</a></li><li>
+        <a href="#1.22-MS-REQ-022" data-turbo="false">
+          <span class="section-number">1.22</span>Can include measurement name in sample</a></li><li>
+        <a href="#1.23-MS-REQ-023" data-turbo="false">
+          <span class="section-number">1.23</span>Can include measurement plugin name in sample</a></li><li>
+        <a href="#1.24-MS-REQ-024" data-turbo="false">
+          <span class="section-number">1.24</span>Can pass remote keys</a></li><li>
+        <a href="#1.25-MS-REQ-025" data-turbo="false">
+          <span class="section-number">1.25</span>Can apply a prefix to the remote key</a></li><li>
+        <a href="#1.26-MS-REQ-026" data-turbo="false">
+          <span class="section-number">1.26</span>Can send samples if all conditions are respected (from a list of condition)</a></li><li>
+        <a href="#1.27-MS-REQ-027" data-turbo="false">
+          <span class="section-number">1.27</span>Can send samples if any conditions is respected (from a list of condition)</a></li><li>
+        <a href="#1.28-MS-REQ-028" data-turbo="false">
+          <span class="section-number">1.28</span>Can send samples if no conditions are not respected (from a list of condition)</a></li><li>
+        <a href="#1.29-MS-REQ-029" data-turbo="false">
+          <span class="section-number">1.29</span>Can send a maximum number of samples when conditions are met</a></li><li>
+        <a href="#1.30-MS-REQ-030" data-turbo="false">
+          <span class="section-number">1.30</span>Stop all nodes if one fails</a></li></ul>
+            </li></ul>
+  </div>
+</turbo-frame>
+</div>
+
+    </div>
+
+    <header class="layout_header">
+      
+<div class="header">
+  <div class="header__document">
+  <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <path d=" M13,13 L13,8 C13,7.5 12.6,7 12,7 L9,7 C8.5,7 8,6.5 8,6 L8,3 C8,2.5 7.5,2 7,2 L4,2 C3.5,2 3,2.5 3,3 L3,13 C3,13.5 3.5,14 4,14 L12,14 C12.6,14 13,13.5 13,13 Z M13,9 L13,8 C13,7.5 13,7 12.5,6.5 L8.5,2.5 C8,2 7.5,2 7,2 L6,2"></path>
+</svg>
+  <turbo-frame id="document_title">
+<div
+  class="header__document_title"
+  title="Measurement server"
+>
+  Measurement server
+</div>
+</turbo-frame>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" class="sc-gLvsXj bpkaBy"><path stroke="currentColor" d="M12.5 4.5l-5 11" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  <div class="viewtype">
+  <div
+    id="viewtype_handler"
+    class="viewtype__handler"
+    aria-expanded="false"
+    aria-controls="viewtype_menu"
+  >
+    <span>Traceability</span>
+    <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" >
+  <path d="M5 10l3 3 3-3M5 6l3-3 3 3"></path>
+</svg>
+  </div>
+  <menu
+    id="viewtype_menu"
+    class="viewtype__menu"
+    aria-hidden="true"
+    aria-labelledby="viewtype_handler"
+  >
+    <li class="viewtype__menu_header">VIEWS</li>
+    <li>
+      <a
+        data-viewtype_link="document"
+        class="viewtype__menu_item"
+        title="Go to Document view"
+        href="../requirements/measurement_server.html">
+        Document</a>
+    </li>
+    <li>
+      <a
+        data-viewtype_link="table"
+        class="viewtype__menu_item"
+        title="Go to Table view"
+        href="../requirements/measurement_server-TABLE.html">
+        Table</a>
+    </li>
+    <li>
+      <a
+        data-viewtype_link="traceability"
+        class="viewtype__menu_item"
+        title="Go to Traceability view"
+        href="../requirements/measurement_server-TRACE.html">
+        Traceability</a>
+    </li>
+    <li>
+      <a
+        data-viewtype_link="deep_traceability"
+        class="viewtype__menu_item"
+        title="Go to Deep Traceability view"
+        href="../requirements/measurement_server-DEEP-TRACE.html">
+      Deep traceability</a>
+    </li>
+  </menu>
+</div>
+</div>
+</div>
+
+    </header>
+
+    <main class="layout_main" id="pan_with_space">
+      
+
+      <div class="content">
+        <section class="content_section">
+
+          <div class="content_item" data-role="parents"></div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="section"
+    data-testid="node-section"
+  >
+
+    
+    <sdoc-anchor id="1-Node-parameters"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-section>
+  
+<sdoc-section-title
+  data-level="1"
+>1.&nbsp;Node parameters</sdoc-section-title>
+  
+</sdoc-section>
+
+
+  </sdoc-node>
+
+          </div>
+          <div class="content_item" data-role="children"></div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.1-MS-REQ-001"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.1"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.1.&nbsp;Can load any number of measurement plugins</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-001
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Measurement server can load any number of measurement plugins</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.2-MS-REQ-002"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.2"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.2.&nbsp;Can only load existing measurement plugins</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-002
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Measurement server throws a custom exception when loading a measurement plugin and stop everything</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.3-MS-REQ-003"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.3"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.3.&nbsp;Can load any number of condition plugins</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-003
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Measurement server can load any number of condition plugins</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.4-MS-REQ-004"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.4"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.4.&nbsp;Can only load existing condition plugins</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-004
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Measurement server throws a custom exception when loading a condition plugin and stop everything</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.5-MS-REQ-005"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.5"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.5.&nbsp;Can set local base path used by all nodes</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-005
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The server must be able to load a path from save_local_base_path parameter</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.6-MS-REQ-006"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.6"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.6.&nbsp;Can set local base path used by all nodes and expand with time variable</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-006
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Strings as %Y, %M, %D etc. must expand to the current year, month and day. All standard ones should be handled. When encountering one unknown, it should stop the node.</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.7-MS-REQ-007"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.7"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.7.&nbsp;Can set local base path used by all nodes and expand environment variables</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-007
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Strings starting with $, e.g $HOME must expand as environment variables. When encountering one empty, it should stop the node.</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.8-MS-REQ-008"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.8"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.8.&nbsp;Can load custom variables</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-008
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The parameter custom_str_params should allow to list custom variables. the subparameter name and one of value_from_file or value must be present. Stop the node otherwise.</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.9-MS-REQ-009"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.9"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.9.&nbsp;Can load custom variables from file</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-009
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The parameter custom_str_params should allow to list custom variables. Variables can come from a file and stop the node if the file does not exist.</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.10-MS-REQ-010"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.10"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.10.&nbsp;Can load custom variables from a fixed string</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-010
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The parameter custom_str_params should allow to list custom variables. Variables can come from a fixed string and stop the node if the string is empty.</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.11-MS-REQ-011"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.11"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.11.&nbsp;Each measurement can be grouped by setting a group key parameter</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-011
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Measurements can be loaded using a group parameter to create a new JSON.</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+    <sdoc-requirement-field-label>comment:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="comment">
+      <div class="document">
+<p>Measurement 1:</p>
+<pre class="code JSON literal-block">
+<span class="punctuation">{</span><span class="name tag">&quot;a&quot;</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="literal number integer">1</span><span class="punctuation">}</span>
+</pre>
+<p>Measurement 2:</p>
+<pre class="code JSON literal-block">
+<span class="punctuation">{</span><span class="name tag">&quot;b&quot;</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="literal number integer">2</span><span class="punctuation">}</span>
+</pre>
+<p>Grouped sample:</p>
+<pre class="code JSON literal-block">
+<span class="punctuation">{</span><span class="name tag">&quot;a&quot;</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="literal number integer">1</span><span class="punctuation">,</span><span class="whitespace"> </span><span class="name tag">&quot;b&quot;</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="literal number integer">2</span><span class="punctuation">}</span>
+</pre>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.12-MS-REQ-012"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.12"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.12.&nbsp;Each data sample can be validated through a JSON schema</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-012
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Sample can be validated following standard schema patterns</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+    <sdoc-requirement-field-label>comment:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="comment">
+      <div class="document">
+<p>JSON are validated following the validation <a class="reference external" href="https://json-schema.org/draft/2020-12/json-schema-validation.html">standard 07</a></p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.13-MS-REQ-013"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.13"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.13.&nbsp;Can pass a custom JSON schema</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-013
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>We can define a custom JSON file for our own validation.</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.14-MS-REQ-014"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.14"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.14.&nbsp;Can filter any sample by keeping only certain key values, before validation</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-014
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Can apply a filter to keys</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.15-MS-REQ-015"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.15"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.15.&nbsp;Can remove a field through a filter</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-015
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Apply a filter that remove the key from the sample</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.16-MS-REQ-016"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.16"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.16.&nbsp;Match measurement samples to destination</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-016
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Can match which sample is sent where using tags</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.17-MS-REQ-017"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.17"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.17.&nbsp;Match measurement samples to destination</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-017
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Can match which sample is sent where using tags</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.18-MS-REQ-018"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.18"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.18.&nbsp;Can collect also when the node starts</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-018
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>ROS timers by default do an action after the time of the wall timer has elapsed. We need an option to collect a sample when starting directly.</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.19-MS-REQ-019"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.19"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.19.&nbsp;Can collect also when the node starts</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-019
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>ROS timers by default do an action after the time of the wall timer has elapsed. We need an option to collect a sample when starting directly.</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.20-MS-REQ-020"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.20"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.20.&nbsp;Can collect when the node starts a certain amount of samples</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-020
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Stop collecting after a certain amount of samples has been reached</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.21-MS-REQ-021"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.21"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.21.&nbsp;Publisher is deleted when max samples reached</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-021
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Stop the publisher, even the loop when the maximum amount of samples has been reached.</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.22-MS-REQ-022"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.22"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.22.&nbsp;Can include measurement name in sample</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-022
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Each sample can have (or not) the measurement name included as key/value</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.23-MS-REQ-023"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.23"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.23.&nbsp;Can include measurement plugin name in sample</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-023
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Each sample can have (or not) the measurement plugin name included as key/value</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.24-MS-REQ-024"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.24"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.24.&nbsp;Can pass remote keys</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-024
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Can precise the remote key, based on remote destination</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.25-MS-REQ-025"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.25"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.25.&nbsp;Can apply a prefix to the remote key</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-025
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Can pass a prefix to the remote key, to add a string to the path</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.26-MS-REQ-026"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.26"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.26.&nbsp;Can send samples if all conditions are respected (from a list of condition)</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-026
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Can pass a list of conditions. All need to be all respected to send data sample</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.27-MS-REQ-027"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.27"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.27.&nbsp;Can send samples if any conditions is respected (from a list of condition)</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-027
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Can pass a list of conditions. One of them need to be respected to send data sample</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.28-MS-REQ-028"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.28"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.28.&nbsp;Can send samples if no conditions are not respected (from a list of condition)</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-028
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Can pass a list of conditions. None need to be respected to send data sample</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.29-MS-REQ-029"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.29"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.29.&nbsp;Can send a maximum number of samples when conditions are met</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-029
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Sometimes, it is useful to send data when conditions are respected and only a certain amount of time</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.30-MS-REQ-030"></sdoc-anchor>
+
+    
+    
+
+
+
+
+
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.30"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    
+        1.30.&nbsp;Stop all nodes if one fails</sdoc-requirement-title>
+  
+    <sdoc-requirement-field-label>UID:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-type="singleline" data-field-label="UID">
+      MS-REQ-030
+    </sdoc-requirement-field>
+  
+  
+  
+  
+    <sdoc-requirement-field-label>statement:</sdoc-requirement-field-label>
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Include a bond connection for the lifecycle manager to ensure that after a server transitions up, it also remains active. If a server crashes, it lets the lifecycle manager know and transition down the system to prevent a critical failure.</p>
+</div>
+
+    </sdoc-requirement-field>
+  
+  
+  
+  
+
+</sdoc-requirement>
+
+
+  </sdoc-node>
+
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="layout_footer">
+    
+      <div class="footer">
+        Built with
+        <a
+          class="strictdoc__link"
+          href="https://github.com/strictdoc-project/strictdoc"
+          target="_blank"
+        >StrictDoc</a>
+        <a
+          class="strictdoc__version"
+          href="https://github.com/strictdoc-project/strictdoc/releases/tag/0.0.40"
+          target="_blank"
+        >
+          <svg height="16" viewBox="0 0 16 16" version="1.1" width="16" >
+            <path fill-rule="evenodd" d="M2.5 7.775V2.75a.25.25 0 01.25-.25h5.025a.25.25 0 01.177.073l6.25 6.25a.25.25 0 010 .354l-5.025 5.025a.25.25 0 01-.354 0l-6.25-6.25a.25.25 0 01-.073-.177zm-1.5 0V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 010 2.474l-5.026 5.026a1.75 1.75 0 01-2.474 0l-6.25-6.25A1.75 1.75 0 011 7.775zM6 5a1 1 0 100 2 1 1 0 000-2z"></path>
+          </svg>
+          0.0.40
+        </a>
+      </div>
+    
+    </footer>
+
+    <aside class="layout_aside">
+      
+    </aside>
+
+  </div>
+  
+  <div id="modal"></div>
+  <div id="confirm"></div>
+  
+</body>
+</html>

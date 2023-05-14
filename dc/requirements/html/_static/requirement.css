@@ -1,0 +1,250 @@
+:root {
+  --requirement-container-limit: 500px;
+  --requirement-border-color: rgb(191,191,191);
+  --requirement-border-width: 1px;
+  --requirement-border-radius: 4px;
+  --requirement-inner-borders-width: 1px;
+  --requirement-label-color: var(--color-fg-secondary, #808080);
+  --requirement-bg-dark-color: var(--color-bg-main, #F2F5F9);
+  --requirement-bg-light-color: var(--color-bg-contrast, #FFFFFF);
+
+  --requirement-base-rhythm: var(--base-rhythm, 8px);
+}
+
+/* sdoc-requirement */
+
+sdoc-requirement {
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: stretch stretch;
+  place-content: stretch stretch;
+  gap: var(--requirement-inner-borders-width);
+
+  position: relative;
+  /* border: */
+  outline:
+    var(--requirement-border-width, 1px)
+    solid
+    var(--requirement-border-color, #bfbfbf);
+  /* min-width: 300px; */
+  /* compensate outline: */
+  min-width: 298px;
+  border-radius: var(--requirement-border-radius);
+  overflow: hidden;
+
+  background-color: var(--color-bg-contrast);
+}
+
+sdoc-requirement-title {
+  display: block;
+
+  font-size: 1.125em;
+  font-weight: 700;
+
+  padding-left: calc(var(--requirement-base-rhythm)*2);
+  padding-right: calc(var(--requirement-base-rhythm)*2);
+  padding-top: calc(var(--requirement-base-rhythm)*1);
+  padding-bottom: calc(var(--requirement-base-rhythm)*1);
+
+  background-color: var(--requirement-bg-dark-color);
+  /* border-bottom: */
+  outline: 1px solid var(--requirement-border-color);
+}
+
+[node-style="card"] sdoc-requirement-title {
+  font-size: 1em;
+}
+
+sdoc-requirement-uid {
+  display: block;
+  padding-left: calc(var(--requirement-base-rhythm)*2);
+  padding-right: calc(var(--requirement-base-rhythm)*2);
+  padding-top: calc(var(--requirement-base-rhythm)*1);
+  padding-bottom: calc(var(--requirement-base-rhythm)*1);
+  font-size: var(--font-size-sm);
+  font-family: var(--code-font-family);
+  font-weight: 700;
+
+  text-transform: uppercase;
+  color: var(--requirement-label-color);
+}
+
+sdoc-requirement-field-label {
+  display: flex;
+  align-items:flex-start;
+
+  padding-left: calc(var(--requirement-base-rhythm)*2);
+  padding-right: calc(var(--requirement-base-rhythm)*2);
+  padding-top: calc(var(--requirement-base-rhythm)*1.75);
+  padding-bottom: calc(var(--requirement-base-rhythm)*1);
+
+  font-size: var(--font-size-sm);
+  font-family: var(--code-font-family);
+  font-weight: 500;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--requirement-label-color);
+}
+
+sdoc-requirement-field {
+  display: block;
+  position: relative;
+
+  padding-left: calc(var(--requirement-base-rhythm)*2);
+  padding-right: calc(var(--requirement-base-rhythm)*2);
+  padding-top: calc(var(--requirement-base-rhythm)*1);
+  padding-bottom: calc(var(--requirement-base-rhythm)*1);
+}
+
+sdoc-requirement-field p,
+sdoc-requirement-field table,
+sdoc-requirement-field blockquote,
+sdoc-requirement-field ol,
+sdoc-requirement-field ul {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* requirement-view="table" */
+
+sdoc-requirement[requirement-view="table"] {
+  /* grid: */
+  grid-template-columns: minmax(80px, min-content) 1fr;
+  /* border: */
+  background-color: var(--requirement-border-color);
+}
+
+sdoc-requirement[requirement-view="table"]
+  sdoc-requirement-title {
+    grid-column: 1 / 3;
+  }
+
+sdoc-requirement[requirement-view="table"]
+  sdoc-requirement-field-label {
+    grid-column: 1 / 2;
+    background-color: var(--requirement-bg-dark-color);
+  }
+
+sdoc-requirement[requirement-view="table"]
+  sdoc-requirement-field {
+    grid-column: 2 / 3;
+    background-color: var(--requirement-bg-light-color);
+  }
+
+sdoc-node:not([node-style="card"]) {
+  /* Making the node a container for the requirement: */
+  container: node / inline-size;
+  /*
+  HACK: [sdoc-node outline hack]
+    Buggy behavior for @container CSS feature:
+    after window resize, the 1px vertically space
+    appears randomly between nodes.
+  */
+  outline: 1px solid #fff;
+  margin: 1px 0;
+}
+
+/* calc(var(--card-width) + calc(var(--base-padding)*4)) */
+/* 300 + 16*4 = 364 */
+@container node (width < 400px) {
+  sdoc-requirement[requirement-view="table"] {
+    /* removes columns: */
+    grid-template-columns: 1fr;
+    /* removes inner border: */
+    background-color: var(--requirement-bg-light-color);
+  }
+
+  sdoc-requirement[requirement-view="table"]
+    sdoc-requirement-title,
+  sdoc-requirement[requirement-view="table"]
+    sdoc-requirement-field-label,
+  sdoc-requirement[requirement-view="table"]
+    sdoc-requirement-field {
+      /* removes columns: */
+      grid-column: unset;
+    }
+}
+
+@supports not (container-type: inline-size) {
+  /* TODO test 888px */
+  @media (max-width: 888px) {
+    /* Do the same as if there was a container support */
+
+    sdoc-requirement[requirement-view="table"] {
+      /* removes columns: */
+      grid-template-columns: 1fr;
+      /* removes inner border: */
+      background-color: var(--requirement-bg-light-color);
+    }
+
+    sdoc-requirement[requirement-view="table"]
+      sdoc-requirement-title,
+    sdoc-requirement[requirement-view="table"]
+      sdoc-requirement-field-label,
+    sdoc-requirement[requirement-view="table"]
+      sdoc-requirement-field {
+        /* removes columns: */
+        grid-column: unset;
+      }
+  }
+}
+
+/* requirement-view="zebra" */
+
+sdoc-requirement[requirement-view="zebra"] {
+  grid-template-columns: 1fr;
+}
+
+sdoc-requirement[requirement-view="zebra"]
+  sdoc-requirement-field-label {
+    background-color: var(--requirement-bg-dark-color);
+  }
+
+sdoc-requirement[requirement-view="zebra"]
+  sdoc-requirement-field {
+    background-color: var(--requirement-bg-light-color);
+  }
+
+/* requirement-view="simple" */
+
+sdoc-requirement[requirement-view="simple"] {
+  grid-template-columns: 1fr;
+}
+
+sdoc-requirement[requirement-view="simple"]
+sdoc-requirement-field-label {
+  background-color: #fff;
+  padding-bottom: 0;
+}
+
+/* section */
+
+sdoc-section,
+sdoc-section-text {
+  display: block;
+  margin: 0;
+}
+
+sdoc-section-title {
+  display: block;
+  font-weight: 700;
+}
+
+sdoc-section-title * {
+  margin: 0;
+  display: inline;
+}
+
+/* * */
+
+sdoc-anchor {
+  /* for Fixed Headers + Section Anchors */
+  scroll-snap-margin-top: calc(var(--base-gap) + var(--base-padding));
+  scroll-margin-top:      calc(var(--base-gap) + var(--base-padding));
+}
+
+sdoc-anchor:target + sdoc-requirement sdoc-requirement-title,
+sdoc-anchor:target + sdoc-section sdoc-section-title,
+sdoc-anchor:target + .requirement__title {
+  background-color: var(--color-highlight);
+}

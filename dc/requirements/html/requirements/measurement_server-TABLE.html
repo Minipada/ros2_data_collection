@@ -1,0 +1,1022 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="UTF-8"/>
+
+  <link rel="shortcut icon" href="../_static/favicon.ico" type="image/x-icon"/>
+
+  
+  <link rel="stylesheet" href="../_static/base.css"/>
+  <link rel="stylesheet" href="../_static/layout.css"/>
+  <link rel="stylesheet" href="../_static/content.css"/>
+  <link rel="stylesheet" href="../_static/node.css"/>
+  <link rel="stylesheet" href="../_static/requirement.css"/>
+  <link rel="stylesheet" href="../_static/requirement__temporary.css"/>
+  <link rel="stylesheet" href="../_static/element.css"/>
+  <link rel="stylesheet" href="../_static/form.css"/>
+  
+
+  
+  <script type="text/javascript" src="../_static/viewtype_menu.js"></script>
+  <script type="text/javascript" src="../_static/toc.js"></script><script id="MathJax-script" async src="../_static/mathjax/tex-mml-chtml.js"></script>
+  
+  
+  
+
+
+  <title>Measurement server - Table</title>
+
+  
+</head>
+
+<body data-viewtype="table" data-turbo="false">
+<script>document.body.dataset.toc_state = sessionStorage.getItem('tocState') || 'open';</script><div class="layout" id="layout">
+
+    <nav class="layout_nav">
+      <div class="nav">
+
+
+
+  <a
+    data-link="index"
+    class="nav_button"
+    href="../index.html"
+    title="Project index">
+    <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <line x1="9" y1="4" x2="7" y2="4"></line>
+  <line x1="12" y1="9" x2="12" y2="7"></line>
+  <line x1="6" y1="10" x2="10" y2="6"></line>
+  <circle cx="4" cy="12" r="2.25"></circle>
+  <circle cx="12" cy="4" r="2.25"></circle>
+  <circle cx="4" cy="4" r="2.25"></circle>
+  <circle cx="12" cy="12" r="2.25"></circle>
+</svg>
+  </a><a
+    data-link="requirements_coverage"
+    class="nav_button"
+    href="../requirements_coverage.html"
+    title="Requirements coverage">
+    
+<svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <line x1="2" y1="11" x2="14" y2="11"></line>
+    <line x1="10" y1="8" x2="14" y2="8"></line>
+    <line x1="2" y1="14" x2="14" y2="14"></line>
+    <polyline points="2 6 4.5 8 9.5 2"></polyline>
+</svg>
+  </a>
+  <a
+    data-link="source_coverage"
+    class="nav_button"
+    href="../source_coverage.html"
+    title="Source coverage">
+    
+<svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <path d="M6,2 C5.5,2 5,2 5,2 C4.5,2 4,2.5 4,3 C4,5 4,6 4,6 C4,6.5 3.5,7.5 2,8 C3.5,8.5 4,9.5 4,10 C4,10 4,11 4,13 C4,13.5 4.5,14 5,14 C5,14 5.5,14 6,14"></path>
+    <line x1="8" y1="8" x2="14" y2="8"></line>
+    <line x1="10" y1="4" x2="14" y2="4"></line>
+    <line x1="10" y1="12" x2="14" y2="12"></line>
+</svg>
+  </a></div>
+    </nav>
+
+    <div class="layout_toc">
+      
+  
+
+
+
+<div class="toc_panel">
+
+<div
+  data-testid="toc-handler"
+  js-toc-handler='true' 
+  class="toc_handler nav_button"
+>
+  <svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+            <line class="horz" x1="2" y1="12" x2="14" y2="12" id="q3"></line>
+            <line x1="2" y1="8" x2="14" y2="8" id="q2"></line>
+            <line class="horz" x1="2" y1="4" x2="14" y2="4" id="q1"></line>
+            <line class="arrw" x1="2" y1="8" x2="8" y2="14" id="q33"></line>
+            <line class="arrw" x1="2" y1="8" x2="8" y2="2" id="q11"></line>
+</svg>
+</div>
+
+<turbo-frame
+  id="frame-toc"
+  style="display: contents"
+  js-collapsible_list='true' 
+  data-controller="collapsible_list"
+>
+
+  <div class="toc_panel__overlay">
+    <div class="toc_panel__control">
+      <div
+        js-collapsible_list-control='true' 
+      ></div>
+    </div>
+  </div>
+
+  <div
+    js-collapsible_list-container='true' 
+    class="toc_panel__content"
+  >
+
+    <ul
+      data-testid="toc-list"
+      js-collapsible_list-list='true' 
+      class="toc"
+    ><li><a href="#1-Node-parameters" data-turbo="false">
+              <span class="section-number">1</span>
+              Node parameters
+            </a><ul><li>
+        <a href="#1.1-MS-REQ-001" data-turbo="false">
+          <span class="section-number">1.1</span>Can load any number of measurement plugins</a></li><li>
+        <a href="#1.2-MS-REQ-002" data-turbo="false">
+          <span class="section-number">1.2</span>Can only load existing measurement plugins</a></li><li>
+        <a href="#1.3-MS-REQ-003" data-turbo="false">
+          <span class="section-number">1.3</span>Can load any number of condition plugins</a></li><li>
+        <a href="#1.4-MS-REQ-004" data-turbo="false">
+          <span class="section-number">1.4</span>Can only load existing condition plugins</a></li><li>
+        <a href="#1.5-MS-REQ-005" data-turbo="false">
+          <span class="section-number">1.5</span>Can set local base path used by all nodes</a></li><li>
+        <a href="#1.6-MS-REQ-006" data-turbo="false">
+          <span class="section-number">1.6</span>Can set local base path used by all nodes and expand with time variable</a></li><li>
+        <a href="#1.7-MS-REQ-007" data-turbo="false">
+          <span class="section-number">1.7</span>Can set local base path used by all nodes and expand environment variables</a></li><li>
+        <a href="#1.8-MS-REQ-008" data-turbo="false">
+          <span class="section-number">1.8</span>Can load custom variables</a></li><li>
+        <a href="#1.9-MS-REQ-009" data-turbo="false">
+          <span class="section-number">1.9</span>Can load custom variables from file</a></li><li>
+        <a href="#1.10-MS-REQ-010" data-turbo="false">
+          <span class="section-number">1.10</span>Can load custom variables from a fixed string</a></li><li>
+        <a href="#1.11-MS-REQ-011" data-turbo="false">
+          <span class="section-number">1.11</span>Each measurement can be grouped by setting a group key parameter</a></li><li>
+        <a href="#1.12-MS-REQ-012" data-turbo="false">
+          <span class="section-number">1.12</span>Each data sample can be validated through a JSON schema</a></li><li>
+        <a href="#1.13-MS-REQ-013" data-turbo="false">
+          <span class="section-number">1.13</span>Can pass a custom JSON schema</a></li><li>
+        <a href="#1.14-MS-REQ-014" data-turbo="false">
+          <span class="section-number">1.14</span>Can filter any sample by keeping only certain key values, before validation</a></li><li>
+        <a href="#1.15-MS-REQ-015" data-turbo="false">
+          <span class="section-number">1.15</span>Can remove a field through a filter</a></li><li>
+        <a href="#1.16-MS-REQ-016" data-turbo="false">
+          <span class="section-number">1.16</span>Match measurement samples to destination</a></li><li>
+        <a href="#1.17-MS-REQ-017" data-turbo="false">
+          <span class="section-number">1.17</span>Match measurement samples to destination</a></li><li>
+        <a href="#1.18-MS-REQ-018" data-turbo="false">
+          <span class="section-number">1.18</span>Can collect also when the node starts</a></li><li>
+        <a href="#1.19-MS-REQ-019" data-turbo="false">
+          <span class="section-number">1.19</span>Can collect also when the node starts</a></li><li>
+        <a href="#1.20-MS-REQ-020" data-turbo="false">
+          <span class="section-number">1.20</span>Can collect when the node starts a certain amount of samples</a></li><li>
+        <a href="#1.21-MS-REQ-021" data-turbo="false">
+          <span class="section-number">1.21</span>Publisher is deleted when max samples reached</a></li><li>
+        <a href="#1.22-MS-REQ-022" data-turbo="false">
+          <span class="section-number">1.22</span>Can include measurement name in sample</a></li><li>
+        <a href="#1.23-MS-REQ-023" data-turbo="false">
+          <span class="section-number">1.23</span>Can include measurement plugin name in sample</a></li><li>
+        <a href="#1.24-MS-REQ-024" data-turbo="false">
+          <span class="section-number">1.24</span>Can pass remote keys</a></li><li>
+        <a href="#1.25-MS-REQ-025" data-turbo="false">
+          <span class="section-number">1.25</span>Can apply a prefix to the remote key</a></li><li>
+        <a href="#1.26-MS-REQ-026" data-turbo="false">
+          <span class="section-number">1.26</span>Can send samples if all conditions are respected (from a list of condition)</a></li><li>
+        <a href="#1.27-MS-REQ-027" data-turbo="false">
+          <span class="section-number">1.27</span>Can send samples if any conditions is respected (from a list of condition)</a></li><li>
+        <a href="#1.28-MS-REQ-028" data-turbo="false">
+          <span class="section-number">1.28</span>Can send samples if no conditions are not respected (from a list of condition)</a></li><li>
+        <a href="#1.29-MS-REQ-029" data-turbo="false">
+          <span class="section-number">1.29</span>Can send a maximum number of samples when conditions are met</a></li><li>
+        <a href="#1.30-MS-REQ-030" data-turbo="false">
+          <span class="section-number">1.30</span>Stop all nodes if one fails</a></li></ul>
+            </li></ul>
+  </div>
+</turbo-frame>
+</div>
+
+    </div>
+
+    <header class="layout_header">
+      
+<div class="header">
+  <div class="header__document">
+  <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <path d=" M13,13 L13,8 C13,7.5 12.6,7 12,7 L9,7 C8.5,7 8,6.5 8,6 L8,3 C8,2.5 7.5,2 7,2 L4,2 C3.5,2 3,2.5 3,3 L3,13 C3,13.5 3.5,14 4,14 L12,14 C12.6,14 13,13.5 13,13 Z M13,9 L13,8 C13,7.5 13,7 12.5,6.5 L8.5,2.5 C8,2 7.5,2 7,2 L6,2"></path>
+</svg>
+  <turbo-frame id="document_title">
+<div
+  class="header__document_title"
+  title="Measurement server"
+>
+  Measurement server
+</div>
+</turbo-frame>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" class="sc-gLvsXj bpkaBy"><path stroke="currentColor" d="M12.5 4.5l-5 11" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  <div class="viewtype">
+  <div
+    id="viewtype_handler"
+    class="viewtype__handler"
+    aria-expanded="false"
+    aria-controls="viewtype_menu"
+  >
+    <span>Table</span>
+    <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" >
+  <path d="M5 10l3 3 3-3M5 6l3-3 3 3"></path>
+</svg>
+  </div>
+  <menu
+    id="viewtype_menu"
+    class="viewtype__menu"
+    aria-hidden="true"
+    aria-labelledby="viewtype_handler"
+  >
+    <li class="viewtype__menu_header">VIEWS</li>
+    <li>
+      <a
+        data-viewtype_link="document"
+        class="viewtype__menu_item"
+        title="Go to Document view"
+        href="../requirements/measurement_server.html">
+        Document</a>
+    </li>
+    <li>
+      <a
+        data-viewtype_link="table"
+        class="viewtype__menu_item"
+        title="Go to Table view"
+        href="../requirements/measurement_server-TABLE.html">
+        Table</a>
+    </li>
+    <li>
+      <a
+        data-viewtype_link="traceability"
+        class="viewtype__menu_item"
+        title="Go to Traceability view"
+        href="../requirements/measurement_server-TRACE.html">
+        Traceability</a>
+    </li>
+    <li>
+      <a
+        data-viewtype_link="deep_traceability"
+        class="viewtype__menu_item"
+        title="Go to Deep Traceability view"
+        href="../requirements/measurement_server-DEEP-TRACE.html">
+      Deep traceability</a>
+    </li>
+  </menu>
+</div>
+</div>
+</div>
+
+    </header>
+
+    <main class="layout_main" id="pan_with_space">
+      
+
+      <div class="content">
+    <sdoc-node>
+      <h1>Measurement server</h1></sdoc-node>
+
+    <table class="content-view-table">
+
+      <thead>
+        <tr>
+          <th class="content-view-th">Type</th>
+          <th class="content-view-th">Level</th><th class="content-view-th">UID</th><th class="content-view-th">STATUS</th><th class="content-view-th">TAGS</th><th class="content-view-th">REFS</th>
+          <th class="content-view-th">Title</th>
+          <th class="content-view-th">Statement</th>
+          <th class="content-view-th">Rationale</th>
+          <th class="content-view-th">Comment</th></tr>
+      </thead>
+      <tr>
+      <td class="content-view-td content-view-td-type">Section</td>
+      <td class="content-view-td content-view-td-meta">
+        1
+      </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="1-Node-parameters"></sdoc-anchor>
+          <div class="requirement__title">
+            Node parameters
+          </div></td>
+      </tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.1
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-001</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.1-MS-REQ-001"></sdoc-anchor>
+          <div class="requirement__title">
+            Can load any number of measurement plugins
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Measurement server can load any number of measurement plugins</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.2
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-002</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.2-MS-REQ-002"></sdoc-anchor>
+          <div class="requirement__title">
+            Can only load existing measurement plugins
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Measurement server throws a custom exception when loading a measurement plugin and stop everything</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.3
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-003</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.3-MS-REQ-003"></sdoc-anchor>
+          <div class="requirement__title">
+            Can load any number of condition plugins
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Measurement server can load any number of condition plugins</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.4
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-004</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.4-MS-REQ-004"></sdoc-anchor>
+          <div class="requirement__title">
+            Can only load existing condition plugins
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Measurement server throws a custom exception when loading a condition plugin and stop everything</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.5
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-005</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.5-MS-REQ-005"></sdoc-anchor>
+          <div class="requirement__title">
+            Can set local base path used by all nodes
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The server must be able to load a path from save_local_base_path parameter</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.6
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-006</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.6-MS-REQ-006"></sdoc-anchor>
+          <div class="requirement__title">
+            Can set local base path used by all nodes and expand with time variable
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Strings as %Y, %M, %D etc. must expand to the current year, month and day. All standard ones should be handled. When encountering one unknown, it should stop the node.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.7
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-007</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.7-MS-REQ-007"></sdoc-anchor>
+          <div class="requirement__title">
+            Can set local base path used by all nodes and expand environment variables
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Strings starting with $, e.g $HOME must expand as environment variables. When encountering one empty, it should stop the node.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.8
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-008</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.8-MS-REQ-008"></sdoc-anchor>
+          <div class="requirement__title">
+            Can load custom variables
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The parameter custom_str_params should allow to list custom variables. the subparameter name and one of value_from_file or value must be present. Stop the node otherwise.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.9
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-009</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.9-MS-REQ-009"></sdoc-anchor>
+          <div class="requirement__title">
+            Can load custom variables from file
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The parameter custom_str_params should allow to list custom variables. Variables can come from a file and stop the node if the file does not exist.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.10
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-010</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.10-MS-REQ-010"></sdoc-anchor>
+          <div class="requirement__title">
+            Can load custom variables from a fixed string
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The parameter custom_str_params should allow to list custom variables. Variables can come from a fixed string and stop the node if the string is empty.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.11
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-011</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.11-MS-REQ-011"></sdoc-anchor>
+          <div class="requirement__title">
+            Each measurement can be grouped by setting a group key parameter
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Measurements can be loaded using a group parameter to create a new JSON.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+          <div class="document">
+<p>Measurement 1:</p>
+<pre class="code JSON literal-block">
+<span class="punctuation">{</span><span class="name tag">&quot;a&quot;</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="literal number integer">1</span><span class="punctuation">}</span>
+</pre>
+<p>Measurement 2:</p>
+<pre class="code JSON literal-block">
+<span class="punctuation">{</span><span class="name tag">&quot;b&quot;</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="literal number integer">2</span><span class="punctuation">}</span>
+</pre>
+<p>Grouped sample:</p>
+<pre class="code JSON literal-block">
+<span class="punctuation">{</span><span class="name tag">&quot;a&quot;</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="literal number integer">1</span><span class="punctuation">,</span><span class="whitespace"> </span><span class="name tag">&quot;b&quot;</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="literal number integer">2</span><span class="punctuation">}</span>
+</pre>
+</div>
+
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.12
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-012</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.12-MS-REQ-012"></sdoc-anchor>
+          <div class="requirement__title">
+            Each data sample can be validated through a JSON schema
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Sample can be validated following standard schema patterns</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+          <div class="document">
+<p>JSON are validated following the validation <a class="reference external" href="https://json-schema.org/draft/2020-12/json-schema-validation.html">standard 07</a></p>
+</div>
+
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.13
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-013</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.13-MS-REQ-013"></sdoc-anchor>
+          <div class="requirement__title">
+            Can pass a custom JSON schema
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>We can define a custom JSON file for our own validation.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.14
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-014</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.14-MS-REQ-014"></sdoc-anchor>
+          <div class="requirement__title">
+            Can filter any sample by keeping only certain key values, before validation
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Can apply a filter to keys</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.15
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-015</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.15-MS-REQ-015"></sdoc-anchor>
+          <div class="requirement__title">
+            Can remove a field through a filter
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Apply a filter that remove the key from the sample</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.16
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-016</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.16-MS-REQ-016"></sdoc-anchor>
+          <div class="requirement__title">
+            Match measurement samples to destination
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Can match which sample is sent where using tags</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.17
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-017</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.17-MS-REQ-017"></sdoc-anchor>
+          <div class="requirement__title">
+            Match measurement samples to destination
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Can match which sample is sent where using tags</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.18
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-018</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.18-MS-REQ-018"></sdoc-anchor>
+          <div class="requirement__title">
+            Can collect also when the node starts
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>ROS timers by default do an action after the time of the wall timer has elapsed. We need an option to collect a sample when starting directly.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.19
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-019</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.19-MS-REQ-019"></sdoc-anchor>
+          <div class="requirement__title">
+            Can collect also when the node starts
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>ROS timers by default do an action after the time of the wall timer has elapsed. We need an option to collect a sample when starting directly.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.20
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-020</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.20-MS-REQ-020"></sdoc-anchor>
+          <div class="requirement__title">
+            Can collect when the node starts a certain amount of samples
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Stop collecting after a certain amount of samples has been reached</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.21
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-021</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.21-MS-REQ-021"></sdoc-anchor>
+          <div class="requirement__title">
+            Publisher is deleted when max samples reached
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Stop the publisher, even the loop when the maximum amount of samples has been reached.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.22
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-022</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.22-MS-REQ-022"></sdoc-anchor>
+          <div class="requirement__title">
+            Can include measurement name in sample
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Each sample can have (or not) the measurement name included as key/value</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.23
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-023</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.23-MS-REQ-023"></sdoc-anchor>
+          <div class="requirement__title">
+            Can include measurement plugin name in sample
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Each sample can have (or not) the measurement plugin name included as key/value</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.24
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-024</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.24-MS-REQ-024"></sdoc-anchor>
+          <div class="requirement__title">
+            Can pass remote keys
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Can precise the remote key, based on remote destination</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.25
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-025</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.25-MS-REQ-025"></sdoc-anchor>
+          <div class="requirement__title">
+            Can apply a prefix to the remote key
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Can pass a prefix to the remote key, to add a string to the path</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.26
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-026</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.26-MS-REQ-026"></sdoc-anchor>
+          <div class="requirement__title">
+            Can send samples if all conditions are respected (from a list of condition)
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Can pass a list of conditions. All need to be all respected to send data sample</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.27
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-027</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.27-MS-REQ-027"></sdoc-anchor>
+          <div class="requirement__title">
+            Can send samples if any conditions is respected (from a list of condition)
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Can pass a list of conditions. One of them need to be respected to send data sample</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.28
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-028</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.28-MS-REQ-028"></sdoc-anchor>
+          <div class="requirement__title">
+            Can send samples if no conditions are not respected (from a list of condition)
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Can pass a list of conditions. None need to be respected to send data sample</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.29
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-029</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.29-MS-REQ-029"></sdoc-anchor>
+          <div class="requirement__title">
+            Can send a maximum number of samples when conditions are met
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Sometimes, it is useful to send data when conditions are respected and only a certain amount of time</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.30
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MS-REQ-030</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.30-MS-REQ-030"></sdoc-anchor>
+          <div class="requirement__title">
+            Stop all nodes if one fails
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Include a bond connection for the lifecycle manager to ensure that after a server transitions up, it also remains active. If a server crashes, it lets the lifecycle manager know and transition down the system to prevent a critical failure.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+
+    </table>
+  </div>
+    </main>
+
+    <footer class="layout_footer">
+    
+      <div class="footer">
+        Built with
+        <a
+          class="strictdoc__link"
+          href="https://github.com/strictdoc-project/strictdoc"
+          target="_blank"
+        >StrictDoc</a>
+        <a
+          class="strictdoc__version"
+          href="https://github.com/strictdoc-project/strictdoc/releases/tag/0.0.40"
+          target="_blank"
+        >
+          <svg height="16" viewBox="0 0 16 16" version="1.1" width="16" >
+            <path fill-rule="evenodd" d="M2.5 7.775V2.75a.25.25 0 01.25-.25h5.025a.25.25 0 01.177.073l6.25 6.25a.25.25 0 010 .354l-5.025 5.025a.25.25 0 01-.354 0l-6.25-6.25a.25.25 0 01-.073-.177zm-1.5 0V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 010 2.474l-5.026 5.026a1.75 1.75 0 01-2.474 0l-6.25-6.25A1.75 1.75 0 011 7.775zM6 5a1 1 0 100 2 1 1 0 000-2z"></path>
+          </svg>
+          0.0.40
+        </a>
+      </div>
+    
+    </footer>
+
+    <aside class="layout_aside">
+      
+    </aside>
+
+  </div>
+  
+  <div id="modal"></div>
+  <div id="confirm"></div>
+  
+</body>
+</html>
