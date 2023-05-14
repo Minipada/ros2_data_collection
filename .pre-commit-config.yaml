@@ -1,5 +1,12 @@
 exclude: "doc/js/.*$|doc/theme/.*|doc/src/fonts/.*|doc/css/lineicon.css"
 repos:
+  - repo: local
+    hooks:
+      - id: build-doc
+        name: Build documentation
+        entry: ./tools/ci/pre-commit/build_doc.sh --ros-version=humble
+        language: script
+        pass_filenames: false
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
