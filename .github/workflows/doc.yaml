@@ -29,6 +29,17 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: .
+      - name: Install Python dependencies
+        uses: py-actions/py-dependency-install@v4
+        with:
+          path: "requirements.txt"
+      - name: Install Python dependencies (dev)
+        uses: py-actions/py-dependency-install@v4
+        with:
+          path: "requirements-dev.txt"
+      - name: Generate strictdoc pages
+        run: |
+          strictdoc export requirements --experimental-enable-file-traceability --enable-mathjax --format=html --output-dir doc/src/dc/requirements --project-title "ROS 2 Data Collection"
       - name: Build documentation
         working-directory: ./doc
         run: mdbook build
