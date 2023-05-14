@@ -64,6 +64,7 @@
   - [PostgreSQL](./dc/infrastructure_setup/postgresql.md)
   - [Ip camera](./dc/infrastructure_setup/ip_camera.md)
 - [CLI tools](./dc/cli.md)
+- [Requirements](./dc/requirements.md)
 - [Future work and Roadmap](./dc/future_work.md)
 - [Contributing](./dc/contributing.md)
 - [FAQ](./dc/faq.md)
