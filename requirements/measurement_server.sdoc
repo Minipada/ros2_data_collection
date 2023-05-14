@@ -1,0 +1,179 @@
+[DOCUMENT]
+TITLE: Measurement server
+
+[SECTION]
+TITLE: Node parameters
+
+[REQUIREMENT]
+UID: MS-REQ-001
+TITLE: Can load any number of measurement plugins
+STATEMENT: Measurement server can load any number of measurement plugins
+
+[REQUIREMENT]
+UID: MS-REQ-002
+TITLE: Can only load existing measurement plugins
+STATEMENT: Measurement server throws a custom exception when loading a measurement plugin and stop everything
+
+[REQUIREMENT]
+UID: MS-REQ-003
+TITLE: Can load any number of condition plugins
+STATEMENT: Measurement server can load any number of condition plugins
+
+[REQUIREMENT]
+UID: MS-REQ-004
+TITLE: Can only load existing condition plugins
+STATEMENT: Measurement server throws a custom exception when loading a condition plugin and stop everything
+
+[REQUIREMENT]
+UID: MS-REQ-005
+TITLE: Can set local base path used by all nodes
+STATEMENT: The server must be able to load a path from save_local_base_path parameter
+
+[REQUIREMENT]
+UID: MS-REQ-006
+TITLE: Can set local base path used by all nodes and expand with time variable
+STATEMENT: Strings as %Y, %M, %D etc. must expand to the current year, month and day. All standard ones should be handled. When encountering one unknown, it should stop the node.
+
+[REQUIREMENT]
+UID: MS-REQ-007
+TITLE: Can set local base path used by all nodes and expand environment variables
+STATEMENT: Strings starting with $, e.g $HOME must expand as environment variables. When encountering one empty, it should stop the node.
+
+[REQUIREMENT]
+UID: MS-REQ-008
+TITLE: Can load custom variables
+STATEMENT: The parameter custom_str_params should allow to list custom variables. the subparameter name and one of value_from_file or value must be present. Stop the node otherwise.
+
+[REQUIREMENT]
+UID: MS-REQ-009
+TITLE: Can load custom variables from file
+STATEMENT: The parameter custom_str_params should allow to list custom variables. Variables can come from a file and stop the node if the file does not exist.
+
+[REQUIREMENT]
+UID: MS-REQ-010
+TITLE: Can load custom variables from a fixed string
+STATEMENT: The parameter custom_str_params should allow to list custom variables. Variables can come from a fixed string and stop the node if the string is empty.
+
+[REQUIREMENT]
+UID: MS-REQ-011
+TITLE: Each measurement can be grouped by setting a group key parameter
+STATEMENT: Measurements can be loaded using a group parameter to create a new JSON.
+COMMENT: >>>
+Measurement 1:
+
+.. code-block:: JSON
+
+    {"a": 1}
+
+Measurement 2:
+
+.. code-block:: JSON
+
+    {"b": 2}
+
+Grouped sample:
+
+.. code-block:: JSON
+
+    {"a": 1, "b": 2}
+<<<
+
+[REQUIREMENT]
+UID: MS-REQ-012
+TITLE: Each data sample can be validated through a JSON schema
+STATEMENT: Sample can be validated following standard schema patterns
+COMMENT: >>>
+JSON are validated following the validation `standard 07 <https://json-schema.org/draft/2020-12/json-schema-validation.html>`_
+<<<
+
+[REQUIREMENT]
+UID: MS-REQ-013
+TITLE: Can pass a custom JSON schema
+STATEMENT: We can define a custom JSON file for our own validation.
+
+[REQUIREMENT]
+UID: MS-REQ-014
+TITLE: Can filter any sample by keeping only certain key values, before validation
+STATEMENT: Can apply a filter to keys
+
+[REQUIREMENT]
+UID: MS-REQ-015
+TITLE: Can remove a field through a filter
+STATEMENT: Apply a filter that remove the key from the sample
+
+[REQUIREMENT]
+UID: MS-REQ-016
+TITLE: Match measurement samples to destination
+STATEMENT: Can match which sample is sent where using tags
+
+[REQUIREMENT]
+UID: MS-REQ-017
+TITLE: Match measurement samples to destination
+STATEMENT: Can match which sample is sent where using tags
+
+[REQUIREMENT]
+UID: MS-REQ-018
+TITLE: Can collect also when the node starts
+STATEMENT: ROS timers by default do an action after the time of the wall timer has elapsed. We need an option to collect a sample when starting directly.
+
+[REQUIREMENT]
+UID: MS-REQ-019
+TITLE: Can collect also when the node starts
+STATEMENT: ROS timers by default do an action after the time of the wall timer has elapsed. We need an option to collect a sample when starting directly.
+
+[REQUIREMENT]
+UID: MS-REQ-020
+TITLE: Can collect when the node starts a certain amount of samples
+STATEMENT: Stop collecting after a certain amount of samples has been reached
+
+[REQUIREMENT]
+UID: MS-REQ-021
+TITLE: Publisher is deleted when max samples reached
+STATEMENT: Stop the publisher, even the loop when the maximum amount of samples has been reached.
+
+[REQUIREMENT]
+UID: MS-REQ-022
+TITLE: Can include measurement name in sample
+STATEMENT: Each sample can have (or not) the measurement name included as key/value
+
+[REQUIREMENT]
+UID: MS-REQ-023
+TITLE: Can include measurement plugin name in sample
+STATEMENT: Each sample can have (or not) the measurement plugin name included as key/value
+
+[REQUIREMENT]
+UID: MS-REQ-024
+TITLE: Can pass remote keys
+STATEMENT: Can precise the remote key, based on remote destination
+
+[REQUIREMENT]
+UID: MS-REQ-025
+TITLE: Can apply a prefix to the remote key
+STATEMENT: Can pass a prefix to the remote key, to add a string to the path
+
+[REQUIREMENT]
+UID: MS-REQ-026
+TITLE: Can send samples if all conditions are respected (from a list of condition)
+STATEMENT: Can pass a list of conditions. All need to be all respected to send data sample
+
+[REQUIREMENT]
+UID: MS-REQ-027
+TITLE: Can send samples if any conditions is respected (from a list of condition)
+STATEMENT: Can pass a list of conditions. One of them need to be respected to send data sample
+
+[REQUIREMENT]
+UID: MS-REQ-028
+TITLE: Can send samples if no conditions are not respected (from a list of condition)
+STATEMENT: Can pass a list of conditions. None need to be respected to send data sample
+
+[REQUIREMENT]
+UID: MS-REQ-029
+TITLE: Can send a maximum number of samples when conditions are met
+STATEMENT: Sometimes, it is useful to send data when conditions are respected and only a certain amount of time
+
+[REQUIREMENT]
+UID: MS-REQ-030
+TITLE: Stop all nodes if one fails
+STATEMENT: Include a bond connection for the lifecycle manager to ensure that after a server transitions up, it also remains active. If a server crashes, it lets the lifecycle manager know and transition down the system to prevent a critical failure.
+
+[/SECTION]
