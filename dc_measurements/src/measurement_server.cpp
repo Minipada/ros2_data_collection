@@ -138,9 +138,9 @@ bool MeasurementServer::loadMeasurementPlugins()
   {
     // Mandatory parameters
     measurement_types_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "plugin");
-    measurement_group_key_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "group_key");
 
     // Optional parameters
+    measurement_group_key_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "group_key", "");
     measurement_topic_outputs_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "topic_output",
                                                                 std::string("/dc/measurement/") + measurement_ids_[i]);
     measurement_polling_interval_[i] = dc_util::get_int_type_param(node, measurement_ids_[i], "polling_interval", 1000);
