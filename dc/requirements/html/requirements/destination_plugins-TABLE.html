@@ -28,7 +28,7 @@
   
 
 
-  <title>Measurement server - Table</title>
+  <title>Destination plugins - Table</title>
 
   
 </head>
@@ -129,190 +129,156 @@
       data-testid="toc-list"
       js-collapsible_list-list='true' 
       class="toc"
-    ><li><a href="#1-Usability" data-turbo="false">
+    ><li><a href="#1-Plugins" data-turbo="false">
               <span class="section-number">1</span>
-              Usability
+              Plugins
             </a><ul><li>
-        <a href="#1.1-MS-USAB-001" data-turbo="false">
-          <span class="section-number">1.1</span>Can load configuration from YAML</a></li></ul>
-            </li><li><a href="#2-Plugin-Loading" data-turbo="false">
+        <a href="#1.1-DP-PLU-001" data-turbo="false">
+          <span class="section-number">1.1</span>Can send to AWS Kinesis Data Streams through Fluent Bit</a></li><li>
+        <a href="#1.2-DP-PLU-002" data-turbo="false">
+          <span class="section-number">1.2</span>Can send to AWS S3 through Fluent Bit</a></li><li>
+        <a href="#1.3-DP-PLU-003" data-turbo="false">
+          <span class="section-number">1.3</span>Can save in a file through Fluent Bit</a></li><li>
+        <a href="#1.4-DP-PLU-004" data-turbo="false">
+          <span class="section-number">1.4</span>Can save files metrics through Fluent Bit</a></li><li>
+        <a href="#1.5-DP-PLU-005" data-turbo="false">
+          <span class="section-number">1.5</span>Can send to HTTP through Fluent Bit</a></li><li>
+        <a href="#1.6-DP-PLU-006" data-turbo="false">
+          <span class="section-number">1.6</span>Can send to MinIO through Fluent Bit</a></li><li>
+        <a href="#1.7-DP-PLU-007" data-turbo="false">
+          <span class="section-number">1.7</span>Can send to PostgreSQL through Fluent Bit</a></li><li>
+        <a href="#1.8-DP-PLU-008" data-turbo="false">
+          <span class="section-number">1.8</span>Can send to Slack through Fluent Bit</a></li><li>
+        <a href="#1.9-DP-PLU-009" data-turbo="false">
+          <span class="section-number">1.9</span>Can send to Stdout through Fluent Bit</a></li><li>
+        <a href="#1.10-DP-PLU-010" data-turbo="false">
+          <span class="section-number">1.10</span>Can send to RCL stdout</a></li></ul>
+            </li><li><a href="#2-Fluent-Bit-File" data-turbo="false">
               <span class="section-number">2</span>
-              Plugin Loading
+              Fluent Bit File
             </a><ul><li>
-        <a href="#2.1-MS-PLU-001" data-turbo="false">
-          <span class="section-number">2.1</span>Can load any number of measurement plugins</a></li><li>
-        <a href="#2.2-MS-PLU-002" data-turbo="false">
-          <span class="section-number">2.2</span>Can handle errors when loading measurement plugins</a></li><li>
-        <a href="#2.3-MS-PLU-003" data-turbo="false">
-          <span class="section-number">2.3</span>Can load any number of condition plugins</a></li><li>
-        <a href="#2.4-MS-PLU-004" data-turbo="false">
-          <span class="section-number">2.4</span>Can handle errors when loading condition plugins</a></li><li>
-        <a href="#2.5-MS-PLU-005" data-turbo="false">
-          <span class="section-number">2.5</span>Extensibility and customizability</a></li><li>
-        <a href="#2.6-MS-PLU-006" data-turbo="false">
-          <span class="section-number">2.6</span>External extensibility and customizability</a></li><li>
-        <a href="#2.7-MS-PLU-007" data-turbo="false">
-          <span class="section-number">2.7</span>Can reload plugins without restarting the node</a></li><li>
-        <a href="#2.8-MS-PLU-008" data-turbo="false">
-          <span class="section-number">2.8</span>Can unload plugins</a></li><li>
-        <a href="#2.9-MS-PLU-08" data-turbo="false">
-          <span class="section-number">2.9</span>Can provide information about loaded plugins</a></li></ul>
-            </li><li><a href="#3-Collect" data-turbo="false">
+        <a href="#2.1-MP-FLB-FILE-001" data-turbo="false">
+          <span class="section-number">2.1</span>Can write data to a file using the Fluent Bit file plugin</a></li><li>
+        <a href="#2.2-MP-FLB-FILE-002" data-turbo="false">
+          <span class="section-number">2.2</span>Can set the file path</a></li><li>
+        <a href="#2.3-MP-FLB-FILE-003" data-turbo="false">
+          <span class="section-number">2.3</span>Can set the file name</a></li><li>
+        <a href="#2.4-MP-FLB-FILE-004" data-turbo="false">
+          <span class="section-number">2.4</span>Can create parent directories if they are not created before</a></li></ul>
+            </li><li><a href="#3-Fluent-Bit-File-metrics" data-turbo="false">
               <span class="section-number">3</span>
-              Collect
+              Fluent Bit File metrics
             </a><ul><li>
-        <a href="#3.1-MS-COL-001" data-turbo="false">
-          <span class="section-number">3.1</span>Polling intervals</a></li><li>
-        <a href="#3.2-MS-COL-002" data-turbo="false">
-          <span class="section-number">3.2</span>Dynamic polling intervals</a></li><li>
-        <a href="#3.3-MS-COL-003" data-turbo="false">
-          <span class="section-number">3.3</span>Real-time data processing</a></li><li>
-        <a href="#3.4-MS-COL-004" data-turbo="false">
-          <span class="section-number">3.4</span>Concurrent data retrieval by plugins</a></li><li>
-        <a href="#3.5-MS-COL-005" data-turbo="false">
-          <span class="section-number">3.5</span>Can enable/disable sample buffering</a></li><li>
-        <a href="#3.6-MS-COL-006" data-turbo="false">
-          <span class="section-number">3.6</span>Ability to set a maximum time to collect samples</a></li></ul>
-            </li><li><a href="#4-File-saving" data-turbo="false">
+        <a href="#3.1-MP-FLB-FILE-M-001" data-turbo="false">
+          <span class="section-number">3.1</span>Can track file metadata</a></li><li>
+        <a href="#3.2-MP-FLB-FILE-M-002" data-turbo="false">
+          <span class="section-number">3.2</span>Can delete local files</a></li><li>
+        <a href="#3.3-MP-FLB-FILE-M-003" data-turbo="false">
+          <span class="section-number">3.3</span>Uses custom Fluent Bit plugin</a></li><li>
+        <a href="#3.4-MP-FLB-FILE-M-004" data-turbo="false">
+          <span class="section-number">3.4</span>Supports multiple storage destinations</a></li><li>
+        <a href="#3.5-MP-FLB-FILE-M-005" data-turbo="false">
+          <span class="section-number">3.5</span>Stores metadata in PostgreSQL database</a></li></ul>
+            </li><li><a href="#4-Fluent-Bit-HTTP" data-turbo="false">
               <span class="section-number">4</span>
-              File saving
+              Fluent Bit HTTP
             </a><ul><li>
-        <a href="#4.1-MS-FIL-001" data-turbo="false">
-          <span class="section-number">4.1</span>Can set local base path used by all nodes</a></li><li>
-        <a href="#4.2-MS-FIL-002" data-turbo="false">
-          <span class="section-number">4.2</span>Can expand time variables in the local base path</a></li><li>
-        <a href="#4.3-MS-FIL-003" data-turbo="false">
-          <span class="section-number">4.3</span>Can expand environment variables in the local base path</a></li></ul>
-            </li><li><a href="#5-Custom-variables" data-turbo="false">
+        <a href="#4.1-MP-FLB-HTTP-001" data-turbo="false">
+          <span class="section-number">4.1</span>Supports sending records in JSON format</a></li><li>
+        <a href="#4.2-MP-FLB-HTTP-002" data-turbo="false">
+          <span class="section-number">4.2</span>Supports HTTP Basic Authentication</a></li><li>
+        <a href="#4.3-MP-FLB-HTTP-003" data-turbo="false">
+          <span class="section-number">4.3</span>Supports setting HTTP host and port</a></li><li>
+        <a href="#4.4-MP-FLB-HTTP-004" data-turbo="false">
+          <span class="section-number">4.4</span>Supports setting HTTP URI</a></li><li>
+        <a href="#4.5-MP-FLB-HTTP-005" data-turbo="false">
+          <span class="section-number">4.5</span>Supports logging the response payload</a></li><li>
+        <a href="#4.6-MP-FLB-HTTP-006" data-turbo="false">
+          <span class="section-number">4.6</span>Supports different date formats</a></li></ul>
+            </li><li><a href="#5-Fluent-Bit-AWS-Kinesis-Data-Streams" data-turbo="false">
               <span class="section-number">5</span>
-              Custom variables
+              Fluent Bit AWS Kinesis Data Streams
             </a><ul><li>
-        <a href="#5.1-MS-VAR-001" data-turbo="false">
-          <span class="section-number">5.1</span>Can load custom variables</a></li><li>
-        <a href="#5.2-MS-VAR-002" data-turbo="false">
-          <span class="section-number">5.2</span>Can load custom variables from a file</a></li><li>
-        <a href="#5.3-MS-VAR-03" data-turbo="false">
-          <span class="section-number">5.3</span>Can load custom variables from a fixed string</a></li></ul>
-            </li><li><a href="#6-Data-aggregation" data-turbo="false">
+        <a href="#5.1-MP-FLB-KDS-001" data-turbo="false">
+          <span class="section-number">5.1</span>Ingests logs into Amazon Kinesis Data Streams</a></li><li>
+        <a href="#5.2-MP-FLB-KDS-002" data-turbo="false">
+          <span class="section-number">5.2</span>Supports custom endpoint for Kinesis API</a></li><li>
+        <a href="#5.3-MP-FLB-KDS-003" data-turbo="false">
+          <span class="section-number">5.3</span>Allows customization of log record sent to Kinesis</a></li><li>
+        <a href="#5.4-MP-FLB-KDS-004" data-turbo="false">
+          <span class="section-number">5.4</span>Handles network errors gracefully</a></li></ul>
+            </li><li><a href="#6-Fluent-Bit-MinIO" data-turbo="false">
               <span class="section-number">6</span>
-              Data aggregation
+              Fluent Bit MinIO
             </a><ul><li>
-        <a href="#6.1-MS-AGG-001" data-turbo="false">
-          <span class="section-number">6.1</span>Can handle data aggregation</a></li><li>
-        <a href="#6.2-MS-AGG-002" data-turbo="false">
-          <span class="section-number">6.2</span>Ability to aggregate samples based on tags</a></li></ul>
-            </li><li><a href="#7-Validation" data-turbo="false">
+        <a href="#6.1-MP-FLB-MINIO-001" data-turbo="false">
+          <span class="section-number">6.1</span>Can activate secure access to Minio</a></li><li>
+        <a href="#6.2-MP-FLB-MINIO-002" data-turbo="false">
+          <span class="section-number">6.2</span>Configurable endpoint for Minio</a></li><li>
+        <a href="#6.3-MP-FLB-MINIO-003" data-turbo="false">
+          <span class="section-number">6.3</span>Support for access keys and secret access keys</a></li><li>
+        <a href="#6.4-MP-FLB-MINIO-004" data-turbo="false">
+          <span class="section-number">6.4</span>Support for SSL/TLS encryption</a></li><li>
+        <a href="#6.5-MP-FLB-MINIO-005" data-turbo="false">
+          <span class="section-number">6.5</span>Configurable bucket creation</a></li><li>
+        <a href="#6.6-MP-FLB-MINIO-006" data-turbo="false">
+          <span class="section-number">6.6</span>Configurable bucket name</a></li><li>
+        <a href="#6.7-MP-FLB-MINIO-007" data-turbo="false">
+          <span class="section-number">6.7</span>Configurable upload and source fields</a></li></ul>
+            </li><li><a href="#7-PostgreSQL" data-turbo="false">
               <span class="section-number">7</span>
-              Validation
+              PostgreSQL
             </a><ul><li>
-        <a href="#7.1-MS-VAL-001" data-turbo="false">
-          <span class="section-number">7.1</span>Validation of data samples through JSON schema</a></li><li>
-        <a href="#7.2-MS-VAL-002" data-turbo="false">
-          <span class="section-number">7.2</span>Ability to pass a custom JSON schema for validation</a></li><li>
-        <a href="#7.3-MS-VAL-003" data-turbo="false">
-          <span class="section-number">7.3</span>Error reporting for failed validation</a></li></ul>
-            </li><li><a href="#8-Filters" data-turbo="false">
+        <a href="#7.1-MP-FLB-PSQL-001" data-turbo="false">
+          <span class="section-number">7.1</span>Supports PostgreSQL 10 and above</a></li><li>
+        <a href="#7.2-MP-FLB-PSQL-002" data-turbo="false">
+          <span class="section-number">7.2</span>Handles database connection errors gracefully</a></li><li>
+        <a href="#7.3-MP-FLB-PSQL-003" data-turbo="false">
+          <span class="section-number">7.3</span>Handles SQL query errors gracefully</a></li><li>
+        <a href="#7.4-MP-FLB-PSQL-004" data-turbo="false">
+          <span class="section-number">7.4</span>Supports both async and sync connections</a></li><li>
+        <a href="#7.5-MP-FLB-PSQL-005" data-turbo="false">
+          <span class="section-number">7.5</span>Allows customization of connection pool size</a></li><li>
+        <a href="#7.6-MP-FLB-PSQL-006" data-turbo="false">
+          <span class="section-number">7.6</span>Allows specification of table to store data in</a></li><li>
+        <a href="#7.7-MP-FLB-PSQL-007" data-turbo="false">
+          <span class="section-number">7.7</span>Allows specification of timestamp field</a></li><li>
+        <a href="#7.8-MP-FLB-PSQL-008" data-turbo="false">
+          <span class="section-number">7.8</span>Supports CockroachDB</a></li><li>
+        <a href="#7.9-MP-FLB-PSQL-009" data-turbo="false">
+          <span class="section-number">7.9</span>Can set a timeout for remote connection to PostgreSQL</a></li></ul>
+            </li><li><a href="#8-Fluent-Bit-S3" data-turbo="false">
               <span class="section-number">8</span>
-              Filters
+              Fluent Bit S3
             </a><ul><li>
-        <a href="#8.1-MS-FILT-001" data-turbo="false">
-          <span class="section-number">8.1</span>Ability to filter a sample by keeping only certain key values before validation</a></li><li>
-        <a href="#8.2-MS-FILT-002" data-turbo="false">
-          <span class="section-number">8.2</span>Ability to exclude a field through a filter</a></li><li>
-        <a href="#8.3-MS-FILT-003" data-turbo="false">
-          <span class="section-number">8.3</span>Ability to filter samples based on a regular expression pattern</a></li><li>
-        <a href="#8.4-MS-FILT-004" data-turbo="false">
-          <span class="section-number">8.4</span>Ability to chain multiple filters together</a></li></ul>
-            </li><li><a href="#9-Matching" data-turbo="false">
+        <a href="#8.1-MP-FLB-S3-001" data-turbo="false">
+          <span class="section-number">8.1</span>Allows specifying the AWS region of the S3 bucket</a></li><li>
+        <a href="#8.2-MP-FLB-S3-002" data-turbo="false">
+          <span class="section-number">8.2</span>Allows specifying the S3 bucket name</a></li><li>
+        <a href="#8.3-MP-FLB-S3-003" data-turbo="false">
+          <span class="section-number">8.3</span>Allows specifying the time key in the output record</a></li><li>
+        <a href="#8.4-MP-FLB-S3-004" data-turbo="false">
+          <span class="section-number">8.4</span>Allows specifying the format of the date</a></li><li>
+        <a href="#8.5-MP-FLB-S3-005" data-turbo="false">
+          <span class="section-number">8.5</span>Allows specifying the maximum size of files in S3</a></li><li>
+        <a href="#8.6-MP-FLB-S3-006" data-turbo="false">
+          <span class="section-number">8.6</span>Allows specifying the size of each 'part' for multipart uploads</a></li><li>
+        <a href="#8.7-MP-FLB-S3-007" data-turbo="false">
+          <span class="section-number">8.7</span>Allows specifying the time interval for completing an upload and creating a new file in S3</a></li><li>
+        <a href="#8.8-MP-FLB-S3-008" data-turbo="false">
+          <span class="section-number">8.8</span>Allows specifying the directory to locally buffer data before sending</a></li><li>
+        <a href="#8.9-MP-FLB-S3-009" data-turbo="false">
+          <span class="section-number">8.9</span>Allows specifying the size limitation for disk usage in S3</a></li><li>
+        <a href="#8.10-MP-FLB-S3-010" data-turbo="false">
+          <span class="section-number">8.10</span>Support for multipart upload</a></li><li>
+        <a href="#8.11-MP-FLB-S3-011" data-turbo="false">
+          <span class="section-number">8.11</span>Can set custom endpoint</a></li></ul>
+            </li><li><a href="#9-Fluent-Bit-Slack" data-turbo="false">
               <span class="section-number">9</span>
-              Matching
+              Fluent Bit Slack
             </a><ul><li>
-        <a href="#9.1-MS-MAT-001" data-turbo="false">
-          <span class="section-number">9.1</span>Ability to match measurement samples to a specific destination using tags</a></li><li>
-        <a href="#9.2-MS-MAT-002" data-turbo="false">
-          <span class="section-number">9.2</span>Can send data to multiple destinations simultaneously</a></li></ul>
-            </li><li><a href="#10-Maximum-collect" data-turbo="false">
-              <span class="section-number">10</span>
-              Maximum collect
-            </a><ul><li>
-        <a href="#10.1-MS-MAX-001" data-turbo="false">
-          <span class="section-number">10.1</span>Ability to collect a certain amount of samples when the node starts</a></li><li>
-        <a href="#10.2-MS-MAX-002" data-turbo="false">
-          <span class="section-number">10.2</span>Ability to delete the publisher when the maximum amount of samples has been reached</a></li><li>
-        <a href="#10.3-MS-MAX-003" data-turbo="false">
-          <span class="section-number">10.3</span>Ability to delete the subscriber when the maximum amount of samples has been reached</a></li><li>
-        <a href="#10.4-MS-MAX-004" data-turbo="false">
-          <span class="section-number">10.4</span>Ability to collect samples when the node starts</a></li><li>
-        <a href="#10.5-MS-MAX-005" data-turbo="false">
-          <span class="section-number">10.5</span>Can send a maximum number of samples when conditions are met</a></li></ul>
-            </li><li><a href="#11-Metadata-keys" data-turbo="false">
-              <span class="section-number">11</span>
-              Metadata keys
-            </a><ul><li>
-        <a href="#11.1-MS-MET-001" data-turbo="false">
-          <span class="section-number">11.1</span>Ability to include measurement name in sample</a></li><li>
-        <a href="#11.2-MS-MET-002" data-turbo="false">
-          <span class="section-number">11.2</span>Can include measurement plugin name in sample</a></li><li>
-        <a href="#11.3-MS-MET-003" data-turbo="false">
-          <span class="section-number">11.3</span>Add timestamp to sample</a></li></ul>
-            </li><li><a href="#12-Remote-paths" data-turbo="false">
-              <span class="section-number">12</span>
-              Remote paths
-            </a><ul><li>
-        <a href="#12.1-MS-PAT-001" data-turbo="false">
-          <span class="section-number">12.1</span>Can pass remote keys</a></li><li>
-        <a href="#12.2-MS-PAT-002" data-turbo="false">
-          <span class="section-number">12.2</span>Can apply a prefix to the remote key</a></li></ul>
-            </li><li><a href="#13-Conditions" data-turbo="false">
-              <span class="section-number">13</span>
-              Conditions
-            </a><ul><li>
-        <a href="#13.1-MS-CON-001" data-turbo="false">
-          <span class="section-number">13.1</span>Can send samples if all conditions are respected (from a list of condition)</a></li><li>
-        <a href="#13.2-MS-CON-002" data-turbo="false">
-          <span class="section-number">13.2</span>Can send samples if any conditions is respected (from a list of condition)</a></li><li>
-        <a href="#13.3-MS-CON-003" data-turbo="false">
-          <span class="section-number">13.3</span>Can send samples if no conditions are not respected (from a list of condition)</a></li><li>
-        <a href="#13.4-MS-CON-004" data-turbo="false">
-          <span class="section-number">13.4</span>Can access condition state from measurements</a></li></ul>
-            </li><li><a href="#14-Lifecycle" data-turbo="false">
-              <span class="section-number">14</span>
-              Lifecycle
-            </a><ul><li>
-        <a href="#14.1-MS-LIF-001" data-turbo="false">
-          <span class="section-number">14.1</span>Stop all nodes if one fails</a></li></ul>
-            </li><li><a href="#15-Compression" data-turbo="false">
-              <span class="section-number">15</span>
-              Compression
-            </a><ul><li>
-        <a href="#15.1-MS-COMP-001" data-turbo="false">
-          <span class="section-number">15.1</span>Can compress samples before publishing</a></li><li>
-        <a href="#15.2-MS-COMP-002" data-turbo="false">
-          <span class="section-number">15.2</span>Support for gzip compression</a></li><li>
-        <a href="#15.3-MS-COMP-003" data-turbo="false">
-          <span class="section-number">15.3</span>Support for deflate compression</a></li><li>
-        <a href="#15.4-MS-COMP-004" data-turbo="false">
-          <span class="section-number">15.4</span>Support for Brotli compression</a></li><li>
-        <a href="#15.5-MS-COMP-005" data-turbo="false">
-          <span class="section-number">15.5</span>Support for LZ77 compression</a></li><li>
-        <a href="#15.6-MS-COMP-006" data-turbo="false">
-          <span class="section-number">15.6</span>Support for LZ4 compression</a></li><li>
-        <a href="#15.7-MS-COMP-007" data-turbo="false">
-          <span class="section-number">15.7</span>Ability to choose compression algorithm</a></li><li>
-        <a href="#15.8-MS-COMP-008" data-turbo="false">
-          <span class="section-number">15.8</span>Performance benchmarking</a></li><li>
-        <a href="#15.9-MS-COMP-009" data-turbo="false">
-          <span class="section-number">15.9</span>Configurable compression level</a></li><li>
-        <a href="#15.10-MS-COMP-010" data-turbo="false">
-          <span class="section-number">15.10</span>Compression compatibility with JSON schema</a></li><li>
-        <a href="#15.11-MS-COMP-011" data-turbo="false">
-          <span class="section-number">15.11</span>Compression and decompression efficiency</a></li></ul>
-            </li><li><a href="#16-Limitations" data-turbo="false">
-              <span class="section-number">16</span>
-              Limitations
-            </a><ul><li>
-        <a href="#16.1-MS-LIM-001" data-turbo="false">
-          <span class="section-number">16.1</span>Can limit bandwidth usage for remote connections</a></li></ul>
+        <a href="#9.1-MP-FLB-SLACK-001" data-turbo="false">
+          <span class="section-number">9.1</span>Can set the webhook used by Slack</a></li></ul>
             </li></ul>
   </div>
 </turbo-frame>
@@ -330,9 +296,9 @@
   <turbo-frame id="document_title">
 <div
   class="header__document_title"
-  title="Measurement server"
+  title="Destination plugins"
 >
-  Measurement server
+  Destination plugins
 </div>
 </turbo-frame>
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" class="sc-gLvsXj bpkaBy"><path stroke="currentColor" d="M12.5 4.5l-5 11" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -360,7 +326,7 @@
         data-viewtype_link="document"
         class="viewtype__menu_item"
         title="Go to Document view"
-        href="../requirements/measurement_server.html">
+        href="../requirements/destination_plugins.html">
         Document</a>
     </li>
     <li>
@@ -368,7 +334,7 @@
         data-viewtype_link="table"
         class="viewtype__menu_item"
         title="Go to Table view"
-        href="../requirements/measurement_server-TABLE.html">
+        href="../requirements/destination_plugins-TABLE.html">
         Table</a>
     </li>
     <li>
@@ -376,7 +342,7 @@
         data-viewtype_link="traceability"
         class="viewtype__menu_item"
         title="Go to Traceability view"
-        href="../requirements/measurement_server-TRACE.html">
+        href="../requirements/destination_plugins-TRACE.html">
         Traceability</a>
     </li>
     <li>
@@ -384,7 +350,7 @@
         data-viewtype_link="deep_traceability"
         class="viewtype__menu_item"
         title="Go to Deep Traceability view"
-        href="../requirements/measurement_server-DEEP-TRACE.html">
+        href="../requirements/destination_plugins-DEEP-TRACE.html">
       Deep traceability</a>
     </li>
   </menu>
@@ -399,7 +365,7 @@
 
       <div class="content">
     <sdoc-node>
-      <h1>Measurement server</h1></sdoc-node>
+      <h1>Destination plugins</h1></sdoc-node>
 
     <table class="content-view-table">
 
@@ -417,9 +383,9 @@
       <td class="content-view-td content-view-td-meta">
         1
       </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="1-Usability"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="1-Plugins"></sdoc-anchor>
           <div class="requirement__title">
-            Usability
+            Plugins
           </div></td>
       </tr>
       <tr>
@@ -429,16 +395,214 @@
         1.1
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-USAB-001</td>
+            DP-PLU-001</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.1-MS-USAB-001"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.1-DP-PLU-001"></sdoc-anchor>
           <div class="requirement__title">
-            Can load configuration from YAML
+            Can send to AWS Kinesis Data Streams through Fluent Bit
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>All configuration can be passed as a standard ROS 2 YAML configuration file.</p>
+<p>The plugin must be able to send data to an AWS Kinesis Data Stream using Fluent Bit's AWS Kinesis Data Streams output plugin.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.2
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            DP-PLU-002</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.2-DP-PLU-002"></sdoc-anchor>
+          <div class="requirement__title">
+            Can send to AWS S3 through Fluent Bit
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin must be able to send data to an AWS S3 bucket using Fluent Bit's AWS S3 output plugin.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.3
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            DP-PLU-003</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.3-DP-PLU-003"></sdoc-anchor>
+          <div class="requirement__title">
+            Can save in a file through Fluent Bit
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin must be able to save data to a file using Fluent Bit's file output plugin.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.4
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            DP-PLU-004</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.4-DP-PLU-004"></sdoc-anchor>
+          <div class="requirement__title">
+            Can save files metrics through Fluent Bit
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin must be able to save files metrics (i.e. file size, file permissions, etc.) using Fluent Bit's file metrics output plugin.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.5
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            DP-PLU-005</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.5-DP-PLU-005"></sdoc-anchor>
+          <div class="requirement__title">
+            Can send to HTTP through Fluent Bit
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin must be able to send data to an HTTP server using Fluent Bit's HTTP output plugin.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.6
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            DP-PLU-006</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.6-DP-PLU-006"></sdoc-anchor>
+          <div class="requirement__title">
+            Can send to MinIO through Fluent Bit
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin must be able to send data to a MinIO server using Fluent Bit's MinIO output plugin.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.7
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            DP-PLU-007</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.7-DP-PLU-007"></sdoc-anchor>
+          <div class="requirement__title">
+            Can send to PostgreSQL through Fluent Bit
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin must be able to send data to a PostgreSQL database using Fluent Bit's PostgreSQL output plugin.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.8
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            DP-PLU-008</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.8-DP-PLU-008"></sdoc-anchor>
+          <div class="requirement__title">
+            Can send to Slack through Fluent Bit
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin must be able to send data to a Slack channel using Fluent Bit's Slack output plugin.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.9
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            DP-PLU-009</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.9-DP-PLU-009"></sdoc-anchor>
+          <div class="requirement__title">
+            Can send to Stdout through Fluent Bit
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin must be able to output data to the console using Fluent Bit's Stdout output plugin.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.10
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            DP-PLU-010</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.10-DP-PLU-010"></sdoc-anchor>
+          <div class="requirement__title">
+            Can send to RCL stdout
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin must be able to output data to the ROS 2 console using the RCL stdout output plugin.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -449,9 +613,9 @@
       <td class="content-view-td content-view-td-meta">
         2
       </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="2-Plugin-Loading"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="2-Fluent-Bit-File"></sdoc-anchor>
           <div class="requirement__title">
-            Plugin Loading
+            Fluent Bit File
           </div></td>
       </tr>
       <tr>
@@ -461,16 +625,16 @@
         2.1
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-PLU-001</td>
+            MP-FLB-FILE-001</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.1-MS-PLU-001"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.1-MP-FLB-FILE-001"></sdoc-anchor>
           <div class="requirement__title">
-            Can load any number of measurement plugins
+            Can write data to a file using the Fluent Bit file plugin
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The Measurement server must be able to load any number of measurement plugins that conform to a specific interface. The plugins should be loaded dynamically at runtime.</p>
+<p>The file plugin should be able to write data to a file in the specified location. The data should be written in the specified format and appended to the file if it already exists.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -483,16 +647,16 @@
         2.2
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-PLU-002</td>
+            MP-FLB-FILE-002</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.2-MS-PLU-002"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.2-MP-FLB-FILE-002"></sdoc-anchor>
           <div class="requirement__title">
-            Can handle errors when loading measurement plugins
+            Can set the file path
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>If the Measurement server attempts to load a plugin that does not conform to the specified interface or the plugin file does not exist, it should throw a custom exception with a clear error message. The node should then stop processing.</p>
+<p>The file plugin must allow the user to specify the path where the output file will be created. The user should be able to specify an absolute or relative path.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -505,16 +669,16 @@
         2.3
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-PLU-003</td>
+            MP-FLB-FILE-003</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.3-MS-PLU-003"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.3-MP-FLB-FILE-003"></sdoc-anchor>
           <div class="requirement__title">
-            Can load any number of condition plugins
+            Can set the file name
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The Measurement server must be able to load any number of condition plugins that conform to a specific interface. The plugins should be loaded dynamically at runtime.</p>
+<p>The file plugin must allow the user to specify the name of the output file. The user should be able to specify a file name with or without an extension.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -527,126 +691,16 @@
         2.4
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-PLU-004</td>
+            MP-FLB-FILE-004</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.4-MS-PLU-004"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.4-MP-FLB-FILE-004"></sdoc-anchor>
           <div class="requirement__title">
-            Can handle errors when loading condition plugins
+            Can create parent directories if they are not created before
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>If the Measurement server attempts to load a plugin that does not conform to the specified interface or the plugin file does not exist, it should throw a custom exception with a clear error message. The node should then stop processing.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        2.5
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-PLU-005</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.5-MS-PLU-005"></sdoc-anchor>
-          <div class="requirement__title">
-            Extensibility and customizability
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should be easily extensible and customizable, allowing users to add new features, plugins, and functionality to meet their specific requirements in the repository.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        2.6
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-PLU-006</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.6-MS-PLU-006"></sdoc-anchor>
-          <div class="requirement__title">
-            External extensibility and customizability
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should be easily extensible and customizable, allowing users to add new features, plugins, and functionality to meet their specific requirements in their own ROS packages.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        2.7
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-PLU-007</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.7-MS-PLU-007"></sdoc-anchor>
-          <div class="requirement__title">
-            Can reload plugins without restarting the node
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The Measurement server should be able to reload plugins dynamically without having to stop and restart the node. This will allow for updates and changes to be made to the plugins without interrupting data processing.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        2.8
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-PLU-008</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.8-MS-PLU-008"></sdoc-anchor>
-          <div class="requirement__title">
-            Can unload plugins
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The Measurement server should be able to unload plugins dynamically. This will allow for plugins to be removed from the system when they are no longer needed.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        2.9
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-PLU-08</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.9-MS-PLU-08"></sdoc-anchor>
-          <div class="requirement__title">
-            Can provide information about loaded plugins
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The Measurement server should be able to provide information about the plugins that are currently loaded, such as their names, version numbers, description and json schema.</p>
+<p>If the directory where the file is supposed to be saved does not exist, the plugin must be able to create the directory and any required parent directories automatically. The user should not be required to manually create the directory before starting the plugin.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -657,9 +711,9 @@
       <td class="content-view-td content-view-td-meta">
         3
       </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="3-Collect"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="3-Fluent-Bit-File-metrics"></sdoc-anchor>
           <div class="requirement__title">
-            Collect
+            Fluent Bit File metrics
           </div></td>
       </tr>
       <tr>
@@ -669,16 +723,16 @@
         3.1
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-COL-001</td>
+            MP-FLB-FILE-M-001</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="3.1-MS-COL-001"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="3.1-MP-FLB-FILE-M-001"></sdoc-anchor>
           <div class="requirement__title">
-            Polling intervals
+            Can track file metadata
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should allow for different polling intervals for different measurements</p>
+<p>The plugin must be able to track metadata for all files that are sent to their destinations, including the file type, size, and timestamp.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -691,16 +745,16 @@
         3.2
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-COL-002</td>
+            MP-FLB-FILE-M-002</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="3.2-MS-COL-002"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="3.2-MP-FLB-FILE-M-002"></sdoc-anchor>
           <div class="requirement__title">
-            Dynamic polling intervals
+            Can delete local files
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should allow for changing the polling interval during runtime.</p>
+<p>The plugin must be able to delete local files that have been sent to all their storage destinations, in order to free up disk space.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -713,16 +767,16 @@
         3.3
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-COL-003</td>
+            MP-FLB-FILE-M-003</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="3.3-MS-COL-003"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="3.3-MP-FLB-FILE-M-003"></sdoc-anchor>
           <div class="requirement__title">
-            Real-time data processing
+            Uses custom Fluent Bit plugin
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should be able to process data in real-time, with minimal latency, to support time-critical applications.</p>
+<p>The plugin must use a custom Fluent Bit plugin located in the fluent_bit_plugins package to track file metadata and manage file deletion.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -735,16 +789,16 @@
         3.4
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-COL-004</td>
+            MP-FLB-FILE-M-004</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="3.4-MS-COL-004"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="3.4-MP-FLB-FILE-M-004"></sdoc-anchor>
           <div class="requirement__title">
-            Concurrent data retrieval by plugins
+            Supports multiple storage destinations
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>Multiple plugins should be able to fetch data in parallel without blocking or delaying each other, in order to ensure efficient and responsive data collection.</p>
+<p>The plugin must support tracking files that are sent to multiple storage destinations, such as AWS S3, MinIO, etc.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -757,38 +811,16 @@
         3.5
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-COL-005</td>
+            MP-FLB-FILE-M-005</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="3.5-MS-COL-005"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="3.5-MP-FLB-FILE-M-005"></sdoc-anchor>
           <div class="requirement__title">
-            Can enable/disable sample buffering
+            Stores metadata in PostgreSQL database
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The user can enable or disable the buffering of samples in case the remote destination is not available.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        3.6
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-COL-006</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="3.6-MS-COL-006"></sdoc-anchor>
-          <div class="requirement__title">
-            Ability to set a maximum time to collect samples
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should provide an option to stop collecting samples after a certain amount of time has elapsed.</p>
+<p>The plugin must store file metadata in a PostgreSQL database, including the file name, status, and the destinations it has been sent to.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -799,9 +831,9 @@
       <td class="content-view-td content-view-td-meta">
         4
       </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="4-File-saving"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="4-Fluent-Bit-HTTP"></sdoc-anchor>
           <div class="requirement__title">
-            File saving
+            Fluent Bit HTTP
           </div></td>
       </tr>
       <tr>
@@ -811,16 +843,16 @@
         4.1
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-FIL-001</td>
+            MP-FLB-HTTP-001</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="4.1-MS-FIL-001"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="4.1-MP-FLB-HTTP-001"></sdoc-anchor>
           <div class="requirement__title">
-            Can set local base path used by all nodes
+            Supports sending records in JSON format
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The Measurement server must be able to load a local base path from a save_local_base_path parameter. This base path will be used by all nodes running in the server instance.</p>
+<p>The HTTP output plugin should allow the user to specify sending records in JSON format through the 'format' parameter. It must be possible to send multiple headers through the 'header' parameter.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -833,16 +865,16 @@
         4.2
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-FIL-002</td>
+            MP-FLB-HTTP-002</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="4.2-MS-FIL-002"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="4.2-MP-FLB-HTTP-002"></sdoc-anchor>
           <div class="requirement__title">
-            Can expand time variables in the local base path
+            Supports HTTP Basic Authentication
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The Measurement server should support time variables in the save_local_base_path parameter, such as %Y, %m, and %d. These variables should expand to the current year, month, and day, respectively. If an unknown variable is encountered, the node should stop processing.</p>
+<p>The HTTP output plugin should allow the user to send HTTP Basic Authentication credentials through the 'http_user' and 'http_passwd' parameters.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -855,16 +887,82 @@
         4.3
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-FIL-003</td>
+            MP-FLB-HTTP-003</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="4.3-MS-FIL-003"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="4.3-MP-FLB-HTTP-003"></sdoc-anchor>
           <div class="requirement__title">
-            Can expand environment variables in the local base path
+            Supports setting HTTP host and port
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The Measurement server should support environment variables in the save_local_base_path parameter, denoted by a $ or ${} symbol. If an empty variable is encountered, the node should stop processing.</p>
+<p>The HTTP output plugin should allow the user to set the IP address or hostname of the target HTTP Server and TCP port through the 'host' and 'port' parameters, respectively.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        4.4
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-HTTP-004</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="4.4-MP-FLB-HTTP-004"></sdoc-anchor>
+          <div class="requirement__title">
+            Supports setting HTTP URI
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The HTTP output plugin should allow the user to set an optional HTTP URI for the target web server through the 'uri' parameter.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        4.5
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-HTTP-005</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="4.5-MP-FLB-HTTP-005"></sdoc-anchor>
+          <div class="requirement__title">
+            Supports logging the response payload
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The HTTP output plugin should allow the user to specify whether or not to log the response payload through the 'log_response_payload' parameter.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        4.6
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-HTTP-006</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="4.6-MP-FLB-HTTP-006"></sdoc-anchor>
+          <div class="requirement__title">
+            Supports different date formats
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The system should allow users to specify different date formats for parsing and formatting dates, such as ISO 8601, RFC 3339, Unix timestamp, and custom formats.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -875,9 +973,9 @@
       <td class="content-view-td content-view-td-meta">
         5
       </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="5-Custom-variables"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="5-Fluent-Bit-AWS-Kinesis-Data-Streams"></sdoc-anchor>
           <div class="requirement__title">
-            Custom variables
+            Fluent Bit AWS Kinesis Data Streams
           </div></td>
       </tr>
       <tr>
@@ -887,16 +985,16 @@
         5.1
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-VAR-001</td>
+            MP-FLB-KDS-001</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="5.1-MS-VAR-001"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="5.1-MP-FLB-KDS-001"></sdoc-anchor>
           <div class="requirement__title">
-            Can load custom variables
+            Ingests logs into Amazon Kinesis Data Streams
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The custom_str_params parameter should allow the user to specify custom variables. Each variable should have a name subparameter and either a value or value_fromfile subparameter. If a required subparameter is missing or the file specified in value_from_file does not exist, the node should stop processing.</p>
+<p>The system should be able to ingest logs into Amazon Kinesis Data Streams using the provided Amazon Kinesis Data Streams output plugin. The plugin should support the configuration of the AWS region, the name of the Kinesis Streams Delivery stream to send the logs to, and an optional IAM role ARN for cross-account access.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -909,16 +1007,16 @@
         5.2
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-VAR-002</td>
+            MP-FLB-KDS-002</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="5.2-MS-VAR-002"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="5.2-MP-FLB-KDS-002"></sdoc-anchor>
           <div class="requirement__title">
-            Can load custom variables from a file
+            Supports custom endpoint for Kinesis API
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The custom_str_params parameter should allow the user to specify custom variables that are loaded from a file. If the file specified in value_from_file does not exist, the node should stop processing.</p>
+<p>The Amazon Kinesis Data Streams output plugin should support the configuration of a custom endpoint for the Kinesis API, in case a user wants to send logs to a custom endpoint instead of the default AWS endpoint.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -931,16 +1029,38 @@
         5.3
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-VAR-03</td>
+            MP-FLB-KDS-003</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="5.3-MS-VAR-03"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="5.3-MP-FLB-KDS-003"></sdoc-anchor>
           <div class="requirement__title">
-            Can load custom variables from a fixed string
+            Allows customization of log record sent to Kinesis
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The custom_str_params parameter should allow the user to specify custom variables that are loaded from a fixed string. If the value subparameter is empty, the node should stop processing.</p>
+<p>The Amazon Kinesis Data Streams output plugin should allow customization of the log record that is sent to Kinesis. It should support the configuration of a key name to send only the value of that key to Kinesis, and the addition of a timestamp to the record under a specified key name, using a strftime compliant format string for the timestamp.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        5.4
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-KDS-004</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="5.4-MP-FLB-KDS-004"></sdoc-anchor>
+          <div class="requirement__title">
+            Handles network errors gracefully
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The Amazon Kinesis Data Streams output plugin should handle network errors gracefully and provide clear error messages to users, indicating the cause of the error. It should also support immediate retry of failed requests to AWS services once, without affecting the normal Fluent Bit retry mechanism with backoff.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -951,9 +1071,9 @@
       <td class="content-view-td content-view-td-meta">
         6
       </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="6-Data-aggregation"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="6-Fluent-Bit-MinIO"></sdoc-anchor>
           <div class="requirement__title">
-            Data aggregation
+            Fluent Bit MinIO
           </div></td>
       </tr>
       <tr>
@@ -963,35 +1083,20 @@
         6.1
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-AGG-001</td>
+            MP-FLB-MINIO-001</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="6.1-MS-AGG-001"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="6.1-MP-FLB-MINIO-001"></sdoc-anchor>
           <div class="requirement__title">
-            Can handle data aggregation
+            Can activate secure access to Minio
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should be able to aggregate data from multiple sources and provide a unified view of the data.</p>
+<p>The Minio plugin can provide secure access to the Minio server by supporting HTTPS protocol and allowing the use of access keys and secret access keys for authentication.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
         <td class="content-view-td content-view-td-content">
-          <div class="document">
-<p>Measurement 1:</p>
-<pre class="code JSON literal-block">
-<span class="punctuation">{</span><span class="name tag">&quot;a&quot;</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="literal number integer">1</span><span class="punctuation">}</span>
-</pre>
-<p>Measurement 2:</p>
-<pre class="code JSON literal-block">
-<span class="punctuation">{</span><span class="name tag">&quot;b&quot;</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="literal number integer">2</span><span class="punctuation">}</span>
-</pre>
-<p>Aggregated sample:</p>
-<pre class="code JSON literal-block">
-<span class="punctuation">{</span><span class="name tag">&quot;a&quot;</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="literal number integer">1</span><span class="punctuation">,</span><span class="whitespace"> </span><span class="name tag">&quot;b&quot;</span><span class="punctuation">:</span><span class="whitespace"> </span><span class="literal number integer">2</span><span class="punctuation">}</span>
-</pre>
-</div>
-
         </td></tr>
       <tr>
       <td class="content-view-td content-view-td-type">
@@ -1000,16 +1105,126 @@
         6.2
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-AGG-002</td>
+            MP-FLB-MINIO-002</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="6.2-MS-AGG-002"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="6.2-MP-FLB-MINIO-002"></sdoc-anchor>
           <div class="requirement__title">
-            Ability to aggregate samples based on tags
+            Configurable endpoint for Minio
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should allow for grouping of samples based on tags, such as aggregating data from multiple sources with the same tag into a single output or view.</p>
+<p>The Minio plugin must allow the configuration of the endpoint for the Minio server, including the hostname, port, and scheme.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        6.3
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-MINIO-003</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="6.3-MP-FLB-MINIO-003"></sdoc-anchor>
+          <div class="requirement__title">
+            Support for access keys and secret access keys
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The Minio plugin must allow the configuration of access keys and secret access keys to provide authentication to the Minio server.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        6.4
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-MINIO-004</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="6.4-MP-FLB-MINIO-004"></sdoc-anchor>
+          <div class="requirement__title">
+            Support for SSL/TLS encryption
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The Minio plugin must support SSL/TLS encryption to ensure secure communication with the Minio server.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        6.5
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-MINIO-005</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="6.5-MP-FLB-MINIO-005"></sdoc-anchor>
+          <div class="requirement__title">
+            Configurable bucket creation
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The Minio plugin must allow the configuration of whether a bucket should be created automatically if it does not already exist.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        6.6
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-MINIO-006</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="6.6-MP-FLB-MINIO-006"></sdoc-anchor>
+          <div class="requirement__title">
+            Configurable bucket name
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The Minio plugin must allow the configuration of the bucket name to which files will be uploaded.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        6.7
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-MINIO-007</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="6.7-MP-FLB-MINIO-007"></sdoc-anchor>
+          <div class="requirement__title">
+            Configurable upload and source fields
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The Minio plugin must allow the configuration of the fields containing the remote and local paths for file uploads. These fields should be separated by dots.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -1020,9 +1235,9 @@
       <td class="content-view-td content-view-td-meta">
         7
       </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="7-Validation"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="7-PostgreSQL"></sdoc-anchor>
           <div class="requirement__title">
-            Validation
+            PostgreSQL
           </div></td>
       </tr>
       <tr>
@@ -1032,24 +1247,20 @@
         7.1
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-VAL-001</td>
+            MP-FLB-PSQL-001</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="7.1-MS-VAL-001"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="7.1-MP-FLB-PSQL-001"></sdoc-anchor>
           <div class="requirement__title">
-            Validation of data samples through JSON schema
+            Supports PostgreSQL 10 and above
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system must be able to validate each data sample using a JSON schema, following standard schema patterns.</p>
+<p>The plugin should be able to connect and write data to PostgreSQL 10 and above.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
         <td class="content-view-td content-view-td-content">
-          <div class="document">
-<p>The validation of JSON data must follow the validation standard outlined in version 7 of the JSON schema specification, available at <a class="reference external" href="https://json-schema.org/draft/2020-12/json-schema-validation.html">https://json-schema.org/draft/2020-12/json-schema-validation.html</a>. The system must be able to validate each data sample against the specified schema to ensure that the data conforms to the defined structure and data types.</p>
-</div>
-
         </td></tr>
       <tr>
       <td class="content-view-td content-view-td-type">
@@ -1058,16 +1269,16 @@
         7.2
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-VAL-002</td>
+            MP-FLB-PSQL-002</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="7.2-MS-VAL-002"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="7.2-MP-FLB-PSQL-002"></sdoc-anchor>
           <div class="requirement__title">
-            Ability to pass a custom JSON schema for validation
+            Handles database connection errors gracefully
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should be able to accept a custom JSON file for validation that follows the standard schema patterns.</p>
+<p>The plugin should handle errors when connecting to the PostgreSQL database gracefully and provide clear error messages to users.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -1080,16 +1291,148 @@
         7.3
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-VAL-003</td>
+            MP-FLB-PSQL-003</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="7.3-MS-VAL-003"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="7.3-MP-FLB-PSQL-003"></sdoc-anchor>
           <div class="requirement__title">
-            Error reporting for failed validation
+            Handles SQL query errors gracefully
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should provide clear error messages when a data sample fails validation, including the specific validation rule that was not met.</p>
+<p>The plugin should handle errors when executing SQL queries gracefully and provide clear error messages to users.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        7.4
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-PSQL-004</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="7.4-MP-FLB-PSQL-004"></sdoc-anchor>
+          <div class="requirement__title">
+            Supports both async and sync connections
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin should support both async and sync connections to the PostgreSQL database.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        7.5
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-PSQL-005</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="7.5-MP-FLB-PSQL-005"></sdoc-anchor>
+          <div class="requirement__title">
+            Allows customization of connection pool size
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin should allow users to customize the minimum and maximum number of connections in the connection pool.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        7.6
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-PSQL-006</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="7.6-MP-FLB-PSQL-006"></sdoc-anchor>
+          <div class="requirement__title">
+            Allows specification of table to store data in
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin should allow users to specify the name of the table in the PostgreSQL database where data should be stored.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        7.7
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-PSQL-007</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="7.7-MP-FLB-PSQL-007"></sdoc-anchor>
+          <div class="requirement__title">
+            Allows specification of timestamp field
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin should allow users to specify which field in the incoming data contains the timestamp for the record.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        7.8
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-PSQL-008</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="7.8-MP-FLB-PSQL-008"></sdoc-anchor>
+          <div class="requirement__title">
+            Supports CockroachDB
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin should be able to connect and write data to CockroachDB when the &quot;cockroachdb&quot; option is set to true.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        7.9
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-PSQL-009</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="7.9-MP-FLB-PSQL-009"></sdoc-anchor>
+          <div class="requirement__title">
+            Can set a timeout for remote connection to PostgreSQL
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The system should be able to set a timeout for remote connection to PostgreSQL and terminate them if no data has been received within the timeout.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -1100,9 +1443,9 @@
       <td class="content-view-td content-view-td-meta">
         8
       </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="8-Filters"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="8-Fluent-Bit-S3"></sdoc-anchor>
           <div class="requirement__title">
-            Filters
+            Fluent Bit S3
           </div></td>
       </tr>
       <tr>
@@ -1112,16 +1455,16 @@
         8.1
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-FILT-001</td>
+            MP-FLB-S3-001</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.1-MS-FILT-001"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.1-MP-FLB-S3-001"></sdoc-anchor>
           <div class="requirement__title">
-            Ability to filter a sample by keeping only certain key values before validation
+            Allows specifying the AWS region of the S3 bucket
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should be able to apply a filter that keeps only certain key values from a sample before validation.</p>
+<p>The plugin should allow users to specify the AWS region where the S3 bucket resides.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -1134,16 +1477,16 @@
         8.2
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-FILT-002</td>
+            MP-FLB-S3-002</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.2-MS-FILT-002"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.2-MP-FLB-S3-002"></sdoc-anchor>
           <div class="requirement__title">
-            Ability to exclude a field through a filter
+            Allows specifying the S3 bucket name
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should be able to apply a filter that excludes one or multiple keys from the sample.</p>
+<p>The plugin should allow users to specify the name of the S3 bucket where data should be stored.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -1156,16 +1499,16 @@
         8.3
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-FILT-003</td>
+            MP-FLB-S3-003</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.3-MS-FILT-003"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.3-MP-FLB-S3-003"></sdoc-anchor>
           <div class="requirement__title">
-            Ability to filter samples based on a regular expression pattern
+            Allows specifying the time key in the output record
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should be able to filter samples based on a regular expression pattern for a specific key. The user should be able to specify the key and the regular expression pattern to match.</p>
+<p>The plugin should allow users to specify the name of the time key in the output record. If the time key is disabled, the plugin should not include any time information in the S3 object.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -1178,16 +1521,170 @@
         8.4
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-FILT-004</td>
+            MP-FLB-S3-004</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.4-MS-FILT-004"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.4-MP-FLB-S3-004"></sdoc-anchor>
           <div class="requirement__title">
-            Ability to chain multiple filters together
+            Allows specifying the format of the date
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should be able to chain multiple filters together, allowing the user to apply multiple filters to a sample in a specific order. The order of the filters should be configurable.</p>
+<p>The plugin should allow users to specify the format of the date in the output record. The supported formats should include double, epoch, iso8601, and java_sql_timestamp.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        8.5
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-S3-005</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.5-MP-FLB-S3-005"></sdoc-anchor>
+          <div class="requirement__title">
+            Allows specifying the maximum size of files in S3
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin should allow users to specify the maximum size of files that can be uploaded to S3. The maximum size should be 50GB and the minimum size should be 1MB.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        8.6
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-S3-006</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.6-MP-FLB-S3-006"></sdoc-anchor>
+          <div class="requirement__title">
+            Allows specifying the size of each 'part' for multipart uploads
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin should allow users to specify the size of each 'part' for multipart uploads. The maximum size should be 50MB.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        8.7
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-S3-007</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.7-MP-FLB-S3-007"></sdoc-anchor>
+          <div class="requirement__title">
+            Allows specifying the time interval for completing an upload and creating a new file in S3
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin should allow users to specify the time interval for completing an upload and creating a new file in S3. If this amount of time has elapsed, Fluent Bit will complete an upload and create a new file in S3.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        8.8
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-S3-008</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.8-MP-FLB-S3-008"></sdoc-anchor>
+          <div class="requirement__title">
+            Allows specifying the directory to locally buffer data before sending
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin should allow users to specify the directory where data should be buffered before being sent to S3. When multipart uploads are used, data will only be buffered until the upload_chunk_size is reached. S3 will also store metadata about in-progress multipart uploads in this directory.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        8.9
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-S3-009</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.9-MP-FLB-S3-009"></sdoc-anchor>
+          <div class="requirement__title">
+            Allows specifying the size limitation for disk usage in S3
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin should allow users to specify the size limitation for disk usage in S3. The amount of S3 buffers in the store_dir should be limited to this size to limit disk usage. Note: Use store_dir_limit_size instead of storage.total_limit_size, which can be used for other plugins, because S3 has its own buffering system.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        8.10
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-S3-010</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.10-MP-FLB-S3-010"></sdoc-anchor>
+          <div class="requirement__title">
+            Support for multipart upload
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin should support multipart upload to S3, allowing large files to be uploaded in parts for increased reliability and faster upload times.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        8.11
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            MP-FLB-S3-011</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="8.11-MP-FLB-S3-011"></sdoc-anchor>
+          <div class="requirement__title">
+            Can set custom endpoint
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The plugin should support multipart upload to S3, allowing large files to be uploaded in parts for increased reliability and faster upload times.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>
@@ -1198,9 +1695,9 @@
       <td class="content-view-td content-view-td-meta">
         9
       </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="9-Matching"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="9-Fluent-Bit-Slack"></sdoc-anchor>
           <div class="requirement__title">
-            Matching
+            Fluent Bit Slack
           </div></td>
       </tr>
       <tr>
@@ -1210,730 +1707,16 @@
         9.1
       </td>
           <td class="content-view-td content-view-td-meta">
-            MS-MAT-001</td>
+            MP-FLB-SLACK-001</td>
           <td class="content-view-td content-view-td-meta"></td>
           <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
         </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="9.1-MS-MAT-001"></sdoc-anchor>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="9.1-MP-FLB-SLACK-001"></sdoc-anchor>
           <div class="requirement__title">
-            Ability to match measurement samples to a specific destination using tags
+            Can set the webhook used by Slack
           </div></td>
         <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should be able to match a sample to a specific destination using tags.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        9.2
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-MAT-002</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="9.2-MS-MAT-002"></sdoc-anchor>
-          <div class="requirement__title">
-            Can send data to multiple destinations simultaneously
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The measurement system can send data to multiple destinations simultaneously, allowing for redundancy, load balancing, or other purposes.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">Section</td>
-      <td class="content-view-td content-view-td-meta">
-        10
-      </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="10-Maximum-collect"></sdoc-anchor>
-          <div class="requirement__title">
-            Maximum collect
-          </div></td>
-      </tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        10.1
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-MAX-001</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="10.1-MS-MAX-001"></sdoc-anchor>
-          <div class="requirement__title">
-            Ability to collect a certain amount of samples when the node starts
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should provide an option to stop collecting samples after a certain amount of samples has been reached.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        10.2
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-MAX-002</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="10.2-MS-MAX-002"></sdoc-anchor>
-          <div class="requirement__title">
-            Ability to delete the publisher when the maximum amount of samples has been reached
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should stop the publisher and the loop when the maximum amount of samples has been reached.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        10.3
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-MAX-003</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="10.3-MS-MAX-003"></sdoc-anchor>
-          <div class="requirement__title">
-            Ability to delete the subscriber when the maximum amount of samples has been reached
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should stop the subscriber and the loop when the maximum amount of samples has been reached.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        10.4
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-MAX-004</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="10.4-MS-MAX-004"></sdoc-anchor>
-          <div class="requirement__title">
-            Ability to collect samples when the node starts
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should provide an option to collect a sample when starting the node directly, instead of waiting for the timer to elapse.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        10.5
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-MAX-005</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="10.5-MS-MAX-005"></sdoc-anchor>
-          <div class="requirement__title">
-            Can send a maximum number of samples when conditions are met
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>Sometimes, it is useful to send data when conditions are respected and only a certain amount of time</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-          <div class="document">
-<p>This requirement means that the system can specify a maximum number of data samples to be sent when certain conditions are met. This can be useful for cases where the system needs to limit the amount of data sent for performance or resource usage reasons.</p>
-</div>
-
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">Section</td>
-      <td class="content-view-td content-view-td-meta">
-        11
-      </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="11-Metadata-keys"></sdoc-anchor>
-          <div class="requirement__title">
-            Metadata keys
-          </div></td>
-      </tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        11.1
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-MET-001</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="11.1-MS-MET-001"></sdoc-anchor>
-          <div class="requirement__title">
-            Ability to include measurement name in sample
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should provide the option to include the measurement name as a key/value pair in each sample.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        11.2
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-MET-002</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="11.2-MS-MET-002"></sdoc-anchor>
-          <div class="requirement__title">
-            Can include measurement plugin name in sample
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>Each sample can have (or not) the measurement plugin name included as key/value</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-          <div class="document">
-<p>This requirement means that each data sample collected by the system can include the name of the measurement plugin that collected it. This can be useful for keeping track of which plugin collected which data, and for debugging purposes.</p>
-</div>
-
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        11.3
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-MET-003</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="11.3-MS-MET-003"></sdoc-anchor>
-          <div class="requirement__title">
-            Add timestamp to sample
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>Each sample has a timestamp included, as a UTC absolute time.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">Section</td>
-      <td class="content-view-td content-view-td-meta">
-        12
-      </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="12-Remote-paths"></sdoc-anchor>
-          <div class="requirement__title">
-            Remote paths
-          </div></td>
-      </tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        12.1
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-PAT-001</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="12.1-MS-PAT-001"></sdoc-anchor>
-          <div class="requirement__title">
-            Can pass remote keys
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>Can precise the remote key, based on remote destination</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-          <div class="document">
-<p>This requirement means that the system can specify which remote key to use when sending data to a particular destination. This can be useful for cases where the remote system requires a specific key to be used, or for cases where multiple keys are valid but only one should be used.</p>
-</div>
-
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        12.2
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-PAT-002</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="12.2-MS-PAT-002"></sdoc-anchor>
-          <div class="requirement__title">
-            Can apply a prefix to the remote key
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>Can pass a prefix to the remote key, to add a string to the path</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-          <div class="document">
-<p>This requirement means that the system can add a prefix to the remote key when sending data to a particular destination. This can be useful for cases where the remote system requires a specific path to be used, or for cases where the system needs to differentiate between different paths for the same destination.</p>
-</div>
-
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">Section</td>
-      <td class="content-view-td content-view-td-meta">
-        13
-      </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="13-Conditions"></sdoc-anchor>
-          <div class="requirement__title">
-            Conditions
-          </div></td>
-      </tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        13.1
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-CON-001</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="13.1-MS-CON-001"></sdoc-anchor>
-          <div class="requirement__title">
-            Can send samples if all conditions are respected (from a list of condition)
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>Can pass a list of conditions. All need to be all respected to send data sample</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-          <div class="document">
-<p>This requirement means that the system can define a list of conditions that must all be true in order for a data sample to be sent. This can be useful for cases where certain criteria must be met before data can be sent, such as when the system needs to ensure that the data is of a certain quality or meets certain requirements.</p>
-</div>
-
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        13.2
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-CON-002</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="13.2-MS-CON-002"></sdoc-anchor>
-          <div class="requirement__title">
-            Can send samples if any conditions is respected (from a list of condition)
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>Can pass a list of conditions. One of them need to be respected to send data sample</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-          <div class="document">
-<p>This requirement means that the system can define a list of conditions and send a data sample if any of them are true. This can be useful for cases where there are multiple criteria that can be met for data to be sent, and only one needs to be met for the data to be sent.</p>
-</div>
-
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        13.3
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-CON-003</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="13.3-MS-CON-003"></sdoc-anchor>
-          <div class="requirement__title">
-            Can send samples if no conditions are not respected (from a list of condition)
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>Can pass a list of conditions. None need to be respected to send data sample</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-          <div class="document">
-<p>This requirement means that the system can define a list of conditions and send a data sample if none of them are true. This can be useful for cases where the system needs to ensure that data is not sent if certain criteria are met, such as if the data is of poor quality or does not meet certain requirements.</p>
-</div>
-
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        13.4
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-CON-004</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="13.4-MS-CON-004"></sdoc-anchor>
-          <div class="requirement__title">
-            Can access condition state from measurements
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>Each measurement should be able to access through a variable the state of conditions it depends on.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">Section</td>
-      <td class="content-view-td content-view-td-meta">
-        14
-      </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="14-Lifecycle"></sdoc-anchor>
-          <div class="requirement__title">
-            Lifecycle
-          </div></td>
-      </tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        14.1
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-LIF-001</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="14.1-MS-LIF-001"></sdoc-anchor>
-          <div class="requirement__title">
-            Stop all nodes if one fails
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>Include a bond connection for the lifecycle manager to ensure that after a server transitions up, it also remains active. If a server crashes, it lets the lifecycle manager know and transition down the system to prevent a critical failure.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">Section</td>
-      <td class="content-view-td content-view-td-meta">
-        15
-      </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="15-Compression"></sdoc-anchor>
-          <div class="requirement__title">
-            Compression
-          </div></td>
-      </tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        15.1
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-COMP-001</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="15.1-MS-COMP-001"></sdoc-anchor>
-          <div class="requirement__title">
-            Can compress samples before publishing
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>Samples can be large and compressing them before publishing can reduce network bandwidth usage and transmission time.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        15.2
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-COMP-002</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="15.2-MS-COMP-002"></sdoc-anchor>
-          <div class="requirement__title">
-            Support for gzip compression
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system shall support gzip compression of JSON data. The compressed data must be compatible with the gzip compression standard.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        15.3
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-COMP-003</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="15.3-MS-COMP-003"></sdoc-anchor>
-          <div class="requirement__title">
-            Support for deflate compression
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system shall support deflate compression of JSON data. The compressed data must be compatible with the deflate compression standard.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        15.4
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-COMP-004</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="15.4-MS-COMP-004"></sdoc-anchor>
-          <div class="requirement__title">
-            Support for Brotli compression
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system shall support Brotli compression of JSON data. The compressed data must be compatible with the Brotli compression standard.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        15.5
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-COMP-005</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="15.5-MS-COMP-005"></sdoc-anchor>
-          <div class="requirement__title">
-            Support for LZ77 compression
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system shall support LZ77 compression of JSON data. The compressed data must be compatible with the LZ77 compression standard.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        15.6
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-COMP-006</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="15.6-MS-COMP-006"></sdoc-anchor>
-          <div class="requirement__title">
-            Support for LZ4 compression
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system shall support LZ4 compression of JSON data. The compressed data must be compatible with the LZ4 compression standard.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        15.7
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-COMP-007</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="15.7-MS-COMP-007"></sdoc-anchor>
-          <div class="requirement__title">
-            Ability to choose compression algorithm
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system shall allow users to choose between different compression algorithms (such as gzip, deflate, Brotli, LZ77, LZ4, etc.) for compressing JSON data.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        15.8
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-COMP-008</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="15.8-MS-COMP-008"></sdoc-anchor>
-          <div class="requirement__title">
-            Performance benchmarking
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system shall provide performance benchmarks for each compression algorithm to help users choose the most efficient algorithm for their needs.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        15.9
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-COMP-009</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="15.9-MS-COMP-009"></sdoc-anchor>
-          <div class="requirement__title">
-            Configurable compression level
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system shall allow users to configure the level of compression for each algorithm. The compression level should affect the balance between compression ratio and compression speed.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        15.10
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-COMP-010</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="15.10-MS-COMP-010"></sdoc-anchor>
-          <div class="requirement__title">
-            Compression compatibility with JSON schema
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The compressed JSON data must be compatible with JSON schema and should be able to be decompressed without any loss of data or information.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        15.11
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-COMP-011</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="15.11-MS-COMP-011"></sdoc-anchor>
-          <div class="requirement__title">
-            Compression and decompression efficiency
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system shall provide efficient compression and decompression algorithms that minimize CPU usage and memory consumption while achieving high compression ratios.</p>
-</div>
-</td>
-        <td class="content-view-td content-view-td-content"></td>
-        <td class="content-view-td content-view-td-content">
-        </td></tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">Section</td>
-      <td class="content-view-td content-view-td-meta">
-        16
-      </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
-        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="16-Limitations"></sdoc-anchor>
-          <div class="requirement__title">
-            Limitations
-          </div></td>
-      </tr>
-      <tr>
-      <td class="content-view-td content-view-td-type">
-        Requirement</td>
-      <td class="content-view-td content-view-td-meta">
-        16.1
-      </td>
-          <td class="content-view-td content-view-td-meta">
-            MS-LIM-001</td>
-          <td class="content-view-td content-view-td-meta"></td>
-          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
-        </td>
-        <td class="content-view-td content-view-td-title"><sdoc-anchor id="16.1-MS-LIM-001"></sdoc-anchor>
-          <div class="requirement__title">
-            Can limit bandwidth usage for remote connections
-          </div></td>
-        <td class="content-view-td content-view-td-content"><div class="document">
-<p>The system should be able to limit the amount of data sent over a remote connection in order to manage bandwidth usage.</p>
+<p>The plugin should support using the webhook to know where to send the data.</p>
 </div>
 </td>
         <td class="content-view-td content-view-td-content"></td>

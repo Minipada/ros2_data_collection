@@ -1,0 +1,1258 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="UTF-8"/>
+
+  <link rel="shortcut icon" href="../_static/favicon.ico" type="image/x-icon"/>
+
+  
+  
+  <link rel="stylesheet" href="../_static/base.css"/>
+  <link rel="stylesheet" href="../_static/layout.css"/>
+  <link rel="stylesheet" href="../_static/content.css"/>
+  <link rel="stylesheet" href="../_static/node.css"/>
+  <link rel="stylesheet" href="../_static/requirement.css"/>
+  <link rel="stylesheet" href="../_static/requirement__temporary.css"/>
+  <link rel="stylesheet" href="../_static/element.css"/>
+  <link rel="stylesheet" href="../_static/form.css"/>
+  
+  <link rel="stylesheet" href="../_static/requirement-tree.css"/>
+
+
+  
+  <script type="text/javascript" src="../_static/viewtype_menu.js"></script>
+  <script type="text/javascript" src="../_static/toc.js"></script><script id="MathJax-script" async src="../_static/mathjax/tex-mml-chtml.js"></script>
+  <script type="text/javascript" src="../_static/pan_with_space.js"></script>
+  
+  
+  
+  
+
+
+  <title>Destination server - Deep Traceability</title>
+
+  
+</head>
+
+<body data-viewtype="deep_traceability" data-turbo="false">
+<script>document.body.dataset.toc_state = sessionStorage.getItem('tocState') || 'open';</script><div class="layout" id="layout">
+
+    <nav class="layout_nav">
+      <div class="nav">
+
+
+
+  <a
+    data-link="index"
+    class="nav_button"
+    href="../index.html"
+    title="Project index">
+    <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <line x1="9" y1="4" x2="7" y2="4"></line>
+  <line x1="12" y1="9" x2="12" y2="7"></line>
+  <line x1="6" y1="10" x2="10" y2="6"></line>
+  <circle cx="4" cy="12" r="2.25"></circle>
+  <circle cx="12" cy="4" r="2.25"></circle>
+  <circle cx="4" cy="4" r="2.25"></circle>
+  <circle cx="12" cy="12" r="2.25"></circle>
+</svg>
+  </a><a
+    data-link="requirements_coverage"
+    class="nav_button"
+    href="../requirements_coverage.html"
+    title="Requirements coverage">
+    
+<svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <line x1="2" y1="11" x2="14" y2="11"></line>
+    <line x1="10" y1="8" x2="14" y2="8"></line>
+    <line x1="2" y1="14" x2="14" y2="14"></line>
+    <polyline points="2 6 4.5 8 9.5 2"></polyline>
+</svg>
+  </a>
+  <a
+    data-link="source_coverage"
+    class="nav_button"
+    href="../source_coverage.html"
+    title="Source coverage">
+    
+<svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <path d="M6,2 C5.5,2 5,2 5,2 C4.5,2 4,2.5 4,3 C4,5 4,6 4,6 C4,6.5 3.5,7.5 2,8 C3.5,8.5 4,9.5 4,10 C4,10 4,11 4,13 C4,13.5 4.5,14 5,14 C5,14 5.5,14 6,14"></path>
+    <line x1="8" y1="8" x2="14" y2="8"></line>
+    <line x1="10" y1="4" x2="14" y2="4"></line>
+    <line x1="10" y1="12" x2="14" y2="12"></line>
+</svg>
+  </a></div>
+    </nav>
+
+    <div class="layout_toc">
+      
+  
+
+
+
+<div class="toc_panel">
+
+<div
+  data-testid="toc-handler"
+  js-toc-handler='true' 
+  class="toc_handler nav_button"
+>
+  <svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+            <line class="horz" x1="2" y1="12" x2="14" y2="12" id="q3"></line>
+            <line x1="2" y1="8" x2="14" y2="8" id="q2"></line>
+            <line class="horz" x1="2" y1="4" x2="14" y2="4" id="q1"></line>
+            <line class="arrw" x1="2" y1="8" x2="8" y2="14" id="q33"></line>
+            <line class="arrw" x1="2" y1="8" x2="8" y2="2" id="q11"></line>
+</svg>
+</div>
+
+<turbo-frame
+  id="frame-toc"
+  style="display: contents"
+  js-collapsible_list='true' 
+  data-controller="collapsible_list"
+>
+
+  <div class="toc_panel__overlay">
+    <div class="toc_panel__control">
+      <div
+        js-collapsible_list-control='true' 
+      ></div>
+    </div>
+  </div>
+
+  <div
+    js-collapsible_list-container='true' 
+    class="toc_panel__content"
+  >
+
+    <ul
+      data-testid="toc-list"
+      js-collapsible_list-list='true' 
+      class="toc"
+    ><li><a href="#1-Usability" data-turbo="false">
+              <span class="section-number">1</span>
+              Usability
+            </a><ul><li>
+        <a href="#1.1-DS-USAB-001" data-turbo="false">
+          <span class="section-number">1.1</span>Can load configuration from YAML</a></li></ul>
+            </li><li><a href="#2-Plugin-Loading" data-turbo="false">
+              <span class="section-number">2</span>
+              Plugin Loading
+            </a><ul><li>
+        <a href="#2.1-DS-PLU-001" data-turbo="false">
+          <span class="section-number">2.1</span>Can load any number of destination plugins</a></li><li>
+        <a href="#2.2-DS-PLU-002" data-turbo="false">
+          <span class="section-number">2.2</span>Can handle errors when loading destination plugins</a></li><li>
+        <a href="#2.3-DS-PLU-003" data-turbo="false">
+          <span class="section-number">2.3</span>Extensibility and customizability</a></li><li>
+        <a href="#2.4-DS-PLU-004" data-turbo="false">
+          <span class="section-number">2.4</span>External extensibility and customizability</a></li><li>
+        <a href="#2.5-DS-PLU-005" data-turbo="false">
+          <span class="section-number">2.5</span>Can reload plugins without restarting the node</a></li><li>
+        <a href="#2.6-DS-PLU-006" data-turbo="false">
+          <span class="section-number">2.6</span>Can unload plugins</a></li><li>
+        <a href="#2.7-DS-PLU-007" data-turbo="false">
+          <span class="section-number">2.7</span>Can provide information about loaded plugins</a></li></ul>
+            </li><li><a href="#3-General" data-turbo="false">
+              <span class="section-number">3</span>
+              General
+            </a><ul><li>
+        <a href="#3.1-DS-GEN-001" data-turbo="false">
+          <span class="section-number">3.1</span>Can batch samples before sending</a></li><li>
+        <a href="#3.2-DS-GEN-002" data-turbo="false">
+          <span class="section-number">3.2</span>Can store data locally if remote connection is not available</a></li><li>
+        <a href="#3.3-DS-GEN-003" data-turbo="false">
+          <span class="section-number">3.3</span>Can store data locally if remote connection is slow or unreliable</a></li></ul>
+            </li><li><a href="#4-Backend" data-turbo="false">
+              <span class="section-number">4</span>
+              Backend
+            </a><ul><li>
+        <a href="#4.1-MS-BAC-001" data-turbo="false">
+          <span class="section-number">4.1</span>Can store data using a backend</a></li><li>
+        <a href="#4.2-MS-BAC-002" data-turbo="false">
+          <span class="section-number">4.2</span>Support multiple backends</a></li><li>
+        <a href="#4.3-MS-BAC-003" data-turbo="false">
+          <span class="section-number">4.3</span>Can store data without a backend</a></li><li>
+        <a href="#4.4-MS-BAC-004" data-turbo="false">
+          <span class="section-number">4.4</span>Support for Fluent Bit</a></li><li>
+        <a href="#4.5-MS-BAC-005" data-turbo="false">
+          <span class="section-number">4.5</span>Support for Redis</a></li></ul>
+            </li><li><a href="#5-Performance" data-turbo="false">
+              <span class="section-number">5</span>
+              Performance
+            </a><ul><li>
+        <a href="#5.1-DS-PERF-001" data-turbo="false">
+          <span class="section-number">5.1</span>Supports high throughput and low latency</a></li></ul>
+            </li></ul>
+  </div>
+</turbo-frame>
+</div>
+
+    </div>
+
+    <header class="layout_header">
+      
+<div class="header">
+  <div class="header__document">
+  <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <path d=" M13,13 L13,8 C13,7.5 12.6,7 12,7 L9,7 C8.5,7 8,6.5 8,6 L8,3 C8,2.5 7.5,2 7,2 L4,2 C3.5,2 3,2.5 3,3 L3,13 C3,13.5 3.5,14 4,14 L12,14 C12.6,14 13,13.5 13,13 Z M13,9 L13,8 C13,7.5 13,7 12.5,6.5 L8.5,2.5 C8,2 7.5,2 7,2 L6,2"></path>
+</svg>
+  <turbo-frame id="document_title">
+<div
+  class="header__document_title"
+  title="Destination server"
+>
+  Destination server
+</div>
+</turbo-frame>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" class="sc-gLvsXj bpkaBy"><path stroke="currentColor" d="M12.5 4.5l-5 11" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  <div class="viewtype">
+  <div
+    id="viewtype_handler"
+    class="viewtype__handler"
+    aria-expanded="false"
+    aria-controls="viewtype_menu"
+  >
+    <span>Deep Traceability</span>
+    <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" >
+  <path d="M5 10l3 3 3-3M5 6l3-3 3 3"></path>
+</svg>
+  </div>
+  <menu
+    id="viewtype_menu"
+    class="viewtype__menu"
+    aria-hidden="true"
+    aria-labelledby="viewtype_handler"
+  >
+    <li class="viewtype__menu_header">VIEWS</li>
+    <li>
+      <a
+        data-viewtype_link="document"
+        class="viewtype__menu_item"
+        title="Go to Document view"
+        href="../requirements/destination_server.html">
+        Document</a>
+    </li>
+    <li>
+      <a
+        data-viewtype_link="table"
+        class="viewtype__menu_item"
+        title="Go to Table view"
+        href="../requirements/destination_server-TABLE.html">
+        Table</a>
+    </li>
+    <li>
+      <a
+        data-viewtype_link="traceability"
+        class="viewtype__menu_item"
+        title="Go to Traceability view"
+        href="../requirements/destination_server-TRACE.html">
+        Traceability</a>
+    </li>
+    <li>
+      <a
+        data-viewtype_link="deep_traceability"
+        class="viewtype__menu_item"
+        title="Go to Deep Traceability view"
+        href="../requirements/destination_server-DEEP-TRACE.html">
+      Deep traceability</a>
+    </li>
+  </menu>
+</div>
+</div>
+</div>
+
+    </header>
+
+    <main class="layout_main" id="pan_with_space">
+      
+
+    <div class="content">
+          <section class="content_section">
+            <div class="content_item" data-role="current">
+              
+
+  <sdoc-node
+    node-style="card"
+    node-role="section"
+    data-testid="node-section"
+  >
+
+    
+    <sdoc-anchor id="1-Usability"></sdoc-anchor>
+
+    
+    
+<sdoc-section>
+  
+<sdoc-section-title
+  data-level="1"
+>1.&nbsp;Usability</sdoc-section-title>
+</sdoc-section>
+
+
+  </sdoc-node>
+            </div>
+          </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.1-DS-USAB-001"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.1"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can load configuration from YAML</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  DS-USAB-001
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>All configuration can be passed as a standard ROS 2 YAML configuration file.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+          <section class="content_section">
+            <div class="content_item" data-role="current">
+              
+
+  <sdoc-node
+    node-style="card"
+    node-role="section"
+    data-testid="node-section"
+  >
+
+    
+    <sdoc-anchor id="2-Plugin-Loading"></sdoc-anchor>
+
+    
+    
+<sdoc-section>
+  
+<sdoc-section-title
+  data-level="2"
+>2.&nbsp;Plugin Loading</sdoc-section-title>
+</sdoc-section>
+
+
+  </sdoc-node>
+            </div>
+          </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.1-DS-PLU-001"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.1"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can load any number of destination plugins</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  DS-PLU-001
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The Destination server must be able to load any number of destination plugins that conform to a specific interface. The plugins should be loaded dynamically at runtime.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.2-DS-PLU-002"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.2"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can handle errors when loading destination plugins</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  DS-PLU-002
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>If the Destination server attempts to load a plugin that does not conform to the specified interface or the plugin file does not exist, it should throw a custom exception with a clear error message. The node should then stop processing.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.3-DS-PLU-003"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.3"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Extensibility and customizability</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  DS-PLU-003
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be easily extensible and customizable, allowing users to add new features, plugins, and functionality to meet their specific requirements in the repository.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.4-DS-PLU-004"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.4"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    External extensibility and customizability</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  DS-PLU-004
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be easily extensible and customizable, allowing users to add new features, plugins, and functionality to meet their specific requirements in their own ROS packages.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.5-DS-PLU-005"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.5"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can reload plugins without restarting the node</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  DS-PLU-005
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The Destination server should be able to reload plugins dynamically without having to stop and restart the node. This will allow for updates and changes to be made to the plugins without interrupting data processing.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.6-DS-PLU-006"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.6"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can unload plugins</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  DS-PLU-006
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The Destination server should be able to unload plugins dynamically. This will allow for plugins to be removed from the system when they are no longer needed.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.7-DS-PLU-007"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.7"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can provide information about loaded plugins</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  DS-PLU-007
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The Destination server should be able to provide information about the plugins that are currently loaded, such as their names, version numbers, description and json schema.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+          <section class="content_section">
+            <div class="content_item" data-role="current">
+              
+
+  <sdoc-node
+    node-style="card"
+    node-role="section"
+    data-testid="node-section"
+  >
+
+    
+    <sdoc-anchor id="3-General"></sdoc-anchor>
+
+    
+    
+<sdoc-section>
+  
+<sdoc-section-title
+  data-level="3"
+>3.&nbsp;General</sdoc-section-title>
+</sdoc-section>
+
+
+  </sdoc-node>
+            </div>
+          </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="3.1-DS-GEN-001"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="3.1"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can batch samples before sending</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  DS-GEN-001
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The destination system can batch multiple samples together before sending them to remote destinations, reducing network overhead and improving performance.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="3.2-DS-GEN-002"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="3.2"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can store data locally if remote connection is not available</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  DS-GEN-002
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>If a remote connection is not available, the system should be able to store data locally and send it over the remote connection when it becomes available.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="3.3-DS-GEN-003"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="3.3"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can store data locally if remote connection is slow or unreliable</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  DS-GEN-003
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>If a remote connection is slow or unreliable, the system should be able to store data locally and send it over the remote connection when it is stable.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+          <section class="content_section">
+            <div class="content_item" data-role="current">
+              
+
+  <sdoc-node
+    node-style="card"
+    node-role="section"
+    data-testid="node-section"
+  >
+
+    
+    <sdoc-anchor id="4-Backend"></sdoc-anchor>
+
+    
+    
+<sdoc-section>
+  
+<sdoc-section-title
+  data-level="4"
+>4.&nbsp;Backend</sdoc-section-title>
+</sdoc-section>
+
+
+  </sdoc-node>
+            </div>
+          </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="4.1-MS-BAC-001"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="4.1"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can store data using a backend</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MS-BAC-001
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to store collected data using a backend, such as Fluent Bit or Redis, to handle backpressure and ensure data persistency.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="4.2-MS-BAC-002"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="4.2"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Support multiple backends</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MS-BAC-002
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should support multiple backends for storing collected data, handling backpressure, and ensuring data persistency. The selection of a backend should be configurable to allow for easy integration with different systems and tools.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="4.3-MS-BAC-003"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="4.3"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can store data without a backend</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MS-BAC-003
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to store collected data without a backend if needed, for example when testing or in environments where a backend is not available or practical to use. The system should provide a fallback option for data storage in such cases.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="4.4-MS-BAC-004"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="4.4"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Support for Fluent Bit</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MS-BAC-004
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should support the use of Fluent Bit as a backend to handle backpressure and ensure data persistency.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="4.5-MS-BAC-005"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="4.5"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Support for Redis</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MS-BAC-005
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to use Redis as a backend for storing and retrieving collected data. The system should be able to configure the connection to Redis, including the host, port, and authentication credentials, if necessary. The system should suppor &lt;...&gt;</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+          <section class="content_section">
+            <div class="content_item" data-role="current">
+              
+
+  <sdoc-node
+    node-style="card"
+    node-role="section"
+    data-testid="node-section"
+  >
+
+    
+    <sdoc-anchor id="5-Performance"></sdoc-anchor>
+
+    
+    
+<sdoc-section>
+  
+<sdoc-section-title
+  data-level="5"
+>5.&nbsp;Performance</sdoc-section-title>
+</sdoc-section>
+
+
+  </sdoc-node>
+            </div>
+          </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="5.1-DS-PERF-001"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="5.1"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Supports high throughput and low latency</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  DS-PERF-001
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system must support high throughput and low latency to handle large volumes of data and deliver near-real-time insights.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section></div>
+    </main>
+
+    <footer class="layout_footer">
+    
+      <div class="footer">
+        Built with
+        <a
+          class="strictdoc__link"
+          href="https://github.com/strictdoc-project/strictdoc"
+          target="_blank"
+        >StrictDoc</a>
+        <a
+          class="strictdoc__version"
+          href="https://github.com/strictdoc-project/strictdoc/releases/tag/0.0.40"
+          target="_blank"
+        >
+          <svg height="16" viewBox="0 0 16 16" version="1.1" width="16" >
+            <path fill-rule="evenodd" d="M2.5 7.775V2.75a.25.25 0 01.25-.25h5.025a.25.25 0 01.177.073l6.25 6.25a.25.25 0 010 .354l-5.025 5.025a.25.25 0 01-.354 0l-6.25-6.25a.25.25 0 01-.073-.177zm-1.5 0V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 010 2.474l-5.026 5.026a1.75 1.75 0 01-2.474 0l-6.25-6.25A1.75 1.75 0 011 7.775zM6 5a1 1 0 100 2 1 1 0 000-2z"></path>
+          </svg>
+          0.0.40
+        </a>
+      </div>
+    
+    </footer>
+
+    <aside class="layout_aside">
+      
+    </aside>
+
+  </div>
+  
+  <div id="modal"></div>
+  <div id="confirm"></div>
+  
+
+</body>
+</html>

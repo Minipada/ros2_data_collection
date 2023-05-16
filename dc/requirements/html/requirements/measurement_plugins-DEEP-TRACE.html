@@ -33,7 +33,7 @@
   
 
 
-  <title>Measurement server - Deep Traceability</title>
+  <title>Measurement plugins - Deep Traceability</title>
 
   
 </head>
@@ -134,190 +134,214 @@
       data-testid="toc-list"
       js-collapsible_list-list='true' 
       class="toc"
-    ><li><a href="#1-Usability" data-turbo="false">
+    ><li><a href="#1-Plugins" data-turbo="false">
               <span class="section-number">1</span>
-              Usability
+              Plugins
             </a><ul><li>
-        <a href="#1.1-MS-USAB-001" data-turbo="false">
-          <span class="section-number">1.1</span>Can load configuration from YAML</a></li></ul>
-            </li><li><a href="#2-Plugin-Loading" data-turbo="false">
+        <a href="#1.1-MP-PLU-001" data-turbo="false">
+          <span class="section-number">1.1</span>Can collect images from camera</a></li><li>
+        <a href="#1.2-MP-PLU-002" data-turbo="false">
+          <span class="section-number">1.2</span>Can collect video from camera</a></li><li>
+        <a href="#1.3-MP-PLU-003" data-turbo="false">
+          <span class="section-number">1.3</span>Can collect command velocity</a></li><li>
+        <a href="#1.4-MP-PLU-004" data-turbo="false">
+          <span class="section-number">1.4</span>Can collect CPU data</a></li><li>
+        <a href="#1.5-MP-PLU-005" data-turbo="false">
+          <span class="section-number">1.5</span>Can collect distance traveled</a></li><li>
+        <a href="#1.6-MP-PLU-006" data-turbo="false">
+          <span class="section-number">1.6</span>Can collect IP camera image</a></li><li>
+        <a href="#1.7-MP-PLU-007" data-turbo="false">
+          <span class="section-number">1.7</span>Can collect IP camera video</a></li><li>
+        <a href="#1.8-MP-PLU-008" data-turbo="false">
+          <span class="section-number">1.8</span>Can collect ROS 2 map</a></li><li>
+        <a href="#1.9-MP-PLU-009" data-turbo="false">
+          <span class="section-number">1.9</span>Can collect network data</a></li><li>
+        <a href="#1.10-MP-PLU-010" data-turbo="false">
+          <span class="section-number">1.10</span>Can collect OS data</a></li><li>
+        <a href="#1.11-MP-PLU-011" data-turbo="false">
+          <span class="section-number">1.11</span>Can collect permission data</a></li><li>
+        <a href="#1.12-MP-PLU-012" data-turbo="false">
+          <span class="section-number">1.12</span>Can collect position data</a></li></ul>
+            </li><li><a href="#2-Camera-plugin" data-turbo="false">
               <span class="section-number">2</span>
-              Plugin Loading
+              Camera plugin
             </a><ul><li>
-        <a href="#2.1-MS-PLU-001" data-turbo="false">
-          <span class="section-number">2.1</span>Can load any number of measurement plugins</a></li><li>
-        <a href="#2.2-MS-PLU-002" data-turbo="false">
-          <span class="section-number">2.2</span>Can handle errors when loading measurement plugins</a></li><li>
-        <a href="#2.3-MS-PLU-003" data-turbo="false">
-          <span class="section-number">2.3</span>Can load any number of condition plugins</a></li><li>
-        <a href="#2.4-MS-PLU-004" data-turbo="false">
-          <span class="section-number">2.4</span>Can handle errors when loading condition plugins</a></li><li>
-        <a href="#2.5-MS-PLU-005" data-turbo="false">
-          <span class="section-number">2.5</span>Extensibility and customizability</a></li><li>
-        <a href="#2.6-MS-PLU-006" data-turbo="false">
-          <span class="section-number">2.6</span>External extensibility and customizability</a></li><li>
-        <a href="#2.7-MS-PLU-007" data-turbo="false">
-          <span class="section-number">2.7</span>Can reload plugins without restarting the node</a></li><li>
-        <a href="#2.8-MS-PLU-008" data-turbo="false">
-          <span class="section-number">2.8</span>Can unload plugins</a></li><li>
-        <a href="#2.9-MS-PLU-08" data-turbo="false">
-          <span class="section-number">2.9</span>Can provide information about loaded plugins</a></li></ul>
-            </li><li><a href="#3-Collect" data-turbo="false">
+        <a href="#2.1-MP-CAM-001" data-turbo="false">
+          <span class="section-number">2.1</span>Can set camera name</a></li><li>
+        <a href="#2.2-MP-CAM-002" data-turbo="false">
+          <span class="section-number">2.2</span>Can set camera topic</a></li><li>
+        <a href="#2.3-MP-CAM-003" data-turbo="false">
+          <span class="section-number">2.3</span>Can apply transformations to an image</a></li><li>
+        <a href="#2.4-MP-CAM-004" data-turbo="false">
+          <span class="section-number">2.4</span>Can apply rotation transformation to an image</a></li><li>
+        <a href="#2.5-MP-CAM-005" data-turbo="false">
+          <span class="section-number">2.5</span>Can save raw image</a></li><li>
+        <a href="#2.6-MP-CAM-006" data-turbo="false">
+          <span class="section-number">2.6</span>Can save transformed image</a></li><li>
+        <a href="#2.7-MP-CAM-007" data-turbo="false">
+          <span class="section-number">2.7</span>Can save inspected image</a></li><li>
+        <a href="#2.8-MP-CAM-008" data-turbo="false">
+          <span class="section-number">2.8</span>Can set path for where to save raw image</a></li><li>
+        <a href="#2.9-MP-CAM-009" data-turbo="false">
+          <span class="section-number">2.9</span>Can set path for where to save transformed image.</a></li><li>
+        <a href="#2.10-MP-CAM-010" data-turbo="false">
+          <span class="section-number">2.10</span>Can set path for where to save inspected image</a></li><li>
+        <a href="#2.11-MP-CAM-011" data-turbo="false">
+          <span class="section-number">2.11</span>Can set path for where to save inspected image</a></li><li>
+        <a href="#2.12-MP-CAM-012" data-turbo="false">
+          <span class="section-number">2.12</span>Can apply translation image transformation</a></li><li>
+        <a href="#2.13-MP-CAM-013" data-turbo="false">
+          <span class="section-number">2.13</span>Can apply scale image transformation</a></li><li>
+        <a href="#2.14-MP-CAM-014" data-turbo="false">
+          <span class="section-number">2.14</span>Can apply flipping image transformation</a></li><li>
+        <a href="#2.15-MP-CAM-015" data-turbo="false">
+          <span class="section-number">2.15</span>Can apply image arithmetic image transformation</a></li><li>
+        <a href="#2.16-MP-CAM-016" data-turbo="false">
+          <span class="section-number">2.16</span>Can apply masking image transformation</a></li><li>
+        <a href="#2.17-MP-CAM-017" data-turbo="false">
+          <span class="section-number">2.17</span>Can apply affine image transformation</a></li></ul>
+            </li><li><a href="#3-Command-velocity-plugin" data-turbo="false">
               <span class="section-number">3</span>
-              Collect
+              Command velocity plugin
             </a><ul><li>
-        <a href="#3.1-MS-COL-001" data-turbo="false">
-          <span class="section-number">3.1</span>Polling intervals</a></li><li>
-        <a href="#3.2-MS-COL-002" data-turbo="false">
-          <span class="section-number">3.2</span>Dynamic polling intervals</a></li><li>
-        <a href="#3.3-MS-COL-003" data-turbo="false">
-          <span class="section-number">3.3</span>Real-time data processing</a></li><li>
-        <a href="#3.4-MS-COL-004" data-turbo="false">
-          <span class="section-number">3.4</span>Concurrent data retrieval by plugins</a></li><li>
-        <a href="#3.5-MS-COL-005" data-turbo="false">
-          <span class="section-number">3.5</span>Can enable/disable sample buffering</a></li><li>
-        <a href="#3.6-MS-COL-006" data-turbo="false">
-          <span class="section-number">3.6</span>Ability to set a maximum time to collect samples</a></li></ul>
-            </li><li><a href="#4-File-saving" data-turbo="false">
+        <a href="#3.1-MP-CMV-001" data-turbo="false">
+          <span class="section-number">3.1</span>Get command velocity sent by the robot</a></li><li>
+        <a href="#3.2-MP-CMV-002" data-turbo="false">
+          <span class="section-number">3.2</span>Can set topic where command velocity is published</a></li></ul>
+            </li><li><a href="#4-CPU-plugin" data-turbo="false">
               <span class="section-number">4</span>
-              File saving
+              CPU plugin
             </a><ul><li>
-        <a href="#4.1-MS-FIL-001" data-turbo="false">
-          <span class="section-number">4.1</span>Can set local base path used by all nodes</a></li><li>
-        <a href="#4.2-MS-FIL-002" data-turbo="false">
-          <span class="section-number">4.2</span>Can expand time variables in the local base path</a></li><li>
-        <a href="#4.3-MS-FIL-003" data-turbo="false">
-          <span class="section-number">4.3</span>Can expand environment variables in the local base path</a></li></ul>
-            </li><li><a href="#5-Custom-variables" data-turbo="false">
+        <a href="#4.1-MP-CPU-001" data-turbo="false">
+          <span class="section-number">4.1</span>Get average cpu</a></li><li>
+        <a href="#4.2-MP-CPU-002" data-turbo="false">
+          <span class="section-number">4.2</span>Get cpu per processes</a></li><li>
+        <a href="#4.3-MP-CPU-003" data-turbo="false">
+          <span class="section-number">4.3</span>Can set maximum processes to store in sample</a></li><li>
+        <a href="#4.4-MP-CPU-004" data-turbo="false">
+          <span class="section-number">4.4</span>Can set cpu minimum to store its information</a></li></ul>
+            </li><li><a href="#5-Distance-traveled-plugin" data-turbo="false">
               <span class="section-number">5</span>
-              Custom variables
+              Distance traveled plugin
             </a><ul><li>
-        <a href="#5.1-MS-VAR-001" data-turbo="false">
-          <span class="section-number">5.1</span>Can load custom variables</a></li><li>
-        <a href="#5.2-MS-VAR-002" data-turbo="false">
-          <span class="section-number">5.2</span>Can load custom variables from a file</a></li><li>
-        <a href="#5.3-MS-VAR-03" data-turbo="false">
-          <span class="section-number">5.3</span>Can load custom variables from a fixed string</a></li></ul>
-            </li><li><a href="#6-Data-aggregation" data-turbo="false">
+        <a href="#5.1-MP-DST-001" data-turbo="false">
+          <span class="section-number">5.1</span>Can get distance traveled in meters</a></li></ul>
+            </li><li><a href="#6-IP-Camera-plugin" data-turbo="false">
               <span class="section-number">6</span>
-              Data aggregation
+              IP Camera plugin
             </a><ul><li>
-        <a href="#6.1-MS-AGG-001" data-turbo="false">
-          <span class="section-number">6.1</span>Can handle data aggregation</a></li><li>
-        <a href="#6.2-MS-AGG-002" data-turbo="false">
-          <span class="section-number">6.2</span>Ability to aggregate samples based on tags</a></li></ul>
-            </li><li><a href="#7-Validation" data-turbo="false">
+        <a href="#6.1-MP-IPC-001" data-turbo="false">
+          <span class="section-number">6.1</span>Can connect to IP cameras</a></li><li>
+        <a href="#6.2-MP-IPC-002" data-turbo="false">
+          <span class="section-number">6.2</span>Can configure camera parameters</a></li><li>
+        <a href="#6.3-MP-IPC-003" data-turbo="false">
+          <span class="section-number">6.3</span>Can support multiple camera brands and models</a></li><li>
+        <a href="#6.4-MP-IPC-004" data-turbo="false">
+          <span class="section-number">6.4</span>Can handle network interruptions</a></li><li>
+        <a href="#6.5-MP-IPC-005" data-turbo="false">
+          <span class="section-number">6.5</span>Can handle camera disconnections</a></li><li>
+        <a href="#6.6-MP-IPC-006" data-turbo="false">
+          <span class="section-number">6.6</span>Can provide video stream metadata</a></li><li>
+        <a href="#6.7-MP-IPC-007" data-turbo="false">
+          <span class="section-number">6.7</span>Supports video data</a></li><li>
+        <a href="#6.8-MP-IPC-008" data-turbo="false">
+          <span class="section-number">6.8</span>Supports audio data</a></li><li>
+        <a href="#6.9-MP-IPC-009" data-turbo="false">
+          <span class="section-number">6.9</span>Supports video resolution configuration</a></li><li>
+        <a href="#6.10-MP-IPC-010" data-turbo="false">
+          <span class="section-number">6.10</span>Supports audio bitrate configuration</a></li><li>
+        <a href="#6.11-MP-IPC-011" data-turbo="false">
+          <span class="section-number">6.11</span>Supports video segmentations</a></li><li>
+        <a href="#6.12-MP-IPC-012" data-turbo="false">
+          <span class="section-number">6.12</span>Supports video frame rate configuration</a></li><li>
+        <a href="#6.13-MP-IPC-013" data-turbo="false">
+          <span class="section-number">6.13</span>Supports authentication for accessing the IP camera</a></li></ul>
+            </li><li><a href="#7-Map-plugin" data-turbo="false">
               <span class="section-number">7</span>
-              Validation
+              Map plugin
             </a><ul><li>
-        <a href="#7.1-MS-VAL-001" data-turbo="false">
-          <span class="section-number">7.1</span>Validation of data samples through JSON schema</a></li><li>
-        <a href="#7.2-MS-VAL-002" data-turbo="false">
-          <span class="section-number">7.2</span>Ability to pass a custom JSON schema for validation</a></li><li>
-        <a href="#7.3-MS-VAL-003" data-turbo="false">
-          <span class="section-number">7.3</span>Error reporting for failed validation</a></li></ul>
-            </li><li><a href="#8-Filters" data-turbo="false">
+        <a href="#7.1-MP-MAP-001" data-turbo="false">
+          <span class="section-number">7.1</span>Can collect ROS 2 Map data</a></li><li>
+        <a href="#7.2-MP-MAP-002" data-turbo="false">
+          <span class="section-number">7.2</span>Supports multiple file formats</a></li><li>
+        <a href="#7.3-MP-MAP-003" data-turbo="false">
+          <span class="section-number">7.3</span>Set maximum timeout to save image</a></li><li>
+        <a href="#7.4-MP-MAP-004" data-turbo="false">
+          <span class="section-number">7.4</span>Timeout for save map</a></li><li>
+        <a href="#7.5-MP-MAP-005" data-turbo="false">
+          <span class="section-number">7.5</span>Control path to save map data</a></li></ul>
+            </li><li><a href="#8-Memory-plugin" data-turbo="false">
               <span class="section-number">8</span>
-              Filters
+              Memory plugin
             </a><ul><li>
-        <a href="#8.1-MS-FILT-001" data-turbo="false">
-          <span class="section-number">8.1</span>Ability to filter a sample by keeping only certain key values before validation</a></li><li>
-        <a href="#8.2-MS-FILT-002" data-turbo="false">
-          <span class="section-number">8.2</span>Ability to exclude a field through a filter</a></li><li>
-        <a href="#8.3-MS-FILT-003" data-turbo="false">
-          <span class="section-number">8.3</span>Ability to filter samples based on a regular expression pattern</a></li><li>
-        <a href="#8.4-MS-FILT-004" data-turbo="false">
-          <span class="section-number">8.4</span>Ability to chain multiple filters together</a></li></ul>
-            </li><li><a href="#9-Matching" data-turbo="false">
+        <a href="#8.1-MP-MEM-001" data-turbo="false">
+          <span class="section-number">8.1</span>Can collect memory usage data</a></li></ul>
+            </li><li><a href="#9-Network-plugin" data-turbo="false">
               <span class="section-number">9</span>
-              Matching
+              Network plugin
             </a><ul><li>
-        <a href="#9.1-MS-MAT-001" data-turbo="false">
-          <span class="section-number">9.1</span>Ability to match measurement samples to a specific destination using tags</a></li><li>
-        <a href="#9.2-MS-MAT-002" data-turbo="false">
-          <span class="section-number">9.2</span>Can send data to multiple destinations simultaneously</a></li></ul>
-            </li><li><a href="#10-Maximum-collect" data-turbo="false">
+        <a href="#9.1-MP-NET-001" data-turbo="false">
+          <span class="section-number">9.1</span>Network plugin</a></li><li>
+        <a href="#9.2-MP-NET-02" data-turbo="false">
+          <span class="section-number">9.2</span>Network Plugin Timeout</a></li></ul>
+            </li><li><a href="#10-OS-plugin" data-turbo="false">
               <span class="section-number">10</span>
-              Maximum collect
+              OS plugin
             </a><ul><li>
-        <a href="#10.1-MS-MAX-001" data-turbo="false">
-          <span class="section-number">10.1</span>Ability to collect a certain amount of samples when the node starts</a></li><li>
-        <a href="#10.2-MS-MAX-002" data-turbo="false">
-          <span class="section-number">10.2</span>Ability to delete the publisher when the maximum amount of samples has been reached</a></li><li>
-        <a href="#10.3-MS-MAX-003" data-turbo="false">
-          <span class="section-number">10.3</span>Ability to delete the subscriber when the maximum amount of samples has been reached</a></li><li>
-        <a href="#10.4-MS-MAX-004" data-turbo="false">
-          <span class="section-number">10.4</span>Ability to collect samples when the node starts</a></li><li>
-        <a href="#10.5-MS-MAX-005" data-turbo="false">
-          <span class="section-number">10.5</span>Can send a maximum number of samples when conditions are met</a></li></ul>
-            </li><li><a href="#11-Metadata-keys" data-turbo="false">
+        <a href="#10.1-MP-OSP-001" data-turbo="false">
+          <span class="section-number">10.1</span>Can collect OS name</a></li><li>
+        <a href="#10.2-MP-OSP-002" data-turbo="false">
+          <span class="section-number">10.2</span>Can collect kernel version and name</a></li><li>
+        <a href="#10.3-MP-OSP-003" data-turbo="false">
+          <span class="section-number">10.3</span>Can collect available memory</a></li><li>
+        <a href="#10.4-MP-OSP-004" data-turbo="false">
+          <span class="section-number">10.4</span>Can collect CPU count</a></li></ul>
+            </li><li><a href="#11-Permissions-plugin" data-turbo="false">
               <span class="section-number">11</span>
-              Metadata keys
+              Permissions plugin
             </a><ul><li>
-        <a href="#11.1-MS-MET-001" data-turbo="false">
-          <span class="section-number">11.1</span>Ability to include measurement name in sample</a></li><li>
-        <a href="#11.2-MS-MET-002" data-turbo="false">
-          <span class="section-number">11.2</span>Can include measurement plugin name in sample</a></li><li>
-        <a href="#11.3-MS-MET-003" data-turbo="false">
-          <span class="section-number">11.3</span>Add timestamp to sample</a></li></ul>
-            </li><li><a href="#12-Remote-paths" data-turbo="false">
+        <a href="#11.1-MP-PER-001" data-turbo="false">
+          <span class="section-number">11.1</span>Check file/directory permissions</a></li></ul>
+            </li><li><a href="#12-Position-plugin" data-turbo="false">
               <span class="section-number">12</span>
-              Remote paths
+              Position plugin
             </a><ul><li>
-        <a href="#12.1-MS-PAT-001" data-turbo="false">
-          <span class="section-number">12.1</span>Can pass remote keys</a></li><li>
-        <a href="#12.2-MS-PAT-002" data-turbo="false">
-          <span class="section-number">12.2</span>Can apply a prefix to the remote key</a></li></ul>
-            </li><li><a href="#13-Conditions" data-turbo="false">
+        <a href="#12.1-MP-POS-001" data-turbo="false">
+          <span class="section-number">12.1</span>Collect robot position</a></li></ul>
+            </li><li><a href="#13-Speed-plugin" data-turbo="false">
               <span class="section-number">13</span>
-              Conditions
+              Speed plugin
             </a><ul><li>
-        <a href="#13.1-MS-CON-001" data-turbo="false">
-          <span class="section-number">13.1</span>Can send samples if all conditions are respected (from a list of condition)</a></li><li>
-        <a href="#13.2-MS-CON-002" data-turbo="false">
-          <span class="section-number">13.2</span>Can send samples if any conditions is respected (from a list of condition)</a></li><li>
-        <a href="#13.3-MS-CON-003" data-turbo="false">
-          <span class="section-number">13.3</span>Can send samples if no conditions are not respected (from a list of condition)</a></li><li>
-        <a href="#13.4-MS-CON-004" data-turbo="false">
-          <span class="section-number">13.4</span>Can access condition state from measurements</a></li></ul>
-            </li><li><a href="#14-Lifecycle" data-turbo="false">
+        <a href="#13.1-MP-SPE-001" data-turbo="false">
+          <span class="section-number">13.1</span>Can collect speed data</a></li></ul>
+            </li><li><a href="#14-Storage-plugin" data-turbo="false">
               <span class="section-number">14</span>
-              Lifecycle
+              Storage plugin
             </a><ul><li>
-        <a href="#14.1-MS-LIF-001" data-turbo="false">
-          <span class="section-number">14.1</span>Stop all nodes if one fails</a></li></ul>
-            </li><li><a href="#15-Compression" data-turbo="false">
+        <a href="#14.1-MS-STO-001" data-turbo="false">
+          <span class="section-number">14.1</span>Can determine available disk space</a></li></ul>
+            </li><li><a href="#15-String-stamped-plugin" data-turbo="false">
               <span class="section-number">15</span>
-              Compression
+              String stamped plugin
             </a><ul><li>
-        <a href="#15.1-MS-COMP-001" data-turbo="false">
-          <span class="section-number">15.1</span>Can compress samples before publishing</a></li><li>
-        <a href="#15.2-MS-COMP-002" data-turbo="false">
-          <span class="section-number">15.2</span>Support for gzip compression</a></li><li>
-        <a href="#15.3-MS-COMP-003" data-turbo="false">
-          <span class="section-number">15.3</span>Support for deflate compression</a></li><li>
-        <a href="#15.4-MS-COMP-004" data-turbo="false">
-          <span class="section-number">15.4</span>Support for Brotli compression</a></li><li>
-        <a href="#15.5-MS-COMP-005" data-turbo="false">
-          <span class="section-number">15.5</span>Support for LZ77 compression</a></li><li>
-        <a href="#15.6-MS-COMP-006" data-turbo="false">
-          <span class="section-number">15.6</span>Support for LZ4 compression</a></li><li>
-        <a href="#15.7-MS-COMP-007" data-turbo="false">
-          <span class="section-number">15.7</span>Ability to choose compression algorithm</a></li><li>
-        <a href="#15.8-MS-COMP-008" data-turbo="false">
-          <span class="section-number">15.8</span>Performance benchmarking</a></li><li>
-        <a href="#15.9-MS-COMP-009" data-turbo="false">
-          <span class="section-number">15.9</span>Configurable compression level</a></li><li>
-        <a href="#15.10-MS-COMP-010" data-turbo="false">
-          <span class="section-number">15.10</span>Compression compatibility with JSON schema</a></li><li>
-        <a href="#15.11-MS-COMP-011" data-turbo="false">
-          <span class="section-number">15.11</span>Compression and decompression efficiency</a></li></ul>
-            </li><li><a href="#16-Limitations" data-turbo="false">
+        <a href="#15.1-MP-STR-001" data-turbo="false">
+          <span class="section-number">15.1</span>Can collect generic data from a topic publishing a StringStamped message</a></li></ul>
+            </li><li><a href="#16-TCP-Health-plugin" data-turbo="false">
               <span class="section-number">16</span>
-              Limitations
+              TCP Health plugin
             </a><ul><li>
-        <a href="#16.1-MS-LIM-001" data-turbo="false">
-          <span class="section-number">16.1</span>Can limit bandwidth usage for remote connections</a></li></ul>
+        <a href="#16.1-MP-TCP-001" data-turbo="false">
+          <span class="section-number">16.1</span>Can connect to a TCP server</a></li><li>
+        <a href="#16.2-MP-TCP-002" data-turbo="false">
+          <span class="section-number">16.2</span>Can collect TCP server status</a></li><li>
+        <a href="#16.3-MP-TCP-003" data-turbo="false">
+          <span class="section-number">16.3</span>Can set connection timeout</a></li></ul>
+            </li><li><a href="#17-Uptime-plugin" data-turbo="false">
+              <span class="section-number">17</span>
+              Uptime plugin
+            </a><ul><li>
+        <a href="#17.1-MP-UPT-001" data-turbo="false">
+          <span class="section-number">17.1</span>Can collect OS uptime</a></li></ul>
             </li></ul>
   </div>
 </turbo-frame>
@@ -335,9 +359,9 @@
   <turbo-frame id="document_title">
 <div
   class="header__document_title"
-  title="Measurement server"
+  title="Measurement plugins"
 >
-  Measurement server
+  Measurement plugins
 </div>
 </turbo-frame>
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" class="sc-gLvsXj bpkaBy"><path stroke="currentColor" d="M12.5 4.5l-5 11" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -365,7 +389,7 @@
         data-viewtype_link="document"
         class="viewtype__menu_item"
         title="Go to Document view"
-        href="../requirements/measurement_server.html">
+        href="../requirements/measurement_plugins.html">
         Document</a>
     </li>
     <li>
@@ -373,7 +397,7 @@
         data-viewtype_link="table"
         class="viewtype__menu_item"
         title="Go to Table view"
-        href="../requirements/measurement_server-TABLE.html">
+        href="../requirements/measurement_plugins-TABLE.html">
         Table</a>
     </li>
     <li>
@@ -381,7 +405,7 @@
         data-viewtype_link="traceability"
         class="viewtype__menu_item"
         title="Go to Traceability view"
-        href="../requirements/measurement_server-TRACE.html">
+        href="../requirements/measurement_plugins-TRACE.html">
         Traceability</a>
     </li>
     <li>
@@ -389,7 +413,7 @@
         data-viewtype_link="deep_traceability"
         class="viewtype__menu_item"
         title="Go to Deep Traceability view"
-        href="../requirements/measurement_server-DEEP-TRACE.html">
+        href="../requirements/measurement_plugins-DEEP-TRACE.html">
       Deep traceability</a>
     </li>
   </menu>
@@ -414,7 +438,7 @@
   >
 
     
-    <sdoc-anchor id="1-Usability"></sdoc-anchor>
+    <sdoc-anchor id="1-Plugins"></sdoc-anchor>
 
     
     
@@ -422,7 +446,7 @@
   
 <sdoc-section-title
   data-level="1"
->1.&nbsp;Usability</sdoc-section-title>
+>1.&nbsp;Plugins</sdoc-section-title>
 </sdoc-section>
 
 
@@ -442,7 +466,7 @@
   >
 
     
-    <sdoc-anchor id="1.1-MS-USAB-001"></sdoc-anchor>
+    <sdoc-anchor id="1.1-MP-PLU-001"></sdoc-anchor>
 
     
     
@@ -457,15 +481,543 @@
   
   
   <sdoc-requirement-title>
-    Can load configuration from YAML</sdoc-requirement-title>
+    Can collect images from camera</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-USAB-001
+  MP-PLU-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>All configuration can be passed as a standard ROS 2 YAML configuration file.</p>
+<p>The system should be able to collect image data from a ROS 2 camera topic.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.2-MP-PLU-002"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.2"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect video from camera</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-PLU-002
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to collect video data from a ROS 2 camera topic.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.3-MP-PLU-003"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.3"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect command velocity</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-PLU-003
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to collect command velocity from a ROS 2 topic.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.4-MP-PLU-004"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.4"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect CPU data</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-PLU-004
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to collect CPU data</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.5-MP-PLU-005"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.5"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect distance traveled</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-PLU-005
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to collect distance traveled</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.6-MP-PLU-006"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.6"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect IP camera image</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-PLU-006
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to collect IP camera images</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.7-MP-PLU-007"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.7"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect IP camera video</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-PLU-007
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to collect IP camera videos</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.8-MP-PLU-008"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.8"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect ROS 2 map</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-PLU-008
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to collect ROS 2 map (pgm and yaml)</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.9-MP-PLU-009"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.9"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect network data</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-PLU-009
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to collect network data</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.10-MP-PLU-010"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.10"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect OS data</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-PLU-010
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to collect OS data</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.11-MP-PLU-011"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.11"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect permission data</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-PLU-011
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to collect permission data of directories and files</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="1.12-MP-PLU-012"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="1.12"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect position data</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-PLU-012
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should be able to collect position of the robot</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -488,7 +1040,7 @@
   >
 
     
-    <sdoc-anchor id="2-Plugin-Loading"></sdoc-anchor>
+    <sdoc-anchor id="2-Camera-plugin"></sdoc-anchor>
 
     
     
@@ -496,7 +1048,7 @@
   
 <sdoc-section-title
   data-level="2"
->2.&nbsp;Plugin Loading</sdoc-section-title>
+>2.&nbsp;Camera plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -516,7 +1068,7 @@
   >
 
     
-    <sdoc-anchor id="2.1-MS-PLU-001"></sdoc-anchor>
+    <sdoc-anchor id="2.1-MP-CAM-001"></sdoc-anchor>
 
     
     
@@ -531,15 +1083,15 @@
   
   
   <sdoc-requirement-title>
-    Can load any number of measurement plugins</sdoc-requirement-title>
+    Can set camera name</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-PLU-001
+  MP-CAM-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The Measurement server must be able to load any number of measurement plugins that conform to a specific interface. The plugins should be loaded dynamically at runtime.</p>
+<p>Each camera can be identified by a unique alias</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -564,7 +1116,7 @@
   >
 
     
-    <sdoc-anchor id="2.2-MS-PLU-002"></sdoc-anchor>
+    <sdoc-anchor id="2.2-MP-CAM-002"></sdoc-anchor>
 
     
     
@@ -579,15 +1131,15 @@
   
   
   <sdoc-requirement-title>
-    Can handle errors when loading measurement plugins</sdoc-requirement-title>
+    Can set camera topic</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-PLU-002
+  MP-CAM-002
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>If the Measurement server attempts to load a plugin that does not conform to the specified interface or the plugin file does not exist, it should throw a custom exception with a clear error message. The node should then stop processing.</p>
+<p>Set from where which ROS topic the camera data comes from</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -612,7 +1164,7 @@
   >
 
     
-    <sdoc-anchor id="2.3-MS-PLU-003"></sdoc-anchor>
+    <sdoc-anchor id="2.3-MP-CAM-003"></sdoc-anchor>
 
     
     
@@ -627,15 +1179,15 @@
   
   
   <sdoc-requirement-title>
-    Can load any number of condition plugins</sdoc-requirement-title>
+    Can apply transformations to an image</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-PLU-003
+  MP-CAM-003
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The Measurement server must be able to load any number of condition plugins that conform to a specific interface. The plugins should be loaded dynamically at runtime.</p>
+<p>Before inspecting the data, it can be transformed by passing a list of transformations to apply. Each transformation has a name, type and parameters.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -660,7 +1212,7 @@
   >
 
     
-    <sdoc-anchor id="2.4-MS-PLU-004"></sdoc-anchor>
+    <sdoc-anchor id="2.4-MP-CAM-004"></sdoc-anchor>
 
     
     
@@ -675,15 +1227,15 @@
   
   
   <sdoc-requirement-title>
-    Can handle errors when loading condition plugins</sdoc-requirement-title>
+    Can apply rotation transformation to an image</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-PLU-004
+  MP-CAM-004
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>If the Measurement server attempts to load a plugin that does not conform to the specified interface or the plugin file does not exist, it should throw a custom exception with a clear error message. The node should then stop processing.</p>
+<p>Able to rotate an image to 90, 180 degrees</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -708,7 +1260,7 @@
   >
 
     
-    <sdoc-anchor id="2.5-MS-PLU-005"></sdoc-anchor>
+    <sdoc-anchor id="2.5-MP-CAM-005"></sdoc-anchor>
 
     
     
@@ -723,15 +1275,15 @@
   
   
   <sdoc-requirement-title>
-    Extensibility and customizability</sdoc-requirement-title>
+    Can save raw image</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-PLU-005
+  MP-CAM-005
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should be easily extensible and customizable, allowing users to add new features, plugins, and functionality to meet their specific requirements in the repository.</p>
+<p>Raw image can be saved as a file by setting a parameter.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -756,7 +1308,7 @@
   >
 
     
-    <sdoc-anchor id="2.6-MS-PLU-006"></sdoc-anchor>
+    <sdoc-anchor id="2.6-MP-CAM-006"></sdoc-anchor>
 
     
     
@@ -771,15 +1323,15 @@
   
   
   <sdoc-requirement-title>
-    External extensibility and customizability</sdoc-requirement-title>
+    Can save transformed image</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-PLU-006
+  MP-CAM-006
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should be easily extensible and customizable, allowing users to add new features, plugins, and functionality to meet their specific requirements in their own ROS packages.</p>
+<p>Transformed image can be saved as a file by setting a parameter.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -804,7 +1356,7 @@
   >
 
     
-    <sdoc-anchor id="2.7-MS-PLU-007"></sdoc-anchor>
+    <sdoc-anchor id="2.7-MP-CAM-007"></sdoc-anchor>
 
     
     
@@ -819,15 +1371,15 @@
   
   
   <sdoc-requirement-title>
-    Can reload plugins without restarting the node</sdoc-requirement-title>
+    Can save inspected image</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-PLU-007
+  MP-CAM-007
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The Measurement server should be able to reload plugins dynamically without having to stop and restart the node. This will allow for updates and changes to be made to the plugins without interrupting data processing.</p>
+<p>Inspected image can be saved as a file by setting a parameter.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -852,7 +1404,7 @@
   >
 
     
-    <sdoc-anchor id="2.8-MS-PLU-008"></sdoc-anchor>
+    <sdoc-anchor id="2.8-MP-CAM-008"></sdoc-anchor>
 
     
     
@@ -867,15 +1419,18 @@
   
   
   <sdoc-requirement-title>
-    Can unload plugins</sdoc-requirement-title>
+    Can set path for where to save raw image</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-PLU-008
+  MP-CAM-008
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The Measurement server should be able to unload plugins dynamically. This will allow for plugins to be removed from the system when they are no longer needed.</p>
+<p>Can set a path where to save camera raw images. Able to expand times:</p>
+<p>camera/raw/%Y-%m-%dT%H:%M:%S</p>
+<p>becomes for example
+camera/raw/2023-03-03T09:01:23</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -900,7 +1455,7 @@
   >
 
     
-    <sdoc-anchor id="2.9-MS-PLU-08"></sdoc-anchor>
+    <sdoc-anchor id="2.9-MP-CAM-009"></sdoc-anchor>
 
     
     
@@ -915,15 +1470,399 @@
   
   
   <sdoc-requirement-title>
-    Can provide information about loaded plugins</sdoc-requirement-title>
+    Can set path for where to save transformed image.</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-PLU-08
+  MP-CAM-009
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The Measurement server should be able to provide information about the plugins that are currently loaded, such as their names, version numbers, description and json schema.</p>
+<p>Able to set a path where to save camera transformed images.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.10-MP-CAM-010"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.10"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can set path for where to save inspected image</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-CAM-010
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Able to set a path where to save camera inspected images.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.11-MP-CAM-011"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.11"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can set path for where to save inspected image</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-CAM-011
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Able to set a path where to save camera inspected images.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.12-MP-CAM-012"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.12"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can apply translation image transformation</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-CAM-012
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Image can be translated by shifting its x and y</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.13-MP-CAM-013"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.13"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can apply scale image transformation</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-CAM-013
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Image can be scaled to change its dimension</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.14-MP-CAM-014"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.14"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can apply flipping image transformation</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-CAM-014
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Image can be flipped horizontally or vertically</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.15-MP-CAM-015"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.15"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can apply image arithmetic image transformation</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-CAM-015
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Image can be modified with image arithmetic, for example to make it lighter or darker</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.16-MP-CAM-016"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.16"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can apply masking image transformation</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-CAM-016
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Image can be transformed by using masking to extract only a certain part of an image.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="2.17-MP-CAM-017"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="2.17"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can apply affine image transformation</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-CAM-017
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>Image can be rotated with affine transformation</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -946,7 +1885,7 @@
   >
 
     
-    <sdoc-anchor id="3-Collect"></sdoc-anchor>
+    <sdoc-anchor id="3-Command-velocity-plugin"></sdoc-anchor>
 
     
     
@@ -954,7 +1893,7 @@
   
 <sdoc-section-title
   data-level="3"
->3.&nbsp;Collect</sdoc-section-title>
+>3.&nbsp;Command velocity plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -974,7 +1913,7 @@
   >
 
     
-    <sdoc-anchor id="3.1-MS-COL-001"></sdoc-anchor>
+    <sdoc-anchor id="3.1-MP-CMV-001"></sdoc-anchor>
 
     
     
@@ -989,15 +1928,15 @@
   
   
   <sdoc-requirement-title>
-    Polling intervals</sdoc-requirement-title>
+    Get command velocity sent by the robot</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-COL-001
+  MP-CMV-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should allow for different polling intervals for different measurements</p>
+<p>Linear, angular and computed command velocity need to be collected.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -1022,7 +1961,7 @@
   >
 
     
-    <sdoc-anchor id="3.2-MS-COL-002"></sdoc-anchor>
+    <sdoc-anchor id="3.2-MP-CMV-002"></sdoc-anchor>
 
     
     
@@ -1037,207 +1976,15 @@
   
   
   <sdoc-requirement-title>
-    Dynamic polling intervals</sdoc-requirement-title>
+    Can set topic where command velocity is published</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-COL-002
+  MP-CMV-002
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should allow for changing the polling interval during runtime.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="3.3-MS-COL-003"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="3.3"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Real-time data processing</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COL-003
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system should be able to process data in real-time, with minimal latency, to support time-critical applications.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="3.4-MS-COL-004"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="3.4"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Concurrent data retrieval by plugins</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COL-004
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>Multiple plugins should be able to fetch data in parallel without blocking or delaying each other, in order to ensure efficient and responsive data collection.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="3.5-MS-COL-005"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="3.5"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Can enable/disable sample buffering</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COL-005
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The user can enable or disable the buffering of samples in case the remote destination is not available.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="3.6-MS-COL-006"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="3.6"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Ability to set a maximum time to collect samples</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COL-006
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system should provide an option to stop collecting samples after a certain amount of time has elapsed.</p>
+<p>Command velocity can come from different topic.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -1260,7 +2007,7 @@
   >
 
     
-    <sdoc-anchor id="4-File-saving"></sdoc-anchor>
+    <sdoc-anchor id="4-CPU-plugin"></sdoc-anchor>
 
     
     
@@ -1268,7 +2015,7 @@
   
 <sdoc-section-title
   data-level="4"
->4.&nbsp;File saving</sdoc-section-title>
+>4.&nbsp;CPU plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -1288,7 +2035,7 @@
   >
 
     
-    <sdoc-anchor id="4.1-MS-FIL-001"></sdoc-anchor>
+    <sdoc-anchor id="4.1-MP-CPU-001"></sdoc-anchor>
 
     
     
@@ -1303,15 +2050,15 @@
   
   
   <sdoc-requirement-title>
-    Can set local base path used by all nodes</sdoc-requirement-title>
+    Get average cpu</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-FIL-001
+  MP-CPU-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The Measurement server must be able to load a local base path from a save_local_base_path parameter. This base path will be used by all nodes running in the server instance.</p>
+<p>Get a percentage of CPU used. Must be between 0 and 100.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -1336,7 +2083,7 @@
   >
 
     
-    <sdoc-anchor id="4.2-MS-FIL-002"></sdoc-anchor>
+    <sdoc-anchor id="4.2-MP-CPU-002"></sdoc-anchor>
 
     
     
@@ -1351,15 +2098,15 @@
   
   
   <sdoc-requirement-title>
-    Can expand time variables in the local base path</sdoc-requirement-title>
+    Get cpu per processes</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-FIL-002
+  MP-CPU-002
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The Measurement server should support time variables in the save_local_base_path parameter, such as %Y, %m, and %d. These variables should expand to the current year, month, and day, respectively. If an unknown variable is encountered, the node should sto &lt;...&gt;</p>
+<p>Get CPU used by processes. 5 by default and 5.0% cpu used minimum</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -1384,7 +2131,7 @@
   >
 
     
-    <sdoc-anchor id="4.3-MS-FIL-003"></sdoc-anchor>
+    <sdoc-anchor id="4.3-MP-CPU-003"></sdoc-anchor>
 
     
     
@@ -1399,15 +2146,63 @@
   
   
   <sdoc-requirement-title>
-    Can expand environment variables in the local base path</sdoc-requirement-title>
+    Can set maximum processes to store in sample</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-FIL-003
+  MP-CPU-003
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The Measurement server should support environment variables in the save_local_base_path parameter, denoted by a $ or ${} symbol. If an empty variable is encountered, the node should stop processing.</p>
+<p>A ROS parameter must be defined for the number of processes matching the minimum cpu usage</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="4.4-MP-CPU-004"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="4.4"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can set cpu minimum to store its information</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-CPU-004
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>A ROS parameter must be defined for the minimum CPU usage to store in sample.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -1430,7 +2225,7 @@
   >
 
     
-    <sdoc-anchor id="5-Custom-variables"></sdoc-anchor>
+    <sdoc-anchor id="5-Distance-traveled-plugin"></sdoc-anchor>
 
     
     
@@ -1438,7 +2233,7 @@
   
 <sdoc-section-title
   data-level="5"
->5.&nbsp;Custom variables</sdoc-section-title>
+>5.&nbsp;Distance traveled plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -1458,7 +2253,7 @@
   >
 
     
-    <sdoc-anchor id="5.1-MS-VAR-001"></sdoc-anchor>
+    <sdoc-anchor id="5.1-MP-DST-001"></sdoc-anchor>
 
     
     
@@ -1473,111 +2268,15 @@
   
   
   <sdoc-requirement-title>
-    Can load custom variables</sdoc-requirement-title>
+    Can get distance traveled in meters</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-VAR-001
+  MP-DST-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The custom_str_params parameter should allow the user to specify custom variables. Each variable should have a name subparameter and either a value or value_fromfile subparameter. If a required subparameter is missing or the file specified in value_from&lt;...&gt;</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="5.2-MS-VAR-002"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="5.2"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Can load custom variables from a file</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-VAR-002
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The custom_str_params parameter should allow the user to specify custom variables that are loaded from a file. If the file specified in value_from_file does not exist, the node should stop processing.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="5.3-MS-VAR-03"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="5.3"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Can load custom variables from a fixed string</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-VAR-03
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The custom_str_params parameter should allow the user to specify custom variables that are loaded from a fixed string. If the value subparameter is empty, the node should stop processing.</p>
+<p>A measurement plugin can send how much the robot moved in meters in a certain amount of time. Still, send 0 if no movement.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -1600,7 +2299,7 @@
   >
 
     
-    <sdoc-anchor id="6-Data-aggregation"></sdoc-anchor>
+    <sdoc-anchor id="6-IP-Camera-plugin"></sdoc-anchor>
 
     
     
@@ -1608,7 +2307,7 @@
   
 <sdoc-section-title
   data-level="6"
->6.&nbsp;Data aggregation</sdoc-section-title>
+>6.&nbsp;IP Camera plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -1628,7 +2327,7 @@
   >
 
     
-    <sdoc-anchor id="6.1-MS-AGG-001"></sdoc-anchor>
+    <sdoc-anchor id="6.1-MP-IPC-001"></sdoc-anchor>
 
     
     
@@ -1643,15 +2342,15 @@
   
   
   <sdoc-requirement-title>
-    Can handle data aggregation</sdoc-requirement-title>
+    Can connect to IP cameras</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-AGG-001
+  MP-IPC-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should be able to aggregate data from multiple sources and provide a unified view of the data.</p>
+<p>The plugin should be able to connect to IP cameras and retrieve video streams for processing.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -1676,7 +2375,7 @@
   >
 
     
-    <sdoc-anchor id="6.2-MS-AGG-002"></sdoc-anchor>
+    <sdoc-anchor id="6.2-MP-IPC-002"></sdoc-anchor>
 
     
     
@@ -1691,15 +2390,543 @@
   
   
   <sdoc-requirement-title>
-    Ability to aggregate samples based on tags</sdoc-requirement-title>
+    Can configure camera parameters</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-AGG-002
+  MP-IPC-002
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should allow for grouping of samples based on tags, such as aggregating data from multiple sources with the same tag into a single output or view.</p>
+<p>The plugin should allow users to configure camera parameters such as resolution, frame rate, compression format, and authentication credentials.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="6.3-MP-IPC-003"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="6.3"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can support multiple camera brands and models</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-IPC-003
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The plugin should be able to connect to IP cameras from multiple brands and models, and should support different protocols such as RTSP, HTTP, and ONVIF.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="6.4-MP-IPC-004"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="6.4"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can handle network interruptions</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-IPC-004
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The plugin should be able to handle network interruptions and automatically reconnect to the camera when the network connection is restored.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="6.5-MP-IPC-005"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="6.5"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can handle camera disconnections</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-IPC-005
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The plugin should be able to handle camera disconnections and automatically reconnect to the camera when it becomes available again.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="6.6-MP-IPC-006"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="6.6"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can provide video stream metadata</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-IPC-006
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The plugin should be able to extract metadata from the video stream such as resolution, frame rate, duration, and timestamps.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="6.7-MP-IPC-007"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="6.7"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Supports video data</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-IPC-007
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The IP camera input plugin should collect video data</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="6.8-MP-IPC-008"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="6.8"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Supports audio data</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-IPC-008
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The IP camera input plugin should collect audio data</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="6.9-MP-IPC-009"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="6.9"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Supports video resolution configuration</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-IPC-009
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The IP camera input plugin should support configuration of video resolution to adjust the quality of the video stream.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="6.10-MP-IPC-010"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="6.10"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Supports audio bitrate configuration</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-IPC-010
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The IP camera input plugin should support configuration of audio bitrate to adjust the quality of the audio stream.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="6.11-MP-IPC-011"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="6.11"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Supports video segmentations</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-IPC-011
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The IP camera input plugin should support segmenting the video stream into smaller chunks to reduce the size of each file and facilitate data processing.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="6.12-MP-IPC-012"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="6.12"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Supports video frame rate configuration</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-IPC-012
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The IP camera input plugin should support configuration of video frame rate to adjust the smoothness of the video stream.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="6.13-MP-IPC-013"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="6.13"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Supports authentication for accessing the IP camera</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-IPC-013
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The IP camera input plugin should support authentication mechanisms to secure the connection to the IP camera and prevent unauthorized access.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -1722,7 +2949,7 @@
   >
 
     
-    <sdoc-anchor id="7-Validation"></sdoc-anchor>
+    <sdoc-anchor id="7-Map-plugin"></sdoc-anchor>
 
     
     
@@ -1730,7 +2957,7 @@
   
 <sdoc-section-title
   data-level="7"
->7.&nbsp;Validation</sdoc-section-title>
+>7.&nbsp;Map plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -1750,7 +2977,7 @@
   >
 
     
-    <sdoc-anchor id="7.1-MS-VAL-001"></sdoc-anchor>
+    <sdoc-anchor id="7.1-MP-MAP-001"></sdoc-anchor>
 
     
     
@@ -1765,15 +2992,15 @@
   
   
   <sdoc-requirement-title>
-    Validation of data samples through JSON schema</sdoc-requirement-title>
+    Can collect ROS 2 Map data</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-VAL-001
+  MP-MAP-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system must be able to validate each data sample using a JSON schema, following standard schema patterns.</p>
+<p>The system should be able to collect ROS 2 Map data generated by the nav2 map_saver tool.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -1798,7 +3025,7 @@
   >
 
     
-    <sdoc-anchor id="7.2-MS-VAL-002"></sdoc-anchor>
+    <sdoc-anchor id="7.2-MP-MAP-002"></sdoc-anchor>
 
     
     
@@ -1813,15 +3040,15 @@
   
   
   <sdoc-requirement-title>
-    Ability to pass a custom JSON schema for validation</sdoc-requirement-title>
+    Supports multiple file formats</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-VAL-002
+  MP-MAP-002
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should be able to accept a custom JSON file for validation that follows the standard schema patterns.</p>
+<p>The plugin should support multiple file formats for the collected map data, including PNG, YAML, and PGM.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -1846,7 +3073,7 @@
   >
 
     
-    <sdoc-anchor id="7.3-MS-VAL-003"></sdoc-anchor>
+    <sdoc-anchor id="7.3-MP-MAP-003"></sdoc-anchor>
 
     
     
@@ -1861,15 +3088,111 @@
   
   
   <sdoc-requirement-title>
-    Error reporting for failed validation</sdoc-requirement-title>
+    Set maximum timeout to save image</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-VAL-003
+  MP-MAP-003
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should provide clear error messages when a data sample fails validation, including the specific validation rule that was not met.</p>
+<p>The plugin should support multiple file formats for the collected map data, including PNG, YAML, and PGM.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="7.4-MP-MAP-004"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="7.4"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Timeout for save map</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-MAP-004
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should allow the user to set a timeout for nav2 map_saver plugin, which controls the duration for which the plugin will wait for a response before timing out and returning an error. This is necessary to prevent the plugin from waiting indefinit &lt;...&gt;</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="7.5-MP-MAP-005"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="7.5"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Control path to save map data</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-MAP-005
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The system should allow the user to specify the path where the map data generated by the nav2 map_saver plugin is saved.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -1892,7 +3215,7 @@
   >
 
     
-    <sdoc-anchor id="8-Filters"></sdoc-anchor>
+    <sdoc-anchor id="8-Memory-plugin"></sdoc-anchor>
 
     
     
@@ -1900,7 +3223,7 @@
   
 <sdoc-section-title
   data-level="8"
->8.&nbsp;Filters</sdoc-section-title>
+>8.&nbsp;Memory plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -1920,7 +3243,7 @@
   >
 
     
-    <sdoc-anchor id="8.1-MS-FILT-001"></sdoc-anchor>
+    <sdoc-anchor id="8.1-MP-MEM-001"></sdoc-anchor>
 
     
     
@@ -1935,159 +3258,15 @@
   
   
   <sdoc-requirement-title>
-    Ability to filter a sample by keeping only certain key values before validation</sdoc-requirement-title>
+    Can collect memory usage data</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-FILT-001
+  MP-MEM-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should be able to apply a filter that keeps only certain key values from a sample before validation.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="8.2-MS-FILT-002"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="8.2"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Ability to exclude a field through a filter</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-FILT-002
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system should be able to apply a filter that excludes one or multiple keys from the sample.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="8.3-MS-FILT-003"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="8.3"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Ability to filter samples based on a regular expression pattern</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-FILT-003
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system should be able to filter samples based on a regular expression pattern for a specific key. The user should be able to specify the key and the regular expression pattern to match.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="8.4-MS-FILT-004"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="8.4"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Ability to chain multiple filters together</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-FILT-004
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system should be able to chain multiple filters together, allowing the user to apply multiple filters to a sample in a specific order. The order of the filters should be configurable.</p>
+<p>The system should be able to collect data on memory usage in order to monitor and analyze the performance of the system.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -2110,7 +3289,7 @@
   >
 
     
-    <sdoc-anchor id="9-Matching"></sdoc-anchor>
+    <sdoc-anchor id="9-Network-plugin"></sdoc-anchor>
 
     
     
@@ -2118,7 +3297,7 @@
   
 <sdoc-section-title
   data-level="9"
->9.&nbsp;Matching</sdoc-section-title>
+>9.&nbsp;Network plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -2138,7 +3317,7 @@
   >
 
     
-    <sdoc-anchor id="9.1-MS-MAT-001"></sdoc-anchor>
+    <sdoc-anchor id="9.1-MP-NET-001"></sdoc-anchor>
 
     
     
@@ -2153,15 +3332,15 @@
   
   
   <sdoc-requirement-title>
-    Ability to match measurement samples to a specific destination using tags</sdoc-requirement-title>
+    Network plugin</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-MAT-001
+  MP-NET-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should be able to match a sample to a specific destination using tags.</p>
+<p>The system should include a network plugin that can check the accessibility of a remote address and port, and report the result. The plugin should allow the configuration of the remote address and port to be checked. The plugin should support both TCP and &lt;...&gt;</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -2186,7 +3365,7 @@
   >
 
     
-    <sdoc-anchor id="9.2-MS-MAT-002"></sdoc-anchor>
+    <sdoc-anchor id="9.2-MP-NET-02"></sdoc-anchor>
 
     
     
@@ -2201,15 +3380,15 @@
   
   
   <sdoc-requirement-title>
-    Can send data to multiple destinations simultaneously</sdoc-requirement-title>
+    Network Plugin Timeout</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-MAT-002
+  MP-NET-02
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The measurement system can send data to multiple destinations simultaneously, allowing for redundancy, load balancing, or other purposes.</p>
+<p>The network plugin must have a configurable timeout parameter for checking remote address and port accessibility. The timeout value must be at least 0.1 second and configurable by the user.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -2232,7 +3411,7 @@
   >
 
     
-    <sdoc-anchor id="10-Maximum-collect"></sdoc-anchor>
+    <sdoc-anchor id="10-OS-plugin"></sdoc-anchor>
 
     
     
@@ -2240,7 +3419,7 @@
   
 <sdoc-section-title
   data-level="10"
->10.&nbsp;Maximum collect</sdoc-section-title>
+>10.&nbsp;OS plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -2260,7 +3439,7 @@
   >
 
     
-    <sdoc-anchor id="10.1-MS-MAX-001"></sdoc-anchor>
+    <sdoc-anchor id="10.1-MP-OSP-001"></sdoc-anchor>
 
     
     
@@ -2275,15 +3454,15 @@
   
   
   <sdoc-requirement-title>
-    Ability to collect a certain amount of samples when the node starts</sdoc-requirement-title>
+    Can collect OS name</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-MAX-001
+  MP-OSP-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should provide an option to stop collecting samples after a certain amount of samples has been reached.</p>
+<p>The plugin must be able to identify the name of the operating system it is running on.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -2308,7 +3487,7 @@
   >
 
     
-    <sdoc-anchor id="10.2-MS-MAX-002"></sdoc-anchor>
+    <sdoc-anchor id="10.2-MP-OSP-002"></sdoc-anchor>
 
     
     
@@ -2323,15 +3502,15 @@
   
   
   <sdoc-requirement-title>
-    Ability to delete the publisher when the maximum amount of samples has been reached</sdoc-requirement-title>
+    Can collect kernel version and name</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-MAX-002
+  MP-OSP-002
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should stop the publisher and the loop when the maximum amount of samples has been reached.</p>
+<p>The plugin must be able to identify the version and name of the kernel used by the operating system.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -2356,7 +3535,7 @@
   >
 
     
-    <sdoc-anchor id="10.3-MS-MAX-003"></sdoc-anchor>
+    <sdoc-anchor id="10.3-MP-OSP-003"></sdoc-anchor>
 
     
     
@@ -2371,15 +3550,15 @@
   
   
   <sdoc-requirement-title>
-    Ability to delete the subscriber when the maximum amount of samples has been reached</sdoc-requirement-title>
+    Can collect available memory</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-MAX-003
+  MP-OSP-003
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should stop the subscriber and the loop when the maximum amount of samples has been reached.</p>
+<p>The plugin must be able to retrieve information on the amount of available memory on the system.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -2404,7 +3583,7 @@
   >
 
     
-    <sdoc-anchor id="10.4-MS-MAX-004"></sdoc-anchor>
+    <sdoc-anchor id="10.4-MP-OSP-004"></sdoc-anchor>
 
     
     
@@ -2419,63 +3598,15 @@
   
   
   <sdoc-requirement-title>
-    Ability to collect samples when the node starts</sdoc-requirement-title>
+    Can collect CPU count</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-MAX-004
+  MP-OSP-004
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should provide an option to collect a sample when starting the node directly, instead of waiting for the timer to elapse.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="10.5-MS-MAX-005"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="10.5"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Can send a maximum number of samples when conditions are met</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-MAX-005
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>Sometimes, it is useful to send data when conditions are respected and only a certain amount of time</p>
+<p>The plugin must be able to identify the number of CPUs available on the system.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -2498,7 +3629,7 @@
   >
 
     
-    <sdoc-anchor id="11-Metadata-keys"></sdoc-anchor>
+    <sdoc-anchor id="11-Permissions-plugin"></sdoc-anchor>
 
     
     
@@ -2506,7 +3637,7 @@
   
 <sdoc-section-title
   data-level="11"
->11.&nbsp;Metadata keys</sdoc-section-title>
+>11.&nbsp;Permissions plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -2526,7 +3657,7 @@
   >
 
     
-    <sdoc-anchor id="11.1-MS-MET-001"></sdoc-anchor>
+    <sdoc-anchor id="11.1-MP-PER-001"></sdoc-anchor>
 
     
     
@@ -2541,111 +3672,15 @@
   
   
   <sdoc-requirement-title>
-    Ability to include measurement name in sample</sdoc-requirement-title>
+    Check file/directory permissions</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-MET-001
+  MP-PER-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should provide the option to include the measurement name as a key/value pair in each sample.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="11.2-MS-MET-002"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="11.2"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Can include measurement plugin name in sample</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-MET-002
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>Each sample can have (or not) the measurement plugin name included as key/value</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="11.3-MS-MET-003"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="11.3"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Add timestamp to sample</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-MET-003
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>Each sample has a timestamp included, as a UTC absolute time.</p>
+<p>The system should have a plugin that can check the permissions of a given file or directory. The plugin should be able to determine if the current user has read, write, or execute permissions on the file/directory, and return an appropriate response.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -2668,7 +3703,7 @@
   >
 
     
-    <sdoc-anchor id="12-Remote-paths"></sdoc-anchor>
+    <sdoc-anchor id="12-Position-plugin"></sdoc-anchor>
 
     
     
@@ -2676,7 +3711,7 @@
   
 <sdoc-section-title
   data-level="12"
->12.&nbsp;Remote paths</sdoc-section-title>
+>12.&nbsp;Position plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -2696,7 +3731,7 @@
   >
 
     
-    <sdoc-anchor id="12.1-MS-PAT-001"></sdoc-anchor>
+    <sdoc-anchor id="12.1-MP-POS-001"></sdoc-anchor>
 
     
     
@@ -2711,63 +3746,15 @@
   
   
   <sdoc-requirement-title>
-    Can pass remote keys</sdoc-requirement-title>
+    Collect robot position</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-PAT-001
+  MP-POS-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>Can precise the remote key, based on remote destination</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="12.2-MS-PAT-002"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="12.2"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Can apply a prefix to the remote key</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-PAT-002
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>Can pass a prefix to the remote key, to add a string to the path</p>
+<p>The system shall include a plugin that can collect the position of the robot in the environment, using sensors such as GPS or odometry data.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -2790,7 +3777,7 @@
   >
 
     
-    <sdoc-anchor id="13-Conditions"></sdoc-anchor>
+    <sdoc-anchor id="13-Speed-plugin"></sdoc-anchor>
 
     
     
@@ -2798,7 +3785,7 @@
   
 <sdoc-section-title
   data-level="13"
->13.&nbsp;Conditions</sdoc-section-title>
+>13.&nbsp;Speed plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -2818,7 +3805,7 @@
   >
 
     
-    <sdoc-anchor id="13.1-MS-CON-001"></sdoc-anchor>
+    <sdoc-anchor id="13.1-MP-SPE-001"></sdoc-anchor>
 
     
     
@@ -2833,159 +3820,15 @@
   
   
   <sdoc-requirement-title>
-    Can send samples if all conditions are respected (from a list of condition)</sdoc-requirement-title>
+    Can collect speed data</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-CON-001
+  MP-SPE-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>Can pass a list of conditions. All need to be all respected to send data sample</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="13.2-MS-CON-002"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="13.2"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Can send samples if any conditions is respected (from a list of condition)</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-CON-002
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>Can pass a list of conditions. One of them need to be respected to send data sample</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="13.3-MS-CON-003"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="13.3"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Can send samples if no conditions are not respected (from a list of condition)</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-CON-003
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>Can pass a list of conditions. None need to be respected to send data sample</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="13.4-MS-CON-004"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="13.4"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Can access condition state from measurements</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-CON-004
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>Each measurement should be able to access through a variable the state of conditions it depends on.</p>
+<p>The plugin should be able to collect speed data from a robot running ROS 2 and provide the data in appropriate units (e.g., meters per second).</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -3008,7 +3851,7 @@
   >
 
     
-    <sdoc-anchor id="14-Lifecycle"></sdoc-anchor>
+    <sdoc-anchor id="14-Storage-plugin"></sdoc-anchor>
 
     
     
@@ -3016,7 +3859,7 @@
   
 <sdoc-section-title
   data-level="14"
->14.&nbsp;Lifecycle</sdoc-section-title>
+>14.&nbsp;Storage plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -3036,7 +3879,7 @@
   >
 
     
-    <sdoc-anchor id="14.1-MS-LIF-001"></sdoc-anchor>
+    <sdoc-anchor id="14.1-MS-STO-001"></sdoc-anchor>
 
     
     
@@ -3051,15 +3894,15 @@
   
   
   <sdoc-requirement-title>
-    Stop all nodes if one fails</sdoc-requirement-title>
+    Can determine available disk space</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-LIF-001
+  MS-STO-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>Include a bond connection for the lifecycle manager to ensure that after a server transitions up, it also remains active. If a server crashes, it lets the lifecycle manager know and transition down the system to prevent a critical failure.</p>
+<p>The plugin must be able to retrieve information about the amount of free disk space in a specified directory.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -3082,7 +3925,7 @@
   >
 
     
-    <sdoc-anchor id="15-Compression"></sdoc-anchor>
+    <sdoc-anchor id="15-String-stamped-plugin"></sdoc-anchor>
 
     
     
@@ -3090,7 +3933,7 @@
   
 <sdoc-section-title
   data-level="15"
->15.&nbsp;Compression</sdoc-section-title>
+>15.&nbsp;String stamped plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -3110,7 +3953,7 @@
   >
 
     
-    <sdoc-anchor id="15.1-MS-COMP-001"></sdoc-anchor>
+    <sdoc-anchor id="15.1-MP-STR-001"></sdoc-anchor>
 
     
     
@@ -3125,495 +3968,15 @@
   
   
   <sdoc-requirement-title>
-    Can compress samples before publishing</sdoc-requirement-title>
+    Can collect generic data from a topic publishing a StringStamped message</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-COMP-001
+  MP-STR-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>Samples can be large and compressing them before publishing can reduce network bandwidth usage and transmission time.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="15.2-MS-COMP-002"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="15.2"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Support for gzip compression</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COMP-002
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system shall support gzip compression of JSON data. The compressed data must be compatible with the gzip compression standard.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="15.3-MS-COMP-003"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="15.3"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Support for deflate compression</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COMP-003
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system shall support deflate compression of JSON data. The compressed data must be compatible with the deflate compression standard.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="15.4-MS-COMP-004"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="15.4"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Support for Brotli compression</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COMP-004
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system shall support Brotli compression of JSON data. The compressed data must be compatible with the Brotli compression standard.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="15.5-MS-COMP-005"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="15.5"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Support for LZ77 compression</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COMP-005
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system shall support LZ77 compression of JSON data. The compressed data must be compatible with the LZ77 compression standard.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="15.6-MS-COMP-006"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="15.6"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Support for LZ4 compression</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COMP-006
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system shall support LZ4 compression of JSON data. The compressed data must be compatible with the LZ4 compression standard.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="15.7-MS-COMP-007"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="15.7"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Ability to choose compression algorithm</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COMP-007
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system shall allow users to choose between different compression algorithms (such as gzip, deflate, Brotli, LZ77, LZ4, etc.) for compressing JSON data.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="15.8-MS-COMP-008"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="15.8"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Performance benchmarking</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COMP-008
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system shall provide performance benchmarks for each compression algorithm to help users choose the most efficient algorithm for their needs.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="15.9-MS-COMP-009"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="15.9"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Configurable compression level</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COMP-009
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system shall allow users to configure the level of compression for each algorithm. The compression level should affect the balance between compression ratio and compression speed.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="15.10-MS-COMP-010"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="15.10"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Compression compatibility with JSON schema</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COMP-010
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The compressed JSON data must be compatible with JSON schema and should be able to be decompressed without any loss of data or information.</p>
-</div>
-
-    </sdoc-requirement-field></sdoc-requirement>
-
-
-  </sdoc-node>
-          </div>
-
-          <div class="content_item" data-role="children">
-</div>
-        </section>
-        <section class="content_section">
-          <div class="content_item" data-role="parents">
-</div>
-          <div class="content_item" data-role="current">
-            
-
-  <sdoc-node
-    node-style="card"
-    node-role="requirement"
-    data-testid="node-requirement"
-  >
-
-    
-    <sdoc-anchor id="15.11-MS-COMP-011"></sdoc-anchor>
-
-    
-    
-
-
-<sdoc-requirement
-  requirement-view="simple"
-  data-level="15.11"
-  data-testid="requirement-style-simple"
->
-  
-  
-  
-  <sdoc-requirement-title>
-    Compression and decompression efficiency</sdoc-requirement-title>
-  
-  <sdoc-requirement-uid>
-  MS-COMP-011
-  </sdoc-requirement-uid>
-  
-    <sdoc-requirement-field data-field-label="statement">
-      <div class="document">
-<p>The system shall provide efficient compression and decompression algorithms that minimize CPU usage and memory consumption while achieving high compression ratios.</p>
+<p>The plugin should be able to subscribe to a ROS 2 topic and receive a StringStamped message containing generic data.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
@@ -3636,7 +3999,7 @@
   >
 
     
-    <sdoc-anchor id="16-Limitations"></sdoc-anchor>
+    <sdoc-anchor id="16-TCP-Health-plugin"></sdoc-anchor>
 
     
     
@@ -3644,7 +4007,7 @@
   
 <sdoc-section-title
   data-level="16"
->16.&nbsp;Limitations</sdoc-section-title>
+>16.&nbsp;TCP Health plugin</sdoc-section-title>
 </sdoc-section>
 
 
@@ -3664,7 +4027,7 @@
   >
 
     
-    <sdoc-anchor id="16.1-MS-LIM-001"></sdoc-anchor>
+    <sdoc-anchor id="16.1-MP-TCP-001"></sdoc-anchor>
 
     
     
@@ -3679,15 +4042,185 @@
   
   
   <sdoc-requirement-title>
-    Can limit bandwidth usage for remote connections</sdoc-requirement-title>
+    Can connect to a TCP server</sdoc-requirement-title>
   
   <sdoc-requirement-uid>
-  MS-LIM-001
+  MP-TCP-001
   </sdoc-requirement-uid>
   
     <sdoc-requirement-field data-field-label="statement">
       <div class="document">
-<p>The system should be able to limit the amount of data sent over a remote connection in order to manage bandwidth usage.</p>
+<p>The plugin should be able to connect to a specified TCP server to collect its status.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="16.2-MP-TCP-002"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="16.2"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect TCP server status</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-TCP-002
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The plugin should be able to collect the status of the connected TCP server, including information about whether the server is accepting connections, the number of active connections, and other relevant details.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="16.3-MP-TCP-003"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="16.3"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can set connection timeout</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-TCP-003
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The plugin should allow the user to set a connection timeout value, after which the plugin should terminate the connection attempt if it has not successfully connected to the server.</p>
+</div>
+
+    </sdoc-requirement-field></sdoc-requirement>
+
+
+  </sdoc-node>
+          </div>
+
+          <div class="content_item" data-role="children">
+</div>
+        </section>
+          <section class="content_section">
+            <div class="content_item" data-role="current">
+              
+
+  <sdoc-node
+    node-style="card"
+    node-role="section"
+    data-testid="node-section"
+  >
+
+    
+    <sdoc-anchor id="17-Uptime-plugin"></sdoc-anchor>
+
+    
+    
+<sdoc-section>
+  
+<sdoc-section-title
+  data-level="17"
+>17.&nbsp;Uptime plugin</sdoc-section-title>
+</sdoc-section>
+
+
+  </sdoc-node>
+            </div>
+          </section>
+        <section class="content_section">
+          <div class="content_item" data-role="parents">
+</div>
+          <div class="content_item" data-role="current">
+            
+
+  <sdoc-node
+    node-style="card"
+    node-role="requirement"
+    data-testid="node-requirement"
+  >
+
+    
+    <sdoc-anchor id="17.1-MP-UPT-001"></sdoc-anchor>
+
+    
+    
+
+
+<sdoc-requirement
+  requirement-view="simple"
+  data-level="17.1"
+  data-testid="requirement-style-simple"
+>
+  
+  
+  
+  <sdoc-requirement-title>
+    Can collect OS uptime</sdoc-requirement-title>
+  
+  <sdoc-requirement-uid>
+  MP-UPT-001
+  </sdoc-requirement-uid>
+  
+    <sdoc-requirement-field data-field-label="statement">
+      <div class="document">
+<p>The OS plugin should be able to retrieve the time duration since the system was last booted up.</p>
 </div>
 
     </sdoc-requirement-field></sdoc-requirement>
