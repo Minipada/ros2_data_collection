@@ -1,0 +1,87 @@
+[DOCUMENT]
+TITLE: Condition plugins
+
+[SECTION]
+TITLE: Value comparison
+
+[REQUIREMENT]
+UID: MS-CON-VC-001
+TITLE: Bool equal
+STATEMENT: The system should be able to compare two boolean values and determine if they are equal.
+
+[REQUIREMENT]
+UID: MS-CON-VC-002
+TITLE: Double equal
+STATEMENT: The system should be able to compare two double values and determine if they are equal.
+
+[REQUIREMENT]
+UID: MS-CON-VC-003
+TITLE: Double inferior
+STATEMENT: The system should be able to compare two double values and determine if the first one is inferior to the second one.
+
+[REQUIREMENT]
+UID: MS-CON-VC-004
+TITLE: Double superior
+STATEMENT: The system should be able to compare two double values and determine if the first one is superior to the second one.
+
+[REQUIREMENT]
+UID: MS-CON-VC-005
+TITLE: Exist
+STATEMENT: The system should be able to check if a value exists.
+
+[REQUIREMENT]
+UID: MS-CON-VC-006
+TITLE: Integer equal
+STATEMENT: The system should be able to compare two integer values and determine if they are equal.
+
+[REQUIREMENT]
+UID: MS-CON-VC-007
+TITLE: Integer inferior
+STATEMENT: The system should be able to compare two integer values and determine if the first one is inferior to the second one.
+
+[REQUIREMENT]
+UID: MS-CON-VC-008
+TITLE: Integer superior
+STATEMENT: The system should be able to compare two integer values and determine if the first one is superior to the second one.
+
+[REQUIREMENT]
+UID: MS-CON-VC-009
+TITLE: List bool equal
+STATEMENT: The system should be able to compare two lists of boolean values and determine if they are equal.
+
+[REQUIREMENT]
+UID: MS-CON-VC-010
+TITLE: List double equal
+STATEMENT: The system should be able to compare two lists of double values and determine if they are equal.
+
+[REQUIREMENT]
+UID: MS-CON-VC-011
+TITLE: List integer equal
+STATEMENT: The system should be able to compare two lists of integer values and determine if they are equal.
+
+[REQUIREMENT]
+UID: MS-CON-VC-012
+TITLE: List string equal
+STATEMENT: The system should be able to compare two lists of string values and determine if they are equal.
+
+[REQUIREMENT]
+UID: MS-CON-VC-013
+TITLE: Same as previous
+STATEMENT: The system should be able to compare a value with the previous one and determine if they are the same.
+
+[REQUIREMENT]
+UID: MS-CON-VC-014
+TITLE: String match
+STATEMENT: The system should be able to compare two string values and determine if they match.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Robot actions
+
+[REQUIREMENT]
+UID: MS-CON-ACT-001
+TITLE: Moving robot
+STATEMENT: The system should be able to publish when the robot moves.
+
+[/SECTION]

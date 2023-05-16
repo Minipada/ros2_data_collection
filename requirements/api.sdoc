@@ -1,0 +1,202 @@
+[DOCUMENT]
+TITLE: API
+
+[SECTION]
+TITLE: General
+
+[REQUIREMENT]
+UID: API-GEN-001
+TITLE: Provide an API
+STATEMENT: The system should provide an API to access collected data to easily integrate with third-party tools and systems, including data analysis and visualization tools, machine learning frameworks, and others.
+
+[REQUIREMENT]
+UID: API-GEN-002
+TITLE: Can provide historical data retrieval
+STATEMENT: The system should be able to store and retrieve historical data for analysis and reporting purposes.
+
+[REQUIREMENT]
+UID: API-GEN-003
+TITLE: Can handle requests for specific data fields
+STATEMENT: The API should be able to handle requests for specific data fields, allowing users to retrieve only the information they need.
+
+[REQUIREMENT]
+UID: API-GEN-004
+TITLE: Can handle requests for data within a specific time range
+STATEMENT: The API should be able to handle requests for data within a specific time range, allowing users to retrieve data that falls within a particular period of time.
+
+[REQUIREMENT]
+UID: API-GEN-005
+TITLE: Can filter data by measurement type
+STATEMENT: The API should allow data to be filtered by a specific measurement type, allowing users to retrieve data for a specific measurement type.
+
+[REQUIREMENT]
+UID: API-GEN-006
+TITLE: Can filter data by robot ID
+STATEMENT: The API should allow data to be filtered by a robot ID, allowing users to retrieve data for a specific robot ID.
+
+[REQUIREMENT]
+UID: API-GEN-007
+TITLE: Can filter data by robot name
+STATEMENT: The API should allow data to be filtered by a robot name, allowing users to retrieve data for a specific robot name.
+
+[REQUIREMENT]
+UID: API-GEN-008
+TITLE: Can paginate data results
+STATEMENT: The API should allow data to be paginated to limit the amount of data returned in a single request.
+
+[REQUIREMENT]
+UID: API-GEN-009
+TITLE: Can retrieve data in different formats
+STATEMENT: The API should be able to return data in different formats, such as CSV, JSON, or XML, to accommodate different use cases.
+
+[/SECTION]
+
+[SECTION]
+TITLE: OpenAPI
+
+[REQUIREMENT]
+UID: API-OPENAPI-001
+TITLE: Provide OpenAPI documentation
+STATEMENT: The API should provide an OpenAPI specification document that describes the endpoints, parameters, and responses for each API operation.
+
+[REQUIREMENT]
+UID: API-OPENAPI-002
+TITLE: Conform to OpenAPI specification
+STATEMENT: The API should conform to the OpenAPI specification version X.Y.Z to ensure consistency and compatibility with OpenAPI tools and frameworks.
+
+[REQUIREMENT]
+UID: API-OPENAPI-003
+TITLE: Support OpenAPI security definitions
+STATEMENT: The API should support OpenAPI security definitions, such as API keys, OAuth 2.0, or JSON Web Tokens, to provide authentication and authorization for API operations.
+
+[REQUIREMENT]
+UID: API-OPENAPI-004
+TITLE: Support OpenAPI response codes
+STATEMENT: The API should support standard OpenAPI response codes, such as 200 OK, 401 Unauthorized, and 404 Not Found, to provide consistent and meaningful responses to API clients.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Backends
+
+[REQUIREMENT]
+UID: API-BAC-001
+TITLE: Can fetch data from PostgreSQL
+STATEMENT: The system should be able to get stored data from a PostgreSQL database.
+
+[REQUIREMENT]
+UID: API-BAC-002
+TITLE: Can fetch data from MongoDB
+STATEMENT: The system should be able to get stored data from a MongoDB database.
+
+[REQUIREMENT]
+UID: API-BAC-003
+TITLE: Can fetch data from InfluxDB
+STATEMENT: The system should be able to get stored data from an InfluxDB database.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Database Connections
+
+[REQUIREMENT]
+UID: API-DB-001
+TITLE: Support for multiple database systems
+STATEMENT: The API should be able to connect to and retrieve data from multiple types of database systems, including but not limited to PostgreSQL, MySQL, and SQLite.
+
+[REQUIREMENT]
+UID: API-DB-002
+TITLE: Secure database connections
+STATEMENT: The API should use secure connections to connect to databases, such as SSL or TLS encryption, to ensure the confidentiality and integrity of the data being transmitted.
+
+[REQUIREMENT]
+UID: API-DB-003
+TITLE: Connection pooling
+STATEMENT: The API should support connection pooling to efficiently manage database connections and reduce the overhead of creating new connections.
+
+[REQUIREMENT]
+UID: API-DB-004
+TITLE: Support for connection parameters
+STATEMENT: The API should allow users to specify connection parameters for each database connection, such as the host, port, username, and password.
+
+[REQUIREMENT]
+UID: API-DB-005
+TITLE: Support for connection parameters through configuration file
+STATEMENT: The API should allow users to specify connection parameters through configuration file for each database connection, such as the host, port, username, and password.
+
+[REQUIREMENT]
+UID: API-DB-006
+TITLE: Support for connection parameters through environment variables
+STATEMENT: The API should allow users to specify connection parameters through environment variables for each database connection, such as the host, port, username, and password.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Authentication and Security
+
+[REQUIREMENT]
+UID: API-AUT-001
+TITLE: Can authenticate users
+STATEMENT: The API should provide a mechanism for user authentication, such as OAuth 2.0, in order to secure access to sensitive data.
+
+[REQUIREMENT]
+UID: API-AUT-002
+TITLE: Can provide rate limiting
+STATEMENT: The API should be able to limit the number of requests that can be made in a given period of time in order to prevent abuse and protect the system from overload.
+
+[REQUIREMENT]
+UID: API-AUT-003
+TITLE: Can provide encrypted data transmission
+STATEMENT: The API should provide encrypted data transmission, such as HTTPS, to ensure that data is transmitted securely over the internet.
+
+[/SECTION]
+
+[SECTION]
+TITLE: API Documentation
+
+[REQUIREMENT]
+UID: API-DOC-001
+TITLE: OpenAPI Specification
+STATEMENT: The API documentation should be provided using the OpenAPI specification to allow developers to easily understand and interact with the API.
+
+[REQUIREMENT]
+UID: API-DOC-002
+TITLE: Comprehensive documentation
+STATEMENT: The API documentation should be comprehensive, providing detailed information on each API endpoint, including input and output parameters, error codes, and examples.
+
+[REQUIREMENT]
+UID: API-DOC-003
+TITLE: Up-to-date documentation
+STATEMENT: The API documentation should be kept up-to-date with any changes made to the API to ensure that developers have the most accurate and current information.
+
+[REQUIREMENT]
+UID: API-DOC-004
+TITLE: User-friendly documentation
+STATEMENT: The API documentation should be user-friendly, providing clear and concise instructions on how to use the API, and including relevant examples and use cases.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Swagger
+
+[REQUIREMENT]
+UID: API-SWA-001
+TITLE: Support OpenAPI Specification (Swagger)
+STATEMENT: The API should support the OpenAPI Specification (formerly known as Swagger) for defining and documenting the API's interface.
+
+[REQUIREMENT]
+UID: API-SWA-002
+TITLE: Provide Swagger documentation
+STATEMENT: The API should provide Swagger documentation that describes the API's interface, including the available endpoints, parameters, and responses.
+
+[REQUIREMENT]
+UID: API-SWA-003
+TITLE: Keep Swagger documentation up-to-date
+STATEMENT: The Swagger documentation should be automatically generated and kept up-to-date with the latest changes to the API's interface.
+
+[REQUIREMENT]
+UID: API-SWA-004
+TITLE: Validate API requests and responses using Swagger
+STATEMENT: The API should validate incoming requests and outgoing responses against the Swagger documentation to ensure that they conform to the API's interface.
+
+[/SECTION]
