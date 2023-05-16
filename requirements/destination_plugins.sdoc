@@ -1,0 +1,332 @@
+[DOCUMENT]
+TITLE: Destination plugins
+
+[SECTION]
+TITLE: Plugins
+
+[REQUIREMENT]
+UID: DP-PLU-001
+TITLE: Can send to AWS Kinesis Data Streams through Fluent Bit
+STATEMENT: The plugin must be able to send data to an AWS Kinesis Data Stream using Fluent Bit's AWS Kinesis Data Streams output plugin.
+
+[REQUIREMENT]
+UID: DP-PLU-002
+TITLE: Can send to AWS S3 through Fluent Bit
+STATEMENT: The plugin must be able to send data to an AWS S3 bucket using Fluent Bit's AWS S3 output plugin.
+
+[REQUIREMENT]
+UID: DP-PLU-003
+TITLE: Can save in a file through Fluent Bit
+STATEMENT: The plugin must be able to save data to a file using Fluent Bit's file output plugin.
+
+[REQUIREMENT]
+UID: DP-PLU-004
+TITLE: Can save files metrics through Fluent Bit
+STATEMENT: The plugin must be able to save files metrics (i.e. file size, file permissions, etc.) using Fluent Bit's file metrics output plugin.
+
+[REQUIREMENT]
+UID: DP-PLU-005
+TITLE: Can send to HTTP through Fluent Bit
+STATEMENT: The plugin must be able to send data to an HTTP server using Fluent Bit's HTTP output plugin.
+
+[REQUIREMENT]
+UID: DP-PLU-006
+TITLE: Can send to MinIO through Fluent Bit
+STATEMENT: The plugin must be able to send data to a MinIO server using Fluent Bit's MinIO output plugin.
+
+[REQUIREMENT]
+UID: DP-PLU-007
+TITLE: Can send to PostgreSQL through Fluent Bit
+STATEMENT: The plugin must be able to send data to a PostgreSQL database using Fluent Bit's PostgreSQL output plugin.
+
+[REQUIREMENT]
+UID: DP-PLU-008
+TITLE: Can send to Slack through Fluent Bit
+STATEMENT: The plugin must be able to send data to a Slack channel using Fluent Bit's Slack output plugin.
+
+[REQUIREMENT]
+UID: DP-PLU-009
+TITLE: Can send to Stdout through Fluent Bit
+STATEMENT: The plugin must be able to output data to the console using Fluent Bit's Stdout output plugin.
+
+[REQUIREMENT]
+UID: DP-PLU-010
+TITLE: Can send to RCL stdout
+STATEMENT: The plugin must be able to output data to the ROS 2 console using the RCL stdout output plugin.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Fluent Bit File
+
+[REQUIREMENT]
+UID: MP-FLB-FILE-001
+TITLE: Can write data to a file using the Fluent Bit file plugin
+STATEMENT: The file plugin should be able to write data to a file in the specified location. The data should be written in the specified format and appended to the file if it already exists.
+
+[REQUIREMENT]
+UID: MP-FLB-FILE-002
+TITLE: Can set the file path
+STATEMENT: The file plugin must allow the user to specify the path where the output file will be created. The user should be able to specify an absolute or relative path.
+
+[REQUIREMENT]
+UID: MP-FLB-FILE-003
+TITLE: Can set the file name
+STATEMENT: The file plugin must allow the user to specify the name of the output file. The user should be able to specify a file name with or without an extension.
+
+[REQUIREMENT]
+UID: MP-FLB-FILE-004
+TITLE: Can create parent directories if they are not created before
+STATEMENT: If the directory where the file is supposed to be saved does not exist, the plugin must be able to create the directory and any required parent directories automatically. The user should not be required to manually create the directory before starting the plugin.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Fluent Bit File metrics
+
+[REQUIREMENT]
+UID: MP-FLB-FILE-M-001
+TITLE: Can track file metadata
+STATEMENT: The plugin must be able to track metadata for all files that are sent to their destinations, including the file type, size, and timestamp.
+
+[REQUIREMENT]
+UID: MP-FLB-FILE-M-002
+TITLE: Can delete local files
+STATEMENT: The plugin must be able to delete local files that have been sent to all their storage destinations, in order to free up disk space.
+
+[REQUIREMENT]
+UID: MP-FLB-FILE-M-003
+TITLE: Uses custom Fluent Bit plugin
+STATEMENT: The plugin must use a custom Fluent Bit plugin located in the fluent_bit_plugins package to track file metadata and manage file deletion.
+
+[REQUIREMENT]
+UID: MP-FLB-FILE-M-004
+TITLE: Supports multiple storage destinations
+STATEMENT: The plugin must support tracking files that are sent to multiple storage destinations, such as AWS S3, MinIO, etc.
+
+[REQUIREMENT]
+UID: MP-FLB-FILE-M-005
+TITLE: Stores metadata in PostgreSQL database
+STATEMENT: The plugin must store file metadata in a PostgreSQL database, including the file name, status, and the destinations it has been sent to.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Fluent Bit HTTP
+
+[REQUIREMENT]
+UID: MP-FLB-HTTP-001
+TITLE: Supports sending records in JSON format
+STATEMENT: The HTTP output plugin should allow the user to specify sending records in JSON format through the 'format' parameter. It must be possible to send multiple headers through the 'header' parameter.
+
+[REQUIREMENT]
+UID: MP-FLB-HTTP-002
+TITLE: Supports HTTP Basic Authentication
+STATEMENT: The HTTP output plugin should allow the user to send HTTP Basic Authentication credentials through the 'http_user' and 'http_passwd' parameters.
+
+[REQUIREMENT]
+UID: MP-FLB-HTTP-003
+TITLE: Supports setting HTTP host and port
+STATEMENT: The HTTP output plugin should allow the user to set the IP address or hostname of the target HTTP Server and TCP port through the 'host' and 'port' parameters, respectively.
+
+[REQUIREMENT]
+UID: MP-FLB-HTTP-004
+TITLE: Supports setting HTTP URI
+STATEMENT: The HTTP output plugin should allow the user to set an optional HTTP URI for the target web server through the 'uri' parameter.
+
+[REQUIREMENT]
+UID: MP-FLB-HTTP-005
+TITLE: Supports logging the response payload
+STATEMENT: The HTTP output plugin should allow the user to specify whether or not to log the response payload through the 'log_response_payload' parameter.
+
+[REQUIREMENT]
+UID: MP-FLB-HTTP-006
+TITLE: Supports different date formats
+STATEMENT: The system should allow users to specify different date formats for parsing and formatting dates, such as ISO 8601, RFC 3339, Unix timestamp, and custom formats.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Fluent Bit AWS Kinesis Data Streams
+
+[REQUIREMENT]
+UID: MP-FLB-KDS-001
+TITLE: Ingests logs into Amazon Kinesis Data Streams
+STATEMENT: The system should be able to ingest logs into Amazon Kinesis Data Streams using the provided Amazon Kinesis Data Streams output plugin. The plugin should support the configuration of the AWS region, the name of the Kinesis Streams Delivery stream to send the logs to, and an optional IAM role ARN for cross-account access.
+
+[REQUIREMENT]
+UID: MP-FLB-KDS-002
+TITLE: Supports custom endpoint for Kinesis API
+STATEMENT: The Amazon Kinesis Data Streams output plugin should support the configuration of a custom endpoint for the Kinesis API, in case a user wants to send logs to a custom endpoint instead of the default AWS endpoint.
+
+[REQUIREMENT]
+UID: MP-FLB-KDS-003
+TITLE: Allows customization of log record sent to Kinesis
+STATEMENT: The Amazon Kinesis Data Streams output plugin should allow customization of the log record that is sent to Kinesis. It should support the configuration of a key name to send only the value of that key to Kinesis, and the addition of a timestamp to the record under a specified key name, using a strftime compliant format string for the timestamp.
+
+[REQUIREMENT]
+UID: MP-FLB-KDS-004
+TITLE: Handles network errors gracefully
+STATEMENT: The Amazon Kinesis Data Streams output plugin should handle network errors gracefully and provide clear error messages to users, indicating the cause of the error. It should also support immediate retry of failed requests to AWS services once, without affecting the normal Fluent Bit retry mechanism with backoff.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Fluent Bit MinIO
+
+[REQUIREMENT]
+UID: MP-FLB-MINIO-001
+TITLE: Can activate secure access to Minio
+STATEMENT: The Minio plugin can provide secure access to the Minio server by supporting HTTPS protocol and allowing the use of access keys and secret access keys for authentication.
+
+[REQUIREMENT]
+UID: MP-FLB-MINIO-002
+TITLE: Configurable endpoint for Minio
+STATEMENT: The Minio plugin must allow the configuration of the endpoint for the Minio server, including the hostname, port, and scheme.
+
+[REQUIREMENT]
+UID: MP-FLB-MINIO-003
+TITLE: Support for access keys and secret access keys
+STATEMENT: The Minio plugin must allow the configuration of access keys and secret access keys to provide authentication to the Minio server.
+
+[REQUIREMENT]
+UID: MP-FLB-MINIO-004
+TITLE: Support for SSL/TLS encryption
+STATEMENT: The Minio plugin must support SSL/TLS encryption to ensure secure communication with the Minio server.
+
+[REQUIREMENT]
+UID: MP-FLB-MINIO-005
+TITLE: Configurable bucket creation
+STATEMENT: The Minio plugin must allow the configuration of whether a bucket should be created automatically if it does not already exist.
+
+[REQUIREMENT]
+UID: MP-FLB-MINIO-006
+TITLE: Configurable bucket name
+STATEMENT: The Minio plugin must allow the configuration of the bucket name to which files will be uploaded.
+
+[REQUIREMENT]
+UID: MP-FLB-MINIO-007
+TITLE: Configurable upload and source fields
+STATEMENT: The Minio plugin must allow the configuration of the fields containing the remote and local paths for file uploads. These fields should be separated by dots.
+
+[/SECTION]
+
+[SECTION]
+TITLE: PostgreSQL
+
+[REQUIREMENT]
+UID: MP-FLB-PSQL-001
+TITLE: Supports PostgreSQL 10 and above
+STATEMENT: The plugin should be able to connect and write data to PostgreSQL 10 and above.
+
+[REQUIREMENT]
+UID: MP-FLB-PSQL-002
+TITLE: Handles database connection errors gracefully
+STATEMENT: The plugin should handle errors when connecting to the PostgreSQL database gracefully and provide clear error messages to users.
+
+[REQUIREMENT]
+UID: MP-FLB-PSQL-003
+TITLE: Handles SQL query errors gracefully
+STATEMENT: The plugin should handle errors when executing SQL queries gracefully and provide clear error messages to users.
+
+[REQUIREMENT]
+UID: MP-FLB-PSQL-004
+TITLE: Supports both async and sync connections
+STATEMENT: The plugin should support both async and sync connections to the PostgreSQL database.
+
+[REQUIREMENT]
+UID: MP-FLB-PSQL-005
+TITLE: Allows customization of connection pool size
+STATEMENT: The plugin should allow users to customize the minimum and maximum number of connections in the connection pool.
+
+[REQUIREMENT]
+UID: MP-FLB-PSQL-006
+TITLE: Allows specification of table to store data in
+STATEMENT: The plugin should allow users to specify the name of the table in the PostgreSQL database where data should be stored.
+
+[REQUIREMENT]
+UID: MP-FLB-PSQL-007
+TITLE: Allows specification of timestamp field
+STATEMENT: The plugin should allow users to specify which field in the incoming data contains the timestamp for the record.
+
+[REQUIREMENT]
+UID: MP-FLB-PSQL-008
+TITLE: Supports CockroachDB
+STATEMENT: The plugin should be able to connect and write data to CockroachDB when the "cockroachdb" option is set to true.
+
+[REQUIREMENT]
+UID: MP-FLB-PSQL-009
+TITLE: Can set a timeout for remote connection to PostgreSQL
+STATEMENT: The system should be able to set a timeout for remote connection to PostgreSQL and terminate them if no data has been received within the timeout.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Fluent Bit S3
+
+[REQUIREMENT]
+UID: MP-FLB-S3-001
+TITLE: Allows specifying the AWS region of the S3 bucket
+STATEMENT: The plugin should allow users to specify the AWS region where the S3 bucket resides.
+
+[REQUIREMENT]
+UID: MP-FLB-S3-002
+TITLE: Allows specifying the S3 bucket name
+STATEMENT: The plugin should allow users to specify the name of the S3 bucket where data should be stored.
+
+[REQUIREMENT]
+UID: MP-FLB-S3-003
+TITLE: Allows specifying the time key in the output record
+STATEMENT: The plugin should allow users to specify the name of the time key in the output record. If the time key is disabled, the plugin should not include any time information in the S3 object.
+
+[REQUIREMENT]
+UID: MP-FLB-S3-004
+TITLE: Allows specifying the format of the date
+STATEMENT: The plugin should allow users to specify the format of the date in the output record. The supported formats should include double, epoch, iso8601, and java_sql_timestamp.
+
+[REQUIREMENT]
+UID: MP-FLB-S3-005
+TITLE: Allows specifying the maximum size of files in S3
+STATEMENT: The plugin should allow users to specify the maximum size of files that can be uploaded to S3. The maximum size should be 50GB and the minimum size should be 1MB.
+
+[REQUIREMENT]
+UID: MP-FLB-S3-006
+TITLE: Allows specifying the size of each 'part' for multipart uploads
+STATEMENT: The plugin should allow users to specify the size of each 'part' for multipart uploads. The maximum size should be 50MB.
+
+[REQUIREMENT]
+UID: MP-FLB-S3-007
+TITLE: Allows specifying the time interval for completing an upload and creating a new file in S3
+STATEMENT: The plugin should allow users to specify the time interval for completing an upload and creating a new file in S3. If this amount of time has elapsed, Fluent Bit will complete an upload and create a new file in S3.
+
+[REQUIREMENT]
+UID: MP-FLB-S3-008
+TITLE: Allows specifying the directory to locally buffer data before sending
+STATEMENT: The plugin should allow users to specify the directory where data should be buffered before being sent to S3. When multipart uploads are used, data will only be buffered until the upload_chunk_size is reached. S3 will also store metadata about in-progress multipart uploads in this directory.
+
+[REQUIREMENT]
+UID: MP-FLB-S3-009
+TITLE: Allows specifying the size limitation for disk usage in S3
+STATEMENT: The plugin should allow users to specify the size limitation for disk usage in S3. The amount of S3 buffers in the store_dir should be limited to this size to limit disk usage. Note: Use store_dir_limit_size instead of storage.total_limit_size, which can be used for other plugins, because S3 has its own buffering system.
+
+[REQUIREMENT]
+UID: MP-FLB-S3-010
+TITLE: Support for multipart upload
+STATEMENT: The plugin should support multipart upload to S3, allowing large files to be uploaded in parts for increased reliability and faster upload times.
+
+[REQUIREMENT]
+UID: MP-FLB-S3-011
+TITLE: Can set custom endpoint
+STATEMENT: The plugin should support multipart upload to S3, allowing large files to be uploaded in parts for increased reliability and faster upload times.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Fluent Bit Slack
+
+[REQUIREMENT]
+UID: MP-FLB-SLACK-001
+TITLE: Can set the webhook used by Slack
+STATEMENT: The plugin should support using the webhook to know where to send the data.
+
+[/SECTION]
