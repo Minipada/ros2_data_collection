@@ -1,0 +1,112 @@
+[DOCUMENT]
+TITLE: Destination server
+
+[SECTION]
+TITLE: Usability
+
+[REQUIREMENT]
+UID: DS-USAB-001
+TITLE: Can load configuration from YAML
+STATEMENT: All configuration can be passed as a standard ROS 2 YAML configuration file.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Plugin Loading
+
+[REQUIREMENT]
+UID: DS-PLU-001
+TITLE: Can load any number of destination plugins
+STATEMENT: The Destination server must be able to load any number of destination plugins that conform to a specific interface. The plugins should be loaded dynamically at runtime.
+
+[REQUIREMENT]
+UID: DS-PLU-002
+TITLE: Can handle errors when loading destination plugins
+STATEMENT: If the Destination server attempts to load a plugin that does not conform to the specified interface or the plugin file does not exist, it should throw a custom exception with a clear error message. The node should then stop processing.
+
+[REQUIREMENT]
+UID: DS-PLU-003
+TITLE: Extensibility and customizability
+STATEMENT: The system should be easily extensible and customizable, allowing users to add new features, plugins, and functionality to meet their specific requirements in the repository.
+
+[REQUIREMENT]
+UID: DS-PLU-004
+TITLE: External extensibility and customizability
+STATEMENT: The system should be easily extensible and customizable, allowing users to add new features, plugins, and functionality to meet their specific requirements in their own ROS packages.
+
+[REQUIREMENT]
+UID: DS-PLU-005
+TITLE: Can reload plugins without restarting the node
+STATEMENT: The Destination server should be able to reload plugins dynamically without having to stop and restart the node. This will allow for updates and changes to be made to the plugins without interrupting data processing.
+
+[REQUIREMENT]
+UID: DS-PLU-006
+TITLE: Can unload plugins
+STATEMENT: The Destination server should be able to unload plugins dynamically. This will allow for plugins to be removed from the system when they are no longer needed.
+
+[REQUIREMENT]
+UID: DS-PLU-007
+TITLE: Can provide information about loaded plugins
+STATEMENT: The Destination server should be able to provide information about the plugins that are currently loaded, such as their names, version numbers, description and json schema.
+
+[/SECTION]
+
+[SECTION]
+TITLE: General
+
+[REQUIREMENT]
+UID: DS-GEN-001
+TITLE: Can batch samples before sending
+STATEMENT: The destination system can batch multiple samples together before sending them to remote destinations, reducing network overhead and improving performance.
+
+[REQUIREMENT]
+UID: DS-GEN-002
+TITLE: Can store data locally if remote connection is not available
+STATEMENT: If a remote connection is not available, the system should be able to store data locally and send it over the remote connection when it becomes available.
+
+[REQUIREMENT]
+UID: DS-GEN-003
+TITLE: Can store data locally if remote connection is slow or unreliable
+STATEMENT: If a remote connection is slow or unreliable, the system should be able to store data locally and send it over the remote connection when it is stable.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Backend
+
+[REQUIREMENT]
+UID: MS-BAC-001
+TITLE: Can store data using a backend
+STATEMENT: The system should be able to store collected data using a backend, such as Fluent Bit or Redis, to handle backpressure and ensure data persistency.
+
+[REQUIREMENT]
+UID: MS-BAC-002
+TITLE: Support multiple backends
+STATEMENT: The system should support multiple backends for storing collected data, handling backpressure, and ensuring data persistency. The selection of a backend should be configurable to allow for easy integration with different systems and tools.
+
+[REQUIREMENT]
+UID: MS-BAC-003
+TITLE: Can store data without a backend
+STATEMENT: The system should be able to store collected data without a backend if needed, for example when testing or in environments where a backend is not available or practical to use. The system should provide a fallback option for data storage in such cases.
+
+[REQUIREMENT]
+UID: MS-BAC-004
+TITLE: Support for Fluent Bit
+STATEMENT: The system should support the use of Fluent Bit as a backend to handle backpressure and ensure data persistency.
+
+[REQUIREMENT]
+UID: MS-BAC-005
+TITLE: Support for Redis
+STATEMENT: The system should be able to use Redis as a backend for storing and retrieving collected data. The system should be able to configure the connection to Redis, including the host, port, and authentication credentials, if necessary. The system should support Redis commands for data manipulation and should handle errors and exceptions gracefully.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Performance
+
+[REQUIREMENT]
+UID: DS-PERF-001
+TITLE: Supports high throughput and low latency
+STATEMENT: The system must support high throughput and low latency to handle large volumes of data and deliver near-real-time insights.
+
+[/SECTION]
