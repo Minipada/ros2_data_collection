@@ -32,7 +32,7 @@ For detailed instructions:
 - [Groups](https://minipada.github.io/ros2_data_collection/dc/groups.html)
 - [Destinations](https://minipada.github.io/ros2_data_collection/dc/destinations.html)
 - [Configuration examples](https://minipada.github.io/ros2_data_collection/dc/configuration_examples.html)
-- [Demos](https://minipada.github.io/ros2_data_collection/dc/demos.html)
+- [Getting started](https://minipada.github.io/ros2_data_collection/dc/getting_started.html)
 - [Infrastructure setup](https://minipada.github.io/ros2_data_collection/dc/infrastructure_setup.html)
 - [CLI tools](https://minipada.github.io/ros2_data_collection/dc/cli.html)
 - [Future work and Roadmap](https://minipada.github.io/ros2_data_collection/dc/future_work.html)
