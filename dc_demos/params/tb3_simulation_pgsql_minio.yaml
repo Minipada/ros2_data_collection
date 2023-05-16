@@ -167,7 +167,6 @@ measurement_server:
     cpu:
       plugin: "dc_measurements/Cpu"
       topic_output: "/dc/measurement/cpu"
-      group_key: "cpu"
       polling_interval: 5000
       tags: ["flb_pgsql"]
       include_measurement_name: true
@@ -176,7 +175,6 @@ measurement_server:
       cpu_min: 5.0
     memory:
       plugin: "dc_measurements/Memory"
-      group_key: "memory"
       topic_output: "/dc/measurement/memory"
       polling_interval: 5000
       node_name: "dc_measurement_memory"
@@ -186,14 +184,12 @@ measurement_server:
     os:
       plugin: "dc_measurements/OS"
       topic_output: "/dc/measurement/os"
-      group_key: "os"
       tags: ["flb_pgsql"]
       include_measurement_name: true
       init_collect: true
       init_max_measurements: 1
     uptime:
       plugin: "dc_measurements/Uptime"
-      group_key: "uptime"
       topic_output: "/dc/measurement/uptime"
       polling_interval: 5000
       enable_validator: true
@@ -207,7 +203,6 @@ measurement_server:
       topic_output: "/dc/measurement/distance_traveled"
       if_all_conditions: ["min_distance_traveled", "max_distance_traveled"]
       tags: ["flb_pgsql"]
-      group_key: "distance_traveled"
       global_frame: "map"
       robot_base_frame: "base_link"
       transform_timeout: 0.1
@@ -218,7 +213,6 @@ measurement_server:
       init_collect: false
     cmd_vel:
       plugin: "dc_measurements/CmdVel"
-      group_key: "cmd_vel"
       tags: ["flb_pgsql"]
       enable_validator: true
       polling_interval: 500
@@ -226,7 +220,6 @@ measurement_server:
       include_measurement_name: true
     position:
       plugin: "dc_measurements/Position"
-      group_key: "position"
       topic_output: "/dc/measurement/position"
       enable_validator: true
       tags: ["flb_pgsql"]
@@ -237,14 +230,12 @@ measurement_server:
       include_measurement_name: true
     stops:
       plugin: "dc_measurements/Stops"
-      group_key: "stops"
       tags: ["flb_pgsql"]
       odom_topic: "/odom"
       topic_output: "/dc/measurement/stops"
       include_measurement_name: true
     speed:
       plugin: "dc_measurements/Speed"
-      group_key: "speed"
       tags: ["flb_pgsql"]
       odom_topic: "/odom"
       polling_interval: 500
@@ -252,7 +243,6 @@ measurement_server:
       include_measurement_name: true
     camera:
       plugin: "dc_measurements/Camera"
-      group_key: "camera"
       topic_output: "/dc/measurement/camera"
       init_collect: false
       init_max_measurements: 0
@@ -275,7 +265,6 @@ measurement_server:
     # Environment data
     map:
       plugin: "dc_measurements/Map"
-      group_key: "map"
       save_path: "map/%Y-%m-%dT%H-%M-%S"
       topic_output: "/dc/measurement/map"
       save_map_timeout: 4.0
@@ -291,7 +280,6 @@ measurement_server:
     minio_api_health:
       plugin: "dc_measurements/TCPHealth"
       topic_output: "/dc/measurement/minio_api_health"
-      group_key: "minio_api_health"
       polling_interval: 5000
       tags: ["flb_pgsql"]
       host: "127.0.0.1"
@@ -301,7 +289,6 @@ measurement_server:
     minio_dashboard_health:
       plugin: "dc_measurements/TCPHealth"
       topic_output: "/dc/measurement/minio_dashboard_health"
-      group_key: "minio_dashboard_health"
       polling_interval: 5000
       tags: ["flb_pgsql"]
       host: "127.0.0.1"
@@ -311,7 +298,6 @@ measurement_server:
     pgsql_health:
       plugin: "dc_measurements/TCPHealth"
       topic_output: "/dc/measurement/pgsql_health"
-      group_key: "pgsql_health"
       polling_interval: 5000
       tags: ["flb_pgsql"]
       host: "127.0.0.1"
