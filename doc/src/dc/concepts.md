@@ -81,6 +81,14 @@ You can find th code in flb_destination.hpp
 ## Match
 Fluent Bit allows to deliver your collected and processed Events to one or multiple destinations, this is done through a routing phase. A Match represent a simple rule to select Events where its tags matches a defined rule.
 
+## Destinations
+A destination is where the data will be sent: AWS S3, stdout, AWS Kinesis. It has the possibility to use [outputs from fluentbit](https://docs.fluentbit.io/manual/pipeline/outputs).
+
+## Conditions
+A condition enables or disables one or multiple measurements to be published and thus collected. We could for example enable collecting camera images only when a robot is stopped.
+
+Data collection for a measurement can be enabled if one of many conditions are activated, multiple conditions are activated or none.
+
 ## Timestamp
 
 The Timestamp represents the time when an Event was created. All events are converting the ROS now time to timestamps (UTC)
