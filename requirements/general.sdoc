@@ -1,0 +1,37 @@
+[DOCUMENT]
+TITLE: General
+
+[SECTION]
+TITLE: Usability
+
+[REQUIREMENT]
+UID: GEN-USAB-001
+TITLE: Can load configuration from YAML
+STATEMENT: All configuration can be passed as a standard ROS 2 YAML configuration file.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Deployment
+
+[REQUIREMENT]
+UID: GEN-DEP-001
+TITLE: Container deployment
+STATEMENT: The system should support deployment with docker images.
+
+[REQUIREMENT]
+UID: GEN-DEP-002
+TITLE: Native deployment
+STATEMENT: The system should support deployment with native apt packages.
+
+[REQUIREMENT]
+UID: GEN-DEP-003
+TITLE: Easy configuration and management
+STATEMENT: The system should provide an easy-to-use configuration and management interface, allowing users to quickly and easily set up and manage the system.
+
+[REQUIREMENT]
+UID: GEN-DEP-004
+TITLE: Fault tolerance and error handling
+STATEMENT: The system should be fault-tolerant and provide robust error handling mechanisms to ensure that the system continues to operate even in the event of failures or errors.
+
+[/SECTION]

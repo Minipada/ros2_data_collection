@@ -1,0 +1,32 @@
+[DOCUMENT]
+TITLE: Tooling
+
+[SECTION]
+TITLE: Monitoring
+
+[REQUIREMENT]
+UID: TOOL-MON-001
+TITLE: Can monitor system performance and health
+STATEMENT: The system should be able to monitor its own performance and health, such as CPU usage, memory usage, network usage, and report any issues or errors to a logging system.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Reports
+
+[REQUIREMENT]
+UID: TOOL-REP-001
+TITLE: Can generate reports and statistics on data usage and performance
+STATEMENT: The system should be able to generate reports and statistics on data usage and performance to help users optimize their data collection and analysis processes.
+
+[/SECTION]
+
+[SECTION]
+TITLE: CLI
+
+[REQUIREMENT]
+UID: TOOL-CLI-001
+TITLE: Can list plugins from CLI
+STATEMENT: Plugins defined in xml files can be fetched and listed so the user knows which ones are available.
+
+[/SECTION]

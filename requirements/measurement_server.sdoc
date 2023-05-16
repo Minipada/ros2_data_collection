@@ -2,62 +2,147 @@
 TITLE: Measurement server
 
 [SECTION]
-TITLE: Node parameters
+TITLE: Usability
 
 [REQUIREMENT]
-UID: MS-REQ-001
+UID: MS-USAB-001
+TITLE: Can load configuration from YAML
+STATEMENT: All configuration can be passed as a standard ROS 2 YAML configuration file.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Plugin Loading
+
+[REQUIREMENT]
+UID: MS-PLU-001
 TITLE: Can load any number of measurement plugins
-STATEMENT: Measurement server can load any number of measurement plugins
+STATEMENT: The Measurement server must be able to load any number of measurement plugins that conform to a specific interface. The plugins should be loaded dynamically at runtime.
 
 [REQUIREMENT]
-UID: MS-REQ-002
-TITLE: Can only load existing measurement plugins
-STATEMENT: Measurement server throws a custom exception when loading a measurement plugin and stop everything
+UID: MS-PLU-002
+TITLE: Can handle errors when loading measurement plugins
+STATEMENT: If the Measurement server attempts to load a plugin that does not conform to the specified interface or the plugin file does not exist, it should throw a custom exception with a clear error message. The node should then stop processing.
 
 [REQUIREMENT]
-UID: MS-REQ-003
+UID: MS-PLU-003
 TITLE: Can load any number of condition plugins
-STATEMENT: Measurement server can load any number of condition plugins
+STATEMENT: The Measurement server must be able to load any number of condition plugins that conform to a specific interface. The plugins should be loaded dynamically at runtime.
 
 [REQUIREMENT]
-UID: MS-REQ-004
-TITLE: Can only load existing condition plugins
-STATEMENT: Measurement server throws a custom exception when loading a condition plugin and stop everything
+UID: MS-PLU-004
+TITLE: Can handle errors when loading condition plugins
+STATEMENT: If the Measurement server attempts to load a plugin that does not conform to the specified interface or the plugin file does not exist, it should throw a custom exception with a clear error message. The node should then stop processing.
 
 [REQUIREMENT]
-UID: MS-REQ-005
+UID: MS-PLU-005
+TITLE: Extensibility and customizability
+STATEMENT: The system should be easily extensible and customizable, allowing users to add new features, plugins, and functionality to meet their specific requirements in the repository.
+
+[REQUIREMENT]
+UID: MS-PLU-006
+TITLE: External extensibility and customizability
+STATEMENT: The system should be easily extensible and customizable, allowing users to add new features, plugins, and functionality to meet their specific requirements in their own ROS packages.
+
+[REQUIREMENT]
+UID: MS-PLU-007
+TITLE: Can reload plugins without restarting the node
+STATEMENT: The Measurement server should be able to reload plugins dynamically without having to stop and restart the node. This will allow for updates and changes to be made to the plugins without interrupting data processing.
+
+[REQUIREMENT]
+UID: MS-PLU-008
+TITLE: Can unload plugins
+STATEMENT: The Measurement server should be able to unload plugins dynamically. This will allow for plugins to be removed from the system when they are no longer needed.
+
+[REQUIREMENT]
+UID: MS-PLU-08
+TITLE: Can provide information about loaded plugins
+STATEMENT: The Measurement server should be able to provide information about the plugins that are currently loaded, such as their names, version numbers, description and json schema.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Collect
+
+[REQUIREMENT]
+UID: MS-COL-001
+TITLE: Polling intervals
+STATEMENT: The system should allow for different polling intervals for different measurements
+
+[REQUIREMENT]
+UID: MS-COL-002
+TITLE: Dynamic polling intervals
+STATEMENT: The system should allow for changing the polling interval during runtime.
+
+[REQUIREMENT]
+UID: MS-COL-003
+TITLE: Real-time data processing
+STATEMENT: The system should be able to process data in real-time, with minimal latency, to support time-critical applications.
+
+[REQUIREMENT]
+UID: MS-COL-004
+TITLE: Concurrent data retrieval by plugins
+STATEMENT: Multiple plugins should be able to fetch data in parallel without blocking or delaying each other, in order to ensure efficient and responsive data collection.
+
+[REQUIREMENT]
+UID: MS-COL-005
+TITLE: Can enable/disable sample buffering
+STATEMENT: The user can enable or disable the buffering of samples in case the remote destination is not available.
+
+[REQUIREMENT]
+UID: MS-COL-006
+TITLE: Ability to set a maximum time to collect samples
+STATEMENT: The system should provide an option to stop collecting samples after a certain amount of time has elapsed.
+
+[/SECTION]
+
+[SECTION]
+TITLE: File saving
+
+[REQUIREMENT]
+UID: MS-FIL-001
 TITLE: Can set local base path used by all nodes
-STATEMENT: The server must be able to load a path from save_local_base_path parameter
+STATEMENT: The Measurement server must be able to load a local base path from a save_local_base_path parameter. This base path will be used by all nodes running in the server instance.
 
 [REQUIREMENT]
-UID: MS-REQ-006
-TITLE: Can set local base path used by all nodes and expand with time variable
-STATEMENT: Strings as %Y, %M, %D etc. must expand to the current year, month and day. All standard ones should be handled. When encountering one unknown, it should stop the node.
+UID: MS-FIL-002
+TITLE: Can expand time variables in the local base path
+STATEMENT: The Measurement server should support time variables in the save_local_base_path parameter, such as %Y, %m, and %d. These variables should expand to the current year, month, and day, respectively. If an unknown variable is encountered, the node should stop processing.
 
 [REQUIREMENT]
-UID: MS-REQ-007
-TITLE: Can set local base path used by all nodes and expand environment variables
-STATEMENT: Strings starting with $, e.g $HOME must expand as environment variables. When encountering one empty, it should stop the node.
+UID: MS-FIL-003
+TITLE: Can expand environment variables in the local base path
+STATEMENT: The Measurement server should support environment variables in the save_local_base_path parameter, denoted by a $ or ${} symbol. If an empty variable is encountered, the node should stop processing.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Custom variables
 
 [REQUIREMENT]
-UID: MS-REQ-008
+UID: MS-VAR-001
 TITLE: Can load custom variables
-STATEMENT: The parameter custom_str_params should allow to list custom variables. the subparameter name and one of value_from_file or value must be present. Stop the node otherwise.
+STATEMENT: The custom_str_params parameter should allow the user to specify custom variables. Each variable should have a name subparameter and either a value or value_fromfile subparameter. If a required subparameter is missing or the file specified in value\_from\_file does not exist, the node should stop processing.
 
 [REQUIREMENT]
-UID: MS-REQ-009
-TITLE: Can load custom variables from file
-STATEMENT: The parameter custom_str_params should allow to list custom variables. Variables can come from a file and stop the node if the file does not exist.
+UID: MS-VAR-002
+TITLE: Can load custom variables from a file
+STATEMENT: The custom_str_params parameter should allow the user to specify custom variables that are loaded from a file. If the file specified in value\_from\_file does not exist, the node should stop processing.
 
 [REQUIREMENT]
-UID: MS-REQ-010
+UID: MS-VAR-03
 TITLE: Can load custom variables from a fixed string
-STATEMENT: The parameter custom_str_params should allow to list custom variables. Variables can come from a fixed string and stop the node if the string is empty.
+STATEMENT: The custom_str_params parameter should allow the user to specify custom variables that are loaded from a fixed string. If the value subparameter is empty, the node should stop processing.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Data aggregation
 
 [REQUIREMENT]
-UID: MS-REQ-011
-TITLE: Each measurement can be grouped by setting a group key parameter
-STATEMENT: Measurements can be loaded using a group parameter to create a new JSON.
+UID: MS-AGG-001
+TITLE: Can handle data aggregation
+STATEMENT: The system should be able to aggregate data from multiple sources and provide a unified view of the data.
 COMMENT: >>>
 Measurement 1:
 
@@ -71,7 +156,7 @@ Measurement 2:
 
     {"b": 2}
 
-Grouped sample:
+Aggregated sample:
 
 .. code-block:: JSON
 
@@ -79,101 +164,262 @@ Grouped sample:
 <<<
 
 [REQUIREMENT]
-UID: MS-REQ-012
-TITLE: Each data sample can be validated through a JSON schema
-STATEMENT: Sample can be validated following standard schema patterns
+UID: MS-AGG-002
+TITLE: Ability to aggregate samples based on tags
+STATEMENT: The system should allow for grouping of samples based on tags, such as aggregating data from multiple sources with the same tag into a single output or view.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Validation
+
+[REQUIREMENT]
+UID: MS-VAL-001
+TITLE: Validation of data samples through JSON schema
+STATEMENT: The system must be able to validate each data sample using a JSON schema, following standard schema patterns.
 COMMENT: >>>
-JSON are validated following the validation `standard 07 <https://json-schema.org/draft/2020-12/json-schema-validation.html>`_
+The validation of JSON data must follow the validation standard outlined in version 7 of the JSON schema specification, available at https://json-schema.org/draft/2020-12/json-schema-validation.html. The system must be able to validate each data sample against the specified schema to ensure that the data conforms to the defined structure and data types.
 <<<
 
 [REQUIREMENT]
-UID: MS-REQ-013
-TITLE: Can pass a custom JSON schema
-STATEMENT: We can define a custom JSON file for our own validation.
+UID: MS-VAL-002
+TITLE: Ability to pass a custom JSON schema for validation
+STATEMENT: The system should be able to accept a custom JSON file for validation that follows the standard schema patterns.
 
 [REQUIREMENT]
-UID: MS-REQ-014
-TITLE: Can filter any sample by keeping only certain key values, before validation
-STATEMENT: Can apply a filter to keys
+UID: MS-VAL-003
+TITLE: Error reporting for failed validation
+STATEMENT: The system should provide clear error messages when a data sample fails validation, including the specific validation rule that was not met.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Filters
 
 [REQUIREMENT]
-UID: MS-REQ-015
-TITLE: Can remove a field through a filter
-STATEMENT: Apply a filter that remove the key from the sample
+UID: MS-FILT-001
+TITLE: Ability to filter a sample by keeping only certain key values before validation
+STATEMENT: The system should be able to apply a filter that keeps only certain key values from a sample before validation.
 
 [REQUIREMENT]
-UID: MS-REQ-016
-TITLE: Match measurement samples to destination
-STATEMENT: Can match which sample is sent where using tags
+UID: MS-FILT-002
+TITLE: Ability to exclude a field through a filter
+STATEMENT: The system should be able to apply a filter that excludes one or multiple keys from the sample.
 
 [REQUIREMENT]
-UID: MS-REQ-017
-TITLE: Match measurement samples to destination
-STATEMENT: Can match which sample is sent where using tags
+UID: MS-FILT-003
+TITLE: Ability to filter samples based on a regular expression pattern
+STATEMENT: The system should be able to filter samples based on a regular expression pattern for a specific key. The user should be able to specify the key and the regular expression pattern to match.
 
 [REQUIREMENT]
-UID: MS-REQ-018
-TITLE: Can collect also when the node starts
-STATEMENT: ROS timers by default do an action after the time of the wall timer has elapsed. We need an option to collect a sample when starting directly.
+UID: MS-FILT-004
+TITLE: Ability to chain multiple filters together
+STATEMENT: The system should be able to chain multiple filters together, allowing the user to apply multiple filters to a sample in a specific order. The order of the filters should be configurable.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Matching
 
 [REQUIREMENT]
-UID: MS-REQ-019
-TITLE: Can collect also when the node starts
-STATEMENT: ROS timers by default do an action after the time of the wall timer has elapsed. We need an option to collect a sample when starting directly.
+UID: MS-MAT-001
+TITLE: Ability to match measurement samples to a specific destination using tags
+STATEMENT: The system should be able to match a sample to a specific destination using tags.
 
 [REQUIREMENT]
-UID: MS-REQ-020
-TITLE: Can collect when the node starts a certain amount of samples
-STATEMENT: Stop collecting after a certain amount of samples has been reached
+UID: MS-MAT-002
+TITLE: Can send data to multiple destinations simultaneously
+STATEMENT: The measurement system can send data to multiple destinations simultaneously, allowing for redundancy, load balancing, or other purposes.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Maximum collect
 
 [REQUIREMENT]
-UID: MS-REQ-021
-TITLE: Publisher is deleted when max samples reached
-STATEMENT: Stop the publisher, even the loop when the maximum amount of samples has been reached.
+UID: MS-MAX-001
+TITLE: Ability to collect a certain amount of samples when the node starts
+STATEMENT: The system should provide an option to stop collecting samples after a certain amount of samples has been reached.
 
 [REQUIREMENT]
-UID: MS-REQ-022
-TITLE: Can include measurement name in sample
-STATEMENT: Each sample can have (or not) the measurement name included as key/value
+UID: MS-MAX-002
+TITLE: Ability to delete the publisher when the maximum amount of samples has been reached
+STATEMENT: The system should stop the publisher and the loop when the maximum amount of samples has been reached.
 
 [REQUIREMENT]
-UID: MS-REQ-023
-TITLE: Can include measurement plugin name in sample
-STATEMENT: Each sample can have (or not) the measurement plugin name included as key/value
+UID: MS-MAX-003
+TITLE: Ability to delete the subscriber when the maximum amount of samples has been reached
+STATEMENT: The system should stop the subscriber and the loop when the maximum amount of samples has been reached.
 
 [REQUIREMENT]
-UID: MS-REQ-024
-TITLE: Can pass remote keys
-STATEMENT: Can precise the remote key, based on remote destination
+UID: MS-MAX-004
+TITLE: Ability to collect samples when the node starts
+STATEMENT: The system should provide an option to collect a sample when starting the node directly, instead of waiting for the timer to elapse.
 
 [REQUIREMENT]
-UID: MS-REQ-025
-TITLE: Can apply a prefix to the remote key
-STATEMENT: Can pass a prefix to the remote key, to add a string to the path
-
-[REQUIREMENT]
-UID: MS-REQ-026
-TITLE: Can send samples if all conditions are respected (from a list of condition)
-STATEMENT: Can pass a list of conditions. All need to be all respected to send data sample
-
-[REQUIREMENT]
-UID: MS-REQ-027
-TITLE: Can send samples if any conditions is respected (from a list of condition)
-STATEMENT: Can pass a list of conditions. One of them need to be respected to send data sample
-
-[REQUIREMENT]
-UID: MS-REQ-028
-TITLE: Can send samples if no conditions are not respected (from a list of condition)
-STATEMENT: Can pass a list of conditions. None need to be respected to send data sample
-
-[REQUIREMENT]
-UID: MS-REQ-029
+UID: MS-MAX-005
 TITLE: Can send a maximum number of samples when conditions are met
 STATEMENT: Sometimes, it is useful to send data when conditions are respected and only a certain amount of time
+COMMENT: >>>
+This requirement means that the system can specify a maximum number of data samples to be sent when certain conditions are met. This can be useful for cases where the system needs to limit the amount of data sent for performance or resource usage reasons.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: Metadata keys
 
 [REQUIREMENT]
-UID: MS-REQ-030
+UID: MS-MET-001
+TITLE: Ability to include measurement name in sample
+STATEMENT: The system should provide the option to include the measurement name as a key/value pair in each sample.
+
+[REQUIREMENT]
+UID: MS-MET-002
+TITLE: Can include measurement plugin name in sample
+STATEMENT: Each sample can have (or not) the measurement plugin name included as key/value
+COMMENT: >>>
+This requirement means that each data sample collected by the system can include the name of the measurement plugin that collected it. This can be useful for keeping track of which plugin collected which data, and for debugging purposes.
+<<<
+
+[REQUIREMENT]
+UID: MS-MET-003
+TITLE: Add timestamp to sample
+STATEMENT: Each sample has a timestamp included, as a UTC absolute time.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Remote paths
+
+[REQUIREMENT]
+UID: MS-PAT-001
+TITLE: Can pass remote keys
+STATEMENT: Can precise the remote key, based on remote destination
+COMMENT: >>>
+This requirement means that the system can specify which remote key to use when sending data to a particular destination. This can be useful for cases where the remote system requires a specific key to be used, or for cases where multiple keys are valid but only one should be used.
+<<<
+
+[REQUIREMENT]
+UID: MS-PAT-002
+TITLE: Can apply a prefix to the remote key
+STATEMENT: Can pass a prefix to the remote key, to add a string to the path
+COMMENT: >>>
+This requirement means that the system can add a prefix to the remote key when sending data to a particular destination. This can be useful for cases where the remote system requires a specific path to be used, or for cases where the system needs to differentiate between different paths for the same destination.
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: Conditions
+
+[REQUIREMENT]
+UID: MS-CON-001
+TITLE: Can send samples if all conditions are respected (from a list of condition)
+STATEMENT: Can pass a list of conditions. All need to be all respected to send data sample
+COMMENT: >>>
+This requirement means that the system can define a list of conditions that must all be true in order for a data sample to be sent. This can be useful for cases where certain criteria must be met before data can be sent, such as when the system needs to ensure that the data is of a certain quality or meets certain requirements.
+<<<
+
+[REQUIREMENT]
+UID: MS-CON-002
+TITLE: Can send samples if any conditions is respected (from a list of condition)
+STATEMENT: Can pass a list of conditions. One of them need to be respected to send data sample
+COMMENT: >>>
+This requirement means that the system can define a list of conditions and send a data sample if any of them are true. This can be useful for cases where there are multiple criteria that can be met for data to be sent, and only one needs to be met for the data to be sent.
+<<<
+
+[REQUIREMENT]
+UID: MS-CON-003
+TITLE: Can send samples if no conditions are not respected (from a list of condition)
+STATEMENT: Can pass a list of conditions. None need to be respected to send data sample
+COMMENT: >>>
+This requirement means that the system can define a list of conditions and send a data sample if none of them are true. This can be useful for cases where the system needs to ensure that data is not sent if certain criteria are met, such as if the data is of poor quality or does not meet certain requirements.
+<<<
+
+[REQUIREMENT]
+UID: MS-CON-004
+TITLE: Can access condition state from measurements
+STATEMENT: Each measurement should be able to access through a variable the state of conditions it depends on.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Lifecycle
+
+[REQUIREMENT]
+UID: MS-LIF-001
 TITLE: Stop all nodes if one fails
 STATEMENT: Include a bond connection for the lifecycle manager to ensure that after a server transitions up, it also remains active. If a server crashes, it lets the lifecycle manager know and transition down the system to prevent a critical failure.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Compression
+
+[REQUIREMENT]
+UID: MS-COMP-001
+TITLE: Can compress samples before publishing
+STATEMENT: Samples can be large and compressing them before publishing can reduce network bandwidth usage and transmission time.
+
+[REQUIREMENT]
+UID: MS-COMP-002
+TITLE: Support for gzip compression
+STATEMENT: The system shall support gzip compression of JSON data. The compressed data must be compatible with the gzip compression standard.
+
+[REQUIREMENT]
+UID: MS-COMP-003
+TITLE: Support for deflate compression
+STATEMENT: The system shall support deflate compression of JSON data. The compressed data must be compatible with the deflate compression standard.
+
+[REQUIREMENT]
+UID: MS-COMP-004
+TITLE: Support for Brotli compression
+STATEMENT: The system shall support Brotli compression of JSON data. The compressed data must be compatible with the Brotli compression standard.
+
+[REQUIREMENT]
+UID: MS-COMP-005
+TITLE: Support for LZ77 compression
+STATEMENT: The system shall support LZ77 compression of JSON data. The compressed data must be compatible with the LZ77 compression standard.
+
+[REQUIREMENT]
+UID: MS-COMP-006
+TITLE: Support for LZ4 compression
+STATEMENT: The system shall support LZ4 compression of JSON data. The compressed data must be compatible with the LZ4 compression standard.
+
+[REQUIREMENT]
+UID: MS-COMP-007
+TITLE: Ability to choose compression algorithm
+STATEMENT: The system shall allow users to choose between different compression algorithms (such as gzip, deflate, Brotli, LZ77, LZ4, etc.) for compressing JSON data.
+
+[REQUIREMENT]
+UID: MS-COMP-008
+TITLE: Performance benchmarking
+STATEMENT: The system shall provide performance benchmarks for each compression algorithm to help users choose the most efficient algorithm for their needs.
+
+[REQUIREMENT]
+UID: MS-COMP-009
+TITLE: Configurable compression level
+STATEMENT: The system shall allow users to configure the level of compression for each algorithm. The compression level should affect the balance between compression ratio and compression speed.
+
+[REQUIREMENT]
+UID: MS-COMP-010
+TITLE: Compression compatibility with JSON schema
+STATEMENT: The compressed JSON data must be compatible with JSON schema and should be able to be decompressed without any loss of data or information.
+
+[REQUIREMENT]
+UID: MS-COMP-011
+TITLE: Compression and decompression efficiency
+STATEMENT: The system shall provide efficient compression and decompression algorithms that minimize CPU usage and memory consumption while achieving high compression ratios.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Limitations
+
+[REQUIREMENT]
+UID: MS-LIM-001
+TITLE: Can limit bandwidth usage for remote connections
+STATEMENT: The system should be able to limit the amount of data sent over a remote connection in order to manage bandwidth usage.
 
 [/SECTION]

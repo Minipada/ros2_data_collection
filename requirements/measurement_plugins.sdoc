@@ -1,0 +1,486 @@
+[DOCUMENT]
+TITLE: Measurement plugins
+
+[SECTION]
+TITLE: Plugins
+
+[REQUIREMENT]
+UID: MP-PLU-001
+TITLE: Can collect images from camera
+STATEMENT: The system should be able to collect image data from a ROS 2 camera topic.
+
+[REQUIREMENT]
+UID: MP-PLU-002
+TITLE: Can collect video from camera
+STATEMENT: The system should be able to collect video data from a ROS 2 camera topic.
+
+[REQUIREMENT]
+UID: MP-PLU-003
+TITLE: Can collect command velocity
+STATEMENT: The system should be able to collect command velocity from a ROS 2 topic.
+
+[REQUIREMENT]
+UID: MP-PLU-004
+TITLE: Can collect CPU data
+STATEMENT: The system should be able to collect CPU data
+
+[REQUIREMENT]
+UID: MP-PLU-005
+TITLE: Can collect distance traveled
+STATEMENT: The system should be able to collect distance traveled
+
+[REQUIREMENT]
+UID: MP-PLU-006
+TITLE: Can collect IP camera image
+STATEMENT: The system should be able to collect IP camera images
+
+[REQUIREMENT]
+UID: MP-PLU-007
+TITLE: Can collect IP camera video
+STATEMENT: The system should be able to collect IP camera videos
+
+[REQUIREMENT]
+UID: MP-PLU-008
+TITLE: Can collect ROS 2 map
+STATEMENT: The system should be able to collect ROS 2 map (pgm and yaml)
+
+[REQUIREMENT]
+UID: MP-PLU-009
+TITLE: Can collect network data
+STATEMENT: The system should be able to collect network data
+
+[REQUIREMENT]
+UID: MP-PLU-010
+TITLE: Can collect OS data
+STATEMENT: The system should be able to collect OS data
+
+[REQUIREMENT]
+UID: MP-PLU-011
+TITLE: Can collect permission data
+STATEMENT: The system should be able to collect permission data of directories and files
+
+[REQUIREMENT]
+UID: MP-PLU-012
+TITLE: Can collect position data
+STATEMENT: The system should be able to collect position of the robot
+
+[/SECTION]
+
+[SECTION]
+TITLE: Camera plugin
+
+[REQUIREMENT]
+UID: MP-CAM-001
+TITLE: Can set camera name
+STATEMENT: Each camera can be identified by a unique alias
+
+[REQUIREMENT]
+UID: MP-CAM-002
+TITLE: Can set camera topic
+STATEMENT: Set from where which ROS topic the camera data comes from
+
+[REQUIREMENT]
+UID: MP-CAM-003
+TITLE: Can apply transformations to an image
+STATEMENT: Before inspecting the data, it can be transformed by passing a list of transformations to apply. Each transformation has a name, type and parameters.
+
+[REQUIREMENT]
+UID: MP-CAM-004
+TITLE: Can apply rotation transformation to an image
+STATEMENT: Able to rotate an image to 90, 180 degrees
+
+[REQUIREMENT]
+UID: MP-CAM-005
+TITLE: Can save raw image
+STATEMENT: Raw image can be saved as a file by setting a parameter.
+
+[REQUIREMENT]
+UID: MP-CAM-006
+TITLE: Can save transformed image
+STATEMENT: Transformed image can be saved as a file by setting a parameter.
+
+[REQUIREMENT]
+UID: MP-CAM-007
+TITLE: Can save inspected image
+STATEMENT: Inspected image can be saved as a file by setting a parameter.
+
+[REQUIREMENT]
+UID: MP-CAM-008
+TITLE: Can set path for where to save raw image
+STATEMENT: >>>
+Can set a path where to save camera raw images. Able to expand times:
+
+camera/raw/%Y-%m-%dT%H:%M:%S
+
+becomes for example
+camera/raw/2023-03-03T09:01:23
+<<<
+
+[REQUIREMENT]
+UID: MP-CAM-009
+TITLE: Can set path for where to save transformed image.
+STATEMENT: Able to set a path where to save camera transformed images.
+COMMENT: >>>
+Can expand times:
+
+camera/transformed/%Y-%m-%dT%H:%M:%S
+
+becomes for example
+camera/transformed/2023-03-03T09:01:23
+<<<
+
+[REQUIREMENT]
+UID: MP-CAM-010
+TITLE: Can set path for where to save inspected image
+STATEMENT: Able to set a path where to save camera inspected images.
+COMMENT: >>>
+Can expand times:
+
+camera/inspected/%Y-%m-%dT%H:%M:%S
+
+becomes for example
+camera/inspected/2023-03-03T09:01:23
+<<<
+
+[REQUIREMENT]
+UID: MP-CAM-011
+TITLE: Can set path for where to save inspected image
+STATEMENT: Able to set a path where to save camera inspected images.
+COMMENT: >>>
+Can expand times:
+
+camera/inspected/%Y-%m-%dT%H:%M:%S
+
+becomes for example
+camera/inspected/2023-03-03T09:01:23
+<<<
+
+[REQUIREMENT]
+UID: MP-CAM-012
+TITLE: Can apply translation image transformation
+STATEMENT: Image can be translated by shifting its x and y
+COMMENT: >>>
+See `OpenCV documentation <https://opencv-tutorial.readthedocs.io/en/latest/trans/transform.html>`_
+<<<
+
+[REQUIREMENT]
+UID: MP-CAM-013
+TITLE: Can apply scale image transformation
+STATEMENT: Image can be scaled to change its dimension
+COMMENT: >>>
+See `OpenCV documentation <https://opencv-tutorial.readthedocs.io/en/latest/trans/transform.html#scale>`_
+<<<
+
+[REQUIREMENT]
+UID: MP-CAM-014
+TITLE: Can apply flipping image transformation
+STATEMENT: Image can be flipped horizontally or vertically
+COMMENT: >>>
+See `OpenCV documentation <https://opencv-tutorial.readthedocs.io/en/latest/trans/transform.html#flipping>`_
+<<<
+
+[REQUIREMENT]
+UID: MP-CAM-015
+TITLE: Can apply image arithmetic image transformation
+STATEMENT: Image can be modified with image arithmetic, for example to make it lighter or darker
+COMMENT: >>>
+See `OpenCV documentation <https://opencv-tutorial.readthedocs.io/en/latest/trans/transform.html#image-artithmetic>`_
+<<<
+
+[REQUIREMENT]
+UID: MP-CAM-016
+TITLE: Can apply masking image transformation
+STATEMENT: Image can be transformed by using masking to extract only a certain part of an image.
+COMMENT: >>>
+See `OpenCV documentation <https://opencv-tutorial.readthedocs.io/en/latest/trans/transform.html#masking>`_
+<<<
+
+[REQUIREMENT]
+UID: MP-CAM-017
+TITLE: Can apply affine image transformation
+STATEMENT: Image can be rotated with affine transformation
+COMMENT: >>>
+See `OpenCV documentation <https://opencv-tutorial.readthedocs.io/en/latest/trans/transform.html#masking>`_
+<<<
+
+[/SECTION]
+
+[SECTION]
+TITLE: Command velocity plugin
+
+[REQUIREMENT]
+UID: MP-CMV-001
+TITLE: Get command velocity sent by the robot
+STATEMENT: Linear, angular and computed command velocity need to be collected.
+
+[REQUIREMENT]
+UID: MP-CMV-002
+TITLE: Can set topic where command velocity is published
+STATEMENT: Command velocity can come from different topic.
+
+[/SECTION]
+
+[SECTION]
+TITLE: CPU plugin
+
+[REQUIREMENT]
+UID: MP-CPU-001
+TITLE: Get average cpu
+STATEMENT: Get a percentage of CPU used. Must be between 0 and 100.
+
+[REQUIREMENT]
+UID: MP-CPU-002
+TITLE: Get cpu per processes
+STATEMENT: Get CPU used by processes. 5 by default and 5.0% cpu used minimum
+
+[REQUIREMENT]
+UID: MP-CPU-003
+TITLE: Can set maximum processes to store in sample
+STATEMENT: A ROS parameter must be defined for the number of processes matching the minimum cpu usage
+
+[REQUIREMENT]
+UID: MP-CPU-004
+TITLE: Can set cpu minimum to store its information
+STATEMENT: A ROS parameter must be defined for the minimum CPU usage to store in sample.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Distance traveled plugin
+
+[REQUIREMENT]
+UID: MP-DST-001
+TITLE: Can get distance traveled in meters
+STATEMENT: A measurement plugin can send how much the robot moved in meters in a certain amount of time. Still, send 0 if no movement.
+
+[/SECTION]
+
+[SECTION]
+TITLE: IP Camera plugin
+
+[REQUIREMENT]
+UID: MP-IPC-001
+TITLE: Can connect to IP cameras
+STATEMENT: The plugin should be able to connect to IP cameras and retrieve video streams for processing.
+
+[REQUIREMENT]
+UID: MP-IPC-002
+TITLE: Can configure camera parameters
+STATEMENT: The plugin should allow users to configure camera parameters such as resolution, frame rate, compression format, and authentication credentials.
+
+[REQUIREMENT]
+UID: MP-IPC-003
+TITLE: Can support multiple camera brands and models
+STATEMENT: The plugin should be able to connect to IP cameras from multiple brands and models, and should support different protocols such as RTSP, HTTP, and ONVIF.
+
+[REQUIREMENT]
+UID: MP-IPC-004
+TITLE: Can handle network interruptions
+STATEMENT: The plugin should be able to handle network interruptions and automatically reconnect to the camera when the network connection is restored.
+
+[REQUIREMENT]
+UID: MP-IPC-005
+TITLE: Can handle camera disconnections
+STATEMENT: The plugin should be able to handle camera disconnections and automatically reconnect to the camera when it becomes available again.
+
+[REQUIREMENT]
+UID: MP-IPC-006
+TITLE: Can provide video stream metadata
+STATEMENT: The plugin should be able to extract metadata from the video stream such as resolution, frame rate, duration, and timestamps.
+
+[REQUIREMENT]
+UID: MP-IPC-007
+TITLE: Supports video data
+STATEMENT: The IP camera input plugin should collect video data
+
+[REQUIREMENT]
+UID: MP-IPC-008
+TITLE: Supports audio data
+STATEMENT: The IP camera input plugin should collect audio data
+
+[REQUIREMENT]
+UID: MP-IPC-009
+TITLE: Supports video resolution configuration
+STATEMENT: The IP camera input plugin should support configuration of video resolution to adjust the quality of the video stream.
+
+[REQUIREMENT]
+UID: MP-IPC-010
+TITLE: Supports audio bitrate configuration
+STATEMENT: The IP camera input plugin should support configuration of audio bitrate to adjust the quality of the audio stream.
+
+[REQUIREMENT]
+UID: MP-IPC-011
+TITLE: Supports video segmentations
+STATEMENT: The IP camera input plugin should support segmenting the video stream into smaller chunks to reduce the size of each file and facilitate data processing.
+
+[REQUIREMENT]
+UID: MP-IPC-012
+TITLE: Supports video frame rate configuration
+STATEMENT: The IP camera input plugin should support configuration of video frame rate to adjust the smoothness of the video stream.
+
+[REQUIREMENT]
+UID: MP-IPC-013
+TITLE: Supports authentication for accessing the IP camera
+STATEMENT: The IP camera input plugin should support authentication mechanisms to secure the connection to the IP camera and prevent unauthorized access.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Map plugin
+
+[REQUIREMENT]
+UID: MP-MAP-001
+TITLE: Can collect ROS 2 Map data
+STATEMENT: The system should be able to collect ROS 2 Map data generated by the nav2 map_saver tool.
+
+[REQUIREMENT]
+UID: MP-MAP-002
+TITLE: Supports multiple file formats
+STATEMENT: The plugin should support multiple file formats for the collected map data, including PNG, YAML, and PGM.
+
+[REQUIREMENT]
+UID: MP-MAP-003
+TITLE: Set maximum timeout to save image
+STATEMENT: The plugin should support multiple file formats for the collected map data, including PNG, YAML, and PGM.
+
+[REQUIREMENT]
+UID: MP-MAP-004
+TITLE: Timeout for save map
+STATEMENT: The system should allow the user to set a timeout for nav2 map_saver plugin, which controls the duration for which the plugin will wait for a response before timing out and returning an error. This is necessary to prevent the plugin from waiting indefinitely and blocking other operations in the system.
+
+[REQUIREMENT]
+UID: MP-MAP-005
+TITLE: Control path to save map data
+STATEMENT: The system should allow the user to specify the path where the map data generated by the nav2 map_saver plugin is saved.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Memory plugin
+
+[REQUIREMENT]
+UID: MP-MEM-001
+TITLE: Can collect memory usage data
+STATEMENT: The system should be able to collect data on memory usage in order to monitor and analyze the performance of the system.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Network plugin
+
+[REQUIREMENT]
+UID: MP-NET-001
+TITLE: Network plugin
+STATEMENT: The system should include a network plugin that can check the accessibility of a remote address and port, and report the result. The plugin should allow the configuration of the remote address and port to be checked. The plugin should support both TCP and UDP protocols.
+
+[REQUIREMENT]
+UID: MP-NET-02
+TITLE: Network Plugin Timeout
+STATEMENT: The network plugin must have a configurable timeout parameter for checking remote address and port accessibility. The timeout value must be at least 0.1 second and configurable by the user.
+
+[/SECTION]
+
+[SECTION]
+TITLE: OS plugin
+
+[REQUIREMENT]
+UID: MP-OSP-001
+TITLE: Can collect OS name
+STATEMENT: The plugin must be able to identify the name of the operating system it is running on.
+
+[REQUIREMENT]
+UID: MP-OSP-002
+TITLE: Can collect kernel version and name
+STATEMENT: The plugin must be able to identify the version and name of the kernel used by the operating system.
+
+[REQUIREMENT]
+UID: MP-OSP-003
+TITLE: Can collect available memory
+STATEMENT: The plugin must be able to retrieve information on the amount of available memory on the system.
+
+[REQUIREMENT]
+UID: MP-OSP-004
+TITLE: Can collect CPU count
+STATEMENT: The plugin must be able to identify the number of CPUs available on the system.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Permissions plugin
+
+[REQUIREMENT]
+UID: MP-PER-001
+TITLE: Check file/directory permissions
+STATEMENT: The system should have a plugin that can check the permissions of a given file or directory. The plugin should be able to determine if the current user has read, write, or execute permissions on the file/directory, and return an appropriate response.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Position plugin
+
+[REQUIREMENT]
+UID: MP-POS-001
+TITLE: Collect robot position
+STATEMENT: The system shall include a plugin that can collect the position of the robot in the environment, using sensors such as GPS or odometry data.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Speed plugin
+
+[REQUIREMENT]
+UID: MP-SPE-001
+TITLE: Can collect speed data
+STATEMENT: The plugin should be able to collect speed data from a robot running ROS 2 and provide the data in appropriate units (e.g., meters per second).
+
+[/SECTION]
+
+[SECTION]
+TITLE: Storage plugin
+
+[REQUIREMENT]
+UID: MS-STO-001
+TITLE: Can determine available disk space
+STATEMENT: The plugin must be able to retrieve information about the amount of free disk space in a specified directory.
+
+[/SECTION]
+
+[SECTION]
+TITLE: String stamped plugin
+
+[REQUIREMENT]
+UID: MP-STR-001
+TITLE: Can collect generic data from a topic publishing a StringStamped message
+STATEMENT: The plugin should be able to subscribe to a ROS 2 topic and receive a StringStamped message containing generic data.
+
+[/SECTION]
+
+[SECTION]
+TITLE: TCP Health plugin
+
+[REQUIREMENT]
+UID: MP-TCP-001
+TITLE: Can connect to a TCP server
+STATEMENT: The plugin should be able to connect to a specified TCP server to collect its status.
+
+[REQUIREMENT]
+UID: MP-TCP-002
+TITLE: Can collect TCP server status
+STATEMENT: The plugin should be able to collect the status of the connected TCP server, including information about whether the server is accepting connections, the number of active connections, and other relevant details.
+
+[REQUIREMENT]
+UID: MP-TCP-003
+TITLE: Can set connection timeout
+STATEMENT: The plugin should allow the user to set a connection timeout value, after which the plugin should terminate the connection attempt if it has not successfully connected to the server.
+
+[/SECTION]
+
+[SECTION]
+TITLE: Uptime plugin
+
+[REQUIREMENT]
+UID: MP-UPT-001
+TITLE: Can collect OS uptime
+STATEMENT: The OS plugin should be able to retrieve the time duration since the system was last booted up.
+
+[/SECTION]
