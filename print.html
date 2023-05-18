@@ -369,10 +369,10 @@ services:
 <pre><code class="language-bash">$ xhost +
 </code></pre>
 <p>Then start the container:</p>
-<pre><code class="language-bash">$ docker compose up
+<pre><code class="language-bash">$ docker compose up -d
 </code></pre>
 <p>And get in the container with:</p>
-<pre><code class="language-bash">$ docker exec -it ros2-data-collection bash
+<pre><code class="language-bash">$ docker exec -it ros2-data-collection /ros_entrypoint.sh bash
 </code></pre>
 <h2 id="build-from-source"><a class="header" href="#build-from-source">Build from source</a></h2>
 <h3 id="download-the-repository"><a class="header" href="#download-the-repository">Download the repository</a></h3>
