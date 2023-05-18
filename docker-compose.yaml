@@ -23,11 +23,11 @@ services:
       - ${HOME}/.Xauthority:/root/.Xauthority
       - /tmp/.X11-unix:/tmp/.X11-unix
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${PWD}:/root/ws/src/ros2_data_collection
+      - ${PWD}:/root/ros2_data_collection/src/ros2_data_collection
     network_mode: "host"
     logging: *x-logging
     restart: *x-restart
     stop_grace_period: *x-stop-grace-period
     runtime: nvidia
     command: tail -F anything
-    working_dir: /root/ws
+    working_dir: /root/ros2_data_collection
