@@ -60,12 +60,12 @@ $ xhost +
 Then start the container:
 
 ```bash
-$ docker compose up
+$ docker compose up -d
 ```
 
 And get in the container with:
 ```bash
-$ docker exec -it ros2-data-collection bash
+$ docker exec -it ros2-data-collection /ros_entrypoint.sh bash
 ```
 
 ## Build from source
