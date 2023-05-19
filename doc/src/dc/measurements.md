@@ -62,6 +62,7 @@ Each measurement is collected through a node and has these configuration paramet
 | [Command velocity](./measurements/cmd_vel.md)            | Command velocity: navigation commands                                                                   |
 | [CPU](./measurements/cpu.md)                             | CPU statistics                                                                                          |
 | [Distance traveled](./measurements/distance_traveled.md) | Total distance traveled by the robot                                                                    |
+| [Dummy](./measurements/dummy.md)                         | Dummy event, for testing and debugging                                                                  |
 | [IP Camera](./measurements/ip_camera.md)                 | IP camera videos as files                                                                               |
 | [Map](./measurements/map.md)                             | ROS map files (yaml and pgm) and metadata used by the robot to localize and navigate                    |
 | [Memory](./measurements/memory.md)                       | System memory usage                                                                                     |
