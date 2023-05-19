@@ -23,6 +23,14 @@
         </class>
     </library>
 
+    <library path="dc_dummy_measurement">
+        <class name="dc_measurements/Dummy" type="dc_measurements::Dummy" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_dummy
+            </description>
+        </class>
+    </library>
+
     <library path="dc_distance_traveled_measurement">
         <class name="dc_measurements/DistanceTraveled" type="dc_measurements::DistanceTraveled" base_class_type="dc_core::Measurement">
             <description>
