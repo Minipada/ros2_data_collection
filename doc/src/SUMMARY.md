@@ -15,6 +15,7 @@
   - [Camera](./dc/measurements/camera.md)
   - [Command velocity](./dc/measurements/cmd_vel.md)
   - [CPU](./dc/measurements/cpu.md)
+  - [Dummy](./dc/measurements/dummy.md)
   - [Distance traveled](./dc/measurements/distance_traveled.md)
   - [IP Camera](./dc/measurements/ip_camera.md)
   - [Map](./dc/measurements/map.md)
