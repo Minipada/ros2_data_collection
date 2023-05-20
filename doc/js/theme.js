@@ -21,10 +21,10 @@ document.getElementById('ayu').onclick = function () {
 
 if (window.location.href.indexOf('http://localhost/') == 0) {
     document.getElementById("logo-dc").src = "/images/dc.png"
-    document.getElementById("logo-dc").href = "/"
+    document.getElementById("a-logo-dc").href = "/"
 } else if (window.location.href.indexOf('https://minipada.github.io/ros2_data_collection/') == 0) {
     let level = window.location.href.split("https://minipada.github.io/ros2_data_collection/")[1].split("/").length - 1
 
     document.getElementById("logo-dc").src = "../".repeat(level) + "images/dc.png"
-    document.getElementById("logo-dc").href = "https://minipada.github.io/ros2_data_collection"
+    document.getElementById("a-logo-dc").href = "https://minipada.github.io/ros2_data_collection"
 }
