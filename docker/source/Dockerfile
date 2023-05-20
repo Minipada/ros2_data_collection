@@ -33,3 +33,6 @@ RUN --mount=type=cache,target=/root/.ccache/ \
     ccache -s && \
     # Update /ros_entrypoint.sh to source our new workspace
     sed -i "s#/opt/ros/\$ROS_DISTRO/setup.bash#$ROS_UNDERLAY/setup.sh#g" /ros_entrypoint.sh
+
+# hadolint ignore=SC2016
+RUN echo "source ${ROS_UNDERLAY}/setup.bash" >> /etc/bash.bashrc
