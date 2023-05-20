@@ -14,7 +14,7 @@
 
 ### Feature requests
 
-Since I want DC to be community driven, go to [Github discussions](https://ros2-data-collection.hellonext.co), start a discussion about a features you want to see and users will be able to vote for your it. Most requested features will have more attention than others.
+Since I want DC to be community driven, go to [Github discussions](https://github.com/Minipada/ros2_data_collection/discussions), start a discussion about a features you want to see and users will be able to vote for your it. Most requested features will have more attention than others.
 
 ### Found a bug?
 
