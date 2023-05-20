@@ -34,6 +34,4 @@ RUN --mount=type=cache,target=/root/.ccache/ \
     --ament-cmake-args -DCMAKE_BUILD_TYPE=Release \
     --event-handlers desktop_notification- status- && \
     ccache -s && \
-    rm -rf /var/lib/apt/lists/* && \
-    # Update /ros_entrypoint.sh to source our new workspace
-    sed -i "s#/opt/ros/\$ROS_DISTRO/setup.bash#$ROS_UNDERLAY/setup.sh#g" /ros_entrypoint.sh
+    rm -rf /var/lib/apt/lists/*
