@@ -6,7 +6,7 @@
 # DC source compiled
 
 ARG ROS_DISTRO=humble
-FROM minipada/ros2_data_collection:${ROS_DISTRO}-ci-testing
+FROM ghcr.io/minipada/ros2_data_collection:${ROS_DISTRO}-ci-testing
 
 # Export ROS_UNDERLAY for downstream docker containers
 ENV ROS_UNDERLAY /root/ros2_data_collection/install
