@@ -4,7 +4,7 @@
 
 Even though measurements and destinations will constantly be added in the future, the current focus is on getting feedback, fixing bugs, documentation and reach a minimum test coverage.
 
-Create a feature request in HelloNext...or better, write your plugin and do a Pull Request.
+Create a feature request in [Github Discussions](https://github.com/Minipada/ros2_data_collection/discussions/categories/ideas-and-feature-requests)...or better, write your plugin and do a Pull Request.
 
 ## Can I use DC without Fluent Bit backend?
 It is possible to use DC without Fluent Bit as backend. There is an example with the RCL destination, which subscribes to a ROS topic and prints it in the console.
