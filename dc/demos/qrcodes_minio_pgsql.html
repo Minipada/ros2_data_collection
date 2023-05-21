@@ -272,11 +272,6 @@ $ export TURTLEBOT3_MODEL=waffle
       id:
         name: id
         value_from_file: /etc/machine-id
-    run_id:
-      enabled: true
-      counter: true
-      counter_path: &quot;$HOME/run_id&quot;
-      uuid: false
     flb_pgsql:
       plugin: &quot;dc_destinations/FlbPgSQL&quot;
       inputs: [&quot;/dc/group/robot&quot;]
@@ -311,6 +306,11 @@ measurement_server:
     custom_str_params: [&quot;robot_name&quot;]
     robot_name: &quot;C3PO&quot;
     measurement_plugins: [&quot;cmd_vel&quot;, &quot;position&quot;, &quot;speed&quot;]
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: &quot;$HOME/run_id&quot;
+      uuid: false
     moving:
       plugin: &quot;dc_conditions/Moving&quot;
     cmd_vel:
@@ -445,6 +445,11 @@ measurement_server:
   ...
   measurement_plugins: [&quot;right_camera&quot;, &quot;left_camera&quot;]
   condition_plugins: [&quot;moving&quot;, &quot;inspected_exists&quot;]
+  run_id:
+    enabled: true
+    counter: true
+    counter_path: &quot;$HOME/run_id&quot;
+    uuid: false
   destinations:
     minio:
       bucket: mybucket
@@ -533,11 +538,6 @@ measurement_server:
       id:
         name: id
         value_from_file: /etc/machine-id
-    run_id:
-      enabled: true
-      counter: true
-      counter_path: &quot;$HOME/run_id&quot;
-      uuid: false
     flb_files_metrics:
       plugin: &quot;dc_destinations/FlbFilesMetrics&quot;
       inputs:

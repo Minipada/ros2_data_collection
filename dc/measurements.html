@@ -200,6 +200,10 @@ In addition, conditions are pluginlibs plugin also loaded dynamically. They are 
 <tr><td>save_local_base_path</td><td>Path where files will be saved locally (e.g camera images). Expands $X to environment variables and =Y to custom string parameters</td><td>str</td><td>&quot;$HOME/ros2/data/%Y/%M/%D/%H&quot;</td></tr>
 <tr><td>all_base_path</td><td>Path where files will be saved at their destination (S3, minio...). Expands $X to environment variables and =Y to</td><td>str</td><td>&quot;&quot;</td></tr>
 <tr><td>custom_str_params</td><td>Custom string parameters that can be used in other parameters.</td><td>list[str]</td><td>N/A (optional)</td></tr>
+<tr><td>run_id.enabled</td><td>Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter or UUID</td><td>str</td><td>true</td></tr>
+<tr><td>run_id.counter</td><td>Enable counter for the run_id</td><td>str</td><td>true</td></tr>
+<tr><td>run_id.counter_path</td><td>Path to store the last run. It is expanded with environment variables id</td><td>str</td><td>&quot;$HOME/run_id&quot;</td></tr>
+<tr><td>run_id.uuid</td><td>Generate a new run ID by using a random UUID</td><td>str</td><td>false</td></tr>
 </tbody></table>
 </div>
 <h2 id="plugin-parameters"><a class="header" href="#plugin-parameters">Plugin parameters</a></h2>

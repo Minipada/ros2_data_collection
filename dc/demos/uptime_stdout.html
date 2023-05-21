@@ -203,6 +203,11 @@
       debug: true
       tags: [&quot;flb_stdout&quot;]
       init_collect: true
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: &quot;$HOME/run_id&quot;
+      uuid: false
 </code></pre>
 <p><strong>measurement_plugins (Mandatory)</strong>: List all the plugins to enable. This is a custom string that is equal to the measurement plugin dictionary present in the same level. If not listed, will not be loaded.</p>
 <p><strong>uptime.plugin (Mandatory)</strong>: Name of the plugin, if you are not sure which plugin is available, <a href="../cli.html">use the CLI tool</a> to list them</p>
@@ -211,6 +216,10 @@
 <p><strong>uptime.enable_validator (Optional)</strong>: Will validate the data against a JSON schema. This file is located in the <a href="https://github.com/Minipada/ros2_data_collection/tree/humble/dc_measurements/plugins/measurements/json">dc_measurements package</a>. You can provide your own using the <code>json_schema_path</code> parameter, which we will explore later on</p>
 <p><strong>uptime.debug (Optional)</strong>: More verbose output</p>
 <p><strong>uptime.init_collect (Optional)</strong>: Collect when the node starts instead of waiting for the polling_interval time to pass</p>
+<p><strong>run_id.enabled (Optional)</strong>: Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter that increment at each restart of the node or UUID</p>
+<p><strong>run_id.counter (Optional)</strong>: Enable counter for the run_id</p>
+<p><strong>run_id.counter_path (Optional)</strong>: Path to store the last run. It is expanded with environment variables id</p>
+<p><strong>run_id.uuid (Optional)</strong>: Generate a new run ID by using a random UUID</p>
 <p>This will collect the uptime every 5 seconds (including when the node starts), will forward it to the <em>flb_stdout</em> destination.</p>
 <div id="admonition-info" class="admonition info">
 <div class="admonition-title">
@@ -249,11 +258,6 @@
       id:
         name: id
         value_from_file: /etc/machine-id
-    run_id:
-      enabled: true
-      counter: true
-      counter_path: &quot;$HOME/run_id&quot;
-      uuid: false
     flb_stdout:
       plugin: &quot;dc_destinations/FlbStdout&quot;
       inputs: [&quot;/dc/measurement/uptime&quot;]
@@ -295,10 +299,6 @@
 <p><strong>custom_str_params.id.value_from_file (Optional)</strong>: Value associated to the key in the dictionary to add taken from the content of a file</p>
 <h4 id="inject-run-id-at-each-record"><a class="header" href="#inject-run-id-at-each-record">Inject run id at each record</a></h4>
 <p>Finally, we set the run id. This is used later on when fetching data for a run. It can come from a counter which is incremented at each start of the node or from a random UUID generated. The counter mechanism writes and read on a file on the system (take care of not deleting it), you can set its path as a parameter.</p>
-<p><strong>run_id.enabled (Optional)</strong>: Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter that increment at each restart of the node or UUID</p>
-<p><strong>run_id.counter (Optional)</strong>: Enable counter for the run_id</p>
-<p><strong>run_id.counter_path (Optional)</strong>: Path to store the last run. It is expanded with environment variables id</p>
-<p><strong>run_id.uuid (Optional)</strong>: Generate a new run ID by using a random UUID</p>
 <p>Find the complete destinations documentation <a href="../destinations.html">here</a></p>
 <h2 id="console-output"><a class="header" href="#console-output">Console output</a></h2>
 <p>Now that the node started, let us see what's displayed in the console</p>

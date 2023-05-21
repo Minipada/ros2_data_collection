@@ -298,6 +298,11 @@ $ export TURTLEBOT3_MODEL=waffle
     custom_str_params: [&quot;robot_name&quot;]
     robot_name: &quot;C3PO&quot;
     measurement_plugins: [&quot;cmd_vel&quot;, &quot;map&quot;, &quot;position&quot;, &quot;speed&quot;]
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: &quot;$HOME/run_id&quot;
+      uuid: false
     save_local_base_path: &quot;$HOME/dc_data/&quot;
     all_base_path: &quot;=robot_name/%Y/%m/%d/%H&quot;
     cmd_vel:
@@ -384,11 +389,6 @@ $ export TURTLEBOT3_MODEL=waffle
       id:
         name: id
         value_from_file: /etc/machine-id
-    run_id:
-      enabled: true
-      counter: true
-      counter_path: &quot;$HOME/run_id&quot;
-      uuid: false
     flb_stdout:
       plugin: &quot;dc_destinations/FlbStdout&quot;
       inputs: [&quot;/dc/group/robot&quot;, &quot;/dc/measurement/map&quot;]
