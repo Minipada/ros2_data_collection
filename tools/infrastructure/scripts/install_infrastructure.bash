@@ -169,8 +169,12 @@ function start_container() {
 
 # Install and start tool if possible
 if [ "${INSTALL_TYPE}" == "docker" ]; then
-    init_docker
-    start_container
+    if ! command -v docker &> /dev/null; then
+        "${ID_LIKE}_docker"
+        init_docker
+    else
+        start_container
+    fi
 else
     # shellcheck disable=SC2046
     if [ $(type -t "${ID_LIKE}_${INSTALL_TYPE}") == "function" ]; then
