@@ -25,6 +25,9 @@ foreach(Dependency IN ITEMS ${dependencies})
   find_package(${Dependency} REQUIRED)
 endforeach()
 
+find_package(PkgConfig REQUIRED)
+pkg_search_module(UUID REQUIRED uuid)
+
 dc_package()
 
 set(library_name measurement_server_core)
@@ -34,6 +37,7 @@ include_directories(
   include
   ${YAML_CPP_INCLUDEDIR}
   ${OpenCV_INCLUDE_DIRS}
+  ${UUID_INCLUDE_DIRS}
 )
 
 # Condition plugins
@@ -164,6 +168,7 @@ foreach(measurement_plugin ${dc_measurement_plugin_libs})
     ${measurement_plugin}
     nlohmann_json::nlohmann_json
     nlohmann_json_schema_validator
+    ${UUID_LIBRARIES}
   )
   target_compile_definitions(${measurement_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
@@ -182,6 +187,11 @@ pluginlib_export_plugin_description_file(dc_core condition_plugin.xml)
 # Library
 add_library(${library_name} SHARED
   src/measurement_server.cpp
+)
+
+target_link_libraries(
+  ${library_name}
+  ${UUID_LIBRARIES}
 )
 
 ament_target_dependencies(${library_name}

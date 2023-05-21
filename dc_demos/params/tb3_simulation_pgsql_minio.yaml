@@ -25,11 +25,6 @@ destination_server:
       id:
         name: id
         value_from_file: /etc/machine-id
-    run_id:
-      enabled: true
-      counter: true
-      counter_path: "$HOME/run_id"
-      uuid: false
     flb_files_metrics:
       plugin: "dc_destinations/FlbFilesMetrics"
       inputs: ["/dc/measurement/map", "/dc/measurement/camera"]
@@ -146,6 +141,11 @@ measurement_server:
         "minio_dashboard_health",
         "pgsql_health",
       ]
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: "$HOME/run_id"
+      uuid: false
     save_local_base_path: "$HOME/dc_data/"
     all_base_path: "=robot_name/%Y/%m/%d/%H"
     condition_plugins: ["min_distance_traveled", "max_distance_traveled"]

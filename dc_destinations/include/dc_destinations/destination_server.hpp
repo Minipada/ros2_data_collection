@@ -1,8 +1,6 @@
 #ifndef DC_DESTINATIONS__DESTINATION_SERVER_HPP_
 #define DC_DESTINATIONS__DESTINATION_SERVER_HPP_
 
-#include <uuid/uuid.h>
-
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <chrono>
 #include <filesystem>
@@ -29,6 +27,7 @@
 namespace destination_server
 {
 using json = nlohmann::json;
+using namespace std::chrono_literals;
 
 /**
  * @class dc_destination::DestinationNode
@@ -90,11 +89,6 @@ protected:
   std::vector<std::string> destination_time_key_;
   std::vector<std::string> custom_str_params_list_;
   json custom_params_;
-  std::string run_id_;
-  std::string run_id_counter_path_;
-  bool run_id_enabled_;
-  bool run_id_counter_;
-  bool run_id_uuid_;
 
   // Fluent Bit
   flb_ctx_t* ctx_;

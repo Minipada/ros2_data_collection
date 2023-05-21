@@ -25,11 +25,6 @@ destination_server:
       id:
         name: id
         value_from_file: /etc/machine-id
-    run_id:
-      enabled: true
-      counter: true
-      counter_path: "$HOME/run_id"
-      uuid: false
     flb_stdout:
       plugin: "dc_destinations/FlbStdout"
       inputs: ["/dc/measurement/uptime"]
@@ -49,3 +44,8 @@ measurement_server:
       debug: true
       tags: ["flb_stdout"]
       init_collect: true
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: "$HOME/run_id"
+      uuid: false

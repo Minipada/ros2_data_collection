@@ -29,11 +29,6 @@ Destinations parameters are loaded dynamically. Here are the static ones:
 | [flb.in_storage_type](https://docs.fluentbit.io/manual/administration/buffering-and-storage#input-section-configuration)                      | Specifies the buffering mechanism to use. It can be memory or filesystem.                                                                                                                                                                             | str         | "filesystem"            |
 | [flb.in_storage_pause_on_chunks_overlimit](https://docs.fluentbit.io/manual/administration/buffering-and-storage#input-section-configuration) | Specifies if file storage is to be paused when reaching the chunk limit.                                                                                                                                                                              | str         | "off"                   |
 | custom_str_params_list                                                                                                                        | Custom strings to use in other parameters. They are also appended in the json sent to the destination                                                                                                                                                 | list\[str\] | N/A                     |
-| run_id.enabled                                                                                                                                | Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter or UUID                                                                                                                                     | str         | true                    |
-| run_id.counter                                                                                                                                | Enable counter for the run_id                                                                                                                                                                                                                         | str         | true                    |
-| run_id.counter_path                                                                                                                           | Path to store the last run. It is expanded with environment variables id                                                                                                                                                                              | str         | "$HOME/run_id"          |
-| run_id.uuid                                                                                                                                   | Generate a new run ID by using a random UUID                                                                                                                                                                                                          | str         | false                   |
-
 
 ## Plugin parameters
 
@@ -85,11 +80,6 @@ destination_server:
       id:
         name: id
         value_from_file: /etc/machine-id
-    run_id:
-      enabled: true
-      counter: true
-      counter_path: "$HOME/run_id"
-      uuid: false
     flb_minio:
       plugin: "dc_destinations/FlbMinIO"
       inputs: ["/dc/group/map"]

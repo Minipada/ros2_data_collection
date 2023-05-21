@@ -27,7 +27,10 @@ In addition, conditions are pluginlibs plugin also loaded dynamically. They are 
 | save_local_base_path | Path where files will be saved locally (e.g camera images). Expands $X to environment variables and =Y to custom string parameters | str         | "$HOME/ros2/data/%Y/%M/%D/%H" |
 | all_base_path        | Path where files will be saved at their destination (S3, minio...). Expands $X to environment variables and =Y to                  | str         | ""                            |
 | custom_str_params    | Custom string parameters that can be used in other parameters.                                                                     | list\[str\] | N/A (optional)                |
-
+| run_id.enabled       | Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter or UUID                  | str         | true                          |
+| run_id.counter       | Enable counter for the run_id                                                                                                      | str         | true                          |
+| run_id.counter_path  | Path to store the last run. It is expanded with environment variables id                                                           | str         | "$HOME/run_id"                |
+| run_id.uuid          | Generate a new run ID by using a random UUID                                                                                       | str         | false                         |
 
 ## Plugin parameters
 

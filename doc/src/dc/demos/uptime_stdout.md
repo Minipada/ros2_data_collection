@@ -34,6 +34,11 @@ measurement_server:
       debug: true
       tags: ["flb_stdout"]
       init_collect: true
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: "$HOME/run_id"
+      uuid: false
 ```
 
 **measurement_plugins (Mandatory)**: List all the plugins to enable. This is a custom string that is equal to the measurement plugin dictionary present in the same level. If not listed, will not be loaded.
@@ -49,6 +54,14 @@ measurement_server:
 **uptime.debug (Optional)**: More verbose output
 
 **uptime.init_collect (Optional)**: Collect when the node starts instead of waiting for the polling_interval time to pass
+
+**run_id.enabled (Optional)**: Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter that increment at each restart of the node or UUID
+
+**run_id.counter (Optional)**: Enable counter for the run_id
+
+**run_id.counter_path (Optional)**: Path to store the last run. It is expanded with environment variables id
+
+**run_id.uuid (Optional)**: Generate a new run ID by using a random UUID
 
 This will collect the uptime every 5 seconds (including when the node starts), will forward it to the *flb_stdout* destination.
 
@@ -88,11 +101,6 @@ destination_server:
       id:
         name: id
         value_from_file: /etc/machine-id
-    run_id:
-      enabled: true
-      counter: true
-      counter_path: "$HOME/run_id"
-      uuid: false
     flb_stdout:
       plugin: "dc_destinations/FlbStdout"
       inputs: ["/dc/measurement/uptime"]
@@ -168,14 +176,6 @@ Here, we want to append some content in every record: the robot name and its ID.
 #### Inject run id at each record
 
 Finally, we set the run id. This is used later on when fetching data for a run. It can come from a counter which is incremented at each start of the node or from a random UUID generated. The counter mechanism writes and read on a file on the system (take care of not deleting it), you can set its path as a parameter.
-
-**run_id.enabled (Optional)**: Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter that increment at each restart of the node or UUID
-
-**run_id.counter (Optional)**: Enable counter for the run_id
-
-**run_id.counter_path (Optional)**: Path to store the last run. It is expanded with environment variables id
-
-**run_id.uuid (Optional)**: Generate a new run ID by using a random UUID
 
 Find the complete destinations documentation [here](../destinations.md)
 
