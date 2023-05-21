@@ -119,11 +119,6 @@ destination_server:
       id:
         name: id
         value_from_file: /etc/machine-id
-    run_id:
-      enabled: true
-      counter: true
-      counter_path: "$HOME/run_id"
-      uuid: false
     flb_pgsql:
       plugin: "dc_destinations/FlbPgSQL"
       inputs: ["/dc/group/robot"]
@@ -158,6 +153,11 @@ measurement_server:
     custom_str_params: ["robot_name"]
     robot_name: "C3PO"
     measurement_plugins: ["cmd_vel", "position", "speed"]
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: "$HOME/run_id"
+      uuid: false
     moving:
       plugin: "dc_conditions/Moving"
     cmd_vel:
@@ -315,6 +315,11 @@ measurement_server:
   ...
   measurement_plugins: ["right_camera", "left_camera"]
   condition_plugins: ["moving", "inspected_exists"]
+  run_id:
+    enabled: true
+    counter: true
+    counter_path: "$HOME/run_id"
+    uuid: false
   destinations:
     minio:
       bucket: mybucket
@@ -403,11 +408,6 @@ destination_server:
       id:
         name: id
         value_from_file: /etc/machine-id
-    run_id:
-      enabled: true
-      counter: true
-      counter_path: "$HOME/run_id"
-      uuid: false
     flb_files_metrics:
       plugin: "dc_destinations/FlbFilesMetrics"
       inputs:

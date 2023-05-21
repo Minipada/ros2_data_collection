@@ -251,6 +251,23 @@ public:
     // }
   }
 
+  void addRunId(dc_interfaces::msg::StringStamped& msg)
+  {
+    if (run_id_enabled_)
+    {
+      try
+      {
+        json data_json = json::parse(msg.data);
+        data_json["run_id"] = run_id_;
+        msg.data = data_json.dump(-1, ' ', true);
+      }
+      catch (json::parse_error& e)
+      {
+        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding tags: " << msg.data);
+      }
+    }
+  }
+
   void addMeasurementName(dc_interfaces::msg::StringStamped& msg)
   {
     // Only put the tags in if the conditions are ok. This way, we still publish the data
@@ -295,6 +312,7 @@ public:
   {
     if (!msg.data.empty() && msg.data != "null")
     {
+      addRunId(msg);
       addTags(msg);
       addMeasurementName(msg);
       addMeasurementPluginName(msg);
@@ -387,7 +405,8 @@ public:
                  const std::vector<std::string>& if_any_conditions, const std::vector<std::string>& if_none_conditions,
                  const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
                  const std::string& save_local_base_path, const std::string& all_base_path,
-                 const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded) override
+                 const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
+                 const std::string& run_id, const bool& run_id_enabled) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -417,6 +436,8 @@ public:
     all_base_path_expanded_ = all_base_path_expanded;
     save_local_base_path_ = save_local_base_path;
     save_local_base_path_expanded_ = save_local_base_path_expanded;
+    run_id_ = run_id;
+    run_id_enabled_ = run_id_enabled;
 
     condition_max_measurements_ = condition_max_measurements;
     if_all_conditions_ = if_all_conditions;
@@ -503,6 +524,10 @@ protected:
   rclcpp::TimerBase::SharedPtr collect_timer_;
   std::string topic_output_;
   std::string group_key_;
+
+  // Run Id
+  bool run_id_enabled_;
+  std::string run_id_;
 
   // Parameters
   bool init_collect_;

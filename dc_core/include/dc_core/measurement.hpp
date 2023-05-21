@@ -44,20 +44,24 @@ public:
    * @param  if_all_conditions Collect only if all conditions are activated
    * @param  if_any_conditions Collect if any conditions is activated
    * @param  if_none_conditions Collect only if all conditions are not activated
+   * @param  run_id Unique ID of the current run
+   * @param  run_id Whether Run Id is enabled
    */
-  virtual void
-  configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
-            const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
-            std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin, const std::string& group_key,
-            const std::string& topic_output, const int& polling_interval, const bool& debug,
-            const bool& enable_validator, const std::string& json_schema_path, const std::vector<std::string>& tags,
-            const bool& init_collect, const int& init_max_measurements, const bool& include_measurement_name,
-            const bool& include_measurement_plugin, const int& condition_max_measurements,
-            const std::vector<std::string>& if_all_conditions, const std::vector<std::string>& if_any_conditions,
-            const std::vector<std::string>& if_none_conditions, const std::vector<std::string>& remote_keys,
-            const std::vector<std::string>& remote_prefixes, const std::string& save_local_base_path,
-            const std::string& all_base_path, const std::string& all_base_path_expanded,
-            const std::string& save_local_base_path_expanded) = 0;
+  virtual void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
+                         const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
+                         std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
+                         const std::string& group_key, const std::string& topic_output, const int& polling_interval,
+                         const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
+                         const std::vector<std::string>& tags, const bool& init_collect,
+                         const int& init_max_measurements, const bool& include_measurement_name,
+                         const bool& include_measurement_plugin, const int& condition_max_measurements,
+                         const std::vector<std::string>& if_all_conditions,
+                         const std::vector<std::string>& if_any_conditions,
+                         const std::vector<std::string>& if_none_conditions,
+                         const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
+                         const std::string& save_local_base_path, const std::string& all_base_path,
+                         const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
+                         const std::string& run_id, const bool& run_id_enabled) = 0;
 
   /**
    * @brief Method to cleanup resources used on shutdown.

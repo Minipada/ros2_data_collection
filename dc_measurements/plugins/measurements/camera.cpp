@@ -46,6 +46,7 @@ void Camera::onConfigure()
   node->get_parameter(measurement_name_ + ".save_rotated_path", save_rotated_path_);
   node->get_parameter(measurement_name_ + ".save_inspected_path", save_inspected_path_);
   node->get_parameter(measurement_name_ + ".detection_modules", detection_modules_);
+  // FIXME Not used, wrong parameter too, should be without measurement_name_
   node->get_parameter(measurement_name_ + ".destinations.minio.bucket", minio_bucket_);
 
   client_cb_group_ = node->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
