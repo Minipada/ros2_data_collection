@@ -1,10 +1,14 @@
 #ifndef DC_MEASUREMENTS__MEASUREMENT_SERVER_HPP_
 #define DC_MEASUREMENTS__MEASUREMENT_SERVER_HPP_
 
+#include <uuid/uuid.h>
+
 #include <boost/algorithm/string.hpp>
+#include <nlohmann/json.hpp>
 
 #include "dc_core/condition.hpp"
 #include "dc_core/measurement.hpp"
+#include "dc_util/filesystem_utils.hpp"
 #include "dc_util/node_utils.hpp"
 #include "dc_util/string_utils.hpp"
 #include "nav2_util/lifecycle_node.hpp"
@@ -16,6 +20,7 @@
 
 namespace measurement_server
 {
+using json = nlohmann::json;
 
 /**
  * @class dc_measurement::MeasurementNode
@@ -78,7 +83,7 @@ protected:
   nav2_util::CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) override;
 
   void setCustomParameters();
-
+  void setRunId();
   void setBaseSavePath();
 
   std::shared_ptr<tf2_ros::Buffer> tf_;
@@ -87,6 +92,14 @@ protected:
   // Measurements
   pluginlib::ClassLoader<dc_core::Measurement> measurement_plugin_loader_;
   std::vector<pluginlib::UniquePtr<dc_core::Measurement>> measurements_;
+  // Run ID
+  json custom_params_;
+  std::string run_id_;
+  std::string run_id_counter_path_;
+  bool run_id_enabled_;
+  bool run_id_counter_;
+  bool run_id_uuid_;
+
   // std::vector<std::string> measurement_plugins_;
   std::vector<std::string> measurement_group_key_;
   std::vector<std::string> measurement_ids_;

@@ -144,6 +144,11 @@ measurement_server:
     custom_str_params: ["robot_name"]
     robot_name: "C3PO"
     measurement_plugins: ["cmd_vel", "map", "position", "speed"]
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: "$HOME/run_id"
+      uuid: false
     save_local_base_path: "$HOME/dc_data/"
     all_base_path: "=robot_name/%Y/%m/%d/%H"
     cmd_vel:
@@ -242,11 +247,6 @@ destination_server:
       id:
         name: id
         value_from_file: /etc/machine-id
-    run_id:
-      enabled: true
-      counter: true
-      counter_path: "$HOME/run_id"
-      uuid: false
     flb_stdout:
       plugin: "dc_destinations/FlbStdout"
       inputs: ["/dc/group/robot", "/dc/measurement/map"]
