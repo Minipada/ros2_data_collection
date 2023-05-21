@@ -20,7 +20,6 @@ MeasurementServer::MeasurementServer(const rclcpp::NodeOptions& options,
   get_parameter("condition_plugins", condition_ids_);
 
   setCustomParameters();
-  setRunId();
 
   // Base file saving path
   setBaseSavePath();
@@ -120,7 +119,7 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
 {
   RCLCPP_INFO(get_logger(), "Configuring");
   auto node = shared_from_this();
-
+  setRunId();
   tf_ = std::make_shared<tf2_ros::Buffer>(get_clock());
   auto timer_interface =
       std::make_shared<tf2_ros::CreateTimerROS>(get_node_base_interface(), get_node_timers_interface());

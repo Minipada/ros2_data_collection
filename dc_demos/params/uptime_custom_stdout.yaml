@@ -16,8 +16,6 @@ destination_server:
       in_storage_type: "filesystem"
       in_storage_pause_on_chunks_overlimit: "off"
     destination_plugins: ["flb_stdout"]
-    run_id:
-      enabled: false
     flb_stdout:
       plugin: "dc_destinations/FlbStdout"
       inputs: ["/dc/measurement/uptime_custom"]
@@ -28,6 +26,8 @@ destination_server:
 measurement_server:
   ros__parameters:
     measurement_plugins: ["uptime_custom"]
+    run_id:
+      enabled: false
     uptime_custom:
       plugin: "dc_demos/UptimeCustom"
       group_key: "uptime"
