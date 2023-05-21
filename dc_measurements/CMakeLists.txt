@@ -168,6 +168,7 @@ foreach(measurement_plugin ${dc_measurement_plugin_libs})
     ${measurement_plugin}
     nlohmann_json::nlohmann_json
     nlohmann_json_schema_validator
+    ${UUID_LIBRARIES}
   )
   target_compile_definitions(${measurement_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
