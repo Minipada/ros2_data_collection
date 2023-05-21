@@ -25,6 +25,9 @@ foreach(Dependency IN ITEMS ${dependencies})
   find_package(${Dependency} REQUIRED)
 endforeach()
 
+find_package(PkgConfig REQUIRED)
+pkg_search_module(UUID REQUIRED uuid)
+
 dc_package()
 
 set(library_name measurement_server_core)
@@ -34,6 +37,7 @@ include_directories(
   include
   ${YAML_CPP_INCLUDEDIR}
   ${OpenCV_INCLUDE_DIRS}
+  ${UUID_INCLUDE_DIRS}
 )
 
 # Condition plugins
@@ -182,6 +186,7 @@ pluginlib_export_plugin_description_file(dc_core condition_plugin.xml)
 # Library
 add_library(${library_name} SHARED
   src/measurement_server.cpp
+  ${UUID_LIBRARIES}
 )
 
 ament_target_dependencies(${library_name}
