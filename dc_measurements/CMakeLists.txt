@@ -187,6 +187,11 @@ pluginlib_export_plugin_description_file(dc_core condition_plugin.xml)
 # Library
 add_library(${library_name} SHARED
   src/measurement_server.cpp
+)
+
+target_link_libraries(
+  ${library_name}
+  fluent_bit::fluent_bit
   ${UUID_LIBRARIES}
 )
 
