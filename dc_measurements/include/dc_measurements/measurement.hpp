@@ -382,12 +382,22 @@ public:
     }
   }
 
-  void addCustomParams(dc_interfaces::msg::StringStamped& msg)
+  void addCustomParameters(dc_interfaces::msg::StringStamped& msg)
   {
     if (!custom_params_.empty())
     {
       json data = json::parse(msg.data);
-      data.update(custom_params_);
+      for (auto& param : custom_params_)
+      {
+        auto key = param["key"].get<std::string>();
+        auto value = param["value"].get<std::string>();
+        auto override_value = param["override"].get<bool>();
+        if (!data.contains(key) || (data.contains(key) && override_value))
+        {
+          json data_custom = { { key, value } };
+          data.update(data_custom);
+        }
+      }
       msg.data = data.dump(-1, ' ', true);
     }
   }
@@ -395,7 +405,7 @@ public:
   void collectAndPublish()
   {
     dc_interfaces::msg::StringStamped msg = collect();
-    addCustomParams(msg);
+    addCustomParameters(msg);
     if (enabled_)
     {
       publish(msg);
@@ -417,7 +427,7 @@ public:
                  const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
                  const std::string& save_local_base_path, const std::string& all_base_path,
                  const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
-                 const std::string& run_id, const bool& run_id_enabled, const json& custom_params) override
+                 const std::string& run_id, const bool& run_id_enabled, const std::vector<json>& custom_params) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -542,7 +552,7 @@ protected:
   std::string run_id_;
 
   // Custom params
-  json custom_params_;
+  std::vector<json> custom_params_;
 
   // Parameters
   bool init_collect_;
