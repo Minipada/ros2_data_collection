@@ -19,8 +19,6 @@ MeasurementServer::MeasurementServer(const rclcpp::NodeOptions& options,
   declare_parameter("condition_plugins", std::vector<std::string>());
   get_parameter("condition_plugins", condition_ids_);
 
-  setCustomParameters();
-
   // Base file saving path
   setBaseSavePath();
 }
@@ -42,43 +40,49 @@ void MeasurementServer::setBaseSavePath()
 
 void MeasurementServer::setCustomParameters()
 {
-  declare_parameter("custom_str_params", std::vector<std::string>());
-  get_parameter("custom_str_params", measurement_custom_str_params_);
+  nav2_util::declare_parameter_if_not_declared(this, "custom_str_params.force_override", rclcpp::ParameterValue(false));
+  custom_str_params_force_override_ = this->get_parameter("custom_str_params.force_override").as_bool();
+  nav2_util::declare_parameter_if_not_declared(this, "custom_str_params_list",
+                                               rclcpp::ParameterValue(std::vector<std::string>()));
+  custom_str_params_list_ = this->get_parameter("custom_str_params_list").as_string_array();
+
   for (auto param = std::begin(measurement_custom_str_params_); param != std::end(measurement_custom_str_params_);
        ++param)
   {
     declare_parameter(*param, "");
     get_parameter(*param, custom_str_params_map_[*param]);
   }
-}
 
-void MeasurementServer::setCustomParams()
-{
-  nav2_util::declare_parameter_if_not_declared(this, "custom_str_params_list",
-                                               rclcpp::ParameterValue(std::vector<std::string>()));
-  custom_str_params_list_ = this->get_parameter("custom_str_params_list").as_string_array();
+  custom_params_.resize(custom_str_params_list_.size());
 
-  for (auto& custom_param : custom_str_params_list_)
+  for (size_t i = 0; i < custom_str_params_list_.size(); i++)
   {
+    auto custom_param = custom_str_params_list_[i];
     nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".name",
                                                  rclcpp::ParameterValue(""));
     nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".value",
                                                  rclcpp::ParameterValue(""));
     nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".value_from_file",
                                                  rclcpp::ParameterValue(""));
+    nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".force_override",
+                                                 rclcpp::ParameterValue(false));
     std::string key = this->get_parameter("custom_str_params." + custom_param + ".name").as_string();
     std::string value = this->get_parameter("custom_str_params." + custom_param + ".value").as_string();
     std::string value_from_file =
         this->get_parameter("custom_str_params." + custom_param + ".value_from_file").as_string();
+    bool force_override = this->get_parameter("custom_str_params." + custom_param + ".force_override").as_bool();
 
+    custom_params_[i]["key"] = key;
+    custom_params_[i]["override"] = force_override;
     if (!value.empty())
     {
-      custom_params_[key] = value;
+      custom_params_[i]["value"] = value;
     }
     else if (!value_from_file.empty())
     {
-      custom_params_[key] = dc_util::get_file_content(value_from_file);
+      custom_params_[i]["value"] = dc_util::get_file_content(value_from_file);
     }
+    // custom_str_params_force_override_v_[i] = force_override;
   }
 }
 
@@ -150,7 +154,7 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   RCLCPP_INFO(get_logger(), "Configuring");
   auto node = shared_from_this();
   setRunId();
-  setCustomParams();
+  setCustomParameters();
   tf_ = std::make_shared<tf2_ros::Buffer>(get_clock());
   auto timer_interface =
       std::make_shared<tf2_ros::CreateTimerROS>(get_node_base_interface(), get_node_timers_interface());
