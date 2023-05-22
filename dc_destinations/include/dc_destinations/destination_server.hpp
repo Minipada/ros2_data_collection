@@ -26,7 +26,6 @@
 
 namespace destination_server
 {
-using json = nlohmann::json;
 using namespace std::chrono_literals;
 
 /**
@@ -87,8 +86,6 @@ protected:
   std::vector<std::string> destination_types_;
   std::vector<std::string> destination_time_format_;
   std::vector<std::string> destination_time_key_;
-  std::vector<std::string> custom_str_params_list_;
-  json custom_params_;
 
   // Fluent Bit
   flb_ctx_t* ctx_;

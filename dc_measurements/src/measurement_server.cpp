@@ -52,6 +52,36 @@ void MeasurementServer::setCustomParameters()
   }
 }
 
+void MeasurementServer::setCustomParams()
+{
+  nav2_util::declare_parameter_if_not_declared(this, "custom_str_params_list",
+                                               rclcpp::ParameterValue(std::vector<std::string>()));
+  custom_str_params_list_ = this->get_parameter("custom_str_params_list").as_string_array();
+
+  for (auto& custom_param : custom_str_params_list_)
+  {
+    nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".name",
+                                                 rclcpp::ParameterValue(""));
+    nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".value",
+                                                 rclcpp::ParameterValue(""));
+    nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".value_from_file",
+                                                 rclcpp::ParameterValue(""));
+    std::string key = this->get_parameter("custom_str_params." + custom_param + ".name").as_string();
+    std::string value = this->get_parameter("custom_str_params." + custom_param + ".value").as_string();
+    std::string value_from_file =
+        this->get_parameter("custom_str_params." + custom_param + ".value_from_file").as_string();
+
+    if (!value.empty())
+    {
+      custom_params_[key] = value;
+    }
+    else if (!value_from_file.empty())
+    {
+      custom_params_[key] = dc_util::get_file_content(value_from_file);
+    }
+  }
+}
+
 void MeasurementServer::setRunId()
 {
   auto node = shared_from_this();
@@ -120,6 +150,7 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   RCLCPP_INFO(get_logger(), "Configuring");
   auto node = shared_from_this();
   setRunId();
+  setCustomParams();
   tf_ = std::make_shared<tf2_ros::Buffer>(get_clock());
   auto timer_interface =
       std::make_shared<tf2_ros::CreateTimerROS>(get_node_base_interface(), get_node_timers_interface());
@@ -260,7 +291,7 @@ bool MeasurementServer::loadMeasurementPlugins()
           measurement_include_measurement_plugin_[i], measurement_condition_max_measurements_[i],
           measurement_if_all_conditions_[i], measurement_if_any_conditions_[i], measurement_if_none_conditions_[i],
           measurement_remote_keys_[i], measurement_remote_prefixes_[i], save_local_base_path_, all_base_path_,
-          all_base_path_expanded_, save_local_base_path_expanded_, run_id_, run_id_enabled_);
+          all_base_path_expanded_, save_local_base_path_expanded_, run_id_, run_id_enabled_, custom_params_);
     }
     catch (const pluginlib::PluginlibException& ex)
     {

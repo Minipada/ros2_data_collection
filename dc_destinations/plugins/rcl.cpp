@@ -13,10 +13,8 @@ Rcl::Rcl() : dc_destinations::Destination()
 void Rcl::sendData(dc_interfaces::msg::StringStamped::SharedPtr msg)
 {
   json data = json::parse(msg->data);
-  if (!custom_params_.empty())
-  {
-    data.update(custom_params_);
-  }
+  data["date"] =
+      std::stod(std::to_string(msg->header.stamp.sec) + std::string(".") + std::to_string(msg->header.stamp.nanosec));
   data.erase("tags");
 
   RCLCPP_INFO(logger_, "%s", data.dump().c_str());
