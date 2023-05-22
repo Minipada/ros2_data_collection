@@ -20,17 +20,20 @@ The node starts the fluent bit engine and its ros2 plugin and enables data colle
 Each topic is configured in a measurement, which is loaded in this node with pluginlib.
 In addition, conditions are pluginlibs plugin also loaded dynamically. They are optional plugins that allow to collect on some conditions, e.g robot is moving.
 
-| Parameter name       | Description                                                                                                                        | Type(s)     | Default                       |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------- | ----------------------------- |
-| measurement_plugins  | Name of the measurement plugins to load                                                                                            | list\[str\] | N/A (mandatory)               |
-| condition_plugins    | Name of the condition plugins to load                                                                                              | list\[str\] | N/A (mandatory)               |
-| save_local_base_path | Path where files will be saved locally (e.g camera images). Expands $X to environment variables and =Y to custom string parameters | str         | "$HOME/ros2/data/%Y/%M/%D/%H" |
-| all_base_path        | Path where files will be saved at their destination (S3, minio...). Expands $X to environment variables and =Y to                  | str         | ""                            |
-| custom_str_params    | Custom string parameters that can be used in other parameters.                                                                     | list\[str\] | N/A (optional)                |
-| run_id.enabled       | Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter or UUID                  | str         | true                          |
-| run_id.counter       | Enable counter for the run_id                                                                                                      | str         | true                          |
-| run_id.counter_path  | Path to store the last run. It is expanded with environment variables id                                                           | str         | "$HOME/run_id"                |
-| run_id.uuid          | Generate a new run ID by using a random UUID                                                                                       | str         | false                         |
+| Parameter name                                 | Description                                                                                                                        | Type(s)     | Default                       |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------- | ----------------------------- |
+| measurement_plugins                            | Name of the measurement plugins to load                                                                                            | list\[str\] | N/A (mandatory)               |
+| condition_plugins                              | Name of the condition plugins to load                                                                                              | list\[str\] | N/A (mandatory)               |
+| save_local_base_path                           | Path where files will be saved locally (e.g camera images). Expands $X to environment variables and =Y to custom string parameters | str         | "$HOME/ros2/data/%Y/%M/%D/%H" |
+| all_base_path                                  | Path where files will be saved at their destination (S3, minio...). Expands $X to environment variables and =Y to                  | str         | ""                            |
+| custom_str_params_list                         | Custom strings to use in other parameters. They are also appended in the json sent to the destination                              | list\[str\] | N/A                           |
+| custom_str_params.<param_name>.name            | Key to add in the serialized data                                                                                                  | str         | N/A (optional)                |
+| custom_str_params.<param_name>.value           | Value to set for the key as a fixed string                                                                                         | str         | N/A (optional)                |
+| custom_str_params.<param_name>.value_from_file | Path to a file containing the value to set                                                                                         | str         | N/A (optional)                |
+| run_id.enabled                                 | Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter or UUID                  | str         | true                          |
+| run_id.counter                                 | Enable counter for the run_id                                                                                                      | str         | true                          |
+| run_id.counter_path                            | Path to store the last run. It is expanded with environment variables id                                                           | str         | "$HOME/run_id"                |
+| run_id.uuid                                    | Generate a new run ID by using a random UUID                                                                                       | str         | false                         |
 
 ## Plugin parameters
 

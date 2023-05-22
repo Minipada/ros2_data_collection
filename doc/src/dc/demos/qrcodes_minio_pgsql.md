@@ -110,15 +110,6 @@ destination_server:
       in_storage_type: "filesystem"
       in_storage_pause_on_chunks_overlimit: "off"
     destination_plugins: ["flb_pgsql"]
-    custom_str_params_list: ["robot_name", "id"]
-    custom_str_params:
-      robot_name:
-        name: robot_name
-        value: "C3PO"
-      # Requires systemd package
-      id:
-        name: id
-        value_from_file: /etc/machine-id
     flb_pgsql:
       plugin: "dc_destinations/FlbPgSQL"
       inputs: ["/dc/group/robot"]
@@ -153,6 +144,15 @@ measurement_server:
     custom_str_params: ["robot_name"]
     robot_name: "C3PO"
     measurement_plugins: ["cmd_vel", "position", "speed"]
+    custom_str_params_list: ["robot_name", "id"]
+    custom_str_params:
+      robot_name:
+        name: robot_name
+        value: "C3PO"
+      # Requires systemd package
+      id:
+        name: id
+        value_from_file: /etc/machine-id
     run_id:
       enabled: true
       counter: true
@@ -315,6 +315,15 @@ measurement_server:
   ...
   measurement_plugins: ["right_camera", "left_camera"]
   condition_plugins: ["moving", "inspected_exists"]
+  custom_str_params_list: ["robot_name", "id"]
+  custom_str_params:
+    robot_name:
+      name: robot_name
+      value: "C3PO"
+    # Requires systemd package
+    id:
+      name: id
+      value_from_file: /etc/machine-id
   run_id:
     enabled: true
     counter: true
@@ -399,15 +408,6 @@ destination_server:
   ros__parameters:
   ...
     destination_plugins: ["flb_minio", "flb_pgsql", "flb_files_metrics"]
-    custom_str_params_list: ["robot_name", "id"]
-    custom_str_params:
-      robot_name:
-        name: robot_name
-        value: "C3PO"
-      # Requires systemd package
-      id:
-        name: id
-        value_from_file: /etc/machine-id
     flb_files_metrics:
       plugin: "dc_destinations/FlbFilesMetrics"
       inputs:
