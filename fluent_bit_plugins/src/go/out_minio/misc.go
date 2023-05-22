@@ -1,9 +1,9 @@
 package main
 
 import (
-    "fmt"
-    "net/http"
-    "os"
+	"fmt"
+	"net/http"
+	"os"
 )
 
 func NestedMapLookup(m map[interface{}]interface{}, ks ...string) (rval interface{}, err error) {
@@ -29,7 +29,7 @@ func get_file_content(path string) string {
 	defer file.Close()
 
 	if err != nil {
-	   panic(err)
+		panic(err)
 	}
 	// Get the file content
 	buf := make([]byte, 512)

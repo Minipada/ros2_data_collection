@@ -2,38 +2,37 @@ package main
 
 import (
 	"C"
+	"database/sql"
 	"fmt"
-    "database/sql"
-    "unsafe"
+	"unsafe"
 
+	"github.com/fluent/fluent-bit-go/output"
 	_ "github.com/lib/pq"
-    "github.com/fluent/fluent-bit-go/output"
 )
 
-
 type PGSQLConfig struct {
-    host string
-    port string
-    user string
-    password string
-    database string
-    table string
-    time_key string
-    ssl string
+	host     string
+	port     string
+	user     string
+	password string
+	database string
+	table    string
+	time_key string
+	ssl      string
 }
 
-func PGSQLInit(plugin unsafe.Pointer) error{
-    plugin_conf.db.postgres = true
-    pgsql_config = PGSQLConfig{
-        host: output.FLBPluginConfigKey(plugin, "pgsql_host"),
-        port: output.FLBPluginConfigKey(plugin, "pgsql_port"),
-        user: output.FLBPluginConfigKey(plugin, "pgsql_user"),
-        password: output.FLBPluginConfigKey(plugin, "pgsql_password"),
-        database: output.FLBPluginConfigKey(plugin, "pgsql_database"),
-        table: output.FLBPluginConfigKey(plugin, "pgsql_table"),
-        time_key: output.FLBPluginConfigKey(plugin, "pgsql_timestamp_key"),
-        ssl: output.FLBPluginConfigKey(plugin, "pgsql_use_ssl"),
-    }
+func PGSQLInit(plugin unsafe.Pointer) error {
+	plugin_conf.db.postgres = true
+	pgsql_config = PGSQLConfig{
+		host:     output.FLBPluginConfigKey(plugin, "pgsql_host"),
+		port:     output.FLBPluginConfigKey(plugin, "pgsql_port"),
+		user:     output.FLBPluginConfigKey(plugin, "pgsql_user"),
+		password: output.FLBPluginConfigKey(plugin, "pgsql_password"),
+		database: output.FLBPluginConfigKey(plugin, "pgsql_database"),
+		table:    output.FLBPluginConfigKey(plugin, "pgsql_table"),
+		time_key: output.FLBPluginConfigKey(plugin, "pgsql_timestamp_key"),
+		ssl:      output.FLBPluginConfigKey(plugin, "pgsql_use_ssl"),
+	}
 
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s?sslmode=%s", pgsql_config.user, pgsql_config.password, pgsql_config.host, pgsql_config.port, pgsql_config.ssl)
 	fmt.Printf("[flb-files-metric] PGSQL connstr: '%s'\n", connStr)
@@ -64,10 +63,10 @@ func PGSQLInit(plugin unsafe.Pointer) error{
 
 	_, table_check := db.Query("select * from " + pgsql_config.table + ";")
 
-    if table_check == nil {
-        fmt.Println("[flb-files-metric] Table exists")
-    } else {
-        fmt.Println("[flb-files-metric] Table not found, creating...")
+	if table_check == nil {
+		fmt.Println("[flb-files-metric] Table exists")
+	} else {
+		fmt.Println("[flb-files-metric] Table not found, creating...")
 		query := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s(
 		id SERIAL PRIMARY KEY,
 		timestamp TIMESTAMP NOT NULL,
@@ -93,6 +92,6 @@ func PGSQLInit(plugin unsafe.Pointer) error{
 		} else {
 			fmt.Printf("[flb-files-metric] Created table %s\n", pgsql_config.table)
 		}
-    }
+	}
 	return err
 }

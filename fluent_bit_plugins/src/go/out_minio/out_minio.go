@@ -39,9 +39,10 @@ func FLBPluginRegister(def unsafe.Pointer) int {
 	return output.FLBPluginRegister(def, "minio", "Minio GO!")
 }
 
-//export FLBPluginInit
 // (fluentbit will call this)
 // plugin (context) pointer to fluentbit context (state/ c code)
+//
+//export FLBPluginInit
 func FLBPluginInit(plugin unsafe.Pointer) int {
 	verbose = output.FLBPluginConfigKey(plugin, "verbose")
 	var err error
@@ -77,7 +78,7 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	return output.FLB_OK
 }
 
-func MinioInit() error{
+func MinioInit() error {
 
 	use_ssl_bool, err := strconv.ParseBool(use_ssl)
 	if err != nil {
@@ -86,7 +87,7 @@ func MinioInit() error{
 	}
 	// Initialize minio client object.
 	minio_client, err = minio.New(endpoint, &minio.Options{
-		Creds: credentials.NewStaticV4(access_key_id, secret_access_key, ""),
+		Creds:  credentials.NewStaticV4(access_key_id, secret_access_key, ""),
 		Secure: use_ssl_bool,
 	})
 
@@ -139,7 +140,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 			fmt.Printf("[flb-minio] Could not get records, ts = nil\n")
 			break
 		}
-		if ret != 0{
+		if ret != 0 {
 			// fmt.Printf("[flb-minio] No more records, ret = %d\n", ret)
 			break
 		}
@@ -172,10 +173,10 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 						current_group = fmt.Sprintf("%s", record["name"])
 					}
 				}
-			// Ignore fields that don't belong to the group. Since they are not in the JSON, we skip them to not create errors
+				// Ignore fields that don't belong to the group. Since they are not in the JSON, we skip them to not create errors
 			}
-			if current_group == fmt.Sprintf("%s", record["name"]){
-				fmt.Printf("[flb-minio] split_src_field_i match index %d: current_group=%s, split_src_field_v=%s\n",split_src_field_i, current_group, split_src_field_v)
+			if current_group == fmt.Sprintf("%s", record["name"]) {
+				fmt.Printf("[flb-minio] split_src_field_i match index %d: current_group=%s, split_src_field_v=%s\n", split_src_field_i, current_group, split_src_field_v)
 				val, err := NestedMapLookup(record, strings.Split(split_src_field_v, ".")...)
 				val_str := fmt.Sprintf("%s", val)
 				if err == nil {
@@ -191,13 +192,13 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		}
 
 		index = 0
-		upload_paths :=[]string{}
+		upload_paths := []string{}
 		for split_upload_field_i, split_upload_field_v := range split_upload_fields {
 			// Ignore fields that don't belong to the group. Since they are not in the JSON, we skip them to not create errors
-			if current_group == fmt.Sprintf("%s", record["name"]){
-				fmt.Printf("[flb-minio] split_upload_field_i match index %d: current_group=%s\n",split_upload_field_i, current_group)
+			if current_group == fmt.Sprintf("%s", record["name"]) {
+				fmt.Printf("[flb-minio] split_upload_field_i match index %d: current_group=%s\n", split_upload_field_i, current_group)
 				// Skip indexes of files that don't exist
-				if ! contains(index_ignore, index) {
+				if !contains(index_ignore, index) {
 					val, err := NestedMapLookup(record, strings.Split(split_upload_field_v, ".")...)
 					if err == nil {
 						val_str := fmt.Sprintf("%s", val)
@@ -229,7 +230,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 			fmt.Printf("[flb-minio] Initial mode: %s", initialModTime)
 			// Keep looping until the file is no longer being written to
 			for {
-				time.Sleep(20*time.Millisecond)
+				time.Sleep(20 * time.Millisecond)
 
 				// Get the current modification time
 				currentModTime, err := file.Stat()
