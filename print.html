@@ -2036,9 +2036,12 @@ In addition, conditions are pluginlibs plugin also loaded dynamically. They are 
 <tr><td>save_local_base_path</td><td>Path where files will be saved locally (e.g camera images). Expands $X to environment variables and =Y to custom string parameters</td><td>str</td><td>&quot;$HOME/ros2/data/%Y/%M/%D/%H&quot;</td></tr>
 <tr><td>all_base_path</td><td>Path where files will be saved at their destination (S3, minio...). Expands $X to environment variables and =Y to custom string parameters</td><td>str</td><td>&quot;&quot;</td></tr>
 <tr><td>custom_str_params_list</td><td>Custom strings to use in other parameters. They are also appended in the json sent to the destination</td><td>list[str]</td><td>N/A</td></tr>
+<tr><td>custom_str_params.force_override</td><td>Override values if the keys are already present in the measurement. Applies to all and can be overridden by <code>custom_str_params.&lt;param_name&gt;.force_override</code></td><td>bool</td><td>false</td></tr>
+<tr><td></td><td></td><td></td><td></td></tr>
 <tr><td>custom_str_params.&lt;param_name&gt;.name</td><td>Key to add in the serialized data</td><td>str</td><td>N/A (optional)</td></tr>
 <tr><td>custom_str_params.&lt;param_name&gt;.value</td><td>Value to set for the key as a fixed string</td><td>str</td><td>N/A (optional)</td></tr>
 <tr><td>custom_str_params.&lt;param_name&gt;.value_from_file</td><td>Path to a file containing the value to set</td><td>str</td><td>N/A (optional)</td></tr>
+<tr><td>custom_str_params.&lt;param_name&gt;.force_override</td><td>Override value if the key is already present in the measurement</td><td>bool</td><td>false</td></tr>
 <tr><td>run_id.enabled</td><td>Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter or UUID</td><td>str</td><td>true</td></tr>
 <tr><td>run_id.counter</td><td>Enable counter for the run_id</td><td>str</td><td>true</td></tr>
 <tr><td>run_id.counter_path</td><td>Path to store the last run. It is expanded with environment variables id</td><td>str</td><td>&quot;$HOME/run_id&quot;</td></tr>
