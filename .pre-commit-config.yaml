@@ -152,3 +152,7 @@ repos:
       - id: poetry-requirements
         name: Check requirements-dev.txt
         args: [-o, requirements-dev.txt, --dev, --without-hashes]
+  - repo: https://github.com/tekwizely/pre-commit-golang
+    rev: v1.0.0-rc.1
+    hooks:
+      - id: go-fmt
