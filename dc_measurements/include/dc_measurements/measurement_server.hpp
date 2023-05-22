@@ -84,6 +84,7 @@ protected:
 
   void setCustomParameters();
   void setRunId();
+  void setCustomParams();
   void setBaseSavePath();
 
   std::shared_ptr<tf2_ros::Buffer> tf_;
@@ -93,12 +94,15 @@ protected:
   pluginlib::ClassLoader<dc_core::Measurement> measurement_plugin_loader_;
   std::vector<pluginlib::UniquePtr<dc_core::Measurement>> measurements_;
   // Run ID
-  json custom_params_;
   std::string run_id_;
   std::string run_id_counter_path_;
   bool run_id_enabled_;
   bool run_id_counter_;
   bool run_id_uuid_;
+
+  // Custom parameters
+  std::vector<std::string> custom_str_params_list_;
+  json custom_params_;
 
   // std::vector<std::string> measurement_plugins_;
   std::vector<std::string> measurement_group_key_;

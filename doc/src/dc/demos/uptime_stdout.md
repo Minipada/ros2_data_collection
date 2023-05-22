@@ -34,6 +34,14 @@ measurement_server:
       debug: true
       tags: ["flb_stdout"]
       init_collect: true
+    custom_str_params_list: ["robot_name", "id"]
+    custom_str_params:
+      robot_name:
+        name: robot_name
+        value: C3PO
+      id:
+        name: id
+        value_from_file: /etc/machine-id
     run_id:
       enabled: true
       counter: true
@@ -65,6 +73,23 @@ measurement_server:
 
 This will collect the uptime every 5 seconds (including when the node starts), will forward it to the *flb_stdout* destination.
 
+#### Inject custom data for each record
+
+Here, we want to append some content in every record: the robot name and its ID. While the robot name comes from a fixed variable in the parameter file, the id comes from the machine-id file.
+
+**custom_str_params_list (Optional)**: Look for those keys in this configuration to add them as keys and values in each record.
+
+**custom_str_params.robot_name (Optional)**: This parameter is loaded since it is mentioned in custom_str_params_list
+
+**custom_str_params.robot_name.name (Optional)**: Key in the dictionary to add
+
+**custom_str_params.robot_name.value (Optional)**: Value associated to the key in the dictionary to add
+
+**custom_str_params.id.name (Optional)**: Key in the dictionary to add
+
+**custom_str_params.id.value_from_file (Optional)**: Value associated to the key in the dictionary to add taken from the content of a file
+
+
 ```admonish info
 
 Note that this configuration alone, sent to Fluent Bit will not display the JSON on stdout since it requires the destination_server configuration
@@ -93,14 +118,6 @@ destination_server:
       in_storage_type: "filesystem"
       in_storage_pause_on_chunks_overlimit: "off"
     destination_plugins: ["flb_stdout"]
-    custom_str_params_list: ["robot_name", "id"]
-    custom_str_params:
-      robot_name:
-        name: robot_name
-        value: C3PO
-      id:
-        name: id
-        value_from_file: /etc/machine-id
     flb_stdout:
       plugin: "dc_destinations/FlbStdout"
       inputs: ["/dc/measurement/uptime"]
@@ -156,22 +173,6 @@ Then, we configure Fluent Bit. This is not necessary but it is easy to do by usi
 **flb.in_storage_type (Optional)**: Specifies the buffering mechanism to use. It can be memory or filesystem.
 
 **flb.in_storage_pause_on_chunks_overlimit (Optional)**: Specifies if file storage is to be paused when reaching the chunk limit.
-
-#### Inject custom data for each record
-
-Here, we want to append some content in every record: the robot name and its ID. While the robot name comes from a fixed variable in the parameter file, the id comes from the machine-id file.
-
-**custom_str_params_list (Optional)**: Look for those keys in this configuration to add them as keys and values in each record.
-
-**custom_str_params.robot_name (Optional)**: This parameter is loaded since it is mentioned in custom_str_params_list
-
-**custom_str_params.robot_name.name (Optional)**: Key in the dictionary to add
-
-**custom_str_params.robot_name.value (Optional)**: Value associated to the key in the dictionary to add
-
-**custom_str_params.id.name (Optional)**: Key in the dictionary to add
-
-**custom_str_params.id.value_from_file (Optional)**: Value associated to the key in the dictionary to add taken from the content of a file
 
 #### Inject run id at each record
 
