@@ -16,15 +16,6 @@ destination_server:
       in_storage_type: "filesystem"
       in_storage_pause_on_chunks_overlimit: "off"
     destination_plugins: ["flb_stdout"]
-    custom_str_params_list: ["robot_name", "id"]
-    custom_str_params:
-      robot_name:
-        name: robot_name
-        value: "r2d2"
-      # Requires systemd package
-      id:
-        name: id
-        value_from_file: /etc/machine-id
     run_id:
       enabled: true
       counter: true
@@ -39,12 +30,20 @@ destination_server:
 
 measurement_server:
   ros__parameters:
-    custom_str_params: ["robot_name"]
     robot_name: "r2d2"
     measurement_plugins: ["right_camera", "left_camera"]
     save_local_base_path: "$HOME/dc_data/"
     all_base_path: "=robot_name/%Y/%m/%d/%H"
     condition_plugins: ["moving"]
+    custom_str_params_list: ["robot_name", "id"]
+    custom_str_params:
+      robot_name:
+        name: robot_name
+        value: "r2d2"
+      # Requires systemd package
+      id:
+        name: id
+        value_from_file: /etc/machine-id
     moving:
       plugin: "dc_conditions/Moving"
     right_camera:
