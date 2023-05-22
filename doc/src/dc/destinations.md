@@ -72,14 +72,6 @@ destination_server:
       in_storage_type: "filesystem"
       in_storage_pause_on_chunks_overlimit: "off"
     destination_plugins: ["flb_stdout"]
-    custom_str_params_list: ["robot_name", "id"]
-    custom_str_params:
-      robot_name:
-        name: robot_name
-        value: david-pc
-      id:
-        name: id
-        value_from_file: /etc/machine-id
     flb_minio:
       plugin: "dc_destinations/FlbMinIO"
       inputs: ["/dc/group/map"]
