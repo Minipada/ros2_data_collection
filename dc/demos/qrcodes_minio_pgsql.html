@@ -263,15 +263,6 @@ $ export TURTLEBOT3_MODEL=waffle
       in_storage_type: &quot;filesystem&quot;
       in_storage_pause_on_chunks_overlimit: &quot;off&quot;
     destination_plugins: [&quot;flb_pgsql&quot;]
-    custom_str_params_list: [&quot;robot_name&quot;, &quot;id&quot;]
-    custom_str_params:
-      robot_name:
-        name: robot_name
-        value: &quot;C3PO&quot;
-      # Requires systemd package
-      id:
-        name: id
-        value_from_file: /etc/machine-id
     flb_pgsql:
       plugin: &quot;dc_destinations/FlbPgSQL&quot;
       inputs: [&quot;/dc/group/robot&quot;]
@@ -306,6 +297,15 @@ measurement_server:
     custom_str_params: [&quot;robot_name&quot;]
     robot_name: &quot;C3PO&quot;
     measurement_plugins: [&quot;cmd_vel&quot;, &quot;position&quot;, &quot;speed&quot;]
+    custom_str_params_list: [&quot;robot_name&quot;, &quot;id&quot;]
+    custom_str_params:
+      robot_name:
+        name: robot_name
+        value: &quot;C3PO&quot;
+      # Requires systemd package
+      id:
+        name: id
+        value_from_file: /etc/machine-id
     run_id:
       enabled: true
       counter: true
@@ -445,6 +445,15 @@ measurement_server:
   ...
   measurement_plugins: [&quot;right_camera&quot;, &quot;left_camera&quot;]
   condition_plugins: [&quot;moving&quot;, &quot;inspected_exists&quot;]
+  custom_str_params_list: [&quot;robot_name&quot;, &quot;id&quot;]
+  custom_str_params:
+    robot_name:
+      name: robot_name
+      value: &quot;C3PO&quot;
+    # Requires systemd package
+    id:
+      name: id
+      value_from_file: /etc/machine-id
   run_id:
     enabled: true
     counter: true
@@ -529,15 +538,6 @@ measurement_server:
   ros__parameters:
   ...
     destination_plugins: [&quot;flb_minio&quot;, &quot;flb_pgsql&quot;, &quot;flb_files_metrics&quot;]
-    custom_str_params_list: [&quot;robot_name&quot;, &quot;id&quot;]
-    custom_str_params:
-      robot_name:
-        name: robot_name
-        value: &quot;C3PO&quot;
-      # Requires systemd package
-      id:
-        name: id
-        value_from_file: /etc/machine-id
     flb_files_metrics:
       plugin: &quot;dc_destinations/FlbFilesMetrics&quot;
       inputs:

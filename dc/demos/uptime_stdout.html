@@ -203,6 +203,14 @@
       debug: true
       tags: [&quot;flb_stdout&quot;]
       init_collect: true
+    custom_str_params_list: [&quot;robot_name&quot;, &quot;id&quot;]
+    custom_str_params:
+      robot_name:
+        name: robot_name
+        value: C3PO
+      id:
+        name: id
+        value_from_file: /etc/machine-id
     run_id:
       enabled: true
       counter: true
@@ -221,6 +229,14 @@
 <p><strong>run_id.counter_path (Optional)</strong>: Path to store the last run. It is expanded with environment variables id</p>
 <p><strong>run_id.uuid (Optional)</strong>: Generate a new run ID by using a random UUID</p>
 <p>This will collect the uptime every 5 seconds (including when the node starts), will forward it to the <em>flb_stdout</em> destination.</p>
+<h4 id="inject-custom-data-for-each-record"><a class="header" href="#inject-custom-data-for-each-record">Inject custom data for each record</a></h4>
+<p>Here, we want to append some content in every record: the robot name and its ID. While the robot name comes from a fixed variable in the parameter file, the id comes from the machine-id file.</p>
+<p><strong>custom_str_params_list (Optional)</strong>: Look for those keys in this configuration to add them as keys and values in each record.</p>
+<p><strong>custom_str_params.robot_name (Optional)</strong>: This parameter is loaded since it is mentioned in custom_str_params_list</p>
+<p><strong>custom_str_params.robot_name.name (Optional)</strong>: Key in the dictionary to add</p>
+<p><strong>custom_str_params.robot_name.value (Optional)</strong>: Value associated to the key in the dictionary to add</p>
+<p><strong>custom_str_params.id.name (Optional)</strong>: Key in the dictionary to add</p>
+<p><strong>custom_str_params.id.value_from_file (Optional)</strong>: Value associated to the key in the dictionary to add taken from the content of a file</p>
 <div id="admonition-info" class="admonition info">
 <div class="admonition-title">
 <p>Info</p>
@@ -250,14 +266,6 @@
       in_storage_type: &quot;filesystem&quot;
       in_storage_pause_on_chunks_overlimit: &quot;off&quot;
     destination_plugins: [&quot;flb_stdout&quot;]
-    custom_str_params_list: [&quot;robot_name&quot;, &quot;id&quot;]
-    custom_str_params:
-      robot_name:
-        name: robot_name
-        value: C3PO
-      id:
-        name: id
-        value_from_file: /etc/machine-id
     flb_stdout:
       plugin: &quot;dc_destinations/FlbStdout&quot;
       inputs: [&quot;/dc/measurement/uptime&quot;]
@@ -289,14 +297,6 @@
 <p><strong>flb.http_port (Optional)</strong>: Port to listen (e.g. 8888)</p>
 <p><strong>flb.in_storage_type (Optional)</strong>: Specifies the buffering mechanism to use. It can be memory or filesystem.</p>
 <p><strong>flb.in_storage_pause_on_chunks_overlimit (Optional)</strong>: Specifies if file storage is to be paused when reaching the chunk limit.</p>
-<h4 id="inject-custom-data-for-each-record"><a class="header" href="#inject-custom-data-for-each-record">Inject custom data for each record</a></h4>
-<p>Here, we want to append some content in every record: the robot name and its ID. While the robot name comes from a fixed variable in the parameter file, the id comes from the machine-id file.</p>
-<p><strong>custom_str_params_list (Optional)</strong>: Look for those keys in this configuration to add them as keys and values in each record.</p>
-<p><strong>custom_str_params.robot_name (Optional)</strong>: This parameter is loaded since it is mentioned in custom_str_params_list</p>
-<p><strong>custom_str_params.robot_name.name (Optional)</strong>: Key in the dictionary to add</p>
-<p><strong>custom_str_params.robot_name.value (Optional)</strong>: Value associated to the key in the dictionary to add</p>
-<p><strong>custom_str_params.id.name (Optional)</strong>: Key in the dictionary to add</p>
-<p><strong>custom_str_params.id.value_from_file (Optional)</strong>: Value associated to the key in the dictionary to add taken from the content of a file</p>
 <h4 id="inject-run-id-at-each-record"><a class="header" href="#inject-run-id-at-each-record">Inject run id at each record</a></h4>
 <p>Finally, we set the run id. This is used later on when fetching data for a run. It can come from a counter which is incremented at each start of the node or from a random UUID generated. The counter mechanism writes and read on a file on the system (take care of not deleting it), you can set its path as a parameter.</p>
 <p>Find the complete destinations documentation <a href="../destinations.html">here</a></p>

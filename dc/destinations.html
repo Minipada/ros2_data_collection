@@ -201,7 +201,6 @@
 <tr><td><a href="https://docs.fluentbit.io/manual/administration/buffering-and-storage">flb.http_server</a></td><td>If true enable statistics HTTP server</td><td>bool</td><td>false</td></tr>
 <tr><td><a href="https://docs.fluentbit.io/manual/administration/buffering-and-storage#input-section-configuration">flb.in_storage_type</a></td><td>Specifies the buffering mechanism to use. It can be memory or filesystem.</td><td>str</td><td>&quot;filesystem&quot;</td></tr>
 <tr><td><a href="https://docs.fluentbit.io/manual/administration/buffering-and-storage#input-section-configuration">flb.in_storage_pause_on_chunks_overlimit</a></td><td>Specifies if file storage is to be paused when reaching the chunk limit.</td><td>str</td><td>&quot;off&quot;</td></tr>
-<tr><td>custom_str_params_list</td><td>Custom strings to use in other parameters. They are also appended in the json sent to the destination</td><td>list[str]</td><td>N/A</td></tr>
 </tbody></table>
 </div>
 <h2 id="plugin-parameters"><a class="header" href="#plugin-parameters">Plugin parameters</a></h2>
@@ -241,14 +240,6 @@
       in_storage_type: &quot;filesystem&quot;
       in_storage_pause_on_chunks_overlimit: &quot;off&quot;
     destination_plugins: [&quot;flb_stdout&quot;]
-    custom_str_params_list: [&quot;robot_name&quot;, &quot;id&quot;]
-    custom_str_params:
-      robot_name:
-        name: robot_name
-        value: david-pc
-      id:
-        name: id
-        value_from_file: /etc/machine-id
     flb_minio:
       plugin: &quot;dc_destinations/FlbMinIO&quot;
       inputs: [&quot;/dc/group/map&quot;]
