@@ -49,8 +49,8 @@ public:
   // configure the server on lifecycle setup
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                  const std::vector<std::string>& inputs, flb_ctx_t* ctx, const bool& debug,
-                 const std::string& flb_in_storage_type, const std::string& time_format, const std::string& time_key,
-                 const json& custom_params) override
+                 const std::string& flb_in_storage_type, const std::string& time_format,
+                 const std::string& time_key) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -62,7 +62,6 @@ public:
     flb_in_storage_type_ = flb_in_storage_type;
     time_format_ = time_format;
     time_key_ = time_key;
-    custom_params_ = custom_params;
 
     logger_ = node->get_logger();
 
@@ -130,6 +129,9 @@ public:
       flb_destroy(ctx_);
       throw std::runtime_error("Cannot set lua timestamp filter");
     }
+
+    RCLCPP_INFO(logger_, "Loaded timestamp lua filter. Match=%s, code=%s", destination_name_.c_str(),
+                ts_lua_code.c_str());
   }
 
   void initRewriteTagFilter()
@@ -181,7 +183,7 @@ public:
       flb_destroy(ctx_);
       throw std::runtime_error("Cannot set lua filter");
     }
-    RCLCPP_INFO(logger_, "Loaded lua filter. Match=ros2, code=%s", lua_code.c_str());
+    RCLCPP_INFO(logger_, "Loaded tags concatenation lua filter. Match=ros2, code=%s", lua_code.c_str());
   }
 
   void initModifyFilter()
@@ -198,32 +200,6 @@ public:
     int ret = flb_filter_set(ctx_, f_ffd, "Remove", "tags", NULL);
     ret += flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
 
-    for (auto param = custom_params_.begin(); param != custom_params_.end(); ++param)
-    {
-      std::string key = param.key();
-      std::string value = param.value();
-      ret += flb_filter_set(ctx_, f_ffd, "Add", (key + " " + value).c_str(), NULL);
-    }
-    if (ret != 0)
-    {
-      flb_destroy(ctx_);
-      throw std::runtime_error("Cannot set rule for modify filter");
-    }
-
-    ret = flb_filter_set(ctx_, f_ffd, "Match", destination_name_.c_str(), NULL);
-    for (auto param = custom_params_.begin(); param != custom_params_.end(); ++param)
-    {
-      std::string key = param.key();
-      std::string value = param.value();
-      if (!value.empty())
-      {
-        ret += flb_filter_set(ctx_, f_ffd, "Add", (key + " " + value).c_str(), NULL);
-      }
-      else
-      {
-        throw std::runtime_error("Value from parameter " + key + " is empty.");
-      }
-    }
     if (f_ffd == -1)
     {
       flb_destroy(ctx_);

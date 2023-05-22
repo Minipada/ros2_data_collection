@@ -2,6 +2,7 @@
 #define DC_CORE_MEASUREMENT_HPP_
 
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 
 #include "dc_core/condition.hpp"
@@ -16,6 +17,7 @@ class Measurement
 {
 public:
   using Ptr = std::shared_ptr<Measurement>;
+  using json = nlohmann::json;
 
   /**
    * @brief Virtual destructor
@@ -46,6 +48,7 @@ public:
    * @param  if_none_conditions Collect only if all conditions are not activated
    * @param  run_id Unique ID of the current run
    * @param  run_id Whether Run Id is enabled
+   * @param  custom_params JSON with custom parameters
    */
   virtual void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                          const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
@@ -61,7 +64,7 @@ public:
                          const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
                          const std::string& save_local_base_path, const std::string& all_base_path,
                          const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
-                         const std::string& run_id, const bool& run_id_enabled) = 0;
+                         const std::string& run_id, const bool& run_id_enabled, const json& custom_params) = 0;
 
   /**
    * @brief Method to cleanup resources used on shutdown.

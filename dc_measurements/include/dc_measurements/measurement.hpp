@@ -382,9 +382,20 @@ public:
     }
   }
 
+  void addCustomParams(dc_interfaces::msg::StringStamped& msg)
+  {
+    if (!custom_params_.empty())
+    {
+      json data = json::parse(msg.data);
+      data.update(custom_params_);
+      msg.data = data.dump(-1, ' ', true);
+    }
+  }
+
   void collectAndPublish()
   {
     dc_interfaces::msg::StringStamped msg = collect();
+    addCustomParams(msg);
     if (enabled_)
     {
       publish(msg);
@@ -406,7 +417,7 @@ public:
                  const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
                  const std::string& save_local_base_path, const std::string& all_base_path,
                  const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
-                 const std::string& run_id, const bool& run_id_enabled) override
+                 const std::string& run_id, const bool& run_id_enabled, const json& custom_params) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -438,6 +449,7 @@ public:
     save_local_base_path_expanded_ = save_local_base_path_expanded;
     run_id_ = run_id;
     run_id_enabled_ = run_id_enabled;
+    custom_params_ = custom_params;
 
     condition_max_measurements_ = condition_max_measurements;
     if_all_conditions_ = if_all_conditions;
@@ -528,6 +540,9 @@ protected:
   // Run Id
   bool run_id_enabled_;
   std::string run_id_;
+
+  // Custom params
+  json custom_params_;
 
   // Parameters
   bool init_collect_;

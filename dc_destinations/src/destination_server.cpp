@@ -54,35 +54,8 @@ DestinationServer::DestinationServer(const rclcpp::NodeOptions& options)
   flb_in_storage_type_ = this->get_parameter("flb.in_storage_type").as_string();
   flb_in_storage_pause_on_chunks_overlimit_ =
       this->get_parameter("flb.in_storage_pause_on_chunks_overlimit").as_string();
-  nav2_util::declare_parameter_if_not_declared(this, "custom_str_params_list",
-                                               rclcpp::ParameterValue(std::vector<std::string>()));
   ros2_plugin_path_ = this->get_parameter("ros2_plugin_path").as_string();
   ros2_plugin_spin_time_ms_ = this->get_parameter("ros2_plugin_spin_time_ms").as_int();
-
-  custom_str_params_list_ = this->get_parameter("custom_str_params_list").as_string_array();
-
-  for (auto& custom_param : custom_str_params_list_)
-  {
-    nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".name",
-                                                 rclcpp::ParameterValue(""));
-    nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".value",
-                                                 rclcpp::ParameterValue(""));
-    nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".value_from_file",
-                                                 rclcpp::ParameterValue(""));
-    std::string key = this->get_parameter("custom_str_params." + custom_param + ".name").as_string();
-    std::string value = this->get_parameter("custom_str_params." + custom_param + ".value").as_string();
-    std::string value_from_file =
-        this->get_parameter("custom_str_params." + custom_param + ".value_from_file").as_string();
-
-    if (!value.empty())
-    {
-      custom_params_[key] = value;
-    }
-    else if (!value_from_file.empty())
-    {
-      custom_params_[key] = dc_util::get_file_content(value_from_file);
-    }
-  }
 }
 
 DestinationServer::~DestinationServer()
@@ -136,8 +109,7 @@ bool DestinationServer::loadDestinationPlugins()
 
       destinations_.push_back(plugin_loader_.createUniqueInstance(destination_types_[i]));
       destinations_.back()->configure(node, destination_ids_[i], destination_inputs_[i], ctx_, destination_debug_[i],
-                                      flb_in_storage_type_, destination_time_format_[i], destination_time_key_[i],
-                                      custom_params_);
+                                      flb_in_storage_type_, destination_time_format_[i], destination_time_key_[i]);
     }
     catch (const pluginlib::PluginlibException& ex)
     {
