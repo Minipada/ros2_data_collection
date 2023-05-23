@@ -2,10 +2,10 @@
 
 ## Description
 
-The Minio Plugin allows to send files to Minio. It uses the GO interface provided by Fluent bit.
+The Minio Plugin allows to send files to Minio. It uses the GO interface provided by Fluent Bit.
 
 
-## Difference with Fluent bit S3 Plugin
+## Difference with Fluent Bit S3 Plugin
 The [S3 plugin](https://docs.fluentbit.io/manual/pipeline/outputs/s3) sends data as JSON to S3 or Minio but does not send files (e.g yaml, images etc.).
 
 ## Parameters

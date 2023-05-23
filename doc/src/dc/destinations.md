@@ -42,15 +42,18 @@ Destinations parameters are loaded dynamically. Here are the static ones:
 
 ## Available plugins:
 
-| Name                                                              | Description                                |
-| ----------------------------------------------------------------- | ------------------------------------------ |
-| [flb_file](./destinations/flb_file.md)                            | JSON in a file via Fluent bit              |
-| [flb_http](./destinations/flb_http.md)                            | JSON to http request via Fluent bit        |
-| [flb_kinesis_streams](./destinations/flb_kinesis_data_streams.md) | JSON to AWS Kinesis Streams via Fluent bit |
-| [flb_minio](./destinations/flb_minio.md)                          | JSON to Minio via Fluent bit               |
-| [flb_pgsql](./destinations/flb_pgsql.md)                          | JSON to PostgreSQL via Fluent bit          |
-| [flb_stdout](./destinations/flb_stdout.md)                        | JSON to STDOUT via Fluent bit              |
-| [rcl](./destinations/rcl.md)                                      | JSON to RCL                                |
+| Name                                                              | Description                                                                                      | Source                                                                                                 |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| [flb_file](./destinations/flb_file.md)                            | Write the data received through the input plugin to file.                                        | [Fluent Bit File](https://docs.fluentbit.io/manual/pipeline/outputs/file)                              |
+| [flb_files_metrics](./destinations/flb_files_metrics.md)          | Ingest your records into the [AWS Kinesis](https://aws.amazon.com/kinesis/data-streams/) service | This project, in fluent_bit_plugins                                                                    |
+| [flb_http](./destinations/flb_http.md)                            | JSON to http request via Fluent Bit                                                              | [Fluent Bit HTTP](https://docs.fluentbit.io/manual/pipeline/outputs/http)                              |
+| [flb_kinesis_streams](./destinations/flb_kinesis_data_streams.md) | JSON to AWS Kinesis Streams via Fluent Bit                                                       | [Amazon Kinesis Data Streams](https://docs.fluentbit.io/manual/pipeline/outputs/kinesis)               |
+| [flb_minio](./destinations/flb_minio.md)                          | JSON to Minio via Fluent Bit                                                                     | This project, in fluent_bit_plugins package                                                            |
+| [flb_pgsql](./destinations/flb_pgsql.md)                          | JSON to PostgreSQL via Fluent Bit                                                                | [Fluent Bit PostgreSQL](https://docs.fluentbit.io/manual/pipeline/outputs/postgresql)                  |
+| [flb_stdout](./destinations/flb_stdout.md)                        | JSON to STDOUT via Fluent Bit                                                                    | [Fluent Bit Stdout](https://docs.fluentbit.io/manual/pipeline/outputs/standard-output)                 |
+| [flb_s3](./destinations/flb_s3.md)                                | JSON to AWS S3 via Fluent Bit                                                                    | [Fluent Bit S3](https://docs.fluentbit.io/manual/pipeline/outputs/s3)                                  |
+| [flb_tcp](./destinations/flb_tcp.md)                              | JSON to TCP via Fluent Bit                                                                       | [Fluent Bit TCP & TLS](https://docs.fluentbit.io/manual/pipeline/outputs/tcp-and-tls)                  |
+| [rcl](./destinations/rcl.md)                                      | JSON to RCL                                                                                      | [ROS 2 logging](https://docs.ros.org/en/rolling/Tutorials/Demos/Logging-and-logger-configuration.html) |
 
 
 ## Example configuration
