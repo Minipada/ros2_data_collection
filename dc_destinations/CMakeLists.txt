@@ -60,6 +60,9 @@ list(APPEND dc_destination_plugin_libs dc_flb_slack_destination)
 add_library(dc_flb_stdout_destination SHARED plugins/flb_stdout.cpp)
 list(APPEND dc_destination_plugin_libs dc_flb_stdout_destination)
 
+add_library(dc_flb_tcp_destination SHARED plugins/flb_tcp.cpp)
+list(APPEND dc_destination_plugin_libs dc_flb_tcp_destination)
+
 add_library(dc_rcl_destination SHARED plugins/rcl.cpp)
 list(APPEND dc_destination_plugin_libs dc_rcl_destination)
 
