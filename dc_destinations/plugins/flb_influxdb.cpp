@@ -64,7 +64,7 @@ void FlbInfluxDB::initFlbOutputPlugin()
   if (out_ffd_ == -1)
   {
     flb_destroy(ctx_);
-    throw std::runtime_error("Cannot initialize Fluent Bit output stdout plugin");
+    throw std::runtime_error("Cannot initialize Fluent Bit output influxdb plugin");
   }
 }
 
