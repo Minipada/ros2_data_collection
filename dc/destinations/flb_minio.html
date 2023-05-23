@@ -184,15 +184,15 @@
 <p>The <a href="https://docs.fluentbit.io/manual/pipeline/outputs/s3">S3 plugin</a> sends data as JSON to S3 or Minio but does not send files (e.g yaml, images etc.).</p>
 <h2 id="parameters"><a class="header" href="#parameters">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
-<tr><td><strong>plugin_path</strong></td><td>Shared library path compiled by go</td><td>str</td><td>&quot;{package_share_directory}/flb_plugins/lib/out_minio.so&quot;</td></tr>
+<tr><td><strong>plugin_path</strong></td><td>Shared library path compiled by go.</td><td>str</td><td>&quot;{package_share_directory}/flb_plugins/lib/out_minio.so&quot;</td></tr>
 <tr><td><strong>endpoint</strong></td><td>Endpoint for the S3 API. An endpoint can contain scheme and port.</td><td>str</td><td>&quot;127.0.0.1:9000&quot;</td></tr>
-<tr><td><strong>access_key_id</strong></td><td>Access keys are long-term credentials for an IAM user or the AWS account root user</td><td>str</td><td>N/A (mandatory)</td></tr>
-<tr><td><strong>secret_access_key</strong></td><td>Secret-like password to connect along he access key id</td><td>str</td><td>N/A (mandatory)</td></tr>
+<tr><td><strong>access_key_id</strong></td><td>Access keys are long-term credentials for an IAM user or the AWS account root user.</td><td>str</td><td>N/A (mandatory)</td></tr>
+<tr><td><strong>secret_access_key</strong></td><td>Secret-like password to connect along he access key id.</td><td>str</td><td>N/A (mandatory)</td></tr>
 <tr><td><strong>use_ssl</strong></td><td>If set to true, https is used instead of http. Default is true.</td><td>str</td><td>&quot;true&quot;</td></tr>
-<tr><td><strong>create_bucket</strong></td><td>Whether the bucket will be created</td><td>str</td><td>&quot;true&quot;</td></tr>
-<tr><td><strong>bucket</strong></td><td>Bucket name</td><td>str</td><td>&quot;dc_bucket&quot;</td></tr>
-<tr><td><strong>upload_fields</strong></td><td>Fields containing remote paths, separated by dots</td><td>list[str]</td><td>N/A (mandatory)</td></tr>
-<tr><td><strong>src_fields</strong></td><td>Fields containing local paths, separated by dots</td><td>list[str]</td><td>N/A (mandatory)</td></tr>
+<tr><td><strong>create_bucket</strong></td><td>Whether the bucket will be created.</td><td>str</td><td>&quot;true&quot;</td></tr>
+<tr><td><strong>bucket</strong></td><td>Bucket name.</td><td>str</td><td>&quot;dc_bucket&quot;</td></tr>
+<tr><td><strong>upload_fields</strong></td><td>Fields containing remote paths, separated by dots.</td><td>list[str]</td><td>N/A (mandatory)</td></tr>
+<tr><td><strong>src_fields</strong></td><td>Fields containing local paths, separated by dots.</td><td>list[str]</td><td>N/A (mandatory)</td></tr>
 </tbody></table>
 </div>
 <h2 id="node-configuration"><a class="header" href="#node-configuration">Node configuration</a></h2>

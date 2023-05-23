@@ -199,12 +199,11 @@
 </div>
 <h2 id="node-configuration"><a class="header" href="#node-configuration">Node configuration</a></h2>
 <pre><code class="language-yaml">...
-flb_stdout:
-  plugin: &quot;dc_destinations/FlbStdout&quot;
-  inputs: [&quot;/dc/group/data&quot;]
-  format: &quot;json&quot;
-  json_date_key: &quot;date&quot;
-  json_date_format: &quot;iso8601&quot;
+flb_tcp:
+  plugin: &quot;dc_destinations/FlbTCP&quot;
+  inputs: [&quot;/dc/measurement/uptime&quot;]
+  host: &quot;127.0.0.1&quot;
+  port: 5170
 ...
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/destinations/flb_tcp.md">Edit this page on GitHub.</a></footer>

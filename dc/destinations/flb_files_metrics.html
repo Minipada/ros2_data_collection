@@ -205,30 +205,30 @@
 </pre>
 <h2 id="parameters"><a class="header" href="#parameters">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
-<tr><td><strong>db_type</strong></td><td>Database used</td><td>str</td><td>&quot;pgsql&quot;</td></tr>
-<tr><td><strong>file_storage</strong></td><td>Where data will be stored</td><td>list[str](s3, minio)</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>delete_when_sent</strong></td><td>Delete file when sent</td><td>bool</td><td>true</td></tr>
-<tr><td><strong>minio.access_key_id</strong></td><td>Minio Access key ID</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>minio.bucket</strong></td><td>Minio bucket name</td><td>str</td><td>&quot;dc_bucket&quot;</td></tr>
-<tr><td><strong>minio.endpoint</strong></td><td>Minio endpoint</td><td>str</td><td>&quot;127.0.0.1:9000&quot;</td></tr>
-<tr><td><strong>minio.secret_access_key</strong></td><td>Minio Secret access key</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>minio.src_fields</strong></td><td>JSON fields containing local paths for Minio</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>minio.upload_fields</strong></td><td>JSON fields containing remote paths for Minio</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>minio.use_ssl</strong></td><td>Use SSL for Minio</td><td>bool</td><td>true</td></tr>
-<tr><td><strong>pgsql.database</strong></td><td>Database name to connect to</td><td>str</td><td>&lt;system_username&gt;</td></tr>
-<tr><td><strong>pgsql.host</strong></td><td>Hostname/IP address of the PostgreSQL instance</td><td>str</td><td>&quot;127.0.0.1&quot;</td></tr>
-<tr><td><strong>pgsql.password</strong></td><td>Password of PostgreSQL username</td><td>str</td><td>&quot;&quot;</td></tr>
-<tr><td><strong>pgsql.port</strong></td><td>PostgreSQL port</td><td>str</td><td>&quot;5432&quot;</td></tr>
-<tr><td><strong>pgsql.ssl</strong></td><td>Use ssl for PostgreSQL connection</td><td>bool</td><td>true</td></tr>
-<tr><td><strong>pgsql.table</strong></td><td>Table name where to store data</td><td>str</td><td>&quot;pg_table&quot;</td></tr>
-<tr><td><strong>pgsql.user</strong></td><td>PostgreSQL username</td><td>str</td><td>&lt;system_username&gt;</td></tr>
-<tr><td><strong>plugin_path</strong></td><td>Shared library of the plugin</td><td>str</td><td>&lt;install_path&gt;/lib/out_files_metrics.so</td></tr>
-<tr><td><strong>s3.access_key_id</strong></td><td>S3 Access key ID</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>s3.bucket</strong></td><td>S3 bucket name</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>s3.endpoint</strong></td><td>S3 endpoint</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>s3.secret_access_key</strong></td><td>S3 Secret access key</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>s3.src_fields</strong></td><td>JSON fields containing local paths for s3</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>s3.upload_fields</strong></td><td>JSON fields containing remote paths for S3</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>db_type</strong></td><td>Database used.</td><td>str</td><td>&quot;pgsql&quot;</td></tr>
+<tr><td><strong>file_storage</strong></td><td>Where data will be stored.</td><td>list[str](s3, minio)</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>delete_when_sent</strong></td><td>Delete file when sent.</td><td>bool</td><td>true</td></tr>
+<tr><td><strong>minio.access_key_id</strong></td><td>Minio Access key ID.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>minio.bucket</strong></td><td>Minio bucket name.</td><td>str</td><td>&quot;dc_bucket&quot;</td></tr>
+<tr><td><strong>minio.endpoint</strong></td><td>Minio endpoint.</td><td>str</td><td>&quot;127.0.0.1:9000&quot;</td></tr>
+<tr><td><strong>minio.secret_access_key</strong></td><td>Minio Secret access key.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>minio.src_fields</strong></td><td>JSON fields containing local paths for Minio.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>minio.upload_fields</strong></td><td>JSON fields containing remote paths for Minio.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>minio.use_ssl</strong></td><td>Use SSL for Minio.</td><td>bool</td><td>true</td></tr>
+<tr><td><strong>pgsql.database</strong></td><td>Database name to connect to.</td><td>str</td><td>&lt;system_username&gt;</td></tr>
+<tr><td><strong>pgsql.host</strong></td><td>Hostname/IP address of the PostgreSQL instance.</td><td>str</td><td>&quot;127.0.0.1&quot;</td></tr>
+<tr><td><strong>pgsql.password</strong></td><td>Password of PostgreSQL username.</td><td>str</td><td>&quot;&quot;</td></tr>
+<tr><td><strong>pgsql.port</strong></td><td>PostgreSQL port.</td><td>str</td><td>&quot;5432&quot;</td></tr>
+<tr><td><strong>pgsql.ssl</strong></td><td>Use ssl for PostgreSQL connection.</td><td>bool</td><td>true</td></tr>
+<tr><td><strong>pgsql.table</strong></td><td>Table name where to store data.</td><td>str</td><td>&quot;pg_table&quot;</td></tr>
+<tr><td><strong>pgsql.user</strong></td><td>PostgreSQL username.</td><td>str</td><td>&lt;system_username&gt;</td></tr>
+<tr><td><strong>plugin_path</strong></td><td>Shared library of the plugin.</td><td>str</td><td>&lt;install_path&gt;/lib/out_files_metrics.so</td></tr>
+<tr><td><strong>s3.access_key_id</strong></td><td>S3 Access key ID.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>s3.bucket</strong></td><td>S3 bucket name.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>s3.endpoint</strong></td><td>S3 endpoint.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>s3.secret_access_key</strong></td><td>S3 Secret access key.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>s3.src_fields</strong></td><td>JSON fields containing local paths for s3.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>s3.upload_fields</strong></td><td>JSON fields containing remote paths for S3.</td><td>str</td><td>N/A (Mandatory)</td></tr>
 </tbody></table>
 </div>
 <h2 id="example"><a class="header" href="#example">Example</a></h2>

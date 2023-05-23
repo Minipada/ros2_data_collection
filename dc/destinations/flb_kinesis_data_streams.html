@@ -179,7 +179,7 @@
                     <main>
                         <h1 id="aws-kinesis-data-streams---fluent-bit"><a class="header" href="#aws-kinesis-data-streams---fluent-bit">AWS Kinesis Data Streams - Fluent Bit</a></h1>
 <h2 id="description"><a class="header" href="#description">Description</a></h2>
-<p>The Amazon Kinesis Data Streams output plugin allows to ingest your records into the <a href="https://aws.amazon.com/kinesis/data-streams/">Kinesis</a> service. See <a href="https://docs.fluentbit.io/manual/pipeline/outputs/s3">fluent bit page</a> for more information.</p>
+<p>The Amazon Kinesis Data Streams output plugin allows to ingest your records into the <a href="https://aws.amazon.com/kinesis/data-streams/">Kinesis</a> service. See <a href="https://docs.fluentbit.io/manual/pipeline/outputs/kinesis">fluent bit page</a> for more information.</p>
 <h2 id="parameters"><a class="header" href="#parameters">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
 <tr><td><strong>region</strong></td><td>The AWS region.</td><td>str</td><td>N/A</td></tr>
@@ -187,9 +187,9 @@
 <tr><td><strong>role_arn</strong></td><td>ARN of an IAM role to assume (for cross account access).</td><td>str</td><td>N/A</td></tr>
 <tr><td><strong>time_key</strong></td><td>Add the timestamp to the record under this key. By default the timestamp from Fluent Bit will not be added to records sent to Kinesis.</td><td>str</td><td>N/A</td></tr>
 <tr><td><strong>time_key_format</strong></td><td>strftime compliant format string for the timestamp; for example, the default is '%Y-%m-%dT%H:%M:%S'. Supports millisecond precision with '%3N' and supports nanosecond precision with '%9N' and '%L'; for example, adding '%3N' to support millisecond '%Y-%m-%dT%H:%M:%S.%3N'. This option is used with time_key.</td><td>str</td><td>&quot;%Y-%m-%dT%H:%M:%S&quot;</td></tr>
-<tr><td><strong>log_key</strong></td><td>By default, the whole log record will be sent to Kinesis. If you specify a key name with this option, then only the value of that key will be sent to Kinesis. For example, if you are using the Fluentd Docker log driver, you can specify log_key log and only the log message will be sent to Kinesis. Server</td><td>str</td><td>N/A</td></tr>
-<tr><td><strong>endpoint</strong></td><td>Specify a custom endpoint for the Kinesis API.Server</td><td>str</td><td>N/A</td></tr>
-<tr><td><strong>auto_retry_requests</strong></td><td>Immediately retry failed requests to AWS services once. This option does not affect the normal Fluent Bit retry mechanism with backoff. Instead, it enables an immediate retry with no delay for networking errors, which may help improve throughput when there are transient/random networking issues. This option defaults to true.Server</td><td>bool</td><td>true</td></tr>
+<tr><td><strong>log_key</strong></td><td>By default, the whole log record will be sent to Kinesis. If you specify a key name with this option, then only the value of that key will be sent to Kinesis. For example, if you are using the Fluentd Docker log driver, you can specify log_key log and only the log message will be sent to Kinesis.</td><td>str</td><td>N/A</td></tr>
+<tr><td><strong>endpoint</strong></td><td>Specify a custom endpoint for the Kinesis API.</td><td>str</td><td>N/A</td></tr>
+<tr><td><strong>auto_retry_requests</strong></td><td>Immediately retry failed requests to AWS services once. This option does not affect the normal Fluent Bit retry mechanism with backoff. Instead, it enables an immediate retry with no delay for networking errors, which may help improve throughput when there are transient/random networking issues. This option defaults to true.</td><td>bool</td><td>true</td></tr>
 </tbody></table>
 </div>
 <h2 id="node-configuration"><a class="header" href="#node-configuration">Node configuration</a></h2>

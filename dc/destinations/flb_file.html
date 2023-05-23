@@ -183,11 +183,11 @@
 <h2 id="parameters"><a class="header" href="#parameters">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
 <tr><td><strong>file</strong></td><td>Set file name to store the records. If not set, the file name will be the tag associated with the records.</td><td>str</td><td>N/A (Optional)</td></tr>
-<tr><td><strong>format</strong></td><td>The format of the file content. See also <a href="https://docs.fluentbit.io/manual/pipeline/outputs/file#format">Format</a> section</td><td>str(out_file,plain,csv,ltsv)</td><td>&quot;out_file&quot;</td></tr>
+<tr><td><strong>format</strong></td><td>The format of the file content. See also <a href="https://docs.fluentbit.io/manual/pipeline/outputs/file#format">Format</a> section.</td><td>str(out_file,plain,csv,ltsv)</td><td>&quot;out_file&quot;</td></tr>
 <tr><td><strong>mkdir</strong></td><td>Recursively create output directory if it does not exist. Permissions set to 0755.</td><td>bool</td><td>true</td></tr>
-<tr><td><strong>path</strong></td><td>Directory path to store files. If not set, Fluent Bit will write the files on it's own positioned directory</td><td>str</td><td>&quot;$HOME/data/&quot;</td></tr>
-<tr><td><strong>delimiter</strong></td><td>The character to separate each data. Default to ',' if format=csv, '\t'(TAB) if format=ltsv, '' else</td><td>str</td><td>'' or ',' or '\t'</td></tr>
-<tr><td><strong>label_delimiter</strong></td><td>The character to separate label and the value. Default: ':'. Used for ltsv</td><td>str</td><td>'.'</td></tr>
+<tr><td><strong>path</strong></td><td>Directory path to store files. If not set, Fluent Bit will write the files on it's own positioned directory.</td><td>str</td><td>&quot;$HOME/data/&quot;</td></tr>
+<tr><td><strong>delimiter</strong></td><td>The character to separate each data. Default to ',' if format=csv, '\t'(TAB) if format=ltsv, '' else.</td><td>str</td><td>'' or ',' or '\t'</td></tr>
+<tr><td><strong>label_delimiter</strong></td><td>The character to separate label and the value. Default: ':'. Used for ltsv.</td><td>str</td><td>'.'</td></tr>
 </tbody></table>
 </div>
 <h2 id="node-configuration"><a class="header" href="#node-configuration">Node configuration</a></h2>

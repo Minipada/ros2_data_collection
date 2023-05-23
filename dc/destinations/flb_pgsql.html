@@ -182,17 +182,17 @@
 <p>PostgreSQL is a very popular and versatile open source database management system that supports the SQL language and that is capable of storing both structured and unstructured data, such as JSON objects. See <a href="https://docs.fluentbit.io/manual/pipeline/outputs/postgresql">fluent bit page</a> for more information.</p>
 <h2 id="parameters"><a class="header" href="#parameters">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
-<tr><td><strong>host</strong></td><td>Hostname/IP address of the PostgreSQL instance</td><td>str</td><td>&quot;127.0.0.1&quot;</td></tr>
-<tr><td><strong>port</strong></td><td>PostgreSQL port</td><td>str</td><td>&quot;5432&quot;</td></tr>
-<tr><td><strong>user</strong></td><td>PostgreSQL username</td><td>str</td><td>&quot;{username}&quot;</td></tr>
-<tr><td><strong>password</strong></td><td>Password of PostgreSQL username</td><td>str</td><td>N/A</td></tr>
-<tr><td><strong>database</strong></td><td>Database name to connect to</td><td>str</td><td>&quot;{username}&quot;</td></tr>
-<tr><td><strong>table</strong></td><td>Table name where to store data</td><td>str</td><td>N/A</td></tr>
-<tr><td><strong>timestamp_Key</strong></td><td>Key in the JSON object containing the record timestamp</td><td>str</td><td>&quot;date&quot;</td></tr>
-<tr><td><strong>async</strong></td><td>Define if we will use async or sync connections</td><td>bool</td><td>false</td></tr>
-<tr><td><strong>min_pool_size</strong></td><td>Minimum number of connection in async mode</td><td>str</td><td>&quot;1&quot;</td></tr>
-<tr><td><strong>max_pool_size</strong></td><td>Maximum amount of connections in async mode</td><td>str</td><td>&quot;4&quot;</td></tr>
-<tr><td><strong>cockroachdb</strong></td><td>Set to true if you will connect the plugin with a CockroachDB</td><td>bool</td><td>false</td></tr>
+<tr><td><strong>host</strong></td><td>Hostname/IP address of the PostgreSQL instance.</td><td>str</td><td>&quot;127.0.0.1&quot;</td></tr>
+<tr><td><strong>port</strong></td><td>PostgreSQL port.</td><td>str</td><td>&quot;5432&quot;</td></tr>
+<tr><td><strong>user</strong></td><td>PostgreSQL username.</td><td>str</td><td>&quot;{username}&quot;</td></tr>
+<tr><td><strong>password</strong></td><td>Password of PostgreSQL username.</td><td>str</td><td>N/A</td></tr>
+<tr><td><strong>database</strong></td><td>Database name to connect to.</td><td>str</td><td>&quot;{username}&quot;</td></tr>
+<tr><td><strong>table</strong></td><td>Table name where to store data.</td><td>str</td><td>N/A</td></tr>
+<tr><td><strong>timestamp_Key</strong></td><td>Key in the JSON object containing the record timestamp.</td><td>str</td><td>&quot;date&quot;</td></tr>
+<tr><td><strong>async</strong></td><td>Define if we will use async or sync connections.</td><td>bool</td><td>false</td></tr>
+<tr><td><strong>min_pool_size</strong></td><td>Minimum number of connection in async mode.</td><td>str</td><td>&quot;1&quot;</td></tr>
+<tr><td><strong>max_pool_size</strong></td><td>Maximum amount of connections in async mode.</td><td>str</td><td>&quot;4&quot;</td></tr>
+<tr><td><strong>cockroachdb</strong></td><td>Set to true if you will connect the plugin with a CockroachDB.</td><td>bool</td><td>false</td></tr>
 </tbody></table>
 </div>
 <h2 id="node-configuration"><a class="header" href="#node-configuration">Node configuration</a></h2>

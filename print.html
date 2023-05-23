@@ -3317,7 +3317,7 @@ uptime:
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/destinations.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="aws-kinesis-data-streams---fluent-bit"><a class="header" href="#aws-kinesis-data-streams---fluent-bit">AWS Kinesis Data Streams - Fluent Bit</a></h1>
 <h2 id="description-36"><a class="header" href="#description-36">Description</a></h2>
-<p>The Amazon Kinesis Data Streams output plugin allows to ingest your records into the <a href="https://aws.amazon.com/kinesis/data-streams/">Kinesis</a> service. See <a href="https://docs.fluentbit.io/manual/pipeline/outputs/s3">fluent bit page</a> for more information.</p>
+<p>The Amazon Kinesis Data Streams output plugin allows to ingest your records into the <a href="https://aws.amazon.com/kinesis/data-streams/">Kinesis</a> service. See <a href="https://docs.fluentbit.io/manual/pipeline/outputs/kinesis">fluent bit page</a> for more information.</p>
 <h2 id="parameters-29"><a class="header" href="#parameters-29">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
 <tr><td><strong>region</strong></td><td>The AWS region.</td><td>str</td><td>N/A</td></tr>
@@ -3325,9 +3325,9 @@ uptime:
 <tr><td><strong>role_arn</strong></td><td>ARN of an IAM role to assume (for cross account access).</td><td>str</td><td>N/A</td></tr>
 <tr><td><strong>time_key</strong></td><td>Add the timestamp to the record under this key. By default the timestamp from Fluent Bit will not be added to records sent to Kinesis.</td><td>str</td><td>N/A</td></tr>
 <tr><td><strong>time_key_format</strong></td><td>strftime compliant format string for the timestamp; for example, the default is '%Y-%m-%dT%H:%M:%S'. Supports millisecond precision with '%3N' and supports nanosecond precision with '%9N' and '%L'; for example, adding '%3N' to support millisecond '%Y-%m-%dT%H:%M:%S.%3N'. This option is used with time_key.</td><td>str</td><td>&quot;%Y-%m-%dT%H:%M:%S&quot;</td></tr>
-<tr><td><strong>log_key</strong></td><td>By default, the whole log record will be sent to Kinesis. If you specify a key name with this option, then only the value of that key will be sent to Kinesis. For example, if you are using the Fluentd Docker log driver, you can specify log_key log and only the log message will be sent to Kinesis. Server</td><td>str</td><td>N/A</td></tr>
-<tr><td><strong>endpoint</strong></td><td>Specify a custom endpoint for the Kinesis API.Server</td><td>str</td><td>N/A</td></tr>
-<tr><td><strong>auto_retry_requests</strong></td><td>Immediately retry failed requests to AWS services once. This option does not affect the normal Fluent Bit retry mechanism with backoff. Instead, it enables an immediate retry with no delay for networking errors, which may help improve throughput when there are transient/random networking issues. This option defaults to true.Server</td><td>bool</td><td>true</td></tr>
+<tr><td><strong>log_key</strong></td><td>By default, the whole log record will be sent to Kinesis. If you specify a key name with this option, then only the value of that key will be sent to Kinesis. For example, if you are using the Fluentd Docker log driver, you can specify log_key log and only the log message will be sent to Kinesis.</td><td>str</td><td>N/A</td></tr>
+<tr><td><strong>endpoint</strong></td><td>Specify a custom endpoint for the Kinesis API.</td><td>str</td><td>N/A</td></tr>
+<tr><td><strong>auto_retry_requests</strong></td><td>Immediately retry failed requests to AWS services once. This option does not affect the normal Fluent Bit retry mechanism with backoff. Instead, it enables an immediate retry with no delay for networking errors, which may help improve throughput when there are transient/random networking issues. This option defaults to true.</td><td>bool</td><td>true</td></tr>
 </tbody></table>
 </div>
 <h2 id="node-configuration"><a class="header" href="#node-configuration">Node configuration</a></h2>
@@ -3346,14 +3346,14 @@ flb_kinesis_streams:
 <p>The Amazon S3 output plugin allows to ingest your records into the <a href="https://aws.amazon.com/s3/">S3</a> service. See <a href="https://docs.fluentbit.io/manual/pipeline/outputs/s3">fluent bit page</a> for more information.</p>
 <h2 id="parameters-30"><a class="header" href="#parameters-30">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
-<tr><td><strong>region</strong></td><td>The AWS region of your S3 bucket</td><td>str</td><td>&quot;us-east-1&quot;</td></tr>
-<tr><td><strong>bucket</strong></td><td>S3 Bucket name</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>json_date_key</strong></td><td>Specify the name of the time key in the output record. To disable the time key just set the value to false</td><td>str</td><td>&quot;date&quot;</td></tr>
-<tr><td><strong>json_date_format</strong></td><td>Specify the format of the date. Supported formats are double, epoch, iso8601 (eg: 2018-05-30T09:39:52.000681Z) and java_sql_timestamp (eg: 2018-05-30 09:39:52.000681)</td><td>str</td><td>&quot;iso8601&quot;</td></tr>
-<tr><td><strong>total_file_size</strong></td><td>Specifies the size of files in S3. Maximum size is 50G, minimim is 1M</td><td>str</td><td>&quot;100M&quot;</td></tr>
-<tr><td><strong>upload_chunk_size</strong></td><td>The size of each 'part' for multipart uploads. Max: 50M</td><td>str</td><td>&quot;50M&quot;</td></tr>
-<tr><td><strong>upload_timeout</strong></td><td>Whenever this amount of time has elapsed, Fluent Bit will complete an upload and create a new file in S3. For example, set this value to 60m and you will get a new file every hour</td><td>str</td><td>&quot;10m&quot;</td></tr>
-<tr><td><strong>store_dir</strong></td><td>Directory to locally buffer data before sending. When multipart uploads are used, data will only be buffered until the upload_chunk_size is reached. S3 will also store metadata about in progress multipart uploads in this directory; this allows pending uploads to be completed even if Fluent Bit stops and restarts. It will also store the current $INDEX value if enabled in the S3 key format so that the $INDEX can keep incrementing from its previous value after Fluent Bit restarts</td><td>str</td><td>&quot;/tmp/fluent-bit/s3&quot;</td></tr>
+<tr><td><strong>region</strong></td><td>The AWS region of your S3 bucket.</td><td>str</td><td>&quot;us-east-1&quot;</td></tr>
+<tr><td><strong>bucket</strong></td><td>S3 Bucket name.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>json_date_key</strong></td><td>Specify the name of the time key in the output record. To disable the time key just set the value to false.</td><td>str</td><td>&quot;date&quot;</td></tr>
+<tr><td><strong>json_date_format</strong></td><td>Specify the format of the date. Supported formats are double, epoch, iso8601 (eg: 2018-05-30T09:39:52.000681Z) and java_sql_timestamp (eg: 2018-05-30 09:39:52.000681).</td><td>str</td><td>&quot;iso8601&quot;</td></tr>
+<tr><td><strong>total_file_size</strong></td><td>Specifies the size of files in S3. Maximum size is 50G, minimim is 1M.</td><td>str</td><td>&quot;100M&quot;</td></tr>
+<tr><td><strong>upload_chunk_size</strong></td><td>The size of each 'part' for multipart uploads. Max: 50M.</td><td>str</td><td>&quot;50M&quot;</td></tr>
+<tr><td><strong>upload_timeout</strong></td><td>Whenever this amount of time has elapsed, Fluent Bit will complete an upload and create a new file in S3. For example, set this value to 60m and you will get a new file every hour.</td><td>str</td><td>&quot;10m&quot;</td></tr>
+<tr><td><strong>store_dir</strong></td><td>Directory to locally buffer data before sending. When multipart uploads are used, data will only be buffered until the upload_chunk_size is reached. S3 will also store metadata about in progress multipart uploads in this directory; this allows pending uploads to be completed even if Fluent Bit stops and restarts. It will also store the current $INDEX value if enabled in the S3 key format so that the $INDEX can keep incrementing from its previous value after Fluent Bit restarts.</td><td>str</td><td>&quot;/tmp/fluent-bit/s3&quot;</td></tr>
 <tr><td><strong>store_dir_limit_size</strong></td><td>The size of the limitation for disk usage in S3. Limit the amount of s3 buffers in the store_dir to limit disk usage. Note: Use store_dir_limit_size instead of storage.total_limit_size which can be used to other plugins, because S3 has its own buffering system.</td><td>int</td><td>0</td></tr>
 <tr><td><strong>s3_key_format</strong></td><td>Format string for keys in S3. This option supports a UUID, strftime time formatters, a syntax for selecting parts of the Fluent log tag using a syntax inspired by the rewrite_tag filter. Add $UUID in the format string to insert a random string. Add $INDEX in the format string to insert an integer that increments each upload. The $INDEX value will be saved in the store_dir so that if Fluent Bit restarts the value will keep incrementing from the previous run. Add $TAG in the format string to insert the full log tag; add $TAG[0] to insert the first part of the tag in the s3 key. The tag is split into “parts” using the characters specified with the s3_key_format_tag_delimiters option. Add extension directly after the last piece of the format string to insert a key suffix. If you want to specify a key suffix and you are in use_put_object mode, you must specify $UUID as well. More explanations can be found in the S3 Key Format explainer section further down in this document. See the in depth examples and tutorial in the documentation. Time in s3_key is the timestamp of the first record in the S3 file.</td><td>str</td><td>&quot;/fluent-bit-logs/$TAG/%Y/%m/%d/%H/%M/%S&quot;</td></tr>
 <tr><td><strong>static_file_path</strong></td><td>Disables behavior where UUID string is automatically appended to end of S3 key name when $UUID is not provided in s3_key_format. $UUID, time formatters, $TAG, and other dynamic key formatters all work as expected while this feature is set to true.</td><td>bool</td><td>false</td></tr>
@@ -3362,7 +3362,7 @@ flb_kinesis_streams:
 <tr><td><strong>role_arn</strong></td><td>ARN of an IAM role to assume (ex. for cross account access).</td><td>str</td><td>N/A</td></tr>
 <tr><td><strong>endpoint</strong></td><td>Custom endpoint for the S3 API. An endpoint can contain scheme and port.</td><td>str</td><td>N/A</td></tr>
 <tr><td><strong>sts_endpoint</strong></td><td>Custom endpoint for the STS API.</td><td>str</td><td>N/A</td></tr>
-<tr><td><strong>canned_acl</strong></td><td><a href="https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl">Predefined Canned ACL</a> policy</td><td>str</td><td>N/A</td></tr>
+<tr><td><strong>canned_acl</strong></td><td><a href="https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl">Predefined Canned ACL</a> policy.</td><td>str</td><td>N/A</td></tr>
 <tr><td><strong>compression</strong></td><td>Compression type for S3 objects. 'gzip' is currently the only supported value by default. If Apache Arrow support was enabled at compile time, you can also use 'arrow'. For gzip compression, the Content-Encoding HTTP Header will be set to 'gzip'. Gzip compression can be enabled when use_put_object is 'on' or 'off' (PutObject and Multipart). Arrow compression can only be enabled with use_put_object On.</td><td>str</td><td>N/A</td></tr>
 <tr><td><strong>content_type</strong></td><td>A standard MIME type for the S3 object; this will be set as the Content-Type HTTP header.</td><td>str</td><td>N/A</td></tr>
 <tr><td><strong>send_content_md5</strong></td><td>Send the Content-MD5 header with PutObject and UploadPart requests, as is required when Object Lock is enabled.</td><td>bool</td><td>false</td></tr>
@@ -3393,11 +3393,11 @@ flb_s3:
 <h2 id="parameters-31"><a class="header" href="#parameters-31">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
 <tr><td><strong>file</strong></td><td>Set file name to store the records. If not set, the file name will be the tag associated with the records.</td><td>str</td><td>N/A (Optional)</td></tr>
-<tr><td><strong>format</strong></td><td>The format of the file content. See also <a href="https://docs.fluentbit.io/manual/pipeline/outputs/file#format">Format</a> section</td><td>str(out_file,plain,csv,ltsv)</td><td>&quot;out_file&quot;</td></tr>
+<tr><td><strong>format</strong></td><td>The format of the file content. See also <a href="https://docs.fluentbit.io/manual/pipeline/outputs/file#format">Format</a> section.</td><td>str(out_file,plain,csv,ltsv)</td><td>&quot;out_file&quot;</td></tr>
 <tr><td><strong>mkdir</strong></td><td>Recursively create output directory if it does not exist. Permissions set to 0755.</td><td>bool</td><td>true</td></tr>
-<tr><td><strong>path</strong></td><td>Directory path to store files. If not set, Fluent Bit will write the files on it's own positioned directory</td><td>str</td><td>&quot;$HOME/data/&quot;</td></tr>
-<tr><td><strong>delimiter</strong></td><td>The character to separate each data. Default to ',' if format=csv, '\t'(TAB) if format=ltsv, '' else</td><td>str</td><td>'' or ',' or '\t'</td></tr>
-<tr><td><strong>label_delimiter</strong></td><td>The character to separate label and the value. Default: ':'. Used for ltsv</td><td>str</td><td>'.'</td></tr>
+<tr><td><strong>path</strong></td><td>Directory path to store files. If not set, Fluent Bit will write the files on it's own positioned directory.</td><td>str</td><td>&quot;$HOME/data/&quot;</td></tr>
+<tr><td><strong>delimiter</strong></td><td>The character to separate each data. Default to ',' if format=csv, '\t'(TAB) if format=ltsv, '' else.</td><td>str</td><td>'' or ',' or '\t'</td></tr>
+<tr><td><strong>label_delimiter</strong></td><td>The character to separate label and the value. Default: ':'. Used for ltsv.</td><td>str</td><td>'.'</td></tr>
 </tbody></table>
 </div>
 <h2 id="node-configuration-2"><a class="header" href="#node-configuration-2">Node configuration</a></h2>
@@ -3439,30 +3439,30 @@ flb_file:
 </pre>
 <h2 id="parameters-32"><a class="header" href="#parameters-32">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
-<tr><td><strong>db_type</strong></td><td>Database used</td><td>str</td><td>&quot;pgsql&quot;</td></tr>
-<tr><td><strong>file_storage</strong></td><td>Where data will be stored</td><td>list[str](s3, minio)</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>delete_when_sent</strong></td><td>Delete file when sent</td><td>bool</td><td>true</td></tr>
-<tr><td><strong>minio.access_key_id</strong></td><td>Minio Access key ID</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>minio.bucket</strong></td><td>Minio bucket name</td><td>str</td><td>&quot;dc_bucket&quot;</td></tr>
-<tr><td><strong>minio.endpoint</strong></td><td>Minio endpoint</td><td>str</td><td>&quot;127.0.0.1:9000&quot;</td></tr>
-<tr><td><strong>minio.secret_access_key</strong></td><td>Minio Secret access key</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>minio.src_fields</strong></td><td>JSON fields containing local paths for Minio</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>minio.upload_fields</strong></td><td>JSON fields containing remote paths for Minio</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>minio.use_ssl</strong></td><td>Use SSL for Minio</td><td>bool</td><td>true</td></tr>
-<tr><td><strong>pgsql.database</strong></td><td>Database name to connect to</td><td>str</td><td>&lt;system_username&gt;</td></tr>
-<tr><td><strong>pgsql.host</strong></td><td>Hostname/IP address of the PostgreSQL instance</td><td>str</td><td>&quot;127.0.0.1&quot;</td></tr>
-<tr><td><strong>pgsql.password</strong></td><td>Password of PostgreSQL username</td><td>str</td><td>&quot;&quot;</td></tr>
-<tr><td><strong>pgsql.port</strong></td><td>PostgreSQL port</td><td>str</td><td>&quot;5432&quot;</td></tr>
-<tr><td><strong>pgsql.ssl</strong></td><td>Use ssl for PostgreSQL connection</td><td>bool</td><td>true</td></tr>
-<tr><td><strong>pgsql.table</strong></td><td>Table name where to store data</td><td>str</td><td>&quot;pg_table&quot;</td></tr>
-<tr><td><strong>pgsql.user</strong></td><td>PostgreSQL username</td><td>str</td><td>&lt;system_username&gt;</td></tr>
-<tr><td><strong>plugin_path</strong></td><td>Shared library of the plugin</td><td>str</td><td>&lt;install_path&gt;/lib/out_files_metrics.so</td></tr>
-<tr><td><strong>s3.access_key_id</strong></td><td>S3 Access key ID</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>s3.bucket</strong></td><td>S3 bucket name</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>s3.endpoint</strong></td><td>S3 endpoint</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>s3.secret_access_key</strong></td><td>S3 Secret access key</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>s3.src_fields</strong></td><td>JSON fields containing local paths for s3</td><td>str</td><td>N/A (Mandatory)</td></tr>
-<tr><td><strong>s3.upload_fields</strong></td><td>JSON fields containing remote paths for S3</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>db_type</strong></td><td>Database used.</td><td>str</td><td>&quot;pgsql&quot;</td></tr>
+<tr><td><strong>file_storage</strong></td><td>Where data will be stored.</td><td>list[str](s3, minio)</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>delete_when_sent</strong></td><td>Delete file when sent.</td><td>bool</td><td>true</td></tr>
+<tr><td><strong>minio.access_key_id</strong></td><td>Minio Access key ID.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>minio.bucket</strong></td><td>Minio bucket name.</td><td>str</td><td>&quot;dc_bucket&quot;</td></tr>
+<tr><td><strong>minio.endpoint</strong></td><td>Minio endpoint.</td><td>str</td><td>&quot;127.0.0.1:9000&quot;</td></tr>
+<tr><td><strong>minio.secret_access_key</strong></td><td>Minio Secret access key.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>minio.src_fields</strong></td><td>JSON fields containing local paths for Minio.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>minio.upload_fields</strong></td><td>JSON fields containing remote paths for Minio.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>minio.use_ssl</strong></td><td>Use SSL for Minio.</td><td>bool</td><td>true</td></tr>
+<tr><td><strong>pgsql.database</strong></td><td>Database name to connect to.</td><td>str</td><td>&lt;system_username&gt;</td></tr>
+<tr><td><strong>pgsql.host</strong></td><td>Hostname/IP address of the PostgreSQL instance.</td><td>str</td><td>&quot;127.0.0.1&quot;</td></tr>
+<tr><td><strong>pgsql.password</strong></td><td>Password of PostgreSQL username.</td><td>str</td><td>&quot;&quot;</td></tr>
+<tr><td><strong>pgsql.port</strong></td><td>PostgreSQL port.</td><td>str</td><td>&quot;5432&quot;</td></tr>
+<tr><td><strong>pgsql.ssl</strong></td><td>Use ssl for PostgreSQL connection.</td><td>bool</td><td>true</td></tr>
+<tr><td><strong>pgsql.table</strong></td><td>Table name where to store data.</td><td>str</td><td>&quot;pg_table&quot;</td></tr>
+<tr><td><strong>pgsql.user</strong></td><td>PostgreSQL username.</td><td>str</td><td>&lt;system_username&gt;</td></tr>
+<tr><td><strong>plugin_path</strong></td><td>Shared library of the plugin.</td><td>str</td><td>&lt;install_path&gt;/lib/out_files_metrics.so</td></tr>
+<tr><td><strong>s3.access_key_id</strong></td><td>S3 Access key ID.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>s3.bucket</strong></td><td>S3 bucket name.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>s3.endpoint</strong></td><td>S3 endpoint.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>s3.secret_access_key</strong></td><td>S3 Secret access key.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>s3.src_fields</strong></td><td>JSON fields containing local paths for s3.</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>s3.upload_fields</strong></td><td>JSON fields containing remote paths for S3.</td><td>str</td><td>N/A (Mandatory)</td></tr>
 </tbody></table>
 </div>
 <h2 id="example-1"><a class="header" href="#example-1">Example</a></h2>
@@ -3510,14 +3510,14 @@ flb_file:
 <tr><td><strong>header</strong></td><td>Add a HTTP header key/value pair. Multiple headers can be set.</td><td>str</td><td>N/A</td></tr>
 <tr><td><strong>headers_key</strong></td><td>Specify the key to use as the headers of the request (must prefix with &quot;$&quot;). The key must contain a map, which will have the contents merged on the request headers. This can be used for many purposes, such as specifying the content-type of the data contained in body_key.</td><td>str</td><td>N/A</td></tr>
 <tr><td><strong>header_tag</strong></td><td>Specify an optional HTTP header field for the original message tag.</td><td>str</td><td>N/A</td></tr>
-<tr><td><strong>http_user</strong></td><td>Basic Auth Username</td><td>str</td><td>N/A</td></tr>
-<tr><td><strong>http_passwd</strong></td><td>Basic Auth Password. Requires HTTP_User to be set</td><td>str</td><td>N/A</td></tr>
-<tr><td><strong>json_date_format</strong></td><td>Specify the format of the date. Supported formats are double, epoch, iso8601 (eg: 2018-05-30T09:39:52.000681Z) and java_sql_timestamp (eg: 2018-05-30 09:39:52.000681)</td><td>str</td><td>&quot;double&quot;</td></tr>
+<tr><td><strong>http_user</strong></td><td>Basic Auth Username.</td><td>str</td><td>N/A</td></tr>
+<tr><td><strong>http_passwd</strong></td><td>Basic Auth Password. Requires HTTP_User to be set.</td><td>str</td><td>N/A</td></tr>
+<tr><td><strong>json_date_format</strong></td><td>Specify the format of the date. Supported formats are double, epoch, iso8601 (eg: 2018-05-30T09:39:52.000681Z) and java_sql_timestamp (eg: 2018-05-30 09:39:52.000681).</td><td>str</td><td>&quot;double&quot;</td></tr>
 <tr><td><strong>json_date_key</strong></td><td>Specify the name of the time key in the output record. To disable the time key just set the value to false.</td><td>str</td><td>&quot;date&quot;</td></tr>
-<tr><td><strong>host</strong></td><td>IP address or hostname of the target HTTP Server</td><td>str</td><td>&quot;127.0.0.1&quot;</td></tr>
+<tr><td><strong>host</strong></td><td>IP address or hostname of the target HTTP Server.</td><td>str</td><td>&quot;127.0.0.1&quot;</td></tr>
 <tr><td><strong>log_response_payload</strong></td><td>Specify if the response paylod should be logged or not.</td><td>str</td><td>true</td></tr>
 <tr><td><strong>port</strong></td><td>TCP port of the target HTTP Server</td><td>str</td><td>&quot;80&quot;</td></tr>
-<tr><td><strong>uri</strong></td><td>Specify an optional HTTP URI for the target web server, e.g: /something</td><td>str</td><td>&quot;/&quot;</td></tr>
+<tr><td><strong>uri</strong></td><td>Specify an optional HTTP URI for the target web server, e.g: /something.</td><td>str</td><td>&quot;/&quot;</td></tr>
 </tbody></table>
 </div>
 <h2 id="node-configuration-3"><a class="header" href="#node-configuration-3">Node configuration</a></h2>
@@ -3568,15 +3568,15 @@ flb_influxdb:
 <p>The <a href="https://docs.fluentbit.io/manual/pipeline/outputs/s3">S3 plugin</a> sends data as JSON to S3 or Minio but does not send files (e.g yaml, images etc.).</p>
 <h2 id="parameters-35"><a class="header" href="#parameters-35">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
-<tr><td><strong>plugin_path</strong></td><td>Shared library path compiled by go</td><td>str</td><td>&quot;{package_share_directory}/flb_plugins/lib/out_minio.so&quot;</td></tr>
+<tr><td><strong>plugin_path</strong></td><td>Shared library path compiled by go.</td><td>str</td><td>&quot;{package_share_directory}/flb_plugins/lib/out_minio.so&quot;</td></tr>
 <tr><td><strong>endpoint</strong></td><td>Endpoint for the S3 API. An endpoint can contain scheme and port.</td><td>str</td><td>&quot;127.0.0.1:9000&quot;</td></tr>
-<tr><td><strong>access_key_id</strong></td><td>Access keys are long-term credentials for an IAM user or the AWS account root user</td><td>str</td><td>N/A (mandatory)</td></tr>
-<tr><td><strong>secret_access_key</strong></td><td>Secret-like password to connect along he access key id</td><td>str</td><td>N/A (mandatory)</td></tr>
+<tr><td><strong>access_key_id</strong></td><td>Access keys are long-term credentials for an IAM user or the AWS account root user.</td><td>str</td><td>N/A (mandatory)</td></tr>
+<tr><td><strong>secret_access_key</strong></td><td>Secret-like password to connect along he access key id.</td><td>str</td><td>N/A (mandatory)</td></tr>
 <tr><td><strong>use_ssl</strong></td><td>If set to true, https is used instead of http. Default is true.</td><td>str</td><td>&quot;true&quot;</td></tr>
-<tr><td><strong>create_bucket</strong></td><td>Whether the bucket will be created</td><td>str</td><td>&quot;true&quot;</td></tr>
-<tr><td><strong>bucket</strong></td><td>Bucket name</td><td>str</td><td>&quot;dc_bucket&quot;</td></tr>
-<tr><td><strong>upload_fields</strong></td><td>Fields containing remote paths, separated by dots</td><td>list[str]</td><td>N/A (mandatory)</td></tr>
-<tr><td><strong>src_fields</strong></td><td>Fields containing local paths, separated by dots</td><td>list[str]</td><td>N/A (mandatory)</td></tr>
+<tr><td><strong>create_bucket</strong></td><td>Whether the bucket will be created.</td><td>str</td><td>&quot;true&quot;</td></tr>
+<tr><td><strong>bucket</strong></td><td>Bucket name.</td><td>str</td><td>&quot;dc_bucket&quot;</td></tr>
+<tr><td><strong>upload_fields</strong></td><td>Fields containing remote paths, separated by dots.</td><td>list[str]</td><td>N/A (mandatory)</td></tr>
+<tr><td><strong>src_fields</strong></td><td>Fields containing local paths, separated by dots.</td><td>list[str]</td><td>N/A (mandatory)</td></tr>
 </tbody></table>
 </div>
 <h2 id="node-configuration-5"><a class="header" href="#node-configuration-5">Node configuration</a></h2>
@@ -3645,17 +3645,17 @@ flb_null:
 <p>PostgreSQL is a very popular and versatile open source database management system that supports the SQL language and that is capable of storing both structured and unstructured data, such as JSON objects. See <a href="https://docs.fluentbit.io/manual/pipeline/outputs/postgresql">fluent bit page</a> for more information.</p>
 <h2 id="parameters-36"><a class="header" href="#parameters-36">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
-<tr><td><strong>host</strong></td><td>Hostname/IP address of the PostgreSQL instance</td><td>str</td><td>&quot;127.0.0.1&quot;</td></tr>
-<tr><td><strong>port</strong></td><td>PostgreSQL port</td><td>str</td><td>&quot;5432&quot;</td></tr>
-<tr><td><strong>user</strong></td><td>PostgreSQL username</td><td>str</td><td>&quot;{username}&quot;</td></tr>
-<tr><td><strong>password</strong></td><td>Password of PostgreSQL username</td><td>str</td><td>N/A</td></tr>
-<tr><td><strong>database</strong></td><td>Database name to connect to</td><td>str</td><td>&quot;{username}&quot;</td></tr>
-<tr><td><strong>table</strong></td><td>Table name where to store data</td><td>str</td><td>N/A</td></tr>
-<tr><td><strong>timestamp_Key</strong></td><td>Key in the JSON object containing the record timestamp</td><td>str</td><td>&quot;date&quot;</td></tr>
-<tr><td><strong>async</strong></td><td>Define if we will use async or sync connections</td><td>bool</td><td>false</td></tr>
-<tr><td><strong>min_pool_size</strong></td><td>Minimum number of connection in async mode</td><td>str</td><td>&quot;1&quot;</td></tr>
-<tr><td><strong>max_pool_size</strong></td><td>Maximum amount of connections in async mode</td><td>str</td><td>&quot;4&quot;</td></tr>
-<tr><td><strong>cockroachdb</strong></td><td>Set to true if you will connect the plugin with a CockroachDB</td><td>bool</td><td>false</td></tr>
+<tr><td><strong>host</strong></td><td>Hostname/IP address of the PostgreSQL instance.</td><td>str</td><td>&quot;127.0.0.1&quot;</td></tr>
+<tr><td><strong>port</strong></td><td>PostgreSQL port.</td><td>str</td><td>&quot;5432&quot;</td></tr>
+<tr><td><strong>user</strong></td><td>PostgreSQL username.</td><td>str</td><td>&quot;{username}&quot;</td></tr>
+<tr><td><strong>password</strong></td><td>Password of PostgreSQL username.</td><td>str</td><td>N/A</td></tr>
+<tr><td><strong>database</strong></td><td>Database name to connect to.</td><td>str</td><td>&quot;{username}&quot;</td></tr>
+<tr><td><strong>table</strong></td><td>Table name where to store data.</td><td>str</td><td>N/A</td></tr>
+<tr><td><strong>timestamp_Key</strong></td><td>Key in the JSON object containing the record timestamp.</td><td>str</td><td>&quot;date&quot;</td></tr>
+<tr><td><strong>async</strong></td><td>Define if we will use async or sync connections.</td><td>bool</td><td>false</td></tr>
+<tr><td><strong>min_pool_size</strong></td><td>Minimum number of connection in async mode.</td><td>str</td><td>&quot;1&quot;</td></tr>
+<tr><td><strong>max_pool_size</strong></td><td>Maximum amount of connections in async mode.</td><td>str</td><td>&quot;4&quot;</td></tr>
+<tr><td><strong>cockroachdb</strong></td><td>Set to true if you will connect the plugin with a CockroachDB.</td><td>bool</td><td>false</td></tr>
 </tbody></table>
 </div>
 <h2 id="node-configuration-7"><a class="header" href="#node-configuration-7">Node configuration</a></h2>
@@ -3680,7 +3680,7 @@ flb_pgsql:
 <p>The Slack output plugin delivers records or messages to your preferred Slack channel. See <a href="https://docs.fluentbit.io/manual/pipeline/outputs/slack">fluent bit page</a> for more information.</p>
 <h2 id="parameters-37"><a class="header" href="#parameters-37">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
-<tr><td><strong>webhook</strong></td><td>Absolute address of the Webhook provided by Slack</td><td>str</td><td>N/A (Mandatory)</td></tr>
+<tr><td><strong>webhook</strong></td><td>Absolute address of the Webhook provided by Slack.</td><td>str</td><td>N/A (Mandatory)</td></tr>
 </tbody></table>
 </div>
 <h2 id="node-configuration-8"><a class="header" href="#node-configuration-8">Node configuration</a></h2>
@@ -3698,7 +3698,7 @@ flb_slack:
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
 <tr><td><strong>format</strong></td><td>Specify the data format to be printed. Supported formats are msgpack json, json_lines and json_stream.</td><td>str</td><td>&quot;json&quot;</td></tr>
 <tr><td><strong>json_date_key</strong></td><td>Specify the name of the time key in the output record. To disable the time key just set the value to false.</td><td>str</td><td>&quot;date&quot;</td></tr>
-<tr><td><strong>json_date_format</strong></td><td>Specify the format of the date. Supported formats are double, epoch, iso8601 (eg: 2018-05-30T09:39:52.000681Z) and java_sql_timestamp (eg: 2018-05-30 09:39:52.000681)</td><td>str</td><td>&quot;double&quot;</td></tr>
+<tr><td><strong>json_date_format</strong></td><td>Specify the format of the date. Supported formats are double, epoch, iso8601 (eg: 2018-05-30T09:39:52.000681Z) and java_sql_timestamp (eg: 2018-05-30 09:39:52.000681).</td><td>str</td><td>&quot;double&quot;</td></tr>
 </tbody></table>
 </div>
 <h2 id="node-configuration-9"><a class="header" href="#node-configuration-9">Node configuration</a></h2>
@@ -3733,12 +3733,11 @@ flb_stdout:
 </div>
 <h2 id="node-configuration-10"><a class="header" href="#node-configuration-10">Node configuration</a></h2>
 <pre><code class="language-yaml">...
-flb_stdout:
-  plugin: &quot;dc_destinations/FlbStdout&quot;
-  inputs: [&quot;/dc/group/data&quot;]
-  format: &quot;json&quot;
-  json_date_key: &quot;date&quot;
-  json_date_format: &quot;iso8601&quot;
+flb_tcp:
+  plugin: &quot;dc_destinations/FlbTCP&quot;
+  inputs: [&quot;/dc/measurement/uptime&quot;]
+  host: &quot;127.0.0.1&quot;
+  port: 5170
 ...
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/destinations/flb_tcp.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="rcl---rclcpp"><a class="header" href="#rcl---rclcpp">RCL - RCLCPP</a></h1>
