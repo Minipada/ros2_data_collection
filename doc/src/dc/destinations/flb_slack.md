@@ -6,9 +6,9 @@ The Slack output plugin delivers records or messages to your preferred Slack cha
 
 ## Parameters
 
-| Parameter   | Description                                       | Type | Default         |
-| ----------- | ------------------------------------------------- | ---- | --------------- |
-| **webhook** | Absolute address of the Webhook provided by Slack | str  | N/A (Mandatory) |
+| Parameter   | Description                                        | Type | Default         |
+| ----------- | -------------------------------------------------- | ---- | --------------- |
+| **webhook** | Absolute address of the Webhook provided by Slack. | str  | N/A (Mandatory) |
 
 ## Node configuration
 

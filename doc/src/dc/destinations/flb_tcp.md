@@ -26,11 +26,10 @@ The tcp output plugin allows to send records to a remote TCP server. The payload
 
 ```yaml
 ...
-flb_stdout:
-  plugin: "dc_destinations/FlbStdout"
-  inputs: ["/dc/group/data"]
-  format: "json"
-  json_date_key: "date"
-  json_date_format: "iso8601"
+flb_tcp:
+  plugin: "dc_destinations/FlbTCP"
+  inputs: ["/dc/measurement/uptime"]
+  host: "127.0.0.1"
+  port: 5170
 ...
 ```
