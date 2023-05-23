@@ -23,6 +23,14 @@
         </class>
     </library>
 
+    <library path="dc_flb_influxdb_destination">
+        <class name="dc_destinations/FlbInfluxDB" type="dc_destinations::FlbInfluxDB" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_influxdb
+            </description>
+        </class>
+    </library>
+
     <library path="dc_flb_kinesis_streams_destination">
         <class name="dc_destinations/FlbKinesisStreams" type="dc_destinations::FlbKinesisStreams" base_class_type="dc_core::Destination">
             <description>
