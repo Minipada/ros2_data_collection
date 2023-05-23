@@ -37,6 +37,8 @@ protected:
   std::string host_;
   int port_;
   std::string format_;
+  std::string json_date_key_;
+  std::string json_date_format_;
   int workers_;
   bool tls_active_;
   bool tls_verify_;
