@@ -79,6 +79,14 @@
         </class>
     </library>
 
+    <library path="dc_flb_tcp_destination">
+        <class name="dc_destinations/FlbTCP" type="dc_destinations::FlbTCP" base_class_type="dc_core::Destination">
+            <description>
+                dc_destination_flb_tcp
+            </description>
+        </class>
+    </library>
+
     <library path="dc_rcl_destination">
         <class name="dc_destinations/Rcl" type="dc_destinations::Rcl" base_class_type="dc_core::Destination">
             <description>

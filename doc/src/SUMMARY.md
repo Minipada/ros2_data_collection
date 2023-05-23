@@ -58,6 +58,7 @@
   - [Fluent Bit PostgreSQL](./dc/destinations/flb_pgsql.md)
   - [Fluent Bit Slack](./dc/destinations/flb_slack.md)
   - [Fluent Bit Stdout](./dc/destinations/flb_stdout.md)
+  - [Fluent Bit TCP](./dc/destinations/flb_tcp.md)
   - [RCL](./dc/destinations/rcl.md)
 - [Configuration examples](./dc/configuration_examples.md)
 - [Infrastructure setup](./dc/infrastructure_setup.md)
