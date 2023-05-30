@@ -1,0 +1,20 @@
+version: '3.7'
+
+services:
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=volkovlabs-image-panel,marcusolsson-dynamictext-panel
+    ports:
+      - 3000:3000
+    volumes:
+      - ./config/grafana/provisioning/grafana-datasource.yml:/etc/grafana/provisioning/datasources/grafana-datasource.yml
+      - ./config/grafana/provisioning/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/grafana-dashboards.yml
+      - ./config/grafana/dashboards:/etc/dashboards
+      - ./config/grafana/configuration/conf.ini:/etc/grafana/grafana.ini
+      - ./config/grafana/img:/usr/share/grafana/public/img/dc
+      - /etc/localtime:/etc/localtime:ro
