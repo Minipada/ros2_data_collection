@@ -4,7 +4,7 @@
 
 #line 1 "cgo-builtin-export-prolog"
 
-#include <stddef.h>
+#include <stddef.h> /* for ptrdiff_t below */
 
 #ifndef GO_CGO_EXPORT_PROLOGUE_H
 #define GO_CGO_EXPORT_PROLOGUE_H
@@ -39,17 +39,11 @@ typedef long long GoInt64;
 typedef unsigned long long GoUint64;
 typedef GoInt64 GoInt;
 typedef GoUint64 GoUint;
-typedef size_t GoUintptr;
+typedef __SIZE_TYPE__ GoUintptr;
 typedef float GoFloat32;
 typedef double GoFloat64;
-#ifdef _MSC_VER
-#include <complex.h>
-typedef _Fcomplex GoComplex64;
-typedef _Dcomplex GoComplex128;
-#else
 typedef float _Complex GoComplex64;
 typedef double _Complex GoComplex128;
-#endif
 
 /*
   static assertion to make sure the file is being used on architecture
@@ -82,13 +76,13 @@ typedef struct
 extern "C" {
 #endif
 
+extern GoInt FLBPluginFlush(void* data, int length, char* tag);
 extern GoInt FLBPluginRegister(void* def);
 
 // (fluentbit will call this)
 // plugin (context) pointer to fluentbit context (state/ c code)
 //
 extern GoInt FLBPluginInit(void* plugin);
-extern GoInt FLBPluginFlush(void* data, int length, char* tag);
 extern GoInt FLBPluginExit();
 
 #ifdef __cplusplus
