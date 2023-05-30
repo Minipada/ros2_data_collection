@@ -1,0 +1,13 @@
+version: '3.7'
+
+services:
+  influxdb:
+    image: influxdb:1.8-alpine
+    container_name: influxdb
+    restart: unless-stopped
+    environment:
+      - INFLUXDB_DB=fluentbit
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+    ports:
+      - 8086:8086
