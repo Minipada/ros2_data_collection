@@ -2102,9 +2102,12 @@ In addition, conditions are pluginlibs plugin also loaded dynamically. They are 
 <tr><td><strong>draw_det_barcodes</strong></td><td>Draw barcode detection on images</td><td>bool</td><td>true</td></tr>
 <tr><td><strong>rotation_angle</strong></td><td>Rotate the image before inspecting it by this angle</td><td>int (90, 180, 270)</td><td>0</td></tr>
 <tr><td><strong>save_detections_img</strong></td><td>Whether to save inspected image captured by the camera with detection shapes</td><td>bool</td><td>true</td></tr>
+<tr><td><strong>save_inspected_base64</strong></td><td>Whether to save inspected image captured by the camera with detection shapes as base64 string</td><td>bool</td><td>false</td></tr>
 <tr><td><strong>save_inspected_path</strong></td><td>Path to save the inspected camera image. Expands environment variables and datetime format are expanded</td><td>str</td><td>&quot;camera/inspected/%Y-%m-%dT%H:%M:%S&quot;</td></tr>
+<tr><td><strong>save_raw_base64</strong></td><td>Whether to save raw image captured by the camera as base64 string</td><td>bool</td><td>false</td></tr>
 <tr><td><strong>save_raw_img</strong></td><td>Whether to save raw image captured by the camera</td><td>bool</td><td>false</td></tr>
 <tr><td><strong>save_raw_path</strong></td><td>Path to save the raw camera image. Expands environment variables and datetime</td><td>str</td><td>&quot;camera/raw/%Y-%m-%dT%H:%M:%S&quot;</td></tr>
+<tr><td><strong>save_rotated_base64</strong></td><td>Whether to save rotated image captured by the camera as base64 string</td><td>bool</td><td>false</td></tr>
 <tr><td><strong>save_rotated_img</strong></td><td>Whether to save rotated image captured by the camera</td><td>bool</td><td>false</td></tr>
 <tr><td><strong>save_rotated_path</strong></td><td>Path to save the rotated camera image. Expands environment variables and datetime format are expanded</td><td>str</td><td>&quot;camera/rotated/%Y-%m-%dT%H:%M:%S&quot;</td></tr>
 </tbody></table>
