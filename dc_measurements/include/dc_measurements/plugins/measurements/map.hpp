@@ -8,6 +8,8 @@
 
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_util/base64.hpp"
+#include "dc_util/filesystem_utils.hpp"
 #include "dc_util/string_utils.hpp"
 #include "nav2_util/node_utils.hpp"
 
@@ -29,10 +31,12 @@ private:
   int getMapSize(const std::string& path_map);
   void saveRemoteKeys(json& data_json, const std::string& key, const std::string& relative_path,
                       const rclcpp::Time& now);
+
   std::string map_topic_;
   std::string save_path_;
   float save_map_timeout_;
   bool quiet_;
+  bool save_base64_;
 
 protected:
   /**
