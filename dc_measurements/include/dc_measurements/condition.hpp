@@ -93,7 +93,7 @@ public:
   // Activate server on lifecycle transition
   void activate() override
   {
-    RCLCPP_INFO(logger_, "Activating %s", condition_name_.c_str());
+    RCLCPP_INFO(logger_, "Activating condition %s", condition_name_.c_str());
 
     enabled_ = true;
   }
