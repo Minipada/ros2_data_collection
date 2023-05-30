@@ -40,8 +40,6 @@ void FlbInfluxDB::onConfigure()
   node->get_parameter(destination_name_ + ".http_token", http_token_);
   node->get_parameter(destination_name_ + ".tag_keys", tag_keys_);
   node->get_parameter(destination_name_ + ".auto_tags", auto_tags_);
-  node->get_parameter(destination_name_ + ".tags_list_enabled", tags_list_enabled_);
-  node->get_parameter(destination_name_ + ".tags_list_key", tags_list_key_);
 }
 
 void FlbInfluxDB::initFlbOutputPlugin()
@@ -55,12 +53,10 @@ void FlbInfluxDB::initFlbOutputPlugin()
   flb_output_set(ctx_, out_ffd_, "org", org_.c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "sequence_tag", sequence_tag_.c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "http_user", http_user_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "http_password", http_password_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "http_passwd", http_password_.c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "http_token", http_token_.c_str(), NULL);
-  flb_output_set(ctx_, out_ffd_, "tag_keys", tag_keys_.c_str(), NULL);
+  flb_output_set(ctx_, out_ffd_, "tag_keys", dc_util::join(tag_keys_, " ").c_str(), NULL);
   flb_output_set(ctx_, out_ffd_, "auto_tags", dc_util::boolToString(auto_tags_), NULL);
-  flb_output_set(ctx_, out_ffd_, "tags_list_enabled", dc_util::boolToString(tags_list_enabled_), NULL);
-  flb_output_set(ctx_, out_ffd_, "tags_list_key", dc_util::join(tags_list_key_, " "), NULL);
   if (out_ffd_ == -1)
   {
     flb_destroy(ctx_);

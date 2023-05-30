@@ -43,10 +43,8 @@ protected:
   std::string http_user_;
   std::string http_password_;
   std::string http_token_;
-  std::string tag_keys_;
+  std::vector<std::string> tag_keys_;
   bool auto_tags_;
-  bool tags_list_enabled_;
-  std::vector<std::string> tags_list_key_;
 };
 
 }  // namespace dc_destinations
