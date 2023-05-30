@@ -18,11 +18,13 @@ void Map::onConfigure()
   nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_map_timeout",
                                                rclcpp::ParameterValue(3.0));
   nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".quiet", rclcpp::ParameterValue(true));
+  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_base64", rclcpp::ParameterValue(false));
 
   node->get_parameter(measurement_name_ + ".topic", map_topic_);
   node->get_parameter(measurement_name_ + ".save_path", save_path_);
   node->get_parameter(measurement_name_ + ".save_map_timeout", save_map_timeout_);
   node->get_parameter(measurement_name_ + ".quiet", quiet_);
+  node->get_parameter(measurement_name_ + ".save_base64", save_base64_);
 }
 
 void Map::setValidationSchema()
@@ -135,6 +137,7 @@ dc_interfaces::msg::StringStamped Map::collect()
 {
   auto node = getNode();
   dc_interfaces::msg::StringStamped msg;
+
   auto now = node->get_clock()->now();
   msg.header.stamp = now;
   msg.group_key = group_key_;
@@ -157,7 +160,21 @@ dc_interfaces::msg::StringStamped Map::collect()
     int width = getMapSize(file_save_path + ".pgm");
     data_json["width"] = width;
     data_json["height"] = width;
+
+    if (save_base64_)
+    {
+      // Convert the PNG
+      cv::Mat img = cv::imread(data_json["local_paths"]["png"], 0);
+      std::vector<uchar> buf;
+      cv::imencode(".png", img, buf);
+      auto base64_png = reinterpret_cast<const unsigned char*>(buf.data());
+      data_json["base64"]["png"] = base64_encode(base64_png, buf.size());
+
+      // Save the YAML
+      data_json["base64"]["yaml"] = dc_util::get_file_content(data_json["local_paths"]["yaml"], false);
+    }
   }
+
   msg.data = data_json.dump(-1, ' ', true);
 
   return msg;
