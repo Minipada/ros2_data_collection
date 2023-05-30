@@ -25,7 +25,7 @@ bool IntegerEqual::getState(dc_interfaces::msg::StringStamped msg)
 
   if (!flat_json.contains(key_w_prefix))
   {
-    RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found");
+    RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found in msg: " << msg.data);
     active_ = false;
     publishActive();
     return active_;

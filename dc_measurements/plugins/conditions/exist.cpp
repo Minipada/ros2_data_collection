@@ -37,7 +37,7 @@ bool Exist::getState(dc_interfaces::msg::StringStamped msg)
   }
   catch (json::parse_error& e)
   {
-    RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON: " << msg.data);
+    RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON (exist): " << msg.data);
     return false;
   }
   return active_;

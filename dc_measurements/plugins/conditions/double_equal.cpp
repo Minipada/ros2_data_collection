@@ -27,7 +27,7 @@ bool DoubleEqual::getState(dc_interfaces::msg::StringStamped msg)
 
     if (!flat_json.contains(key_w_prefix))
     {
-      RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found");
+      RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found in msg: " << msg.data);
       active_ = false;
       publishActive();
       return active_;
@@ -44,7 +44,7 @@ bool DoubleEqual::getState(dc_interfaces::msg::StringStamped msg)
   }
   catch (json::parse_error& e)
   {
-    RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON: " << msg.data);
+    RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON (double equal): " << msg.data);
     return false;
   }
 }
