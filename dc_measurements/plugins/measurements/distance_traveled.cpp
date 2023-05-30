@@ -38,7 +38,14 @@ dc_interfaces::msg::StringStamped DistanceTraveled::collect()
   msg.group_key = group_key_;
   json data_json;
   geometry_msgs::msg::PoseStamped pose;
-  if (!nav2_util::getCurrentPose(pose, *tf_, global_frame_, robot_base_frame_, transform_timeout_))
+  std::string tf_error;
+  bool tf_found = tf_->canTransform(global_frame_, robot_base_frame_, tf2::TimePointZero, &tf_error);
+
+  if (!tf_found)
+  {
+    RCLCPP_WARN_STREAM(logger_, "tf error: " << tf_error);
+  }
+  else if (!nav2_util::getCurrentPose(pose, *tf_, global_frame_, robot_base_frame_, transform_timeout_))
   {
     RCLCPP_ERROR(logger_, "Current robot pose is not available.");
   }
