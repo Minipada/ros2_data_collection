@@ -513,7 +513,7 @@ public:
   // Activate server on lifecycle transition
   void activate() override
   {
-    RCLCPP_INFO(logger_, "Activating %s", measurement_name_.c_str());
+    RCLCPP_INFO(logger_, "Activating measurement %s", measurement_name_.c_str());
 
     data_pub_->on_activate();
 
