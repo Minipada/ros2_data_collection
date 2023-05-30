@@ -19,6 +19,26 @@ endforeach()
 
 dc_package()
 
+set(library_name base64_library)
+
+add_library(${library_name} SHARED
+  src/base64.cpp
+)
+
+ament_target_dependencies(${library_name}
+  ${dependencies}
+)
+
+ament_export_targets(${library_name} HAS_LIBRARY_TARGET)
+
+install(TARGETS ${library_name}
+  EXPORT ${library_name}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
+)
+
 include_directories(
   include
   ${YAML_CPP_INCLUDEDIR}
@@ -30,6 +50,7 @@ install(DIRECTORY include/
 )
 
 ament_export_include_directories(include)
+ament_export_libraries(${library_name})
 ament_export_dependencies(${dependencies})
 
 ament_package()

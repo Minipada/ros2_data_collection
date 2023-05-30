@@ -6,19 +6,22 @@ Save camera image files: raw, rotated and/or inspected. Images can be inspected 
 
 ## Parameters
 
-| Parameter               | Description                                                                                             | Type                 | Default                              |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------ |
-| **cam_name**            | Name to give to the camera                                                                              | str                  | N/A (mandatory)                      |
-| **cam_topic**           | Topic from where camera data needs to be fetched                                                        | str                  | N/A (mandatory)                      |
-| **detection_modules**   | Detection modules to use                                                                                | list\[str\](barcode) | N/A (optional)                       |
-| **draw_det_barcodes**   | Draw barcode detection on images                                                                        | bool                 | true                                 |
-| **rotation_angle**      | Rotate the image before inspecting it by this angle                                                     | int (90, 180, 270)   | 0                                    |
-| **save_detections_img** | Whether to save inspected image captured by the camera with detection shapes                            | bool                 | true                                 |
-| **save_inspected_path** | Path to save the inspected camera image. Expands environment variables and datetime format are expanded | str                  | "camera/inspected/%Y-%m-%dT%H:%M:%S" |
-| **save_raw_img**        | Whether to save raw image captured by the camera                                                        | bool                 | false                                |
-| **save_raw_path**       | Path to save the raw camera image. Expands environment variables and datetime                           | str                  | "camera/raw/%Y-%m-%dT%H:%M:%S"       |
-| **save_rotated_img**    | Whether to save rotated image captured by the camera                                                    | bool                 | false                                |
-| **save_rotated_path**   | Path to save the rotated camera image. Expands environment variables and datetime format are expanded   | str                  | "camera/rotated/%Y-%m-%dT%H:%M:%S"   |
+| Parameter                 | Description                                                                                             | Type                 | Default                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------ |
+| **cam_name**              | Name to give to the camera                                                                              | str                  | N/A (mandatory)                      |
+| **cam_topic**             | Topic from where camera data needs to be fetched                                                        | str                  | N/A (mandatory)                      |
+| **detection_modules**     | Detection modules to use                                                                                | list\[str\](barcode) | N/A (optional)                       |
+| **draw_det_barcodes**     | Draw barcode detection on images                                                                        | bool                 | true                                 |
+| **rotation_angle**        | Rotate the image before inspecting it by this angle                                                     | int (90, 180, 270)   | 0                                    |
+| **save_detections_img**   | Whether to save inspected image captured by the camera with detection shapes                            | bool                 | true                                 |
+| **save_inspected_base64** | Whether to save inspected image captured by the camera with detection shapes as base64 string           | bool                 | false                                |
+| **save_inspected_path**   | Path to save the inspected camera image. Expands environment variables and datetime format are expanded | str                  | "camera/inspected/%Y-%m-%dT%H:%M:%S" |
+| **save_raw_base64**       | Whether to save raw image captured by the camera as base64 string                                       | bool                 | false                                |
+| **save_raw_img**          | Whether to save raw image captured by the camera                                                        | bool                 | false                                |
+| **save_raw_path**         | Path to save the raw camera image. Expands environment variables and datetime                           | str                  | "camera/raw/%Y-%m-%dT%H:%M:%S"       |
+| **save_rotated_base64**   | Whether to save rotated image captured by the camera as base64 string                                   | bool                 | false                                |
+| **save_rotated_img**      | Whether to save rotated image captured by the camera                                                    | bool                 | false                                |
+| **save_rotated_path**     | Path to save the rotated camera image. Expands environment variables and datetime format are expanded   | str                  | "camera/rotated/%Y-%m-%dT%H:%M:%S"   |
 
 ## Measurement node configuration
 The remote paths are also saved in the JSON under *<measurement_name>.<destination>_img_paths.(raw|rotated|inspected)*. If images want to be sent to Minio, add "minio" in *remote_keys*. This will add a remote path that can later be used in your API.

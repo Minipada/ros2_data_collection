@@ -25,10 +25,16 @@ void Camera::onConfigure()
                                                rclcpp::ParameterValue(true));
   nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_raw_path",
                                                rclcpp::ParameterValue("camera/raw/%Y-%m-%dT%H:%M:%S"));
+  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_raw_base64",
+                                               rclcpp::ParameterValue(false));
   nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_rotated_path",
                                                rclcpp::ParameterValue("camera/rotated/%Y-%m-%dT%H:%M:%S"));
+  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_rotated_base64",
+                                               rclcpp::ParameterValue(false));
   nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_inspected_path",
                                                rclcpp::ParameterValue("camera/inspected/%Y-%m-%dT%H:%M:%S"));
+  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_inspected_base64",
+                                               rclcpp::ParameterValue(false));
   nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".detection_modules",
                                                rclcpp::ParameterValue(std::vector<std::string>()));
   nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".destinations.minio.bucket",
@@ -43,8 +49,11 @@ void Camera::onConfigure()
   node->get_parameter(measurement_name_ + ".save_rotated_img", save_rotated_img_);
   node->get_parameter(measurement_name_ + ".save_detections_img", save_detections_img_);
   node->get_parameter(measurement_name_ + ".save_raw_path", save_raw_path_);
+  node->get_parameter(measurement_name_ + ".save_raw_base64", save_raw_base64_);
   node->get_parameter(measurement_name_ + ".save_rotated_path", save_rotated_path_);
+  node->get_parameter(measurement_name_ + ".save_rotated_base64", save_rotated_base64_);
   node->get_parameter(measurement_name_ + ".save_inspected_path", save_inspected_path_);
+  node->get_parameter(measurement_name_ + ".save_inspected_base64", save_inspected_base64_);
   node->get_parameter(measurement_name_ + ".detection_modules", detection_modules_);
   // FIXME Not used, wrong parameter too, should be without measurement_name_
   node->get_parameter(measurement_name_ + ".destinations.minio.bucket", minio_bucket_);
@@ -203,6 +212,14 @@ dc_interfaces::msg::StringStamped Camera::collect()
       }
     }
 
+    if (save_raw_base64_)
+    {
+      std::vector<uchar> buf;
+      cv::imencode(".jpg", cv_ptr->image, buf);
+      auto* enc_msg = reinterpret_cast<unsigned char*>(buf.data());
+      data_json["base64"]["raw"] = base64_encode(enc_msg, buf.size());
+    }
+
     // Rotate image
     if (rotation_angle_ != 0)
     {
@@ -231,6 +248,14 @@ dc_interfaces::msg::StringStamped Camera::collect()
         // Save all future remote path. This is then used as reference for your APIs
         saveRemoteKeys(data_json, "rotated", relative_path, now);
       }
+    }
+
+    if (save_rotated_base64_)
+    {
+      std::vector<uchar> buf;
+      cv::imencode(".jpg", cv_ptr->image, buf);
+      auto* enc_msg = reinterpret_cast<unsigned char*>(buf.data());
+      data_json["base64"]["rotated"] = base64_encode(enc_msg, buf.size());
     }
 
     // Start inspection
@@ -318,6 +343,14 @@ dc_interfaces::msg::StringStamped Camera::collect()
           // Save all future remote path. This is then used as reference for your APIs
           saveRemoteKeys(data_json, "inspected", relative_path, now);
         }
+      }
+
+      if (save_inspected_base64_)
+      {
+        std::vector<uchar> buf;
+        cv::imencode(".jpg", cv_ptr->image, buf);
+        auto* enc_msg = reinterpret_cast<unsigned char*>(buf.data());
+        data_json["base64"]["inspected"] = base64_encode(enc_msg, buf.size());
       }
     }
   }
