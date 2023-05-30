@@ -308,69 +308,130 @@ public:
     }
   }
 
+  void nestedSample(dc_interfaces::msg::StringStamped& msg)
+  {
+    try
+    {
+      json nested_json = json::parse(msg.data);
+      json data_json;
+
+      if (nested_)
+      {
+        data_json[measurement_name_] = nested_json;
+        msg.data = data_json.dump(-1, ' ', true);
+      }
+    }
+    catch (json::parse_error& e)
+    {
+      RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when making it nested: " << msg.data);
+    }
+  }
+
+  void flattenSample(dc_interfaces::msg::StringStamped& msg)
+  {
+    try
+    {
+      json data_json = json::parse(msg.data);
+      json new_json;
+      if (flatten_)
+      {
+        new_json = data_json.flatten();
+        new_json["flattened"] = true;
+      }
+      else
+      {
+        new_json = data_json;
+        new_json["flattened"] = false;
+      }
+
+      if (nested_)
+      {
+        new_json["nested"] = true;
+      }
+      else
+      {
+        new_json["nested"] = false;
+      }
+      msg.data = new_json.dump(-1, ' ', true);
+    }
+    catch (json::parse_error& e)
+    {
+      RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when flattening it: " << msg.data);
+    }
+  }
+
+  void validateJSON(dc_interfaces::msg::StringStamped& msg)
+  {
+    if (enable_validator_)
+    {
+      try
+      {
+        auto json_data = json::parse(msg.data);
+        try
+        {
+          validator_.validate(json_data);
+        }
+        catch (const std::exception& e)
+        {
+          RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what() << "data=" << json_data.dump());
+          onFailedValidation(json_data);
+        }
+      }
+      catch (json::parse_error& e)
+      {
+        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when publishing: " << msg.data);
+      }
+    }
+  }
+
   void publish(dc_interfaces::msg::StringStamped msg)
   {
+    auto msg_copy = msg;
     if (!msg.data.empty() && msg.data != "null")
     {
+      // TODO pass the json, not the msg
+      validateJSON(msg);
+      nestedSample(msg);
+      flattenSample(msg);
       addRunId(msg);
       addTags(msg);
       addMeasurementName(msg);
       addMeasurementPluginName(msg);
+      addCustomParameters(msg);
     }
-    // Init publish
-    if (init_max_measurements_ != -1 && !msg.data.empty() && msg.data != "null" &&
-        (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_))
+    if (!msg.data.empty() && msg.data != "null")
     {
-      // Publish when validation activated
-      if (enable_validator_)
-      {
-        try
-        {
-          auto json_data = json::parse(msg.data);
-          try
-          {
-            validator_.validate(json_data);
-            data_pub_->publish(msg);
-            init_counter_published_++;
-          }
-          catch (const std::exception& e)
-          {
-            RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what() << "data=" << json_data.dump());
-            onFailedValidation(json_data);
-          }
-        }
-        catch (json::parse_error& e)
-        {
-          RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when publishing: " << msg.data);
-        }
-      }
-      // Publish without validation
-      else
+      // Init publish
+      if (init_max_measurements_ != -1 &&
+          (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_))
       {
         data_pub_->publish(msg);
         init_counter_published_++;
       }
+      // Infinite measurements on condition
+      else if (isAnyConditionSet() && isConditionOn(msg_copy) && condition_max_measurements_ == 0)
+      {
+        data_pub_->publish(msg);
+      }
+      // Trigger publish with maximum
+      else if (isAnyConditionSet() && isConditionOn(msg_copy) &&
+               condition_counter_published_ < condition_max_measurements_)
+      {
+        RCLCPP_DEBUG_STREAM(logger_, "condition_counter_published_=" << condition_counter_published_
+                                                                     << ", condition_max_measurements_="
+                                                                     << condition_max_measurements_);
+        data_pub_->publish(msg);
+        condition_counter_published_++;
+      }
+      // Not publish, reset Condition counter
+      else if (isAnyConditionSet() && !isConditionOn(msg_copy))
+      {
+        condition_counter_published_ = 0;
+      }
     }
-    // Infinite measurements on condition
-    else if (!msg.data.empty() && msg.data != "null" &&
-             (isAnyConditionSet() && isConditionOn(msg) && condition_max_measurements_ == 0))
+    else
     {
-      data_pub_->publish(msg);
-    }
-    // Trigger publish with maximum
-    else if (!msg.data.empty() && msg.data != "null" &&
-             (isAnyConditionSet() && isConditionOn(msg) && condition_counter_published_ < condition_max_measurements_))
-    {
-      RCLCPP_DEBUG_STREAM(logger_, "condition_counter_published_=" << condition_counter_published_
-                                                                   << ", condition_max_measurements_="
-                                                                   << condition_max_measurements_);
-      data_pub_->publish(msg);
-      condition_counter_published_++;
-    }
-    // Not publish, reset Condition counter
-    else if (isAnyConditionSet() && !isConditionOn(msg))
-    {
-      condition_counter_published_ = 0;
+      RCLCPP_WARN_STREAM(logger_, "Message empty from measurement " << measurement_name_);
     }
   }
 
@@ -384,9 +445,17 @@ public:
 
   void addCustomParameters(dc_interfaces::msg::StringStamped& msg)
   {
-    if (!custom_params_.empty())
+    if (!custom_params_.empty() && (!msg.data.empty() && msg.data != "null"))
     {
-      json data = json::parse(msg.data);
+      json data;
+      try
+      {
+        data = json::parse(msg.data);
+      }
+      catch (json::parse_error& e)
+      {
+        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding custom parameters: " << data.dump());
+      }
       for (auto& param : custom_params_)
       {
         auto key = param["key"].get<std::string>();
@@ -405,7 +474,6 @@ public:
   void collectAndPublish()
   {
     dc_interfaces::msg::StringStamped msg = collect();
-    addCustomParameters(msg);
     if (enabled_)
     {
       publish(msg);
@@ -425,9 +493,10 @@ public:
                  const int& condition_max_measurements, const std::vector<std::string>& if_all_conditions,
                  const std::vector<std::string>& if_any_conditions, const std::vector<std::string>& if_none_conditions,
                  const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
-                 const std::string& save_local_base_path, const std::string& all_base_path,
-                 const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
-                 const std::string& run_id, const bool& run_id_enabled, const std::vector<json>& custom_params) override
+                 const bool& nested, const bool& flatten, const std::string& save_local_base_path,
+                 const std::string& all_base_path, const std::string& all_base_path_expanded,
+                 const std::string& save_local_base_path_expanded, const std::string& run_id,
+                 const bool& run_id_enabled, const std::vector<json>& custom_params) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -453,6 +522,8 @@ public:
     include_measurement_plugin_ = include_measurement_plugin;
     remote_keys_ = remote_keys;
     remote_prefixes_ = remote_prefixes;
+    nested_ = nested;
+    flatten_ = flatten;
     all_base_path_ = all_base_path;
     all_base_path_expanded_ = all_base_path_expanded;
     save_local_base_path_ = save_local_base_path;
@@ -560,6 +631,8 @@ protected:
   bool include_measurement_plugin_;
   std::vector<std::string> remote_keys_;
   std::vector<std::string> remote_prefixes_;
+  bool nested_;
+  bool flatten_;
   std::string all_base_path_;
   std::string all_base_path_expanded_;
   std::string save_local_base_path_;
