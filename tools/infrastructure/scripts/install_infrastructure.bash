@@ -9,7 +9,7 @@ Install infrastructure tool on the system.
 
 Arguments:
 --help/-h           Show this help text
---tool              Set the tool to install [cromium, minio, pgsql] (mandatory)
+--tool              Set the tool to install [chromium, influxdb, minio, pgsql] (mandatory)
 --install-type      Set the type of installation [docker, native] (mandatory)
 "
     echo "${usage}"
