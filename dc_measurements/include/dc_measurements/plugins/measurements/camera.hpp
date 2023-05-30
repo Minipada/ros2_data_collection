@@ -51,6 +51,9 @@ protected:
   bool save_raw_img_;
   bool save_rotated_img_;
   bool save_detections_img_;
+  bool save_raw_base64_;
+  bool save_rotated_base64_;
+  bool save_detections_base64_;
   std::string tmp_base_storage_dir_;
   std::string save_raw_path_;
   std::string save_rotated_path_;
