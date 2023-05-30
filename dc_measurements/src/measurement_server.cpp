@@ -173,6 +173,8 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   measurement_include_measurement_plugin_.resize(measurement_ids_.size());
   measurement_remote_keys_.resize(measurement_ids_.size());
   measurement_remote_prefixes_.resize(measurement_ids_.size());
+  measurement_nested_.resize(measurement_ids_.size());
+  measurement_flatten_.resize(measurement_ids_.size());
 
   measurement_if_all_conditions_.resize(measurement_ids_.size());
   measurement_if_any_conditions_.resize(measurement_ids_.size());
@@ -252,6 +254,8 @@ bool MeasurementServer::loadMeasurementPlugins()
         dc_util::get_str_array_type_param(node, measurement_ids_[i], "remote_keys", std::vector<std::string>());
     measurement_remote_prefixes_[i] =
         dc_util::get_str_array_type_param(node, measurement_ids_[i], "remote_prefixes", std::vector<std::string>());
+    measurement_nested_[i] = dc_util::get_bool_type_param(node, measurement_ids_[i], "nested", false);
+    measurement_flatten_[i] = dc_util::get_bool_type_param(node, measurement_ids_[i], "flatten", false);
 
     measurement_if_all_conditions_[i] =
         dc_util::get_str_array_type_param(node, measurement_ids_[i], "if_all_conditions", std::vector<std::string>());
@@ -277,7 +281,8 @@ bool MeasurementServer::loadMeasurementPlugins()
                              << ", Include measurement name: " << measurement_include_measurement_name_[i]
                              << ", Include measurement plugin name: " << measurement_include_measurement_plugin_[i]
                              << ", Remote keys: " << dc_util::join(measurement_remote_keys_[i])
-                             << ", Remote prefixes: " << dc_util::join(measurement_remote_prefixes_[i])
+                             << ", Remote prefixes: " << dc_util::join(measurement_remote_prefixes_[i]) << ", Nest: "
+                             << (int)measurement_nested_[i] << ", Flatten: " << (int)measurement_flatten_[i]
                              << ", Include measurement plugin name: " << measurement_include_measurement_plugin_[i]
                              << ", Max measurement on condition: " << measurement_condition_max_measurements_[i]
                              << ", If all condition: " << dc_util::join(measurement_if_all_conditions_[i], ",")
@@ -292,8 +297,9 @@ bool MeasurementServer::loadMeasurementPlugins()
           measurement_init_collect_[i], measurement_init_max_measurements_[i], measurement_include_measurement_name_[i],
           measurement_include_measurement_plugin_[i], measurement_condition_max_measurements_[i],
           measurement_if_all_conditions_[i], measurement_if_any_conditions_[i], measurement_if_none_conditions_[i],
-          measurement_remote_keys_[i], measurement_remote_prefixes_[i], save_local_base_path_, all_base_path_,
-          all_base_path_expanded_, save_local_base_path_expanded_, run_id_, run_id_enabled_, custom_params_);
+          measurement_remote_keys_[i], measurement_remote_prefixes_[i], measurement_nested_[i], measurement_flatten_[i],
+          save_local_base_path_, all_base_path_, all_base_path_expanded_, save_local_base_path_expanded_, run_id_,
+          run_id_enabled_, custom_params_);
     }
     catch (const pluginlib::PluginlibException& ex)
     {

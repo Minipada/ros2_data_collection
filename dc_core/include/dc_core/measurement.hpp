@@ -60,10 +60,10 @@ public:
             const bool& include_measurement_plugin, const int& condition_max_measurements,
             const std::vector<std::string>& if_all_conditions, const std::vector<std::string>& if_any_conditions,
             const std::vector<std::string>& if_none_conditions, const std::vector<std::string>& remote_keys,
-            const std::vector<std::string>& remote_prefixes, const std::string& save_local_base_path,
-            const std::string& all_base_path, const std::string& all_base_path_expanded,
-            const std::string& save_local_base_path_expanded, const std::string& run_id, const bool& run_id_enabled,
-            const std::vector<json>& custom_params) = 0;
+            const std::vector<std::string>& remote_prefixes, const bool& nest, const bool& flatten,
+            const std::string& save_local_base_path, const std::string& all_base_path,
+            const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
+            const std::string& run_id, const bool& run_id_enabled, const std::vector<json>& custom_params) = 0;
 
   /**
    * @brief Method to cleanup resources used on shutdown.
