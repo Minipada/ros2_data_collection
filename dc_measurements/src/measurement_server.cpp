@@ -18,9 +18,6 @@ MeasurementServer::MeasurementServer(const rclcpp::NodeOptions& options,
   get_parameter("measurement_plugins", measurement_ids_);
   declare_parameter("condition_plugins", std::vector<std::string>());
   get_parameter("condition_plugins", condition_ids_);
-
-  // Base file saving path
-  setBaseSavePath();
 }
 
 void MeasurementServer::setBaseSavePath()
@@ -41,7 +38,6 @@ void MeasurementServer::setBaseSavePath()
 void MeasurementServer::setCustomParameters()
 {
   nav2_util::declare_parameter_if_not_declared(this, "custom_str_params.force_override", rclcpp::ParameterValue(false));
-  custom_str_params_force_override_ = this->get_parameter("custom_str_params.force_override").as_bool();
   nav2_util::declare_parameter_if_not_declared(this, "custom_str_params_list",
                                                rclcpp::ParameterValue(std::vector<std::string>()));
   custom_str_params_list_ = this->get_parameter("custom_str_params_list").as_string_array();
@@ -155,6 +151,8 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   auto node = shared_from_this();
   setRunId();
   setCustomParameters();
+  setBaseSavePath();
+
   tf_ = std::make_shared<tf2_ros::Buffer>(get_clock());
   auto timer_interface =
       std::make_shared<tf2_ros::CreateTimerROS>(get_node_base_interface(), get_node_timers_interface());
