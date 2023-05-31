@@ -1,0 +1,235 @@
+destination_server:
+  ros__parameters:
+    flb:
+      flush: 1
+      flb_grace: 1
+      log_level: "info"
+      storage_path: "/var/log/flb-storage/"
+      storage_sync: "full"
+      storage_checksum: "off"
+      storage_backlog_mem_limit: "1M"
+      scheduler_cap: 200
+      scheduler_base: 5
+      http_server: true
+      http_listen: "0.0.0.0"
+      http_port: 2020
+      in_storage_type: "filesystem"
+      in_storage_pause_on_chunks_overlimit: "off"
+    destination_plugins: ["flb_influxdb"]
+    flb_influxdb:
+      plugin: "dc_destinations/FlbInfluxDB"
+      inputs: [
+          # System
+          "/dc/measurement/cpu",
+          "/dc/measurement/memory",
+          "/dc/measurement/os",
+          "/dc/measurement/uptime",
+          # Robot
+          "/dc/measurement/camera",
+          "/dc/measurement/cmd_vel",
+          "/dc/measurement/distance_traveled",
+          "/dc/measurement/position",
+          "/dc/measurement/speed",
+          # Environment
+          "/dc/measurement/map",
+          # Infrastructure
+          "/dc/measurement/influxdb_health",
+        ]
+      host: "127.0.0.1"
+      port: 8086
+      user: fluentbit
+      time_format: "iso8601"
+      time_key: "date"
+
+measurement_server:
+  ros__parameters:
+    measurement_plugins: [
+        # System
+        "cpu",
+        "os",
+        "memory",
+        "uptime",
+        # Robot
+        "camera",
+        "cmd_vel",
+        "distance_traveled",
+        "position",
+        "speed",
+        # Environment
+        "map",
+        # Infrastructure
+        "influxdb_health",
+      ]
+    custom_str_params_list: ["robot_name", "id"]
+    custom_str_params:
+      robot_name:
+        name: robot_name
+        value: "Turtlebot"
+      # Requires systemd package
+      id:
+        name: id
+        value_from_file: /etc/machine-id
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: "$HOME/run_id"
+      uuid: false
+    save_local_base_path: "$HOME/dc_data/"
+    all_base_path: "=robot_name/%Y/%m/%d/%H"
+    condition_plugins: ["min_distance_traveled", "max_distance_traveled"]
+    # Conditions
+    min_distance_traveled:
+      plugin: "dc_conditions/DoubleSuperior"
+      key: "distance_traveled"
+      value: 0.01
+      include_value: true
+      nested: true
+      flatten: true
+    max_distance_traveled:
+      plugin: "dc_conditions/DoubleInferior"
+      key: "distance_traveled"
+      value: 2.0
+      include_value: true
+      nested: true
+      flatten: true
+    # System data
+    cpu:
+      plugin: "dc_measurements/Cpu"
+      topic_output: "/dc/measurement/cpu"
+      polling_interval: 5000
+      tags: ["flb_influxdb"]
+      include_measurement_name: true
+      init_collect: true
+      max_processes: 5
+      cpu_min: 5.0
+      nested: true
+      flatten: true
+    memory:
+      plugin: "dc_measurements/Memory"
+      topic_output: "/dc/measurement/memory"
+      polling_interval: 5000
+      node_name: "dc_measurement_memory"
+      tags: ["flb_influxdb"]
+      include_measurement_name: true
+      init_collect: true
+      nested: true
+      flatten: true
+    os:
+      plugin: "dc_measurements/OS"
+      topic_output: "/dc/measurement/os"
+      tags: ["flb_influxdb"]
+      include_measurement_name: true
+      init_collect: true
+      init_max_measurements: 1
+      nested: true
+      flatten: true
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      topic_output: "/dc/measurement/uptime"
+      polling_interval: 5000
+      debug: true
+      tags: ["flb_influxdb"]
+      init_collect: true
+      include_measurement_name: true
+      nested: true
+      flatten: true
+    # Robot data
+    distance_traveled:
+      plugin: "dc_measurements/DistanceTraveled"
+      topic_output: "/dc/measurement/distance_traveled"
+      if_all_conditions: ["min_distance_traveled", "max_distance_traveled"]
+      tags: ["flb_influxdb"]
+      global_frame: "map"
+      robot_base_frame: "base_link"
+      transform_timeout: 0.1
+      polling_interval: 5000
+      init_max_measurements: -1
+      condition_max_measurements: 0
+      include_measurement_name: true
+      init_collect: false
+      nested: true
+      flatten: true
+    cmd_vel:
+      plugin: "dc_measurements/CmdVel"
+      tags: ["flb_influxdb"]
+      polling_interval: 500
+      topic_output: "/dc/measurement/cmd_vel"
+      include_measurement_name: true
+      nested: true
+      flatten: true
+    position:
+      plugin: "dc_measurements/Position"
+      topic_output: "/dc/measurement/position"
+      tags: ["flb_influxdb"]
+      init_collect: true
+      global_frame: "map"
+      robot_base_frame: "base_link"
+      transform_timeout: 0.1
+      include_measurement_name: true
+      nested: true
+      flatten: true
+    stops:
+      plugin: "dc_measurements/Stops"
+      tags: ["flb_influxdb"]
+      odom_topic: "/odom"
+      topic_output: "/dc/measurement/stops"
+      include_measurement_name: true
+      nested: true
+      flatten: true
+    speed:
+      plugin: "dc_measurements/Speed"
+      tags: ["flb_influxdb"]
+      odom_topic: "/odom"
+      polling_interval: 500
+      topic_output: "/dc/measurement/speed"
+      include_measurement_name: true
+      nested: true
+      flatten: true
+    camera:
+      plugin: "dc_measurements/Camera"
+      topic_output: "/dc/measurement/camera"
+      init_collect: false
+      init_max_measurements: 0
+      polling_interval: 3000
+      node_name: "dc_measurement_camera"
+      cam_topic: "/intel_realsense_r200_depth/image_raw"
+      cam_name: "Intel Realsense"
+      draw_det_barcodes: false
+      save_raw_img: false
+      save_raw_base64: true
+      save_rotated_img: false
+      save_detections_img: false
+      rotation_angle: 0
+      remote_prefixes: [""]
+      remote_keys: ["minio"]
+      tags: ["flb_influxdb", "flb_minio"]
+      include_measurement_name: true
+      include_measurement_plugin: true
+      nested: true
+      flatten: true
+    # Environment data
+    map:
+      plugin: "dc_measurements/Map"
+      save_path: "map/%Y-%m-%dT%H-%M-%S"
+      save_base64: true
+      topic_output: "/dc/measurement/map"
+      save_map_timeout: 4.0
+      init_collect: false
+      init_max_measurements: 1
+      tags: ["flb_influxdb"]
+      include_measurement_name: true
+      quiet: true
+      nested: true
+      flatten: true
+    # Infrastructure
+    influxdb_health:
+      plugin: "dc_measurements/TCPHealth"
+      topic_output: "/dc/measurement/influxdb_health"
+      polling_interval: 5000
+      tags: ["flb_influxdb"]
+      host: "127.0.0.1"
+      port: 8086
+      name: "InfluxDB"
+      include_measurement_plugin: true
+      nested: true
+      flatten: true
