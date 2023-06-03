@@ -23,7 +23,8 @@
 
 For detailed instructions:
 
-- [Build](https://minipada.github.io/ros2_data_collection/dc/setup.html)
+- [Setup](https://minipada.github.io/ros2_data_collection/dc/setup.html)
+- [Demos](https://minipada.github.io/ros2_data_collection/dc/demos.html)
 - [Concepts](https://minipada.github.io/ros2_data_collection/dc/concepts.html)
 - [Data Pipeline](https://minipada.github.io/ros2_data_collection/dc/data_pipeline.html)
 - [Measurements](https://minipada.github.io/ros2_data_collection/dc/measurements.html)
@@ -32,9 +33,9 @@ For detailed instructions:
 - [Groups](https://minipada.github.io/ros2_data_collection/dc/groups.html)
 - [Destinations](https://minipada.github.io/ros2_data_collection/dc/destinations.html)
 - [Configuration examples](https://minipada.github.io/ros2_data_collection/dc/configuration_examples.html)
-- [Demos](https://minipada.github.io/ros2_data_collection/dc/demos.html)
 - [Infrastructure setup](https://minipada.github.io/ros2_data_collection/dc/infrastructure_setup.html)
 - [CLI tools](https://minipada.github.io/ros2_data_collection/dc/cli.html)
+- [Requirements](https://minipada.github.io/ros2_data_collection/dc/requirements.html)
 - [Future work and Roadmap](https://minipada.github.io/ros2_data_collection/dc/future_work.html)
 - [Contributing](https://minipada.github.io/ros2_data_collection/dc/contributing.html)
 - [FAQ](https://minipada.github.io/ros2_data_collection/dc/faq.html)

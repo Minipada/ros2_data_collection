@@ -37,7 +37,8 @@ destination_server:
         ]
       host: "127.0.0.1"
       port: 8086
-      user: fluentbit
+      user: dc
+      database: dc
       time_format: "iso8601"
       time_key: "date"
 
