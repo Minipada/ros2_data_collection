@@ -93,7 +93,7 @@ RViz and Gazebo will start: now you see the robot in Gazebo, and the map on RViz
 
 ## Terminal 2: Start DC
 
-Run colcon build to install the new configuration file:
+Run colcon build to compile the workspace:
 
 ```bash
 $ colcon build
@@ -182,8 +182,6 @@ That's it! Now you can collect your data!
 ```admonish info
 The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/humble/dc_demos/params/tb3_simulation_pgsql_minio.yaml).
 ```
-
-For this demo, we will reconstruct the yaml configuration element by element, given how large it is. Go through the explanation to understand how it works.
 
 ### Measurement server
 #### Measurements
