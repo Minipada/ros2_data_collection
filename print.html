@@ -1142,7 +1142,7 @@ $ source /usr/share/gazebo/setup.bash
 <p><img src="dc/demos/../../images/demos-tb3_aws_minio_pgsql-rviz-1.png" alt="RViz" />
 <img src="dc/demos/../../images/demos-tb3_aws_minio_pgsql-gz-1.png" alt="Gazebo" /></p>
 <h2 id="terminal-2-start-dc"><a class="header" href="#terminal-2-start-dc">Terminal 2: Start DC</a></h2>
-<p>Run colcon build to install the new configuration file:</p>
+<p>Run colcon build to compile the workspace:</p>
 <pre><code class="language-bash">$ colcon build
 </code></pre>
 <p>Now, start the demo:</p>
@@ -1213,7 +1213,6 @@ $ streamlit run Streamlit_ROS_2.py
 <p>The full configuration file can be found <a href="https://github.com/Minipada/ros2_data_collection/blob/humble/dc_demos/params/tb3_simulation_pgsql_minio.yaml">here</a>.</p>
 </div>
 </div>
-<p>For this demo, we will reconstruct the yaml configuration element by element, given how large it is. Go through the explanation to understand how it works.</p>
 <h3 id="measurement-server"><a class="header" href="#measurement-server">Measurement server</a></h3>
 <h4 id="measurements"><a class="header" href="#measurements">Measurements</a></h4>
 <p><code>measurement_plugins</code> sets which plugin to load. We collect</p>
@@ -4114,27 +4113,16 @@ Dummy video device (0x0000) (platform:v4l2loopback-000):
 <p>MinIO is an object storage solution that provides an Amazon Web Services S3-compatible API and supports all core S3 features. MinIO is built to deploy anywhere - public or private cloud, baremetal infrastructure, orchestrated environments, and edge infrastructure.</p>
 <h2 id="start-with-docker-compose-1"><a class="header" href="#start-with-docker-compose-1">Start with Docker compose</a></h2>
 <p>Execute:</p>
-<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash --tool=pgsql --install-type=docker
+<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+  --tool=minio \
+  --install-type=docker
 </code></pre>
-<p>This will start PostgreSQL and Adminer (a GUI to see and interact with the database)</p>
-<p>By accessing <a href="http://localhost:8080">localhost:8080</a>, you should be able to see this page:</p>
-<p><img src="dc/infrastructure_setup/../../images/adminer.png" alt="Adminer" /></p>
-<p>Server: <em>localhost</em>
-Username: <em>dc</em>
-Password: <em>password</em>
-Database: <em>dc</em></p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/minio.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="postgresql-2"><a class="header" href="#postgresql-2">PostgreSQL</a></h1>
-<h2 id="requirements-1"><a class="header" href="#requirements-1">Requirements</a></h2>
-<ol>
-<li>Docker installed</li>
-<li>Docker compose installed</li>
-</ol>
-<h2 id="description-51"><a class="header" href="#description-51">Description</a></h2>
-<p>PostgreSQL is a powerful, open source object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads. The origins of PostgreSQL date back to 1986 as part of the POSTGRES project at the University of California at Berkeley and has more than 35 years of active development on the core platform.</p>
-<h2 id="start-with-docker-compose-2"><a class="header" href="#start-with-docker-compose-2">Start with docker compose</a></h2>
-<p>Execute:</p>
-<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash --tool=minio --install-type=docker
+<h2 id="start-natively-1"><a class="header" href="#start-natively-1">Start natively</a></h2>
+<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+  --tool=minio \
+  --install-type=native
 </code></pre>
+<h2 id="how-to-use"><a class="header" href="#how-to-use">How to use</a></h2>
 <p>This will start MinIO API and dashboard (a GUI to see and interact with the data)</p>
 <p>By accessing <a href="http://localhost:9001">localhost:9001</a>, you should be able to see this page:</p>
 <p><img src="dc/infrastructure_setup/../../images/minio.png" alt="MinIO" /></p>
@@ -4144,7 +4132,30 @@ Password: <em>minioadmin</em></p>
 <p>Go to the Access Keys page and click on &quot;Create access key&quot;</p>
 <p><img src="dc/infrastructure_setup/../../images/minio-access-keys.png" alt="MinIO Access Keys" /></p>
 <p>Take note of the access and secret key and add them in your required launch file configuration late on.</p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/postgresql.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="cli-tools"><a class="header" href="#cli-tools">CLI tools</a></h1>
+<h2 id="credentials-1"><a class="header" href="#credentials-1">Credentials</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>User</th><th>Password</th><th>Port</th></tr></thead><tbody>
+<tr><td>minioadmin</td><td>minioadmin</td><td>9000, 9001</td></tr>
+</tbody></table>
+</div><footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/minio.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="postgresql-2"><a class="header" href="#postgresql-2">PostgreSQL</a></h1>
+<h2 id="description-51"><a class="header" href="#description-51">Description</a></h2>
+<p>PostgreSQL is a powerful, open source object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads. The origins of PostgreSQL date back to 1986 as part of the POSTGRES project at the University of California at Berkeley and has more than 35 years of active development on the core platform.</p>
+<h2 id="start-with-docker-compose-2"><a class="header" href="#start-with-docker-compose-2">Start with docker compose</a></h2>
+<p>Execute:</p>
+<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+  --tool=postgresql \
+  --install-type=docker
+</code></pre>
+<h2 id="start-natively-2"><a class="header" href="#start-natively-2">Start natively</a></h2>
+<p>Execute:</p>
+<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+  --tool=postgresql \
+  --install-type=native
+</code></pre>
+<h2 id="credentials-2"><a class="header" href="#credentials-2">Credentials</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>User</th><th>Password</th><th>Database</th><th>Port</th></tr></thead><tbody>
+<tr><td>dc</td><td>password</td><td>dc</td><td>5432</td></tr>
+</tbody></table>
+</div><footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/postgresql.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="cli-tools"><a class="header" href="#cli-tools">CLI tools</a></h1>
 <h2 id="list-plugins"><a class="header" href="#list-plugins">List plugins</a></h2>
 <p>You can list available plugins by running the CLI tool:</p>
 <pre><code>$ ros2 run dc_cli list_plugins --help
@@ -4165,7 +4176,7 @@ Password: <em>minioadmin</em></p>
 │ measurements     List measurement plugins with their descriptions.                                                        │
 ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 </code></pre>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/cli.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="requirements-2"><a class="header" href="#requirements-2">Requirements</a></h1>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/cli.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="requirements-1"><a class="header" href="#requirements-1">Requirements</a></h1>
 <p>Requirements are tracked using <a href="https://github.com/strictdoc-project/strictdoc">Strictdoc</a>.</p>
 <p>The goal is to list tasks and do <a href="https://visuresolutions.com/requirements-management-traceability-guide/requirement-based-testing">test based requirements</a>.</p>
 <p><object style="width: 100%; height: 100vh;" data="requirements/html/index.html"></object></p>

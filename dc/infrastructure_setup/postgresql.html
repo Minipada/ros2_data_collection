@@ -178,27 +178,25 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="postgresql"><a class="header" href="#postgresql">PostgreSQL</a></h1>
-<h2 id="requirements"><a class="header" href="#requirements">Requirements</a></h2>
-<ol>
-<li>Docker installed</li>
-<li>Docker compose installed</li>
-</ol>
 <h2 id="description"><a class="header" href="#description">Description</a></h2>
 <p>PostgreSQL is a powerful, open source object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads. The origins of PostgreSQL date back to 1986 as part of the POSTGRES project at the University of California at Berkeley and has more than 35 years of active development on the core platform.</p>
 <h2 id="start-with-docker-compose"><a class="header" href="#start-with-docker-compose">Start with docker compose</a></h2>
 <p>Execute:</p>
-<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash --tool=minio --install-type=docker
+<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+  --tool=postgresql \
+  --install-type=docker
 </code></pre>
-<p>This will start MinIO API and dashboard (a GUI to see and interact with the data)</p>
-<p>By accessing <a href="http://localhost:9001">localhost:9001</a>, you should be able to see this page:</p>
-<p><img src="../../images/minio.png" alt="MinIO" /></p>
-<p>Username: <em>minioadmin</em>
-Password: <em>minioadmin</em></p>
-<h2 id="create-an-access-key"><a class="header" href="#create-an-access-key">Create an access key</a></h2>
-<p>Go to the Access Keys page and click on &quot;Create access key&quot;</p>
-<p><img src="../../images/minio-access-keys.png" alt="MinIO Access Keys" /></p>
-<p>Take note of the access and secret key and add them in your required launch file configuration late on.</p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/postgresql.md">Edit this page on GitHub.</a></footer>
+<h2 id="start-natively"><a class="header" href="#start-natively">Start natively</a></h2>
+<p>Execute:</p>
+<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+  --tool=postgresql \
+  --install-type=native
+</code></pre>
+<h2 id="credentials"><a class="header" href="#credentials">Credentials</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>User</th><th>Password</th><th>Database</th><th>Port</th></tr></thead><tbody>
+<tr><td>dc</td><td>password</td><td>dc</td><td>5432</td></tr>
+</tbody></table>
+</div><footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/postgresql.md">Edit this page on GitHub.</a></footer>
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">

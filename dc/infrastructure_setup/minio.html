@@ -187,16 +187,30 @@
 <p>MinIO is an object storage solution that provides an Amazon Web Services S3-compatible API and supports all core S3 features. MinIO is built to deploy anywhere - public or private cloud, baremetal infrastructure, orchestrated environments, and edge infrastructure.</p>
 <h2 id="start-with-docker-compose"><a class="header" href="#start-with-docker-compose">Start with Docker compose</a></h2>
 <p>Execute:</p>
-<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash --tool=pgsql --install-type=docker
+<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+  --tool=minio \
+  --install-type=docker
 </code></pre>
-<p>This will start PostgreSQL and Adminer (a GUI to see and interact with the database)</p>
-<p>By accessing <a href="http://localhost:8080">localhost:8080</a>, you should be able to see this page:</p>
-<p><img src="../../images/adminer.png" alt="Adminer" /></p>
-<p>Server: <em>localhost</em>
-Username: <em>dc</em>
-Password: <em>password</em>
-Database: <em>dc</em></p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/minio.md">Edit this page on GitHub.</a></footer>
+<h2 id="start-natively"><a class="header" href="#start-natively">Start natively</a></h2>
+<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+  --tool=minio \
+  --install-type=native
+</code></pre>
+<h2 id="how-to-use"><a class="header" href="#how-to-use">How to use</a></h2>
+<p>This will start MinIO API and dashboard (a GUI to see and interact with the data)</p>
+<p>By accessing <a href="http://localhost:9001">localhost:9001</a>, you should be able to see this page:</p>
+<p><img src="../../images/minio.png" alt="MinIO" /></p>
+<p>Username: <em>minioadmin</em>
+Password: <em>minioadmin</em></p>
+<h2 id="create-an-access-key"><a class="header" href="#create-an-access-key">Create an access key</a></h2>
+<p>Go to the Access Keys page and click on &quot;Create access key&quot;</p>
+<p><img src="../../images/minio-access-keys.png" alt="MinIO Access Keys" /></p>
+<p>Take note of the access and secret key and add them in your required launch file configuration late on.</p>
+<h2 id="credentials"><a class="header" href="#credentials">Credentials</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>User</th><th>Password</th><th>Port</th></tr></thead><tbody>
+<tr><td>minioadmin</td><td>minioadmin</td><td>9000, 9001</td></tr>
+</tbody></table>
+</div><footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/minio.md">Edit this page on GitHub.</a></footer>
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
