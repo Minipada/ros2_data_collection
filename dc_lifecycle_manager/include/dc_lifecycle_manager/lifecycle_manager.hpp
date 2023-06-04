@@ -53,7 +53,7 @@ protected:
    * @brief Lifecycle node manager callback function
    * @param request_header Header of the service request
    * @param request Service request
-   * @param reponse Service response
+   * @param response Service response
    */
   void managerCallback(const std::shared_ptr<rmw_request_id_t> request_header,
                        const std::shared_ptr<ManageLifecycleNodes::Request> request,
@@ -63,7 +63,7 @@ protected:
    * state.
    * @param request_header Header of the request
    * @param request Service request
-   * @param reponse Service response
+   * @param response Service response
    */
   void isActiveCallback(const std::shared_ptr<rmw_request_id_t> request_header,
                         const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
