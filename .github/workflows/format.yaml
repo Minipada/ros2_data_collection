@@ -31,6 +31,14 @@ jobs:
           version: 1.1.13
           virtualenvs-create: false
           installer-parallel: true
+      - name: Install Python dependencies
+        uses: py-actions/py-dependency-install@v4
+        with:
+          path: "requirements.txt"
+      - name: Install Python dependencies (dev)
+        uses: py-actions/py-dependency-install@v4
+        with:
+          path: "requirements-dev.txt"
       - uses: pre-commit/action@v3.0.0
         id: precommit
       - name: Upload pre-commit changes
