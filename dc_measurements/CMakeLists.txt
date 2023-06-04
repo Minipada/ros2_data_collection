@@ -7,6 +7,7 @@ set(dependencies
   dc_interfaces
   dc_util
   geometry_msgs
+  lifecycle_msgs
   nav2_util
   nlohmann_json
   nlohmann_json_schema_validator

@@ -33,8 +33,6 @@ def generate_launch_description():
     save_img_service = LaunchConfiguration("save_img_service")
     group_node = LaunchConfiguration("group_node")
 
-    lifecycle_nodes = ["measurement_server", "destination_server"]
-
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {"autostart": autostart}
 
@@ -178,17 +176,26 @@ def generate_launch_description():
                 arguments=["--ros-args", "--log-level", log_level],
             ),
             Node(
-                package="nav2_lifecycle_manager",
+                package="dc_lifecycle_manager",
                 executable="lifecycle_manager",
-                name="lifecycle_manager_navigation",
+                name="lifecycle_manager_dc",
                 output={
                     "stdout": "screen",
                     "stderr": "screen",
                 },
                 arguments=["--ros-args", "--log-level", log_level],
                 parameters=[
-                    {"autostart": autostart},
-                    {"node_names": lifecycle_nodes, "bond_timeout": 10.0},
+                    {
+                        "autostart": autostart,
+                        "node_names": [
+                            "destination_server",
+                            "destination_server",
+                            "measurement_server",
+                            "measurement_server",
+                        ],
+                        "transitions": ["configure", "activate", "configure", "activate"],
+                        "bond_timeout": 10.0,
+                    },
                 ],
             ),
         ],
@@ -264,15 +271,21 @@ def generate_launch_description():
                         parameters=[configured_params],
                     ),
                     ComposableNode(
-                        package="nav2_lifecycle_manager",
-                        plugin="nav2_lifecycle_manager::LifecycleManager",
-                        name="lifecycle_manager_navigation",
+                        package="dc_lifecycle_manager",
+                        plugin="dc_lifecycle_manager::LifecycleManager",
+                        name="lifecycle_manager_dc",
                         parameters=[
                             {
                                 "autostart": autostart,
-                                "node_names": lifecycle_nodes,
+                                "node_names": [
+                                    "destination_server",
+                                    "destination_server",
+                                    "measurement_server",
+                                    "measurement_server",
+                                ],
+                                "transitions": ["configure", "activate", "configure", "activate"],
                                 "bond_timeout": 10.0,
-                            }
+                            },
                         ],
                     ),
                 ],

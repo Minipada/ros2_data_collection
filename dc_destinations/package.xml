@@ -12,6 +12,7 @@
   <depend>ament_index_cpp</depend>
   <depend>dc_core</depend>
   <depend>dc_interfaces</depend>
+  <depend>dc_lifecycle_manager</depend>
   <depend>dc_util</depend>
   <depend>fluent_bit_vendor</depend>
   <depend>nav2_util</depend>
@@ -19,9 +20,8 @@
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
 
-  <exec_depend>systemd</exec_depend>
-
   <exec_depend>fluent_bit_plugins</exec_depend>
+  <exec_depend>systemd</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
