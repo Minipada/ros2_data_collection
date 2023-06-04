@@ -14,14 +14,14 @@ Execute:
 
 ```bash
 $ ./tools/infrastructure/scripts/install_infrastructure.bash \
-  --tool=minio
+  --tool=minio \
   --install-type=docker
 ```
 
 ## Start natively
 ```bash
 $ ./tools/infrastructure/scripts/install_infrastructure.bash \
-  --tool=minio
+  --tool=minio \
   --install-type=native
 ```
 
