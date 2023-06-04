@@ -113,7 +113,7 @@ The robot will start moving and you will be able to see all visualizations activ
 ### With Grafana Dashboard
 Open your browser at [http://localhost:3000](http://localhost:3000) and login with admin/admin
 
-![Grafana-1](../../images/demos-tb3_aws_minio_pgsql-rviz-2.png)
+![Grafana-1](../../images/grafana-1.png)
 
 ## Understanding the configuration
 ```admonish info
