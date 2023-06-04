@@ -47,19 +47,4 @@ if [ -z "${ROS_VERSION}" ]; then
     exit 1
 fi
 
-docker run \
-    --rm \
-    -v "${PWD}:/ws" \
-    --workdir /ws/doc "minipada/ros2_data_collection:${ROS_VERSION}-doc" \
-    mdbook build
-
-docker run \
-    --rm \
-    -v "${PWD}:/ws" \
-    --workdir /ws "minipada/ros2_data_collection:${ROS_VERSION}-doc" \
-   strictdoc export requirements \
-    --experimental-enable-file-traceability \
-    --enable-mathjax \
-    --format=html \
-    --output-dir /ws/doc/book/html/dc/requirements \
-    --project-title "ROS 2 Data Collection"
+docker run --rm -v "${PWD}:/ws" --workdir /ws/doc "minipada/ros2_data_collection:${ROS_VERSION}-doc" mdbook build
