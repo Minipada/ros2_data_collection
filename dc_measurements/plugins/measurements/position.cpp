@@ -15,7 +15,7 @@ void Position::onConfigure()
   nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".global_frame", rclcpp::ParameterValue("map"));
   nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".robot_base_frame",
                                                rclcpp::ParameterValue("base_link"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".transform_tolerance",
+  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".transform_timeout",
                                                rclcpp::ParameterValue(static_cast<float>(0.1)));
   node->get_parameter(measurement_name_ + ".global_frame", global_frame_);
   node->get_parameter(measurement_name_ + ".robot_base_frame", robot_base_frame_);
