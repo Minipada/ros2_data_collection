@@ -120,9 +120,9 @@ std::string expand_time(const std::string& s, const rclcpp::Time& now)
 
 std::string expand_env(std::string text)
 {
-  static const std::regex env_re{ R"--(\$\{?([[:alpha:]]\w+)\}?)--" };
+  static const std::regex ENV_RE{ R"--(\$\{?([[:alpha:]]\w+)\}?)--" };
   std::smatch match;
-  while (std::regex_search(text, match, env_re))
+  while (std::regex_search(text, match, ENV_RE))
   {
     auto const from = match[0];
 
@@ -132,14 +132,14 @@ std::string expand_env(std::string text)
 }
 
 template <typename NodeT>
-std::string expand_values(std::string text, NodeT node)
+std::string expand_values(std::string text, NodeT node, const std::string& prefix = "", const std::string& suffix = "")
 {
-  static const std::regex env_re{ R"--(\=\{?([[:alpha:]]\w+)\}?)--" };
+  static const std::regex ENV_RE{ R"--(\=\{?([[:alpha:]]\w+)\}?)--" };
   std::smatch match;
-  while (std::regex_search(text, match, env_re))
+  while (std::regex_search(text, match, ENV_RE))
   {
     auto const from = match[0];
-    text.replace(from.first, from.second, node->get_parameter(match[1].str().c_str()).as_string());
+    text.replace(from.first, from.second, node->get_parameter(prefix + match[1].str() + suffix).as_string());
   }
   return text;
 }

@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB
+    type: influxdb
+    database: dc
+    user: admin
+    password: admin
+    url: http://influxdb:8086
+    isDefault: true
+    uid: flb_influxdb

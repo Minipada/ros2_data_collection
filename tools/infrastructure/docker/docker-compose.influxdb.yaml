@@ -6,7 +6,7 @@ services:
     container_name: influxdb
     restart: unless-stopped
     environment:
-      - INFLUXDB_DB=fluentbit
+      - INFLUXDB_DB=dc
       - INFLUXDB_ADMIN_USER=admin
       - INFLUXDB_ADMIN_PASSWORD=admin
     ports:

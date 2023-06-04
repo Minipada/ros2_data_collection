@@ -31,7 +31,7 @@ void MeasurementServer::setBaseSavePath()
   save_local_base_path_expanded_ = dc_util::expand_values(save_local_base_path_expanded_, this);
   RCLCPP_INFO(get_logger(), "Base save path expanded to %s", save_local_base_path_expanded_.c_str());
   all_base_path_expanded_ = dc_util::expand_env(all_base_path_);
-  all_base_path_expanded_ = dc_util::expand_values(all_base_path_expanded_, this);
+  all_base_path_expanded_ = dc_util::expand_values(all_base_path_expanded_, this, "custom_str_params.", ".value");
   RCLCPP_INFO(get_logger(), "All Base path expanded to %s", all_base_path_expanded_.c_str());
 }
 
@@ -78,7 +78,6 @@ void MeasurementServer::setCustomParameters()
     {
       custom_params_[i]["value"] = dc_util::get_file_content(value_from_file);
     }
-    // custom_str_params_force_override_v_[i] = force_override;
   }
 }
 

@@ -1,0 +1,95 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 2,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "flb_influxdb"
+      },
+      "gridPos": {
+        "h": 21,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content":
+            "<img id=\"logo-dc\"\n    style=\"max-width: 150px; width: 60%; margin-left: auto; margin-right: auto; display: block; margin-bottom: 3px;\"\n    src=\"/public/img/dc/dc.png\">\n\n<h4><a href=\"http://localhost:3000/\">Home</a></h4>\n<h4><a href=\"http://localhost:3000/d/bfb348f2-c2cb-47c3-a3d1-dcc26a204f05/ros-2-data-collection-system\">System</a></h4>\n<h4><a href=\"http://localhost:3000/d/e5e1e5c0-c76e-4545-ad8e-8747ee3f09b8/ros-2-data-collection-robot\">Robot</a></h4>\n<h4><a href=\"http://localhost:3000/d/bcd48967-2d49-4c3d-8091-ce6e71a8b009/ros-2-data-collection-environment\">Environment</a></h4>\n<h4><a href=\"http://localhost:3000/d/ed559b23-bbc2-4b45-a58e-24566881b970/ros-2-data-collection-infrastructure\">Infrastructure</a></h4>\n\n<p><strong>Documentation</strong>: <a\n        href=\"https://minipada.github.io/ros2_data_collection\">https://minipada.github.io/ros2_data_collection</a></p>\n<p><strong>Source code</strong>: <a\n        href=\"https://github.com/minipada/ros2_data_collection\">https://github.com/minipada/ros2_data_collection</a></p>\n\n<div>Under <a target=\"_blank\" s href=\"https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)\">MPL-2.0</a>\n    license</a>\n</div>\n",
+        "mode": "html"
+      },
+      "pluginVersion": "9.5.2",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "flb_influxdb"
+      },
+      "description": "",
+      "gridPos": {
+        "h": 21,
+        "w": 20,
+        "x": 4,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content":
+            "<p>Welcome to our prototype dashboard made with <a target=\"_blank\" href=\"https://grafana.com\">Grafana</a> and\n    <a target=\"_blank\" href=\"https://minipada.github.io/ros2_data_collection/\">DC</a>! We're thrilled to share with you\n    the data we've collected\n    and the insights we've gained from it. Our dashboard is designed to be an example of what can be achieved by the\n    data collection framework DC for ROS 2, with interactive graphs and charts that allow you to explore the data in a\n    user-friendly way.\n</p>\n\n<p>Whether you're a data analyst, a business owner, or just curious about how our system works, our dashboard has\n    something for everyone. You can dive into the data and discover trends and patterns that might not be immediately\n    apparent, or compare different metrics to gain a deeper understanding of our system's performance.</p>\n\n<p>Our dashboard is just a small taste of what our system can do, but we hope it gives you an idea of the power of the\n    data we've collected. We're excited to share it with you, and we're always looking for ways to improve and make it\n    even better. So come on in and take a look around - we're sure you'll find something interesting!</p>\n\n<p>Feel free to use this as a base, backend and/or frontend.</p>\n\n<p>Current data loaded by this dashboard:\n\n<ol>\n    <li>System\n        <ol>\n            <li>Operating System</li>\n            <li>Kernel version</li>\n            <li>Number of CPUs</li>\n            <li>Memory available</li>\n            <li>Memory used over time</li>\n            <li>CPU usage over time</li>\n            <li>Count of processes over time</li>\n        </ol>\n    </li>\n    <li>Robot\n        <ol>\n            <li>Total distance traveled</li>\n            <li>Average speed</li>\n            <li>Speed and command velocity over time</li>\n            <li>Camera images</li>\n        </ol>\n    </li>\n    <li>Environment\n        <ol>\n            <li>Robot map download buttons (png, pgm and yaml)</li>\n            <li>Robot map displayed</li>\n        </ol>\n    </li>\n    <li>Infrastructure\n        <ol>\n            <li>MinIO API health</li>\n            <li>MinIO Dashboard health</li>\n            <li>InfluxDB health</li>\n        </ol>\n    </li>\n</ol>\n</p>\n",
+        "mode": "html"
+      },
+      "pluginVersion": "9.5.2",
+      "title": "ROS 2 Data Collection",
+      "type": "text"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "ROS 2 Data Collection - Home",
+  "uid": "eaa71d7d-b719-4b8c-9381-eb4972c520e7",
+  "version": 6,
+  "weekStart": ""
+}
