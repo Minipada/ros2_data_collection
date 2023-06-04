@@ -127,6 +127,31 @@ function debian_native_pgsql(){
     echo "Password: password"
 }
 
+function debian_native_grafana(){
+    sudo apt-get install -y apt-transport-https software-properties-common wget
+    sudo wget -q -O /usr/share/keyrings/grafana.key https://apt.grafana.com/gpg.key
+
+    echo "deb [signed-by=/usr/share/keyrings/grafana.key] https://apt.grafana.com stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+
+    # Update the list of available packages
+    sudo apt-get update -qq
+
+    # Install the latest OSS release:
+    sudo apt-get install grafana -y
+
+    if [[ $(ps -p 1 -o comm=) == "systemd" ]]; then
+        sudo systemctl daemon-reload
+        sudo systemctl enable grafana-server
+        sudo systemctl start grafana-server
+    else
+        sudo service grafana-server enable
+        sudo service grafana-server start
+    fi
+
+    echo "Grafana installed."
+    echo "Open your browser at http://localhost:3000"
+}
+
 function debian_native_chromium(){
     sudo apt install software-properties-common -y
     sudo add-apt-repository ppa:saiarcot895/chromium-beta -y

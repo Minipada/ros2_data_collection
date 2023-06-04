@@ -1,0 +1,187 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 5,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "flb_influxdb"
+      },
+      "gridPos": {
+        "h": 21,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content":
+            "<img id=\"logo-dc\"\n    style=\"max-width: 150px; width: 60%; margin-left: auto; margin-right: auto; display: block; margin-bottom: 3px;\"\n    src=\"/public/img/dc/dc.png\">\n\n<h4><a href=\"http://localhost:3000/\">Home</a></h4>\n<h4><a href=\"http://localhost:3000/d/bfb348f2-c2cb-47c3-a3d1-dcc26a204f05/ros-2-data-collection-system\">System</a></h4>\n<h4><a href=\"http://localhost:3000/d/e5e1e5c0-c76e-4545-ad8e-8747ee3f09b8/ros-2-data-collection-robot\">Robot</a></h4>\n<h4><a href=\"http://localhost:3000/d/bcd48967-2d49-4c3d-8091-ce6e71a8b009/ros-2-data-collection-environment\">Environment</a></h4>\n<h4><a href=\"http://localhost:3000/d/ed559b23-bbc2-4b45-a58e-24566881b970/ros-2-data-collection-infrastructure\">Infrastructure</a></h4>\n\n<p><strong>Documentation</strong>: <a\n        href=\"https://minipada.github.io/ros2_data_collection\">https://minipada.github.io/ros2_data_collection</a></p>\n<p><strong>Source code</strong>: <a\n        href=\"https://github.com/minipada/ros2_data_collection\">https://github.com/minipada/ros2_data_collection</a></p>\n\n<div>Under <a target=\"_blank\" s href=\"https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)\">MPL-2.0</a>\n    license</a>\n</div>\n",
+        "mode": "html"
+      },
+      "pluginVersion": "9.5.2",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "flb_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 20,
+        "x": 4,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "flb_influxdb"
+          },
+          "groupBy": [],
+          "measurement": "flb_influxdb",
+          "orderByTime": "ASC",
+          "policy": "autogen",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "/influxdb_health/active"
+                ],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "InfluxDB Health",
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "number",
+                "targetField": "flb_influxdb./influxdb_health/active"
+              }
+            ],
+            "fields": {}
+          }
+        }
+      ],
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "ROS 2 Data Collection - Infrastructure",
+  "uid": "ed559b23-bbc2-4b45-a58e-24566881b970",
+  "version": 2,
+  "weekStart": ""
+}

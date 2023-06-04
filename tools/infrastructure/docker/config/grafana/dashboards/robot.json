@@ -1,0 +1,413 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 3,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "flb_influxdb"
+      },
+      "gridPos": {
+        "h": 26,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content":
+            "<img id=\"logo-dc\"\n    style=\"max-width: 150px; width: 60%; margin-left: auto; margin-right: auto; display: block; margin-bottom: 3px;\"\n    src=\"/public/img/dc/dc.png\">\n\n<h4><a href=\"http://localhost:3000/\">Home</a></h4>\n<h4><a href=\"http://localhost:3000/d/bfb348f2-c2cb-47c3-a3d1-dcc26a204f05/ros-2-data-collection-system\">System</a></h4>\n<h4><a href=\"http://localhost:3000/d/e5e1e5c0-c76e-4545-ad8e-8747ee3f09b8/ros-2-data-collection-robot\">Robot</a></h4>\n<h4><a href=\"http://localhost:3000/d/bcd48967-2d49-4c3d-8091-ce6e71a8b009/ros-2-data-collection-environment\">Environment</a></h4>\n<h4><a href=\"http://localhost:3000/d/ed559b23-bbc2-4b45-a58e-24566881b970/ros-2-data-collection-infrastructure\">Infrastructure</a></h4>\n\n<p><strong>Documentation</strong>: <a\n        href=\"https://minipada.github.io/ros2_data_collection\">https://minipada.github.io/ros2_data_collection</a></p>\n<p><strong>Source code</strong>: <a\n        href=\"https://github.com/minipada/ros2_data_collection\">https://github.com/minipada/ros2_data_collection</a></p>\n\n<div>Under <a target=\"_blank\" s href=\"https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)\">MPL-2.0</a>\n    license</a>\n</div>\n",
+        "mode": "html"
+      },
+      "pluginVersion": "9.5.2",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "flb_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed"
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "velocityms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 10,
+        "x": 4,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "alias": "Average speed",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "flb_influxdb"
+          },
+          "groupBy": [],
+          "measurement": "flb_influxdb",
+          "orderByTime": "ASC",
+          "policy": "autogen",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "/speed/computed"
+                ],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "Average speed",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "flb_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "lengthm"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 10,
+        "x": 14,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "alias": "Average speed",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "flb_influxdb"
+          },
+          "groupBy": [],
+          "measurement": "flb_influxdb",
+          "orderByTime": "ASC",
+          "policy": "autogen",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "/distance_traveled/distance_traveled"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "sum"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "Distance traveled",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "flb_influxdb"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": 10000,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 20,
+        "x": 4,
+        "y": 4
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "alias": "Command velocity",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "flb_influxdb"
+          },
+          "groupBy": [],
+          "measurement": "flb_influxdb",
+          "orderByTime": "ASC",
+          "policy": "autogen",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "/cmd_vel/computed"
+                ],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Speed",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "flb_influxdb"
+          },
+          "groupBy": [],
+          "hide": false,
+          "measurement": "flb_influxdb",
+          "orderByTime": "ASC",
+          "policy": "autogen",
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "/speed/computed"
+                ],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "Speed and command velocity",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "flb_influxdb"
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 20,
+        "x": 4,
+        "y": 13
+      },
+      "id": 7,
+      "options": {
+        "content":
+            "{{#each data}}\n<figure>\n  <img src=\"data:image/jpeg;base64, {{Value}}\" />\n  <figcaption class=\"gf\">{{date Time \"DD MMMM YYYY HH:mm:ssZZ\"}}</figcaption>\n</figure>\n{{/each}}\n\n",
+        "defaultContent": "The query didn't return any results.",
+        "editor": {
+          "format": "none",
+          "height": 200,
+          "language": "html"
+        },
+        "editors": [
+          "helpers",
+          "styles"
+        ],
+        "everyRow": false,
+        "helpers": "",
+        "styles":
+            "figure {\n  border: 1px #cccccc solid;\n  padding: 4px;\n  margin: auto;\n  display: inline-grid;\n}\n\nfigcaption {\n  background-color: black;\n  color: white;\n  font-style: italic;\n  padding: 2px;\n  text-align: center;\n}"
+      },
+      "pluginVersion": "9.5.2",
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "alias": "cam_img",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "flb_influxdb"
+          },
+          "groupBy": [],
+          "hide": false,
+          "limit": "10",
+          "measurement": "flb_influxdb",
+          "orderByTime": "DESC",
+          "policy": "autogen",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "/camera/base64/raw"
+                ],
+                "type": "field"
+              }
+            ]
+          ],
+          "tags": []
+        }
+      ],
+      "title": "Camera images",
+      "transformations": [],
+      "type": "marcusolsson-dynamictext-panel"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "ROS 2 Data Collection - Robot",
+  "uid": "e5e1e5c0-c76e-4545-ad8e-8747ee3f09b8",
+  "version": 13,
+  "weekStart": ""
+}
