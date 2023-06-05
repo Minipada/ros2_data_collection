@@ -4,6 +4,7 @@ project(dc_lifecycle_manager)
 set(dependencies
   bondcpp
   diagnostic_updater
+  dc_common
   lifecycle_msgs
   nav2_msgs
   nav2_util
