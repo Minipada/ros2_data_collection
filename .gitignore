@@ -236,6 +236,9 @@ cython_debug/
 *.mod
 *.smod
 
+# Go file
+!go.mod
+
 # Compiled Static libraries
 *.lai
 *.la
