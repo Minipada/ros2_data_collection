@@ -5,6 +5,11 @@ set(GO_COMPILER go)
 set(MINIO_LIBRARY out_minio.so)
 set(MINIO_INCLUDE out_minio.h)
 
+add_custom_target(plugin_out_minio_install ALL
+    COMMAND ${GO_COMPILER} get
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 add_custom_target(plugin_out_minio ALL
     COMMAND ${GO_COMPILER} build -buildmode=c-shared -buildvcs=false -o ${MINIO_LIBRARY} ${CMAKE_CURRENT_SOURCE_DIR}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
