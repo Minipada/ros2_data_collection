@@ -3,13 +3,16 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <chrono>
 #include <cmath>
 #include <ctime>
 #include <fstream>
 #include <memory>
 #include <nlohmann/json-schema.hpp>
 #include <nlohmann/json.hpp>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "dc_core/condition.hpp"
 #include "dc_core/measurement.hpp"
@@ -24,6 +27,10 @@
 #include "tf2/utils.h"
 #pragma GCC diagnostic pop
 
+using namespace std::chrono_literals;  // NOLINT
+using json = nlohmann::json;
+using nlohmann::json_schema::json_validator;
+
 namespace dc_measurements
 {
 
@@ -33,10 +40,6 @@ enum class Status : int8_t
   FAILED = 2,
   RUNNING = 3,
 };
-
-using namespace std::chrono_literals;  // NOLINT
-using json = nlohmann::json;
-using nlohmann::json_schema::json_validator;
 
 /**
  * @class nav2_behaviors::Behavior
@@ -242,13 +245,6 @@ public:
         RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding tags: " << msg.data);
       }
     }
-    // else if (tags_.size() == 0)
-    // {
-    //   std::vector<std::string> tag_flb_null = { "flb_null" };
-    //   json data_json = json::parse(msg.data);
-    //   data_json["tags"] = tag_flb_null;
-    //   msg.data = data_json.dump(-1, ' ', true);
-    // }
   }
 
   void addRunId(dc_interfaces::msg::StringStamped& msg)

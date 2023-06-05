@@ -11,6 +11,15 @@ namespace destination_server
 DestinationServer::DestinationServer(const rclcpp::NodeOptions& options)
   : nav2_util::LifecycleNode("destination_server", "", options), plugin_loader_("dc_core", "dc_core::Destination")
 {
+}
+
+DestinationServer::~DestinationServer()
+{
+  destinations_.clear();
+}
+
+nav2_util::CallbackReturn DestinationServer::on_configure(const rclcpp_lifecycle::State& /*state*/)
+{
   declare_parameter("destination_plugins", default_ids_);
   get_parameter("destination_plugins", destination_ids_);
 
@@ -56,16 +65,6 @@ DestinationServer::DestinationServer(const rclcpp::NodeOptions& options)
       this->get_parameter("flb.in_storage_pause_on_chunks_overlimit").as_string();
   ros2_plugin_path_ = this->get_parameter("ros2_plugin_path").as_string();
   ros2_plugin_spin_time_ms_ = this->get_parameter("ros2_plugin_spin_time_ms").as_int();
-}
-
-DestinationServer::~DestinationServer()
-{
-  destinations_.clear();
-}
-
-nav2_util::CallbackReturn DestinationServer::on_configure(const rclcpp_lifecycle::State& /*state*/)
-{
-  RCLCPP_INFO(get_logger(), "Configuring");
 
   destination_types_.resize(destination_ids_.size());
   destination_inputs_.resize(destination_ids_.size());
@@ -215,7 +214,6 @@ void DestinationServer::initFlbInputPlugin()
 
 nav2_util::CallbackReturn DestinationServer::on_activate(const rclcpp_lifecycle::State& /*previous_state*/)
 {
-  RCLCPP_INFO(get_logger(), "Activating");
   std::vector<pluginlib::UniquePtr<dc_core::Destination>>::iterator iter;
   for (iter = destinations_.begin(); iter != destinations_.end(); ++iter)
   {
