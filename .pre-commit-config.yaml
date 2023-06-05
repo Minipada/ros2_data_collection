@@ -143,15 +143,15 @@ repos:
         args: [--src=., --regex=dc_.*]
       - id: ros2_ws_set_metadata
         args: [--src=., --regex=dc_.*]
-  - repo: https://github.com/arrrrrmin/poetry-requirements
-    rev: 0.1.4
+  - repo: https://github.com/minipada/poetry-requirements
+    rev: main
     hooks:
       - id: poetry-requirements
         name: Check requirements.txt
         args: [-o, requirements.txt, --without-hashes]
       - id: poetry-requirements
         name: Check requirements-dev.txt
-        args: [-o, requirements-dev.txt, --dev, --without-hashes]
+        args: [-o, requirements-dev.txt, --with, dev, --without-hashes]
   - repo: https://github.com/tekwizely/pre-commit-golang
     rev: v1.0.0-rc.1
     hooks:
