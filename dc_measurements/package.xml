@@ -12,9 +12,11 @@
   <depend>cv_bridge</depend>
   <depend>dc_core</depend>
   <depend>dc_interfaces</depend>
+  <depend>dc_lifecycle_manager</depend>
   <depend>dc_util</depend>
   <depend>ffmpeg</depend>
   <depend>geometry_msgs</depend>
+  <depend>lifecycle_msgs</depend>
   <depend>nav2_util</depend>
   <depend>nlohmann-json-dev</depend>
   <depend>nlohmann_json_schema_validator_vendor</depend>
