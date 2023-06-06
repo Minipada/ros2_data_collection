@@ -98,13 +98,16 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 			var local_path string = ""
 			if len(current_group) == 0 {
 				local_path = getPath(record, split_src_field_v)
+				fmt.Printf("[flb-minio] Found %s\n", local_path)
 
 				// Add to group if the file exists
 				if len(local_path) != 0 {
 					if _, err := os.Stat(local_path); errors.Is(err, os.ErrNotExist) {
 						// File does not exist
+						fmt.Printf("[flb-minio] File %s does not exist\n", local_path)
 					} else {
 						current_group = fmt.Sprintf("%s", record["name"])
+						fmt.Printf("[flb-minio] File %s exists, setting group to %s\n", local_path, current_group)
 					}
 				}
 			}
@@ -134,10 +137,19 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 				// Skip indexes of files that don't exist
 				if !contains(index_ignore, index) {
 					var upload_path = getPath(record, split_upload_field_v)
-					upload_paths = append(upload_paths, upload_path)
+					fmt.Printf("[flb-minio] Adding path %s in list\n", upload_path)
+					if len(upload_path) != 0 {
+						upload_paths = append(upload_paths, upload_path)
+					}
 				}
 			}
 			index++
+		}
+
+		size := len(src_paths)
+		fmt.Println("Size:", size)
+		for _, path := range upload_paths {
+			fmt.Println(path)
 		}
 
 		for src_paths_i, src_paths_v := range src_paths {
@@ -180,6 +192,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 					_, err = minio_client.FPutObject(ctx, bucket, upload_paths[src_paths_i], src_paths_v, minio.PutObjectOptions{ContentType: get_file_content(src_paths_v)})
 					if err != nil {
 						fmt.Printf("[flb-minio] Could not upload %s to %s, format: %s\n", src_paths_v, upload_paths[src_paths_i], get_file_content(src_paths_v))
+						fmt.Println(err)
 						retry = true
 					} else {
 						fmt.Printf("[flb-minio] Uploaded %s to %s, format: %s\n", src_paths_v, upload_paths[src_paths_i], get_file_content(src_paths_v))

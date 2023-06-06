@@ -33,32 +33,33 @@ erDiagram
 
 ## Parameters
 
-| Parameter                   | Description                                     | Type                   | Default                                 |
-| --------------------------- | ----------------------------------------------- | ---------------------- | --------------------------------------- |
-| **db_type**                 | Database used.                                  | str                    | "pgsql"                                 |
-| **file_storage**            | Where data will be stored.                      | list\[str\](s3, minio) | N/A (Mandatory)                         |
-| **delete_when_sent**        | Delete file when sent.                          | bool                   | true                                    |
-| **minio.access_key_id**     | Minio Access key ID.                            | str                    | N/A (Mandatory)                         |
-| **minio.bucket**            | Minio bucket name.                              | str                    | "dc_bucket"                             |
-| **minio.endpoint**          | Minio endpoint.                                 | str                    | "127.0.0.1:9000"                        |
-| **minio.secret_access_key** | Minio Secret access key.                        | str                    | N/A (Mandatory)                         |
-| **minio.src_fields**        | JSON fields containing local paths for Minio.   | str                    | N/A (Mandatory)                         |
-| **minio.upload_fields**     | JSON fields containing remote paths for Minio.  | str                    | N/A (Mandatory)                         |
-| **minio.use_ssl**           | Use SSL for Minio.                              | bool                   | true                                    |
-| **pgsql.database**          | Database name to connect to.                    | str                    | <system_username>                       |
-| **pgsql.host**              | Hostname/IP address of the PostgreSQL instance. | str                    | "127.0.0.1"                             |
-| **pgsql.password**          | Password of PostgreSQL username.                | str                    | ""                                      |
-| **pgsql.port**              | PostgreSQL port.                                | str                    | "5432"                                  |
-| **pgsql.ssl**               | Use ssl for PostgreSQL connection.              | bool                   | true                                    |
-| **pgsql.table**             | Table name where to store data.                 | str                    | "pg_table"                              |
-| **pgsql.user**              | PostgreSQL username.                            | str                    | <system_username>                       |
-| **plugin_path**             | Shared library of the plugin.                   | str                    | <install_path>/lib/out_files_metrics.so |
-| **s3.access_key_id**        | S3 Access key ID.                               | str                    | N/A (Mandatory)                         |
-| **s3.bucket**               | S3 bucket name.                                 | str                    | N/A (Mandatory)                         |
-| **s3.endpoint**             | S3 endpoint.                                    | str                    | N/A (Mandatory)                         |
-| **s3.secret_access_key**    | S3 Secret access key.                           | str                    | N/A (Mandatory)                         |
-| **s3.src_fields**           | JSON fields containing local paths for s3.      | str                    | N/A (Mandatory)                         |
-| **s3.upload_fields**        | JSON fields containing remote paths for S3.     | str                    | N/A (Mandatory)                         |
+| Parameter                   | Description                                     | Type                   | Default                                                              |
+| --------------------------- | ----------------------------------------------- | ---------------------- | -------------------------------------------------------------------- |
+| **db_type**                 | Database used.                                  | str                    | "pgsql"                                                              |
+| **file_storage**            | Where data will be stored.                      | list\[str\](s3, minio) | N/A (Mandatory)                                                      |
+| **delete_when_sent**        | Delete file when sent.                          | bool                   | true                                                                 |
+| **minio.access_key_id**     | Minio Access key ID.                            | str                    | N/A (Mandatory)                                                      |
+| **minio.bucket**            | Minio bucket name.                              | str                    | "dc_bucket"                                                          |
+| **minio.endpoint**          | Minio endpoint.                                 | str                    | "127.0.0.1:9000"                                                     |
+| **minio.secret_access_key** | Minio Secret access key.                        | str                    | N/A (Mandatory)                                                      |
+| **minio.src_fields**        | JSON fields containing local paths for Minio.   | str                    | N/A (Mandatory)                                                      |
+| **minio.upload_fields**     | JSON fields containing remote paths for Minio.  | str                    | N/A (Mandatory)                                                      |
+| **minio.use_ssl**           | Use SSL for Minio.                              | bool                   | true                                                                 |
+| **plugin_path**             | Shared library path compiled by go.             | str                    | "{package_share_directory}/flb_plugins/lib/flb-out_files_metrics.so" |
+| **pgsql.database**          | Database name to connect to.                    | str                    | <system_username>                                                    |
+| **pgsql.host**              | Hostname/IP address of the PostgreSQL instance. | str                    | "127.0.0.1"                                                          |
+| **pgsql.password**          | Password of PostgreSQL username.                | str                    | ""                                                                   |
+| **pgsql.port**              | PostgreSQL port.                                | str                    | "5432"                                                               |
+| **pgsql.ssl**               | Use ssl for PostgreSQL connection.              | bool                   | true                                                                 |
+| **pgsql.table**             | Table name where to store data.                 | str                    | "pg_table"                                                           |
+| **pgsql.user**              | PostgreSQL username.                            | str                    | <system_username>                                                    |
+| **plugin_path**             | Shared library of the plugin.                   | str                    | <install_path>/lib/out_files_metrics.so                              |
+| **s3.access_key_id**        | S3 Access key ID.                               | str                    | N/A (Mandatory)                                                      |
+| **s3.bucket**               | S3 bucket name.                                 | str                    | N/A (Mandatory)                                                      |
+| **s3.endpoint**             | S3 endpoint.                                    | str                    | N/A (Mandatory)                                                      |
+| **s3.secret_access_key**    | S3 Secret access key.                           | str                    | N/A (Mandatory)                                                      |
+| **s3.src_fields**           | JSON fields containing local paths for s3.      | str                    | N/A (Mandatory)                                                      |
+| **s3.upload_fields**        | JSON fields containing remote paths for S3.     | str                    | N/A (Mandatory)                                                      |
 
 ## Example
 ```yaml

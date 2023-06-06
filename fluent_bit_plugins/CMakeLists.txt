@@ -30,29 +30,12 @@ foreach(c_plugin ${c_plugins})
 endforeach()
 
 # Go Plugins
-# TODO If a modification is done, it will not be recompiled, at the moment, we need to cleanup the workspace
 if(EXISTS "/usr/bin/go")
   list(APPEND go_plugins "out_minio")
   list(APPEND go_plugins "out_files_metrics")
 
   foreach(go_plugin ${go_plugins})
-    set(LIBRARY_NAME "${go_plugin}")
-    SET(LIB_FILE ${CMAKE_CURRENT_SOURCE_DIR}/src/go/${go_plugin}/${LIBRARY_NAME}.so)
-    add_custom_command(
-      OUTPUT ${LIB_FILE}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/go/${go_plugin}/
-      COMMAND $(MAKE) all
-    )
-    add_library(${LIBRARY_NAME} SHARED IMPORTED)
-    set_target_properties(${LIBRARY_NAME} PROPERTIES IMPORTED_LOCATION ${LIB_FILE})
-    set_target_properties(${LIBRARY_NAME} PROPERTIES PREFIX "")
-
-    # Manually install in directory
-    add_custom_target(go_libs_install_${LIBRARY_NAME} ALL
-      COMMAND ${CMAKE_COMMAND} -E copy
-      ${LIB_FILE}
-      ${CMAKE_INSTALL_PREFIX}/lib/${LIBRARY_NAME}.so
-    )
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/go/${go_plugin}/)
   endforeach()
 endif()
 
