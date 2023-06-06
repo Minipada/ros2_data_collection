@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
-project(out_files_metrics)
+project(flb-out_files_metrics)
 
 set(GO_COMPILER go)
-set(FILES_METRICS_LIBRARY out_files_metrics.so)
-set(FILES_METRICS_INCLUDE out_files_metrics.h)
+set(FILES_METRICS_LIBRARY flb-out_files_metrics.so)
+set(FILES_METRICS_INCLUDE flb-out_files_metrics.h)
 
 add_custom_target(plugin_out_files_metrics_install ALL
     COMMAND ${GO_COMPILER} get
