@@ -17,7 +17,7 @@ Docker images with latest code are available on the [Docker public registry](htt
 Get any by running:
 
 ```bash
-$ docker pull minipada/ros2_data_collection:<TAG>
+docker pull minipada/ros2_data_collection:<TAG>
 ```
 
 ### Docker workflow
@@ -54,18 +54,18 @@ services:
 Then, to allow GUI (RViz, Gazebo) to work in the container, execute:
 
 ```bash
-$ xhost +
+xhost +
 ```
 
 Then start the container:
 
 ```bash
-$ docker compose up -d
+docker compose up -d
 ```
 
 And get in the container with:
 ```bash
-$ docker exec -it ros2-data-collection /ros_entrypoint.sh bash
+docker exec -it ros2-data-collection /ros_entrypoint.sh bash
 ```
 
 ## Build from source
@@ -76,13 +76,13 @@ Given that there is no apt packages available, you will need to build from sourc
 Download the repository in your workspace
 
 ```bash
-$ git clone github.com/minipada/ros2_data_collection.git
+git clone github.com/minipada/ros2_data_collection.git
 ```
 
 ### Install dependencies
 #### Install system and C/C++ dependencies
 ```
-$ rosdep install --from-paths src --ignore-src -r -y
+rosdep install --from-paths src --ignore-src -r -y
 ```
 
 Some packages are external C++ packages but a vendor package has been included in the repository so colcon will handle it.
@@ -92,16 +92,16 @@ In addition, since this set of packages has no python external dependencies, you
 This project uses [poetry](https://python-poetry.org/) to manage python dependencies. It is easy to use and it is possible to set each package version like in a requirements.txt and manage multiple python environments.
 If you have poetry on your machine, you can execute:
 
-`$ poetry install`
+`poetry install`
 
 If not, you can install python dependencies from the provided requirements.txt:
 
-`$ pip3 install -r requirements.txt`
+`pip3 install -r requirements.txt`
 
 ### Build
 
 ```bash
-$ colcon build
+colcon build
 ```
 
 ### Run

@@ -15,10 +15,10 @@ Using a different terminal window for DC helps reading its information.
 In addition to the ros2_data_collection repo in your workspace, you will need to download the [aws warehouse package](https://github.com/aws-robotics/aws-robomaker-small-warehouse-world/tree/ros2):
 
 ```bash
-$ cd src
-$ git clone https://github.com/aws-robotics/aws-robomaker-small-warehouse-world.git -b ros2
-$ cd ..
-$ colcon build
+cd src
+git clone https://github.com/aws-robotics/aws-robomaker-small-warehouse-world.git -b ros2
+cd ..
+colcon build
 ```
 
 ## Setup the environment
@@ -27,7 +27,7 @@ $ colcon build
 For this tutorial, we will need to install all dependencies:
 
 ```bash
-$ pip3 install -r requirements.txt -r requirements-dev.txt
+pip3 install -r requirements.txt -r requirements-dev.txt
 ```
 
 ### Setup the infrastructure
@@ -41,18 +41,18 @@ $ pip3 install -r requirements.txt -r requirements-dev.txt
 In the terminal 1, source your environment, setup turtlebot configuration:
 
 ```bash
-$ source /opt/ros/humble/setup.bash
-$ source install/setup.bash
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-$ export GAZEBO_RESOURCE_PATH=${PWD}/src/aws-robomaker-small-warehouse-world/
-$ export TURTLEBOT3_MODEL=waffle
-$ source /usr/share/gazebo/setup.bash
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+export GAZEBO_RESOURCE_PATH=${PWD}/src/aws-robomaker-small-warehouse-world/
+export TURTLEBOT3_MODEL=waffle
+source /usr/share/gazebo/setup.bash
 ```
 
 Verify the gazebo world can be loaded properly:
 
 ```bash
-$ gazebo /opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/no_roof_small_warehouse/no_roof_small_warehouse.world
+gazebo /opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/no_roof_small_warehouse/no_roof_small_warehouse.world
 ```
 
 Gazebo will start with the warehouse environment. You can close it now.
@@ -67,7 +67,7 @@ I believe requiring the source along with those export are needed because of [th
 Then, in the same terminal (1), start the Turtlebot launchfile:
 
 ```bash
-$ ros2 launch nav2_bringup tb3_simulation_launch.py \
+ros2 launch nav2_bringup tb3_simulation_launch.py \
     world:=/opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/no_roof_small_warehouse/no_roof_small_warehouse.world \
     map:=/opt/ros/humble/share/aws_robomaker_small_warehouse_world/maps/005/map.yaml \
     headless:=False \
@@ -85,13 +85,13 @@ RViz and Gazebo will start: now you see the robot in Gazebo, and the map on RViz
 Run colcon build to compile the workspace:
 
 ```bash
-$ colcon build
+colcon build
 ```
 
 Now, start the demo:
 
 ```bash
-$ ros2 launch dc_demos tb3_simulation_influxdb.launch.py
+ros2 launch dc_demos tb3_simulation_influxdb.launch.py
 ```
 
 The robot will start collecting data.
@@ -101,7 +101,7 @@ The robot will start collecting data.
 Execute
 
 ```bash
-$ ros2 run nav2_simple_commander demo_security
+ros2 run nav2_simple_commander demo_security
 ```
 
 The robot will start moving and you will be able to see all visualizations activated in RViz:
@@ -114,6 +114,8 @@ The robot will start moving and you will be able to see all visualizations activ
 Open your browser at [http://localhost:3000](http://localhost:3000) and login with admin/admin
 
 ![Grafana-1](../../images/grafana-1.png)
+
+<video src="../../images/demos-tb3_aws_minio_pgsql-streamlit.webm" controls="controls"></video>
 
 ## Understanding the configuration
 ```admonish info

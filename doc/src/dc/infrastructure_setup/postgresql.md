@@ -6,7 +6,7 @@ PostgreSQL is a powerful, open source object-relational database system that use
 Execute:
 
 ```bash
-$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=postgresql \
   --install-type=docker
 ```
@@ -15,7 +15,7 @@ $ ./tools/infrastructure/scripts/install_infrastructure.bash \
 Execute:
 
 ```bash
-$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=postgresql \
   --install-type=native
 ```

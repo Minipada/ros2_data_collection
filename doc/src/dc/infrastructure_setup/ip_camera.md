@@ -5,13 +5,13 @@ To start the ip camera example, to save video feeds from rtsp cameras, you can o
 A [rtsp](https://www.wikiwand.com/en/Real_Time_Streaming_Protocol) server. I use **mediamtx** available [here](https://github.com/aler9/mediamtx/releases). Download from the [release page](https://github.com/aler9/mediamtx/releases) and start it:
 
 ```bash
-$ ./mediamtx
+./mediamtx
 ```
 
 If the port is already used, download the [configuration](https://github.com/aler9/mediamtx/blob/main/mediamtx.yml) and edit the `hlsAddress` parameter. You would then need to start it this way:
 
 ```bash
-$ ./mediamtx conf.yml
+./mediamtx conf.yml
 ```
 
 ## Create a virtual camera
@@ -20,18 +20,18 @@ This is optional, and only useful if you want to not use a camera
 You will first need to install some packages:
 
 ```bash
-$ sudo apt-get install v4l-utils v4l2loopback
+sudo apt-get install v4l-utils v4l2loopback
 ```
 
 And start a virtual camera device:
 
 ```bash
-$ sudo modprobe v4l2loopback
+sudo modprobe v4l2loopback
 ```
 
 Now check its path:
 ```bash
-$ v4l2-ctl --list-devices
+v4l2-ctl --list-devices
 
 Dummy video device (0x0000) (platform:v4l2loopback-000):
 	/dev/video2
