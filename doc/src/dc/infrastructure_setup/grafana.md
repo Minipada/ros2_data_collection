@@ -7,14 +7,14 @@
 Execute:
 
 ```bash
-$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=grafana \
   --install-type=docker
 ```
 
 ## Start natively
 ```bash
-$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=grafana \
   --install-type=native
 ```

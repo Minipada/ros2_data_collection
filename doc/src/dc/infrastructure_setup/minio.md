@@ -13,14 +13,14 @@ MinIO is an object storage solution that provides an Amazon Web Services S3-comp
 Execute:
 
 ```bash
-$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=minio \
   --install-type=docker
 ```
 
 ## Start natively
 ```bash
-$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=minio \
   --install-type=native
 ```

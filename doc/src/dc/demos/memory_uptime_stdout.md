@@ -5,7 +5,7 @@ This demo will introduce the group node. It subscribes to multiple nodes and gro
 Let's run it:
 
 ```bash
-$ ros2 launch dc_demos group_memory_uptime_stdout.launch.py
+ros2 launch dc_demos group_memory_uptime_stdout.launch.py
 ```
 
 ```

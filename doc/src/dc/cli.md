@@ -3,7 +3,7 @@
 You can list available plugins by running the CLI tool:
 
 ```
-$ ros2 run dc_cli list_plugins --help
+ros2 run dc_cli list_plugins --help
 
 
  Usage: list_plugins [OPTIONS] COMMAND [ARGS]...

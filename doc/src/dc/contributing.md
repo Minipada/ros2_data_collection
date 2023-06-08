@@ -40,7 +40,7 @@ Follow the steps to build your workspace and install dependencies in the [setup 
 Then, install the pre-commit hook:
 
 ```bash
-$ pre-commit install
+pre-commit install
 ```
 
 You are now ready to write some code, commit and follow the standards with the pre-commit hook.
@@ -50,20 +50,20 @@ You are now ready to write some code, commit and follow the standards with the p
 To build the docs, install cargo:
 
 ```bash
-$ sudo apt-get install cargo
+sudo apt-get install cargo
 ```
 
 Then install mdbook (the command line tool to create books with Markdown) and its plugins:
 
 ```bash
-$ cargo install mdbook mdbook-admonish mdbook-linkcheck mdbook-mermaid
+cargo install mdbook mdbook-admonish mdbook-linkcheck mdbook-mermaid
 ```
 
 Start the doc locally with auto-refresh on edit:
 
 ```bash
-$ export PATH=$PATH:$HOME/.cargo/bin
-$ mdbook serve -p 8000 -n 0.0.0.0
+export PATH=$PATH:$HOME/.cargo/bin
+mdbook serve -p 8000 -n 0.0.0.0
 ```
 
 And open [localhost:8000](http://localhost:8000)

@@ -7,7 +7,7 @@ We are going to take the uptime measurement, change it slightly and collect the 
 To test it, run:
 
 ```bash
-$ ros2 launch dc_demos uptime_custom_stdout.launch.py
+ros2 launch dc_demos uptime_custom_stdout.launch.py
 ```
 
 ## JSON schema
