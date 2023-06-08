@@ -190,7 +190,7 @@
 </tbody></table>
 </div>
 <p>Get any by running:</p>
-<pre><code class="language-bash">$ docker pull minipada/ros2_data_collection:&lt;TAG&gt;
+<pre><code class="language-bash">docker pull minipada/ros2_data_collection:&lt;TAG&gt;
 </code></pre>
 <h3 id="docker-workflow"><a class="header" href="#docker-workflow">Docker workflow</a></h3>
 <p>When developing, use the <em>source-sim</em> image with a docker compose file. The latest one is available on the repository:</p>
@@ -220,34 +220,34 @@ services:
     working_dir: /root/ws
 </code></pre>
 <p>Then, to allow GUI (RViz, Gazebo) to work in the container, execute:</p>
-<pre><code class="language-bash">$ xhost +
+<pre><code class="language-bash">xhost +
 </code></pre>
 <p>Then start the container:</p>
-<pre><code class="language-bash">$ docker compose up -d
+<pre><code class="language-bash">docker compose up -d
 </code></pre>
 <p>And get in the container with:</p>
-<pre><code class="language-bash">$ docker exec -it ros2-data-collection /ros_entrypoint.sh bash
+<pre><code class="language-bash">docker exec -it ros2-data-collection /ros_entrypoint.sh bash
 </code></pre>
 <h2 id="build-from-source"><a class="header" href="#build-from-source">Build from source</a></h2>
 <h3 id="download-the-repository"><a class="header" href="#download-the-repository">Download the repository</a></h3>
 <p>Given that there is no apt packages available, you will need to build from source.</p>
 <p>Download the repository in your workspace</p>
-<pre><code class="language-bash">$ git clone github.com/minipada/ros2_data_collection.git
+<pre><code class="language-bash">git clone github.com/minipada/ros2_data_collection.git
 </code></pre>
 <h3 id="install-dependencies"><a class="header" href="#install-dependencies">Install dependencies</a></h3>
 <h4 id="install-system-and-cc-dependencies"><a class="header" href="#install-system-and-cc-dependencies">Install system and C/C++ dependencies</a></h4>
-<pre><code>$ rosdep install --from-paths src --ignore-src -r -y
+<pre><code>rosdep install --from-paths src --ignore-src -r -y
 </code></pre>
 <p>Some packages are external C++ packages but a vendor package has been included in the repository so colcon will handle it.
 In addition, since this set of packages has no python external dependencies, you won't need anything else.</p>
 <h4 id="install-python-dependencies"><a class="header" href="#install-python-dependencies">Install python dependencies</a></h4>
 <p>This project uses <a href="https://python-poetry.org/">poetry</a> to manage python dependencies. It is easy to use and it is possible to set each package version like in a requirements.txt and manage multiple python environments.
 If you have poetry on your machine, you can execute:</p>
-<p><code>$ poetry install</code></p>
+<p><code>poetry install</code></p>
 <p>If not, you can install python dependencies from the provided requirements.txt:</p>
-<p><code>$ pip3 install -r requirements.txt</code></p>
+<p><code>pip3 install -r requirements.txt</code></p>
 <h3 id="build"><a class="header" href="#build">Build</a></h3>
-<pre><code class="language-bash">$ colcon build
+<pre><code class="language-bash">colcon build
 </code></pre>
 <h3 id="run"><a class="header" href="#run">Run</a></h3>
 <pre><code class="language-bash">source install/setup.bash

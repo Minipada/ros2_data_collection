@@ -188,15 +188,15 @@
 <p>Using a different terminal window for DC helps reading its information.</p>
 <h2 id="packages-in-the-workspace"><a class="header" href="#packages-in-the-workspace">Packages in the workspace</a></h2>
 <p>In addition to the ros2_data_collection repo in your workspace, you will need to download the <a href="https://github.com/aws-robotics/aws-robomaker-small-warehouse-world/tree/ros2">aws warehouse package</a>:</p>
-<pre><code class="language-bash">$ cd src
-$ git clone https://github.com/aws-robotics/aws-robomaker-small-warehouse-world.git -b ros2
-$ cd ..
-$ colcon build
+<pre><code class="language-bash">cd src
+git clone https://github.com/aws-robotics/aws-robomaker-small-warehouse-world.git -b ros2
+cd ..
+colcon build
 </code></pre>
 <h2 id="setup-the-environment"><a class="header" href="#setup-the-environment">Setup the environment</a></h2>
 <h3 id="python-dependencies"><a class="header" href="#python-dependencies">Python dependencies</a></h3>
 <p>For this tutorial, we will need to install all dependencies:</p>
-<pre><code class="language-bash">$ pip3 install -r requirements.txt -r requirements-dev.txt
+<pre><code class="language-bash">pip3 install -r requirements.txt -r requirements-dev.txt
 </code></pre>
 <h3 id="setup-the-infrastructure"><a class="header" href="#setup-the-infrastructure">Setup the infrastructure</a></h3>
 <h4 id="influxdb"><a class="header" href="#influxdb">InfluxDB</a></h4>
@@ -205,15 +205,15 @@ $ colcon build
 <p><a href="https://grafana.com/">Grafana</a> will be used to display the data as timeseries or statistics.</p>
 <h3 id="setup-simulation-environment"><a class="header" href="#setup-simulation-environment">Setup simulation environment</a></h3>
 <p>In the terminal 1, source your environment, setup turtlebot configuration:</p>
-<pre><code class="language-bash">$ source /opt/ros/humble/setup.bash
-$ source install/setup.bash
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-$ export GAZEBO_RESOURCE_PATH=${PWD}/src/aws-robomaker-small-warehouse-world/
-$ export TURTLEBOT3_MODEL=waffle
-$ source /usr/share/gazebo/setup.bash
+<pre><code class="language-bash">source /opt/ros/humble/setup.bash
+source install/setup.bash
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+export GAZEBO_RESOURCE_PATH=${PWD}/src/aws-robomaker-small-warehouse-world/
+export TURTLEBOT3_MODEL=waffle
+source /usr/share/gazebo/setup.bash
 </code></pre>
 <p>Verify the gazebo world can be loaded properly:</p>
-<pre><code class="language-bash">$ gazebo /opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/no_roof_small_warehouse/no_roof_small_warehouse.world
+<pre><code class="language-bash">gazebo /opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/no_roof_small_warehouse/no_roof_small_warehouse.world
 </code></pre>
 <p>Gazebo will start with the warehouse environment. You can close it now.</p>
 <div id="admonition-info" class="admonition info">
@@ -227,7 +227,7 @@ $ source /usr/share/gazebo/setup.bash
 </div>
 <h2 id="terminal-1-start-navigation"><a class="header" href="#terminal-1-start-navigation">Terminal 1: Start Navigation</a></h2>
 <p>Then, in the same terminal (1), start the Turtlebot launchfile:</p>
-<pre><code class="language-bash">$ ros2 launch nav2_bringup tb3_simulation_launch.py \
+<pre><code class="language-bash">ros2 launch nav2_bringup tb3_simulation_launch.py \
     world:=/opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/no_roof_small_warehouse/no_roof_small_warehouse.world \
     map:=/opt/ros/humble/share/aws_robomaker_small_warehouse_world/maps/005/map.yaml \
     headless:=False \
@@ -240,15 +240,15 @@ $ source /usr/share/gazebo/setup.bash
 <img src="../../images/demos-tb3_aws_minio_pgsql-gz-1.png" alt="Gazebo" /></p>
 <h2 id="terminal-2-start-dc"><a class="header" href="#terminal-2-start-dc">Terminal 2: Start DC</a></h2>
 <p>Run colcon build to compile the workspace:</p>
-<pre><code class="language-bash">$ colcon build
+<pre><code class="language-bash">colcon build
 </code></pre>
 <p>Now, start the demo:</p>
-<pre><code class="language-bash">$ ros2 launch dc_demos tb3_simulation_influxdb.launch.py
+<pre><code class="language-bash">ros2 launch dc_demos tb3_simulation_influxdb.launch.py
 </code></pre>
 <p>The robot will start collecting data.</p>
 <h2 id="terminal-3-start-autonomous-navigation"><a class="header" href="#terminal-3-start-autonomous-navigation">Terminal 3: Start autonomous navigation</a></h2>
 <p>Execute</p>
-<pre><code class="language-bash">$ ros2 run nav2_simple_commander demo_security
+<pre><code class="language-bash">ros2 run nav2_simple_commander demo_security
 </code></pre>
 <p>The robot will start moving and you will be able to see all visualizations activated in RViz:</p>
 <p><img src="../../images/demos-tb3_aws_minio_pgsql-rviz-2.png" alt="RViz-moving" /></p>
@@ -256,6 +256,7 @@ $ source /usr/share/gazebo/setup.bash
 <h3 id="with-grafana-dashboard"><a class="header" href="#with-grafana-dashboard">With Grafana Dashboard</a></h3>
 <p>Open your browser at <a href="http://localhost:3000">http://localhost:3000</a> and login with admin/admin</p>
 <p><img src="../../images/grafana-1.png" alt="Grafana-1" /></p>
+<p><video src="../../images/demos-tb3_aws_minio_pgsql-streamlit.webm" controls="controls"></video></p>
 <h2 id="understanding-the-configuration"><a class="header" href="#understanding-the-configuration">Understanding the configuration</a></h2>
 <div id="admonition-info-1" class="admonition info">
 <div class="admonition-title">

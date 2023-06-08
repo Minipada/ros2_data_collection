@@ -187,14 +187,14 @@
 <p>Since RViz is pretty verbose, using 2 terminal windows will help reading the JSON printed on the terminal window.</p>
 <h2 id="setup-the-environment"><a class="header" href="#setup-the-environment">Setup the environment</a></h2>
 <p>In each, terminal, source your environment and setup turtlebot configuration:</p>
-<pre><code class="language-bash">$ source /opt/ros/humble/setup.bash
-$ source install/setup.bash
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-$ export TURTLEBOT3_MODEL=waffle
+<pre><code class="language-bash">source /opt/ros/humble/setup.bash
+source install/setup.bash
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+export TURTLEBOT3_MODEL=waffle
 </code></pre>
 <h2 id="start-navigation"><a class="header" href="#start-navigation">Start Navigation</a></h2>
 <p>Then, start the Turtlebot launchfile:</p>
-<pre><code class="language-bash">$ ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False
+<pre><code class="language-bash">ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False
 </code></pre>
 <p>RViz and Gazebo will start: you should now see the robot in Gazebo, and the map on RViz.</p>
 <p>Set the robot position using the &quot;2D Pose Estimate&quot; button.</p>
@@ -209,7 +209,7 @@ $ export TURTLEBOT3_MODEL=waffle
 </div>
 <h2 id="start-dc"><a class="header" href="#start-dc">Start DC</a></h2>
 <p>Execute</p>
-<pre><code class="language-bash">$ ros2 launch dc_demos tb3_simulation_stdout.launch.py
+<pre><code class="language-bash">ros2 launch dc_demos tb3_simulation_stdout.launch.py
 </code></pre>
 <p>At the end, the data is displayed:</p>
 <pre><code>[component_container_isolated-1] [{&quot;date&quot;:1677690777.96911,&quot;width&quot;:384,&quot;height&quot;:384,&quot;remote_paths&quot;:{&quot;minio&quot;:{&quot;pgm&quot;:&quot;C3PO/2023/03/01/17/map/2023-03-01T17:12:57.pgm&quot;,&quot;yaml&quot;:&quot;C3PO/2023/03/01/17/map/2023-03-01T17:12:57.yaml&quot;}},&quot;resolution&quot;:0.05000000074505806,&quot;origin&quot;:{&quot;x&quot;:-10,&quot;y&quot;:-10},&quot;local_paths&quot;:{&quot;pgm&quot;:&quot;/root/dc_data/C3PO/2023/03/01/17/map/2023-03-01T17:12:57.pgm&quot;,&quot;yaml&quot;:&quot;/root/dc_data/C3PO/2023/03/01/17/map/2023-03-01T17:12:57.yaml&quot;},&quot;id&quot;:&quot;be781e5ffb1e7ee4f817fe7b63e92c32&quot;,&quot;robot_name&quot;:&quot;C3PO&quot;,&quot;run_id&quot;:&quot;234&quot;}]

@@ -337,7 +337,7 @@
 </tbody></table>
 </div>
 <p>Get any by running:</p>
-<pre><code class="language-bash">$ docker pull minipada/ros2_data_collection:&lt;TAG&gt;
+<pre><code class="language-bash">docker pull minipada/ros2_data_collection:&lt;TAG&gt;
 </code></pre>
 <h3 id="docker-workflow"><a class="header" href="#docker-workflow">Docker workflow</a></h3>
 <p>When developing, use the <em>source-sim</em> image with a docker compose file. The latest one is available on the repository:</p>
@@ -367,34 +367,34 @@ services:
     working_dir: /root/ws
 </code></pre>
 <p>Then, to allow GUI (RViz, Gazebo) to work in the container, execute:</p>
-<pre><code class="language-bash">$ xhost +
+<pre><code class="language-bash">xhost +
 </code></pre>
 <p>Then start the container:</p>
-<pre><code class="language-bash">$ docker compose up -d
+<pre><code class="language-bash">docker compose up -d
 </code></pre>
 <p>And get in the container with:</p>
-<pre><code class="language-bash">$ docker exec -it ros2-data-collection /ros_entrypoint.sh bash
+<pre><code class="language-bash">docker exec -it ros2-data-collection /ros_entrypoint.sh bash
 </code></pre>
 <h2 id="build-from-source"><a class="header" href="#build-from-source">Build from source</a></h2>
 <h3 id="download-the-repository"><a class="header" href="#download-the-repository">Download the repository</a></h3>
 <p>Given that there is no apt packages available, you will need to build from source.</p>
 <p>Download the repository in your workspace</p>
-<pre><code class="language-bash">$ git clone github.com/minipada/ros2_data_collection.git
+<pre><code class="language-bash">git clone github.com/minipada/ros2_data_collection.git
 </code></pre>
 <h3 id="install-dependencies"><a class="header" href="#install-dependencies">Install dependencies</a></h3>
 <h4 id="install-system-and-cc-dependencies"><a class="header" href="#install-system-and-cc-dependencies">Install system and C/C++ dependencies</a></h4>
-<pre><code>$ rosdep install --from-paths src --ignore-src -r -y
+<pre><code>rosdep install --from-paths src --ignore-src -r -y
 </code></pre>
 <p>Some packages are external C++ packages but a vendor package has been included in the repository so colcon will handle it.
 In addition, since this set of packages has no python external dependencies, you won't need anything else.</p>
 <h4 id="install-python-dependencies"><a class="header" href="#install-python-dependencies">Install python dependencies</a></h4>
 <p>This project uses <a href="https://python-poetry.org/">poetry</a> to manage python dependencies. It is easy to use and it is possible to set each package version like in a requirements.txt and manage multiple python environments.
 If you have poetry on your machine, you can execute:</p>
-<p><code>$ poetry install</code></p>
+<p><code>poetry install</code></p>
 <p>If not, you can install python dependencies from the provided requirements.txt:</p>
-<p><code>$ pip3 install -r requirements.txt</code></p>
+<p><code>pip3 install -r requirements.txt</code></p>
 <h3 id="build"><a class="header" href="#build">Build</a></h3>
-<pre><code class="language-bash">$ colcon build
+<pre><code class="language-bash">colcon build
 </code></pre>
 <h3 id="run"><a class="header" href="#run">Run</a></h3>
 <pre><code class="language-bash">source install/setup.bash
@@ -436,7 +436,7 @@ ros2 launch dc_bringup bringup.launch.py
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/demos.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="uptime-to-stdout"><a class="header" href="#uptime-to-stdout">Uptime to stdout</a></h1>
 <p>This is the most minimal example to run DC, it collects the system uptime every 5 seconds and sends it to Stdout.</p>
 <p>Let's run it:</p>
-<pre><code class="language-bash">$ ros2 launch dc_demos uptime_stdout.launch.py
+<pre><code class="language-bash">ros2 launch dc_demos uptime_stdout.launch.py
 </code></pre>
 <p>At the end, the data is displayed:</p>
 <pre><code>[component_container_isolated-1] [{&quot;date&quot;:1677668906.745817,&quot;time&quot;:92395,&quot;id&quot;:&quot;be781e5ffb1e7ee4f817fe7b63e92c32&quot;,&quot;robot_name&quot;:&quot;C3PO&quot;,&quot;run_id&quot;:&quot;218&quot;}]
@@ -660,7 +660,7 @@ ros2 launch dc_bringup bringup.launch.py
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/demos/uptime_stdout.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="group-memory-and-uptime"><a class="header" href="#group-memory-and-uptime">Group memory and uptime</a></h1>
 <p>This demo will introduce the group node. It subscribes to multiple nodes and group for each its data and republishes on a new topic.</p>
 <p>Let's run it:</p>
-<pre><code class="language-bash">$ ros2 launch dc_demos group_memory_uptime_stdout.launch.py
+<pre><code class="language-bash">ros2 launch dc_demos group_memory_uptime_stdout.launch.py
 </code></pre>
 <pre><code>[component_container_isolated-1] [{&quot;memory&quot;:{&quot;used&quot;:71.67569732666016},&quot;date&quot;:1677673405.921659,&quot;uptime&quot;:{&quot;time&quot;:96894},&quot;run_id&quot;:&quot;221&quot;}]
 [component_container_isolated-1] [{&quot;memory&quot;:{&quot;used&quot;:71.70790100097656},&quot;date&quot;:1677673408.868847,&quot;uptime&quot;:{&quot;time&quot;:96897},&quot;run_id&quot;:&quot;221&quot;}]
@@ -737,14 +737,14 @@ ros2 launch dc_bringup bringup.launch.py
 <p>Since RViz is pretty verbose, using 2 terminal windows will help reading the JSON printed on the terminal window.</p>
 <h2 id="setup-the-environment"><a class="header" href="#setup-the-environment">Setup the environment</a></h2>
 <p>In each, terminal, source your environment and setup turtlebot configuration:</p>
-<pre><code class="language-bash">$ source /opt/ros/humble/setup.bash
-$ source install/setup.bash
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-$ export TURTLEBOT3_MODEL=waffle
+<pre><code class="language-bash">source /opt/ros/humble/setup.bash
+source install/setup.bash
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+export TURTLEBOT3_MODEL=waffle
 </code></pre>
 <h2 id="start-navigation"><a class="header" href="#start-navigation">Start Navigation</a></h2>
 <p>Then, start the Turtlebot launchfile:</p>
-<pre><code class="language-bash">$ ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False
+<pre><code class="language-bash">ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False
 </code></pre>
 <p>RViz and Gazebo will start: you should now see the robot in Gazebo, and the map on RViz.</p>
 <p>Set the robot position using the &quot;2D Pose Estimate&quot; button.</p>
@@ -759,7 +759,7 @@ $ export TURTLEBOT3_MODEL=waffle
 </div>
 <h2 id="start-dc"><a class="header" href="#start-dc">Start DC</a></h2>
 <p>Execute</p>
-<pre><code class="language-bash">$ ros2 launch dc_demos tb3_simulation_stdout.launch.py
+<pre><code class="language-bash">ros2 launch dc_demos tb3_simulation_stdout.launch.py
 </code></pre>
 <p>At the end, the data is displayed:</p>
 <pre><code>[component_container_isolated-1] [{&quot;date&quot;:1677690777.96911,&quot;width&quot;:384,&quot;height&quot;:384,&quot;remote_paths&quot;:{&quot;minio&quot;:{&quot;pgm&quot;:&quot;C3PO/2023/03/01/17/map/2023-03-01T17:12:57.pgm&quot;,&quot;yaml&quot;:&quot;C3PO/2023/03/01/17/map/2023-03-01T17:12:57.yaml&quot;}},&quot;resolution&quot;:0.05000000074505806,&quot;origin&quot;:{&quot;x&quot;:-10,&quot;y&quot;:-10},&quot;local_paths&quot;:{&quot;pgm&quot;:&quot;/root/dc_data/C3PO/2023/03/01/17/map/2023-03-01T17:12:57.pgm&quot;,&quot;yaml&quot;:&quot;/root/dc_data/C3PO/2023/03/01/17/map/2023-03-01T17:12:57.yaml&quot;},&quot;id&quot;:&quot;be781e5ffb1e7ee4f817fe7b63e92c32&quot;,&quot;robot_name&quot;:&quot;C3PO&quot;,&quot;run_id&quot;:&quot;234&quot;}]
@@ -1085,15 +1085,15 @@ $ export TURTLEBOT3_MODEL=waffle
 <p>Using a different terminal window for DC helps reading its information.</p>
 <h2 id="packages-in-the-workspace"><a class="header" href="#packages-in-the-workspace">Packages in the workspace</a></h2>
 <p>In addition to the ros2_data_collection repo in your workspace, you will need to download the <a href="https://github.com/aws-robotics/aws-robomaker-small-warehouse-world/tree/ros2">aws warehouse package</a>:</p>
-<pre><code class="language-bash">$ cd src
-$ git clone https://github.com/aws-robotics/aws-robomaker-small-warehouse-world.git -b ros2
-$ cd ..
-$ colcon build
+<pre><code class="language-bash">cd src
+git clone https://github.com/aws-robotics/aws-robomaker-small-warehouse-world.git -b ros2
+cd ..
+colcon build
 </code></pre>
 <h2 id="setup-the-environment-1"><a class="header" href="#setup-the-environment-1">Setup the environment</a></h2>
 <h3 id="python-dependencies"><a class="header" href="#python-dependencies">Python dependencies</a></h3>
 <p>For this tutorial, we will need to install all dependencies:</p>
-<pre><code class="language-bash">$ pip3 install -r requirements.txt -r requirements-dev.txt
+<pre><code class="language-bash">pip3 install -r requirements.txt -r requirements-dev.txt
 </code></pre>
 <h3 id="setup-infrastructure"><a class="header" href="#setup-infrastructure">Setup Infrastructure</a></h3>
 <h4 id="minio"><a class="header" href="#minio">MinIO</a></h4>
@@ -1108,15 +1108,15 @@ $ colcon build
 <p>The default yaml configuration file does not need change as it also uses default values.</p>
 <h3 id="setup-simulation-environment"><a class="header" href="#setup-simulation-environment">Setup simulation environment</a></h3>
 <p>In the terminal 1, source your environment, setup turtlebot configuration:</p>
-<pre><code class="language-bash">$ source /opt/ros/humble/setup.bash
-$ source install/setup.bash
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-$ export GAZEBO_RESOURCE_PATH=${PWD}/src/aws-robomaker-small-warehouse-world/
-$ export TURTLEBOT3_MODEL=waffle
-$ source /usr/share/gazebo/setup.bash
+<pre><code class="language-bash">source /opt/ros/humble/setup.bash
+source install/setup.bash
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+export GAZEBO_RESOURCE_PATH=${PWD}/src/aws-robomaker-small-warehouse-world/
+export TURTLEBOT3_MODEL=waffle
+source /usr/share/gazebo/setup.bash
 </code></pre>
 <p>Verify the gazebo world can be loaded properly:</p>
-<pre><code class="language-bash">$ gazebo /opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/small_warehouse/small_warehouse.world
+<pre><code class="language-bash">gazebo /opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/small_warehouse/small_warehouse.world
 </code></pre>
 <p>Gazebo will start with the warehouse environment. You can close it now.</p>
 <div id="admonition-info" class="admonition info">
@@ -1130,7 +1130,7 @@ $ source /usr/share/gazebo/setup.bash
 </div>
 <h2 id="terminal-1-start-navigation"><a class="header" href="#terminal-1-start-navigation">Terminal 1: Start Navigation</a></h2>
 <p>Then, in the same terminal (1), start the Turtlebot launchfile:</p>
-<pre><code class="language-bash">$ ros2 launch nav2_bringup tb3_simulation_launch.py \
+<pre><code class="language-bash">ros2 launch nav2_bringup tb3_simulation_launch.py \
     world:=/opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/no_roof_small_warehouse/no_roof_small_warehouse.world \
     map:=/opt/ros/humble/share/aws_robomaker_small_warehouse_world/maps/005/map.yaml \
     headless:=False \
@@ -1143,15 +1143,15 @@ $ source /usr/share/gazebo/setup.bash
 <img src="dc/demos/../../images/demos-tb3_aws_minio_pgsql-gz-1.png" alt="Gazebo" /></p>
 <h2 id="terminal-2-start-dc"><a class="header" href="#terminal-2-start-dc">Terminal 2: Start DC</a></h2>
 <p>Run colcon build to compile the workspace:</p>
-<pre><code class="language-bash">$ colcon build
+<pre><code class="language-bash">colcon build
 </code></pre>
 <p>Now, start the demo:</p>
-<pre><code class="language-bash">$ ros2 launch dc_demos tb3_simulation_pgsql_minio.launch.py
+<pre><code class="language-bash">ros2 launch dc_demos tb3_simulation_pgsql_minio.launch.py
 </code></pre>
 <p>The robot will start collecting data.</p>
 <h2 id="terminal-3-start-autonomous-navigation"><a class="header" href="#terminal-3-start-autonomous-navigation">Terminal 3: Start autonomous navigation</a></h2>
 <p>Execute</p>
-<pre><code class="language-bash">$ ros2 run nav2_simple_commander demo_security
+<pre><code class="language-bash">ros2 run nav2_simple_commander demo_security
 </code></pre>
 <p>The robot will start moving and you will be able to see all visualizations activated in RViz:</p>
 <p><img src="dc/demos/../../images/demos-tb3_aws_minio_pgsql-rviz-2.png" alt="RViz-moving" /></p>
@@ -1186,12 +1186,12 @@ $ source /usr/share/gazebo/setup.bash
 </div>
 </div>
 <p>Execute in a new terminal:</p>
-<pre><code class="language-bash">$ cd src/ros2_data_collection/dc_demos/dc_demos/streamlit_dashboard/
+<pre><code class="language-bash">cd src/ros2_data_collection/dc_demos/dc_demos/streamlit_dashboard/
 # Replace by what was created at the start of this demo
-$ export MINIO_ACCESS_KEY=&lt;YOUR_ACCESS_KEY&gt;
+export MINIO_ACCESS_KEY=&lt;YOUR_ACCESS_KEY&gt;
 # Replace by what was created at the start of this demo
-$ export MINIO_SECRET_KEY=&lt;YOUR_SECRET_KEY&gt;
-$ streamlit run Streamlit_ROS_2.py
+export MINIO_SECRET_KEY=&lt;YOUR_SECRET_KEY&gt;
+streamlit run Streamlit_ROS_2.py
 
 # This will be printed:
 
@@ -1268,15 +1268,15 @@ $ streamlit run Streamlit_ROS_2.py
 <p>Using a different terminal window for DC helps reading its information.</p>
 <h2 id="packages-in-the-workspace-1"><a class="header" href="#packages-in-the-workspace-1">Packages in the workspace</a></h2>
 <p>In addition to the ros2_data_collection repo in your workspace, you will need to download the <a href="https://github.com/aws-robotics/aws-robomaker-small-warehouse-world/tree/ros2">aws warehouse package</a>:</p>
-<pre><code class="language-bash">$ cd src
-$ git clone https://github.com/aws-robotics/aws-robomaker-small-warehouse-world.git -b ros2
-$ cd ..
-$ colcon build
+<pre><code class="language-bash">cd src
+git clone https://github.com/aws-robotics/aws-robomaker-small-warehouse-world.git -b ros2
+cd ..
+colcon build
 </code></pre>
 <h2 id="setup-the-environment-2"><a class="header" href="#setup-the-environment-2">Setup the environment</a></h2>
 <h3 id="python-dependencies-1"><a class="header" href="#python-dependencies-1">Python dependencies</a></h3>
 <p>For this tutorial, we will need to install all dependencies:</p>
-<pre><code class="language-bash">$ pip3 install -r requirements.txt -r requirements-dev.txt
+<pre><code class="language-bash">pip3 install -r requirements.txt -r requirements-dev.txt
 </code></pre>
 <h3 id="setup-the-infrastructure"><a class="header" href="#setup-the-infrastructure">Setup the infrastructure</a></h3>
 <h4 id="influxdb"><a class="header" href="#influxdb">InfluxDB</a></h4>
@@ -1285,15 +1285,15 @@ $ colcon build
 <p><a href="https://grafana.com/">Grafana</a> will be used to display the data as timeseries or statistics.</p>
 <h3 id="setup-simulation-environment-1"><a class="header" href="#setup-simulation-environment-1">Setup simulation environment</a></h3>
 <p>In the terminal 1, source your environment, setup turtlebot configuration:</p>
-<pre><code class="language-bash">$ source /opt/ros/humble/setup.bash
-$ source install/setup.bash
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-$ export GAZEBO_RESOURCE_PATH=${PWD}/src/aws-robomaker-small-warehouse-world/
-$ export TURTLEBOT3_MODEL=waffle
-$ source /usr/share/gazebo/setup.bash
+<pre><code class="language-bash">source /opt/ros/humble/setup.bash
+source install/setup.bash
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+export GAZEBO_RESOURCE_PATH=${PWD}/src/aws-robomaker-small-warehouse-world/
+export TURTLEBOT3_MODEL=waffle
+source /usr/share/gazebo/setup.bash
 </code></pre>
 <p>Verify the gazebo world can be loaded properly:</p>
-<pre><code class="language-bash">$ gazebo /opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/no_roof_small_warehouse/no_roof_small_warehouse.world
+<pre><code class="language-bash">gazebo /opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/no_roof_small_warehouse/no_roof_small_warehouse.world
 </code></pre>
 <p>Gazebo will start with the warehouse environment. You can close it now.</p>
 <div id="admonition-info" class="admonition info">
@@ -1307,7 +1307,7 @@ $ source /usr/share/gazebo/setup.bash
 </div>
 <h2 id="terminal-1-start-navigation-1"><a class="header" href="#terminal-1-start-navigation-1">Terminal 1: Start Navigation</a></h2>
 <p>Then, in the same terminal (1), start the Turtlebot launchfile:</p>
-<pre><code class="language-bash">$ ros2 launch nav2_bringup tb3_simulation_launch.py \
+<pre><code class="language-bash">ros2 launch nav2_bringup tb3_simulation_launch.py \
     world:=/opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/no_roof_small_warehouse/no_roof_small_warehouse.world \
     map:=/opt/ros/humble/share/aws_robomaker_small_warehouse_world/maps/005/map.yaml \
     headless:=False \
@@ -1320,15 +1320,15 @@ $ source /usr/share/gazebo/setup.bash
 <img src="dc/demos/../../images/demos-tb3_aws_minio_pgsql-gz-1.png" alt="Gazebo" /></p>
 <h2 id="terminal-2-start-dc-1"><a class="header" href="#terminal-2-start-dc-1">Terminal 2: Start DC</a></h2>
 <p>Run colcon build to compile the workspace:</p>
-<pre><code class="language-bash">$ colcon build
+<pre><code class="language-bash">colcon build
 </code></pre>
 <p>Now, start the demo:</p>
-<pre><code class="language-bash">$ ros2 launch dc_demos tb3_simulation_influxdb.launch.py
+<pre><code class="language-bash">ros2 launch dc_demos tb3_simulation_influxdb.launch.py
 </code></pre>
 <p>The robot will start collecting data.</p>
 <h2 id="terminal-3-start-autonomous-navigation-1"><a class="header" href="#terminal-3-start-autonomous-navigation-1">Terminal 3: Start autonomous navigation</a></h2>
 <p>Execute</p>
-<pre><code class="language-bash">$ ros2 run nav2_simple_commander demo_security
+<pre><code class="language-bash">ros2 run nav2_simple_commander demo_security
 </code></pre>
 <p>The robot will start moving and you will be able to see all visualizations activated in RViz:</p>
 <p><img src="dc/demos/../../images/demos-tb3_aws_minio_pgsql-rviz-2.png" alt="RViz-moving" /></p>
@@ -1336,6 +1336,7 @@ $ source /usr/share/gazebo/setup.bash
 <h3 id="with-grafana-dashboard"><a class="header" href="#with-grafana-dashboard">With Grafana Dashboard</a></h3>
 <p>Open your browser at <a href="http://localhost:3000">http://localhost:3000</a> and login with admin/admin</p>
 <p><img src="dc/demos/../../images/grafana-1.png" alt="Grafana-1" /></p>
+<p><video src="../../images/demos-tb3_aws_minio_pgsql-streamlit.webm" controls="controls"></video></p>
 <h2 id="understanding-the-configuration-1"><a class="header" href="#understanding-the-configuration-1">Understanding the configuration</a></h2>
 <div id="admonition-info-1" class="admonition info">
 <div class="admonition-title">
@@ -1409,18 +1410,18 @@ $ source /usr/share/gazebo/setup.bash
 <p>PostgreSQL will be used as database storage for our JSON. Later on, backend engineers can make requests on those JSON based on measurement requested and time range. To start it, <a href="dc/demos/../infrastructure_setup/postgresql.html">follow the steps</a></p>
 <h2 id="setup-the-ros-environment"><a class="header" href="#setup-the-ros-environment">Setup the ROS environment</a></h2>
 <p>In each, terminal, source your environment and setup turtlebot configuration:</p>
-<pre><code class="language-bash">$ source /opt/ros/humble/setup.bash
-$ source install/setup.bash
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/aws_robomaker_small_warehouse_world/models/
-$ export TURTLEBOT3_MODEL=waffle
+<pre><code class="language-bash">source /opt/ros/humble/setup.bash
+source install/setup.bash
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/aws_robomaker_small_warehouse_world/models/
+export TURTLEBOT3_MODEL=waffle
 </code></pre>
 <h2 id="start-rviz"><a class="header" href="#start-rviz">Start RVIZ</a></h2>
-<pre><code class="language-bash">$ ros2 run rviz2 rviz2 -d ${PWD}/install/dc_simulation/share/dc_simulation/rviz/qrcodes.rviz
+<pre><code class="language-bash">ros2 run rviz2 rviz2 -d ${PWD}/install/dc_simulation/share/dc_simulation/rviz/qrcodes.rviz
 </code></pre>
 <h2 id="start-navigation-1"><a class="header" href="#start-navigation-1">Start Navigation</a></h2>
 <p>Then, start the Turtlebot launchfile with custom parameters to start the QRcode world:</p>
-<pre><code class="language-bash">$ ros2 launch nav2_bringup tb3_simulation_launch.py \
+<pre><code class="language-bash">ros2 launch nav2_bringup tb3_simulation_launch.py \
     headless:=False \
     x_pose:=&quot;-16.679400&quot; \
     y_pose:=&quot;-15.300200&quot; \
@@ -1440,7 +1441,7 @@ $ export TURTLEBOT3_MODEL=waffle
 <p>Set the robot position using the &quot;2D Pose Estimate&quot; button.</p>
 <h2 id="start-dc-1"><a class="header" href="#start-dc-1">Start DC</a></h2>
 <p>Execute</p>
-<pre><code class="language-bash">$ ros2 launch dc_demos tb3_qrcodes_minio_pgsql.launch.py
+<pre><code class="language-bash">ros2 launch dc_demos tb3_qrcodes_minio_pgsql.launch.py
 </code></pre>
 <p>With this, all data will be transmitted</p>
 <h2 id="understanding-the-configuration-2"><a class="header" href="#understanding-the-configuration-2">Understanding the configuration</a></h2>
@@ -1830,7 +1831,7 @@ measurement_server:
 <p>In this demo, we will go through a new use case. You want to create your own measurement or use an existing measurement provided by <code>dc_measurements</code> but not exactly, you want to add a field and also modify the JSON schema. That is what we will do here: create a new plugin, inside dc_demos, another package, create a plugin and load it</p>
 <p>We are going to take the uptime measurement, change it slightly and collect the data.</p>
 <p>To test it, run:</p>
-<pre><code class="language-bash">$ ros2 launch dc_demos uptime_custom_stdout.launch.py
+<pre><code class="language-bash">ros2 launch dc_demos uptime_custom_stdout.launch.py
 </code></pre>
 <h2 id="json-schema"><a class="header" href="#json-schema">JSON schema</a></h2>
 <p>Located in <code>dc_demos/plugins/measurements/json/uptime_custom.json</code>:</p>
@@ -3892,7 +3893,7 @@ flb_tcp:
 </div>
 </div>
 <p>Copy the configuration and save it as a yaml file, and then run:</p>
-<pre><code class="language-bash">$ ros2 launch dc_bringup params_file:=&quot;my_file.yaml&quot;
+<pre><code class="language-bash">ros2 launch dc_bringup params_file:=&quot;my_file.yaml&quot;
 </code></pre>
 <h2 id="running-the-examples"><a class="header" href="#running-the-examples">Running the examples</a></h2>
 <h3 id="example-1-uptime-to-fluent-bit-stdout-every-second-and-flush-data-every-second"><a class="header" href="#example-1-uptime-to-fluent-bit-stdout-every-second-and-flush-data-every-second">Example 1: Uptime to Fluent Bit Stdout every second and flush data every second</a></h3>
@@ -4020,7 +4021,7 @@ measurement_server:
       enable_validator: false                           # By default, StringStamped message does not have a JSON schema since it uses custom input data
 </code></pre>
 <p>You will then need in another terminal to publish data on the input topic (<code>/hello-world</code>)</p>
-<pre><code class="language-bash">$ ros2 topic pub -r 1 /hello-world dc_interfaces/msg/StringStamped  &quot;{data: '{\&quot;hello\&quot;:\&quot;world\&quot;}'}&quot;
+<pre><code class="language-bash">ros2 topic pub -r 1 /hello-world dc_interfaces/msg/StringStamped  &quot;{data: '{\&quot;hello\&quot;:\&quot;world\&quot;}'}&quot;
 </code></pre>
 <h3 id="example-7-custom-ros-message-to-stdout-every-time-it-is-published"><a class="header" href="#example-7-custom-ros-message-to-stdout-every-time-it-is-published">Example 7: Custom ROS message to Stdout every time it is published</a></h3>
 <pre><code class="language-yaml">destination_server:
@@ -4048,12 +4049,12 @@ measurement_server:
 <p>PostgreSQL is a powerful, open source object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads. The origins of PostgreSQL date back to 1986 as part of the POSTGRES project at the University of California at Berkeley and has more than 35 years of active development on the core platform.</p>
 <h2 id="start-with-docker-compose"><a class="header" href="#start-with-docker-compose">Start with docker compose</a></h2>
 <p>Execute:</p>
-<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+<pre><code class="language-bash">./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=influxdb
   --install-type=docker
 </code></pre>
 <h2 id="start-natively"><a class="header" href="#start-natively">Start natively</a></h2>
-<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+<pre><code class="language-bash">./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=influxdb
   --install-type=native
 </code></pre>
@@ -4065,21 +4066,21 @@ measurement_server:
 <p>To start the ip camera example, to save video feeds from rtsp cameras, you can optionally create a virtual video feed if you don't have an ip camera, for testing purpose:</p>
 <h2 id="start-rtsp-server"><a class="header" href="#start-rtsp-server">Start RTSP Server</a></h2>
 <p>A <a href="https://www.wikiwand.com/en/Real_Time_Streaming_Protocol">rtsp</a> server. I use <strong>mediamtx</strong> available <a href="https://github.com/aler9/mediamtx/releases">here</a>. Download from the <a href="https://github.com/aler9/mediamtx/releases">release page</a> and start it:</p>
-<pre><code class="language-bash">$ ./mediamtx
+<pre><code class="language-bash">./mediamtx
 </code></pre>
 <p>If the port is already used, download the <a href="https://github.com/aler9/mediamtx/blob/main/mediamtx.yml">configuration</a> and edit the <code>hlsAddress</code> parameter. You would then need to start it this way:</p>
-<pre><code class="language-bash">$ ./mediamtx conf.yml
+<pre><code class="language-bash">./mediamtx conf.yml
 </code></pre>
 <h2 id="create-a-virtual-camera"><a class="header" href="#create-a-virtual-camera">Create a virtual camera</a></h2>
 <p>This is optional, and only useful if you want to not use a camera</p>
 <p>You will first need to install some packages:</p>
-<pre><code class="language-bash">$ sudo apt-get install v4l-utils v4l2loopback
+<pre><code class="language-bash">sudo apt-get install v4l-utils v4l2loopback
 </code></pre>
 <p>And start a virtual camera device:</p>
-<pre><code class="language-bash">$ sudo modprobe v4l2loopback
+<pre><code class="language-bash">sudo modprobe v4l2loopback
 </code></pre>
 <p>Now check its path:</p>
-<pre><code class="language-bash">$ v4l2-ctl --list-devices
+<pre><code class="language-bash">v4l2-ctl --list-devices
 
 Dummy video device (0x0000) (platform:v4l2loopback-000):
 	/dev/video2
@@ -4114,12 +4115,12 @@ Dummy video device (0x0000) (platform:v4l2loopback-000):
 <p>MinIO is an object storage solution that provides an Amazon Web Services S3-compatible API and supports all core S3 features. MinIO is built to deploy anywhere - public or private cloud, baremetal infrastructure, orchestrated environments, and edge infrastructure.</p>
 <h2 id="start-with-docker-compose-1"><a class="header" href="#start-with-docker-compose-1">Start with Docker compose</a></h2>
 <p>Execute:</p>
-<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+<pre><code class="language-bash">./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=minio \
   --install-type=docker
 </code></pre>
 <h2 id="start-natively-1"><a class="header" href="#start-natively-1">Start natively</a></h2>
-<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+<pre><code class="language-bash">./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=minio \
   --install-type=native
 </code></pre>
@@ -4142,13 +4143,13 @@ Password: <em>minioadmin</em></p>
 <p>PostgreSQL is a powerful, open source object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads. The origins of PostgreSQL date back to 1986 as part of the POSTGRES project at the University of California at Berkeley and has more than 35 years of active development on the core platform.</p>
 <h2 id="start-with-docker-compose-2"><a class="header" href="#start-with-docker-compose-2">Start with docker compose</a></h2>
 <p>Execute:</p>
-<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+<pre><code class="language-bash">./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=postgresql \
   --install-type=docker
 </code></pre>
 <h2 id="start-natively-2"><a class="header" href="#start-natively-2">Start natively</a></h2>
 <p>Execute:</p>
-<pre><code class="language-bash">$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+<pre><code class="language-bash">./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=postgresql \
   --install-type=native
 </code></pre>
@@ -4159,7 +4160,7 @@ Password: <em>minioadmin</em></p>
 </div><footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/postgresql.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="cli-tools"><a class="header" href="#cli-tools">CLI tools</a></h1>
 <h2 id="list-plugins"><a class="header" href="#list-plugins">List plugins</a></h2>
 <p>You can list available plugins by running the CLI tool:</p>
-<pre><code>$ ros2 run dc_cli list_plugins --help
+<pre><code>ros2 run dc_cli list_plugins --help
 
 
  Usage: list_plugins [OPTIONS] COMMAND [ARGS]...
@@ -4229,19 +4230,19 @@ Password: <em>minioadmin</em></p>
 <h4 id="ros"><a class="header" href="#ros">ROS</a></h4>
 <p>Follow the steps to build your workspace and install dependencies in the <a href="dc/./setup.html">setup section</a></p>
 <p>Then, install the pre-commit hook:</p>
-<pre><code class="language-bash">$ pre-commit install
+<pre><code class="language-bash">pre-commit install
 </code></pre>
 <p>You are now ready to write some code, commit and follow the standards with the pre-commit hook.</p>
 <h4 id="docs"><a class="header" href="#docs">Docs</a></h4>
 <p>To build the docs, install cargo:</p>
-<pre><code class="language-bash">$ sudo apt-get install cargo
+<pre><code class="language-bash">sudo apt-get install cargo
 </code></pre>
 <p>Then install mdbook (the command line tool to create books with Markdown) and its plugins:</p>
-<pre><code class="language-bash">$ cargo install mdbook mdbook-admonish mdbook-linkcheck mdbook-mermaid
+<pre><code class="language-bash">cargo install mdbook mdbook-admonish mdbook-linkcheck mdbook-mermaid
 </code></pre>
 <p>Start the doc locally with auto-refresh on edit:</p>
-<pre><code class="language-bash">$ export PATH=$PATH:$HOME/.cargo/bin
-$ mdbook serve -p 8000 -n 0.0.0.0
+<pre><code class="language-bash">export PATH=$PATH:$HOME/.cargo/bin
+mdbook serve -p 8000 -n 0.0.0.0
 </code></pre>
 <p>And open <a href="http://localhost:8000">localhost:8000</a></p>
 <p>Now that you open see the documentation locally, open the doc folder of the repository and edit the Markdown files you need. More about mdbook can be found <a href="https://rust-lang.github.io/mdBook/guide/installation.html">here</a></p>

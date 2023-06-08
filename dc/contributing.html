@@ -213,19 +213,19 @@
 <h4 id="ros"><a class="header" href="#ros">ROS</a></h4>
 <p>Follow the steps to build your workspace and install dependencies in the <a href="./setup.html">setup section</a></p>
 <p>Then, install the pre-commit hook:</p>
-<pre><code class="language-bash">$ pre-commit install
+<pre><code class="language-bash">pre-commit install
 </code></pre>
 <p>You are now ready to write some code, commit and follow the standards with the pre-commit hook.</p>
 <h4 id="docs"><a class="header" href="#docs">Docs</a></h4>
 <p>To build the docs, install cargo:</p>
-<pre><code class="language-bash">$ sudo apt-get install cargo
+<pre><code class="language-bash">sudo apt-get install cargo
 </code></pre>
 <p>Then install mdbook (the command line tool to create books with Markdown) and its plugins:</p>
-<pre><code class="language-bash">$ cargo install mdbook mdbook-admonish mdbook-linkcheck mdbook-mermaid
+<pre><code class="language-bash">cargo install mdbook mdbook-admonish mdbook-linkcheck mdbook-mermaid
 </code></pre>
 <p>Start the doc locally with auto-refresh on edit:</p>
-<pre><code class="language-bash">$ export PATH=$PATH:$HOME/.cargo/bin
-$ mdbook serve -p 8000 -n 0.0.0.0
+<pre><code class="language-bash">export PATH=$PATH:$HOME/.cargo/bin
+mdbook serve -p 8000 -n 0.0.0.0
 </code></pre>
 <p>And open <a href="http://localhost:8000">localhost:8000</a></p>
 <p>Now that you open see the documentation locally, open the doc folder of the repository and edit the Markdown files you need. More about mdbook can be found <a href="https://rust-lang.github.io/mdBook/guide/installation.html">here</a></p>

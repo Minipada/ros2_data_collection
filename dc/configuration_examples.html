@@ -190,7 +190,7 @@
 </div>
 </div>
 <p>Copy the configuration and save it as a yaml file, and then run:</p>
-<pre><code class="language-bash">$ ros2 launch dc_bringup params_file:=&quot;my_file.yaml&quot;
+<pre><code class="language-bash">ros2 launch dc_bringup params_file:=&quot;my_file.yaml&quot;
 </code></pre>
 <h2 id="running-the-examples"><a class="header" href="#running-the-examples">Running the examples</a></h2>
 <h3 id="example-1-uptime-to-fluent-bit-stdout-every-second-and-flush-data-every-second"><a class="header" href="#example-1-uptime-to-fluent-bit-stdout-every-second-and-flush-data-every-second">Example 1: Uptime to Fluent Bit Stdout every second and flush data every second</a></h3>
@@ -318,7 +318,7 @@ measurement_server:
       enable_validator: false                           # By default, StringStamped message does not have a JSON schema since it uses custom input data
 </code></pre>
 <p>You will then need in another terminal to publish data on the input topic (<code>/hello-world</code>)</p>
-<pre><code class="language-bash">$ ros2 topic pub -r 1 /hello-world dc_interfaces/msg/StringStamped  &quot;{data: '{\&quot;hello\&quot;:\&quot;world\&quot;}'}&quot;
+<pre><code class="language-bash">ros2 topic pub -r 1 /hello-world dc_interfaces/msg/StringStamped  &quot;{data: '{\&quot;hello\&quot;:\&quot;world\&quot;}'}&quot;
 </code></pre>
 <h3 id="example-7-custom-ros-message-to-stdout-every-time-it-is-published"><a class="header" href="#example-7-custom-ros-message-to-stdout-every-time-it-is-published">Example 7: Custom ROS message to Stdout every time it is published</a></h3>
 <pre><code class="language-yaml">destination_server:

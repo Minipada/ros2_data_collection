@@ -181,21 +181,21 @@
 <p>To start the ip camera example, to save video feeds from rtsp cameras, you can optionally create a virtual video feed if you don't have an ip camera, for testing purpose:</p>
 <h2 id="start-rtsp-server"><a class="header" href="#start-rtsp-server">Start RTSP Server</a></h2>
 <p>A <a href="https://www.wikiwand.com/en/Real_Time_Streaming_Protocol">rtsp</a> server. I use <strong>mediamtx</strong> available <a href="https://github.com/aler9/mediamtx/releases">here</a>. Download from the <a href="https://github.com/aler9/mediamtx/releases">release page</a> and start it:</p>
-<pre><code class="language-bash">$ ./mediamtx
+<pre><code class="language-bash">./mediamtx
 </code></pre>
 <p>If the port is already used, download the <a href="https://github.com/aler9/mediamtx/blob/main/mediamtx.yml">configuration</a> and edit the <code>hlsAddress</code> parameter. You would then need to start it this way:</p>
-<pre><code class="language-bash">$ ./mediamtx conf.yml
+<pre><code class="language-bash">./mediamtx conf.yml
 </code></pre>
 <h2 id="create-a-virtual-camera"><a class="header" href="#create-a-virtual-camera">Create a virtual camera</a></h2>
 <p>This is optional, and only useful if you want to not use a camera</p>
 <p>You will first need to install some packages:</p>
-<pre><code class="language-bash">$ sudo apt-get install v4l-utils v4l2loopback
+<pre><code class="language-bash">sudo apt-get install v4l-utils v4l2loopback
 </code></pre>
 <p>And start a virtual camera device:</p>
-<pre><code class="language-bash">$ sudo modprobe v4l2loopback
+<pre><code class="language-bash">sudo modprobe v4l2loopback
 </code></pre>
 <p>Now check its path:</p>
-<pre><code class="language-bash">$ v4l2-ctl --list-devices
+<pre><code class="language-bash">v4l2-ctl --list-devices
 
 Dummy video device (0x0000) (platform:v4l2loopback-000):
 	/dev/video2
