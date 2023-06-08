@@ -5,7 +5,7 @@ This is the most minimal example to run DC, it collects the system uptime every 
 Let's run it:
 
 ```bash
-$ ros2 launch dc_demos uptime_stdout.launch.py
+ros2 launch dc_demos uptime_stdout.launch.py
 ```
 
 At the end, the data is displayed:

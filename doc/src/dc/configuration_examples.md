@@ -11,7 +11,7 @@ By here, you must have built the workspace following the [setup guide](./setup.m
 Copy the configuration and save it as a yaml file, and then run:
 
 ```bash
-$ ros2 launch dc_bringup params_file:="my_file.yaml"
+ros2 launch dc_bringup params_file:="my_file.yaml"
 ```
 
 ## Running the examples
@@ -160,7 +160,7 @@ measurement_server:
 You will then need in another terminal to publish data on the input topic (`/hello-world`)
 
 ```bash
-$ ros2 topic pub -r 1 /hello-world dc_interfaces/msg/StringStamped  "{data: '{\"hello\":\"world\"}'}"
+ros2 topic pub -r 1 /hello-world dc_interfaces/msg/StringStamped  "{data: '{\"hello\":\"world\"}'}"
 ```
 
 ### Example 7: Custom ROS message to Stdout every time it is published

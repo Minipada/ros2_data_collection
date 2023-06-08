@@ -30,17 +30,17 @@ PostgreSQL will be used as database storage for our JSON. Later on, backend engi
 In each, terminal, source your environment and setup turtlebot configuration:
 
 ```bash
-$ source /opt/ros/humble/setup.bash
-$ source install/setup.bash
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/aws_robomaker_small_warehouse_world/models/
-$ export TURTLEBOT3_MODEL=waffle
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/aws_robomaker_small_warehouse_world/models/
+export TURTLEBOT3_MODEL=waffle
 ```
 
 ## Start RVIZ
 
 ```bash
-$ ros2 run rviz2 rviz2 -d ${PWD}/install/dc_simulation/share/dc_simulation/rviz/qrcodes.rviz
+ros2 run rviz2 rviz2 -d ${PWD}/install/dc_simulation/share/dc_simulation/rviz/qrcodes.rviz
 ```
 
 ## Start Navigation
@@ -48,7 +48,7 @@ $ ros2 run rviz2 rviz2 -d ${PWD}/install/dc_simulation/share/dc_simulation/rviz/
 Then, start the Turtlebot launchfile with custom parameters to start the QRcode world:
 
 ```bash
-$ ros2 launch nav2_bringup tb3_simulation_launch.py \
+ros2 launch nav2_bringup tb3_simulation_launch.py \
     headless:=False \
     x_pose:="-16.679400" \
     y_pose:="-15.300200" \
@@ -74,7 +74,7 @@ Set the robot position using the "2D Pose Estimate" button.
 Execute
 
 ```bash
-$ ros2 launch dc_demos tb3_qrcodes_minio_pgsql.launch.py
+ros2 launch dc_demos tb3_qrcodes_minio_pgsql.launch.py
 ```
 
 With this, all data will be transmitted

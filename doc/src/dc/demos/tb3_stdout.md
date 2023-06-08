@@ -14,10 +14,10 @@ Since RViz is pretty verbose, using 2 terminal windows will help reading the JSO
 In each, terminal, source your environment and setup turtlebot configuration:
 
 ```bash
-$ source /opt/ros/humble/setup.bash
-$ source install/setup.bash
-$ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-$ export TURTLEBOT3_MODEL=waffle
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+export TURTLEBOT3_MODEL=waffle
 ```
 
 ## Start Navigation
@@ -25,7 +25,7 @@ $ export TURTLEBOT3_MODEL=waffle
 Then, start the Turtlebot launchfile:
 
 ```bash
-$ ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False
+ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False
 ```
 
 RViz and Gazebo will start: you should now see the robot in Gazebo, and the map on RViz.
@@ -41,7 +41,7 @@ If any problem occur, please take a look at the [nav2 official documentation](ht
 Execute
 
 ```bash
-$ ros2 launch dc_demos tb3_simulation_stdout.launch.py
+ros2 launch dc_demos tb3_simulation_stdout.launch.py
 ```
 
 At the end, the data is displayed:

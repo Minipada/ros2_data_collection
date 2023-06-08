@@ -7,14 +7,14 @@ Adminer (formerly phpMinAdmin) is a full-featured database management tool writt
 Execute:
 
 ```bash
-$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=adminer \
   --install-type=docker
 ```
 
 ## Start natively
 ```bash
-$ ./tools/infrastructure/scripts/install_infrastructure.bash \
+./tools/infrastructure/scripts/install_infrastructure.bash \
   --tool=adminer \
   --install-type=native
 ```
