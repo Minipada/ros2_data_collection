@@ -12,7 +12,7 @@ void FlbFilesMetrics::onConfigure()
   auto node = getNode();
 
   std::string package_directory = ament_index_cpp::get_package_prefix("fluent_bit_plugins");
-  plugin_path_default_ = package_directory + "/lib/flb-out_files_metrics.so";
+  plugin_path_default_ = package_directory + "/lib/out_files_metrics.so";
   nav2_util::declare_parameter_if_not_declared(node, destination_name_ + ".plugin_path",
                                                rclcpp::ParameterValue(plugin_path_default_));
   node->get_parameter(destination_name_ + ".plugin_path", plugin_path_);

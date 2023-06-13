@@ -66,8 +66,8 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 	for {
 		// Extract Record
 		ret, ts, record = output.GetRecord(dec)
-		if ts == nil {
-			fmt.Printf("[flb-minio] Could not get records, ts = nil\n")
+		if ret != 0 || ts == nil {
+			fmt.Printf("[flb-minio] Could not get records, ts = %d, ret = %d\n", ts, ret)
 			break
 		}
 		if ret != 0 {
@@ -147,7 +147,7 @@ func FLBPluginFlush(data unsafe.Pointer, length C.int, tag *C.char) int {
 		}
 
 		size := len(src_paths)
-		fmt.Println("Size:", size)
+		fmt.Println("[flb-minio] Files to upload:", size)
 		for _, path := range upload_paths {
 			fmt.Println(path)
 		}
