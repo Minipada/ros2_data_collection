@@ -424,6 +424,12 @@ public:
       {
         condition_counter_published_ = 0;
       }
+
+      if (init_max_measurements_ != 0 && init_max_measurements_ != -1 &&
+          init_max_measurements_ == init_counter_published_)
+      {
+        collect_timer_.reset();
+      }
     }
     else
     {
