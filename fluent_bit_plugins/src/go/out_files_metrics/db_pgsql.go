@@ -79,11 +79,9 @@ func PGSQLInit(plugin unsafe.Pointer) error {
 		uploaded BOOLEAN NOT NULL,
 		on_filesystem BOOLEAN NOT NULL,
         deleted BOOLEAN NOT NULL,
-		ignored BOOLEAN NOT NULL,
         storage_type TEXT NOT NULL,
         content_type TEXT NOT NULL,
 		size INTEGER NOT NULL,
-		created_at TIMESTAMP NOT NULL,
 		updated_at TIMESTAMP NOT NULL)`, pgsql_config.table)
 		_, err := db.ExecContext(ctx, query)
 		if err != nil {

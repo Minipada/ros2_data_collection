@@ -15,7 +15,7 @@ destination_server:
       http_port: 2020
       in_storage_type: "filesystem"
       in_storage_pause_on_chunks_overlimit: "off"
-    destination_plugins: ["flb_pgsql", "flb_minio"]
+    destination_plugins: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
     flb_files_metrics:
       plugin: "dc_destinations/FlbFilesMetrics"
       inputs: ["/dc/measurement/map", "/dc/measurement/camera"]
@@ -30,17 +30,17 @@ destination_server:
         bucket: "mybucket"
         src_fields:
           [
+            "local_paths.raw",
             "local_paths.pgm",
             "local_paths.yaml",
-            "local_paths.inspected",
-            "local_paths.inspected",
+            "local_paths.png",
           ]
         upload_fields:
           [
+            "remote_paths.minio.raw",
             "remote_paths.minio.pgm",
             "remote_paths.minio.yaml",
-            "remote_paths.minio.inspected",
-            "remote_paths.minio.inspected",
+            "remote_paths.minio.png",
           ]
       pgsql:
         host: "127.0.0.1"

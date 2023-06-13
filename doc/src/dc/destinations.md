@@ -78,7 +78,7 @@ destination_server:
     flb_minio:
       plugin: "dc_destinations/FlbMinIO"
       inputs: ["/dc/group/map"]
-      plugin_path: "/root/ws/src/ros2_data_collection/dc_destinations/flb_plugins/lib/flb-out_minio.so"
+      plugin_path: "/root/ws/src/ros2_data_collection/dc_destinations/flb_plugins/lib/out_minio.so"
       endpoint: 127.0.0.1:9000
       access_key_id: HgJdDWeDQBiBWCwm
       secret_access_key: plCMROO2VMZIKiqEwDd80dLJUCRvJ9iu
