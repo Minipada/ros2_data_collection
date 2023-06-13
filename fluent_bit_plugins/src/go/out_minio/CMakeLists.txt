@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
-project(flb-out_minio)
+project(out_minio)
 
 set(GO_COMPILER go)
-set(MINIO_LIBRARY flb-out_minio.so)
-set(MINIO_INCLUDE flb-out_minio.h)
+set(MINIO_LIBRARY out_minio.so)
+set(MINIO_INCLUDE out_minio.h)
 
 add_custom_target(plugin_out_minio_install ALL
     COMMAND ${GO_COMPILER} get
