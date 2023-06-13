@@ -3404,7 +3404,7 @@ uptime:
     flb_minio:
       plugin: &quot;dc_destinations/FlbMinIO&quot;
       inputs: [&quot;/dc/group/map&quot;]
-      plugin_path: &quot;/root/ws/src/ros2_data_collection/dc_destinations/flb_plugins/lib/flb-out_minio.so&quot;
+      plugin_path: &quot;/root/ws/src/ros2_data_collection/dc_destinations/flb_plugins/lib/out_minio.so&quot;
       endpoint: 127.0.0.1:9000
       access_key_id: HgJdDWeDQBiBWCwm
       secret_access_key: plCMROO2VMZIKiqEwDd80dLJUCRvJ9iu
@@ -3585,7 +3585,7 @@ flb_file:
 <tr><td><strong>minio.src_fields</strong></td><td>JSON fields containing local paths for Minio.</td><td>str</td><td>N/A (Mandatory)</td></tr>
 <tr><td><strong>minio.upload_fields</strong></td><td>JSON fields containing remote paths for Minio.</td><td>str</td><td>N/A (Mandatory)</td></tr>
 <tr><td><strong>minio.use_ssl</strong></td><td>Use SSL for Minio.</td><td>bool</td><td>true</td></tr>
-<tr><td><strong>plugin_path</strong></td><td>Shared library path compiled by go.</td><td>str</td><td>&quot;{package_share_directory}/flb_plugins/lib/flb-out_files_metrics.so&quot;</td></tr>
+<tr><td><strong>plugin_path</strong></td><td>Shared library path compiled by go.</td><td>str</td><td>&quot;{package_share_directory}/flb_plugins/lib/out_files_metrics.so&quot;</td></tr>
 <tr><td><strong>pgsql.database</strong></td><td>Database name to connect to.</td><td>str</td><td>&lt;system_username&gt;</td></tr>
 <tr><td><strong>pgsql.host</strong></td><td>Hostname/IP address of the PostgreSQL instance.</td><td>str</td><td>&quot;127.0.0.1&quot;</td></tr>
 <tr><td><strong>pgsql.password</strong></td><td>Password of PostgreSQL username.</td><td>str</td><td>&quot;&quot;</td></tr>
@@ -3703,7 +3703,7 @@ flb_influxdb:
 <p>The <a href="https://docs.fluentbit.io/manual/pipeline/outputs/s3">S3 plugin</a> sends data as JSON to S3 or Minio but does not send files (e.g yaml, images etc.).</p>
 <h2 id="parameters-35"><a class="header" href="#parameters-35">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
-<tr><td><strong>plugin_path</strong></td><td>Shared library path compiled by go.</td><td>str</td><td>&quot;{package_share_directory}/flb_plugins/lib/flb-out_minio.so&quot;</td></tr>
+<tr><td><strong>plugin_path</strong></td><td>Shared library path compiled by go.</td><td>str</td><td>&quot;{package_share_directory}/flb_plugins/lib/out_minio.so&quot;</td></tr>
 <tr><td><strong>endpoint</strong></td><td>Endpoint for the S3 API. An endpoint can contain scheme and port.</td><td>str</td><td>&quot;127.0.0.1:9000&quot;</td></tr>
 <tr><td><strong>access_key_id</strong></td><td>Access keys are long-term credentials for an IAM user or the AWS account root user.</td><td>str</td><td>N/A (mandatory)</td></tr>
 <tr><td><strong>secret_access_key</strong></td><td>Secret-like password to connect along he access key id.</td><td>str</td><td>N/A (mandatory)</td></tr>
