@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.5)
 project(fluent_bit_vendor)
 
 find_package(ament_cmake REQUIRED)
-find_package(dc_interfaces REQUIRED)
 
 set(cmake_commands)
 set(cmake_configure_args -Wno-dev)
@@ -56,10 +55,10 @@ else()
 endif()
 set(fluent_bit_external_project_dir ${CMAKE_CURRENT_BINARY_DIR}/fluent_bit)
 include(ExternalProject)
-set(fluent_bit_version "1ab360f79c73627a0789551287c074aa2016bf26")
-# message(${CMAKE_CURRENT_LIST_DIR})
+set(fluent_bit_version "fix-2.1.3")
+
 ExternalProject_Add(fluent_bit_src
-  GIT_REPOSITORY https://github.com/fluent/fluent-bit
+  GIT_REPOSITORY https://github.com/minipada/fluent-bit
   GIT_TAG ${fluent_bit_version}
   GIT_CONFIG advice.detachedHead=false
   PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_LIST_DIR}/mpack.patch
@@ -76,59 +75,139 @@ ExternalProject_Add(fluent_bit_src
     -DFLB_OUT_PGSQL=On
     -DFLB_SHARED_LIB=On
     -DFLB_PROXY_GO=On
+    -DSYSTEMD_UNITDIR=${fluent_bit_external_project_dir}/install/system
     ${cmake_configure_args}
 )
 
 externalproject_get_property(fluent_bit_src INSTALL_DIR)
-set(fluent_bit_INCLUDE_DIR "${INSTALL_DIR}/../fluent_bit/install/include")
+set(fluent_bit_INCLUDE_DIR "${INSTALL_DIR}/../fluent_bit/install/include/")
 set(fluent_bit_LIB_DIR "${INSTALL_DIR}/../fluent_bit/install/lib/fluent-bit")
 
-set(FB_SRC_LIB_INCLUDE_DIR  "${INSTALL_DIR}/src/fluent_bit_src/lib")
+set(FB_SRC_LIB_INCLUDE_DIR "${INSTALL_DIR}/src/fluent_bit_src/lib")
+set(FB_SRC_INCLUDE_DIR "${INSTALL_DIR}/src/fluent_bit_src/include/fluent-bit")
 
-set(ares_INCLUDE_FILES
-  "${FB_SRC_LIB_INCLUDE_DIR}/c-ares-1.18.1/include/ares.h"
-  "${FB_SRC_LIB_INCLUDE_DIR}/c-ares-1.18.1/include/ares_build.h"
-  "${FB_SRC_LIB_INCLUDE_DIR}/c-ares-1.18.1/include/ares_rules.h"
-  "${FB_SRC_LIB_INCLUDE_DIR}/c-ares-1.18.1/include/ares_version.h"
-)
-set(cfl_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/cfl/include/cfl")
-set(cmetrics_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/cmetrics/include/cmetrics")
-set(ctraces_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/ctraces/include/ctraces")
-set(jsmn_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/jsmn")
-set(mkcore_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/monkey/include/monkey/mk_core")
-set(mpack_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/mpack-amalgamation-1.1/src/mpack")
-set(msgpack_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/msgpack-c/include/msgpack")
-set(msgpack_INCLUDE_FILES
-  "${FB_SRC_LIB_INCLUDE_DIR}/msgpack-c/include/msgpack.h"
-)
-set(prometheus_remote_write_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/cmetrics/include/prometheus_remote_write")
-set(xxhash_INCLUDE_FILES
-  "${FB_SRC_LIB_INCLUDE_DIR}/cfl/lib/xxhash/xxhash.h"
-  "${FB_SRC_LIB_INCLUDE_DIR}/cfl/lib/xxhash/xxh3.h"
-)
-
-install(DIRECTORY ${fluent_bit_INCLUDE_DIR}/ DESTINATION include)
-install(FILES ${ares_INCLUDE_FILES} DESTINATION include)
-install(DIRECTORY ${cfl_INCLUDE_DIR}/ DESTINATION include/cfl)
-install(DIRECTORY ${cmetrics_INCLUDE_DIR}/ DESTINATION include/cmetrics)
-install(DIRECTORY ${ctraces_INCLUDE_DIR}/ DESTINATION include/ctraces)
-install(DIRECTORY ${jsmn_INCLUDE_DIR}/ DESTINATION include/jsmn)
-install(DIRECTORY ${mkcore_INCLUDE_DIR}/ DESTINATION include/mk_core)
-install(DIRECTORY ${mpack_INCLUDE_DIR}/ DESTINATION include/mpack)
-install(DIRECTORY ${msgpack_INCLUDE_DIR}/ DESTINATION include/msgpack)
-install(FILES ${msgpack_INCLUDE_FILES} DESTINATION include)
-install(DIRECTORY ${prometheus_remote_write_INCLUDE_DIR}/ DESTINATION include/prometheus_remote_write)
-install(FILES ${xxhash_INCLUDE_FILES}/ DESTINATION include)
-
-install(FILES ${fluent_bit_LIB_DIR}/libfluent-bit.so DESTINATION lib)
-install(FILES ${INSTALL_DIR}/src/fluent_bit_src/library/libmsgpack-c-static.a DESTINATION lib)
-install(FILES ${INSTALL_DIR}/src/fluent_bit_src/library/libfluent-bit.a DESTINATION lib)
-
-install(DIRECTORY cmake DESTINATION share/${PROJECT_NAME})
+set(ares_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/c-ares-1.19.0/include/")
+set(cfl_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/cfl/include/cfl/")
+set(config_format_INCLUDE_DIR "${FB_SRC_INCLUDE_DIR}/config_format/")
+set(cmetrics_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/cmetrics/include/cmetrics/")
+set(ctraces_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/ctraces/include/ctraces/")
+set(jsmn_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/jsmn/")
+set(mkcore_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/monkey/include/monkey/mk_core/")
+set(mpack_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/mpack-amalgamation-1.1/src/mpack/")
+set(msgpack_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/msgpack-c/include/msgpack/")
+set(prometheus_remote_write_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/cmetrics/include/prometheus_remote_write/")
+set(xxhash_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/cfl/lib/xxhash/")
 
 install(
-  DIRECTORY ${INSTALL_DIR}/src/fluent_bit_src/cmake
-  DESTINATION share/${PROJECT_NAME}
+  DIRECTORY
+    ${fluent_bit_INCLUDE_DIR}
+    ${ares_INCLUDE_DIR}
+  DESTINATION
+    include
+  USE_SOURCE_PERMISSIONS
+)
+
+install(
+  DIRECTORY
+    ${cfl_INCLUDE_DIR}
+  DESTINATION
+    include/cfl
+  USE_SOURCE_PERMISSIONS
+)
+install(
+  DIRECTORY
+    ${config_format_INCLUDE_DIR}
+  DESTINATION
+    include/config_format
+  USE_SOURCE_PERMISSIONS
+)
+install(
+  DIRECTORY
+    ${cmetrics_INCLUDE_DIR}
+  DESTINATION
+    include/cmetrics
+  USE_SOURCE_PERMISSIONS
+)
+install(
+  DIRECTORY
+    ${ctraces_INCLUDE_DIR}
+  DESTINATION
+    include/ctraces
+  USE_SOURCE_PERMISSIONS
+)
+install(
+  DIRECTORY
+    ${jsmn_INCLUDE_DIR}
+  DESTINATION
+    include/jsmn
+  USE_SOURCE_PERMISSIONS
+)
+install(
+  DIRECTORY
+    ${mkcore_INCLUDE_DIR}
+  DESTINATION
+    include/mk_core
+  USE_SOURCE_PERMISSIONS
+)
+install(
+  DIRECTORY
+    ${mpack_INCLUDE_DIR}
+  DESTINATION
+    include/mpack
+  USE_SOURCE_PERMISSIONS
+)
+install(
+  DIRECTORY
+    ${msgpack_INCLUDE_DIR}
+  DESTINATION
+    include/msgpack
+  USE_SOURCE_PERMISSIONS
+)
+install(
+  DIRECTORY
+    ${prometheus_remote_write_INCLUDE_DIR}
+  DESTINATION
+    include/prometheus_remote_write
+  USE_SOURCE_PERMISSIONS
+)
+install(
+  DIRECTORY
+    ${xxhash_INCLUDE_DIR}
+  DESTINATION
+    include
+  USE_SOURCE_PERMISSIONS
+)
+install(
+  FILES
+    ${fluent_bit_LIB_DIR}/libfluent-bit.so
+  DESTINATION
+    lib
+)
+install(
+  FILES
+    ${INSTALL_DIR}/src/fluent_bit_src/library/libmsgpack-c-static.a
+  DESTINATION
+    lib
+)
+install(
+  FILES
+    ${INSTALL_DIR}/src/fluent_bit_src/library/libfluent-bit.a
+  DESTINATION
+    lib
+)
+install(
+  DIRECTORY
+    cmake
+  DESTINATION
+    share/${PROJECT_NAME}
+  USE_SOURCE_PERMISSIONS
+)
+install(
+  DIRECTORY
+    ${INSTALL_DIR}/src/fluent_bit_src/cmake
+  DESTINATION
+    share/${PROJECT_NAME}
+  USE_SOURCE_PERMISSIONS
 )
 
 ament_export_include_directories(include)
