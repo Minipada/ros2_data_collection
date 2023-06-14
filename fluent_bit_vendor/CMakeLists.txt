@@ -95,6 +95,7 @@ set(jsmn_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/jsmn/")
 set(mkcore_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/monkey/include/monkey/mk_core/")
 set(mpack_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/mpack-amalgamation-1.1/src/mpack/")
 set(msgpack_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/msgpack-c/include/msgpack/")
+set(msgpack_INCLUDE_FILES "${FB_SRC_LIB_INCLUDE_DIR}/msgpack-c/include/msgpack.h")
 set(prometheus_remote_write_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/cmetrics/include/prometheus_remote_write/")
 set(xxhash_INCLUDE_DIR "${FB_SRC_LIB_INCLUDE_DIR}/cfl/lib/xxhash/")
 
@@ -104,7 +105,6 @@ install(
     ${ares_INCLUDE_DIR}
   DESTINATION
     include
-  USE_SOURCE_PERMISSIONS
 )
 
 install(
@@ -112,70 +112,66 @@ install(
     ${cfl_INCLUDE_DIR}
   DESTINATION
     include/cfl
-  USE_SOURCE_PERMISSIONS
 )
 install(
   DIRECTORY
     ${config_format_INCLUDE_DIR}
   DESTINATION
     include/config_format
-  USE_SOURCE_PERMISSIONS
 )
 install(
   DIRECTORY
     ${cmetrics_INCLUDE_DIR}
   DESTINATION
     include/cmetrics
-  USE_SOURCE_PERMISSIONS
 )
 install(
   DIRECTORY
     ${ctraces_INCLUDE_DIR}
   DESTINATION
     include/ctraces
-  USE_SOURCE_PERMISSIONS
 )
 install(
   DIRECTORY
     ${jsmn_INCLUDE_DIR}
   DESTINATION
     include/jsmn
-  USE_SOURCE_PERMISSIONS
 )
 install(
   DIRECTORY
     ${mkcore_INCLUDE_DIR}
   DESTINATION
     include/mk_core
-  USE_SOURCE_PERMISSIONS
 )
 install(
   DIRECTORY
     ${mpack_INCLUDE_DIR}
   DESTINATION
     include/mpack
-  USE_SOURCE_PERMISSIONS
 )
 install(
   DIRECTORY
     ${msgpack_INCLUDE_DIR}
   DESTINATION
     include/msgpack
-  USE_SOURCE_PERMISSIONS
+)
+install(
+  FILES
+    ${msgpack_INCLUDE_FILES}
+  DESTINATION
+  include
 )
 install(
   DIRECTORY
     ${prometheus_remote_write_INCLUDE_DIR}
   DESTINATION
     include/prometheus_remote_write
-  USE_SOURCE_PERMISSIONS
 )
 install(
   DIRECTORY
     ${xxhash_INCLUDE_DIR}
   DESTINATION
     include
-  USE_SOURCE_PERMISSIONS
 )
 install(
   FILES
@@ -200,14 +196,12 @@ install(
     cmake
   DESTINATION
     share/${PROJECT_NAME}
-  USE_SOURCE_PERMISSIONS
 )
 install(
   DIRECTORY
     ${INSTALL_DIR}/src/fluent_bit_src/cmake
   DESTINATION
     share/${PROJECT_NAME}
-  USE_SOURCE_PERMISSIONS
 )
 
 ament_export_include_directories(include)
