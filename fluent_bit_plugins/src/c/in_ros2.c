@@ -125,9 +125,9 @@ void data_callback(const void* msgin)
     char* pack;
     ctx->buf = msg->data.data;
     ctx->buf_len = msg->data.capacity;
-    flb_debug("buf_len: %ld, buf: '%s'", ctx->buf_len, ctx->buf);
+    flb_debug("buf_len: %d, buf: '%s'", ctx->buf_len, ctx->buf);
 
-    int ret = flb_pack_json(ctx->buf, ctx->buf_len, &pack, &pack_size, &root_type);
+    int ret = flb_pack_json(ctx->buf, ctx->buf_len, &pack, &pack_size, &root_type, NULL);
     if (ret == FLB_ERR_JSON_PART)
     {
       flb_warn("Data incomplete, waiting for more...");
