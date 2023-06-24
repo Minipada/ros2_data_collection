@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Stops",
+  "description": "Robot stops",
+  "properties": {
+    "start_time": {
+      "description": "UTC Timestamp when it stopped",
+      "type": "number"
+    },
+    "end_time": {
+      "description": "UTC Timestamp when it started again",
+      "type": "number"
+    },
+    "duration": {
+      "description": "Stop duration",
+      "type": "number"
+    }
+  },
+  "type": "object"
+}
