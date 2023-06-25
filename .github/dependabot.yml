@@ -6,3 +6,19 @@ updates:
       interval: "daily"
     security:
       open-pull-requests-limit: 5
+    path-filters:
+      - path: "requirements.txt"
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    security:
+      open-pull-requests-limit: 5
+    path-filters:
+      - path: "requirements-dev.txt"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    security:
+      open-pull-requests-limit: 5
