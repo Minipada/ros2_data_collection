@@ -2,9 +2,8 @@
 #ifndef DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__CAMERA_HPP_
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__CAMERA_HPP_
 
-#include <cv_bridge/cv_bridge.h>
-
 #include <boost/algorithm/string/replace.hpp>
+#include <cv_bridge/cv_bridge.hpp>
 #include <filesystem>
 #include <opencv2/highgui.hpp>
 

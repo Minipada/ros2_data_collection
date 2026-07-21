@@ -11,7 +11,6 @@
     <build_depend>dc_common</build_depend>
 
     <exec_depend>launch_ros</exec_depend>
-    <exec_depend>dc_destinations</exec_depend>
     <exec_depend>dc_group</exec_depend>
     <exec_depend>dc_measurements</exec_depend>
     <exec_depend>dc_services</exec_depend>
