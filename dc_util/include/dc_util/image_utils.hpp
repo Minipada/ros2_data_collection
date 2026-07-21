@@ -1,8 +1,7 @@
 #ifndef DC_UTIL__IMAGE_UTILS_HPP_
 #define DC_UTIL__IMAGE_UTILS_HPP_
 
-#include <cv_bridge/cv_bridge.h>
-
+#include <cv_bridge/cv_bridge.hpp>
 #include <iostream>
 #include <numeric>
 #include <regex>

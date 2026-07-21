@@ -1,7 +1,6 @@
-#include <cv_bridge/cv_bridge.h>
-
 #include <boost/algorithm/string/replace.hpp>
 #include <chrono>
+#include <cv_bridge/cv_bridge.hpp>
 #include <memory>
 #include <opencv2/highgui.hpp>
 #include <string>

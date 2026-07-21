@@ -162,19 +162,8 @@ def generate_launch_description():
                 parameters=[configured_params],
                 arguments=["--ros-args", "--log-level", log_level],
             ),
-            Node(
-                package="dc_destinations",
-                executable="destination_server",
-                name="destination_server",
-                output={
-                    "stdout": "screen",
-                    "stderr": "screen",
-                },
-                respawn=use_respawn,
-                respawn_delay=2.0,
-                parameters=[configured_params],
-                arguments=["--ros-args", "--log-level", log_level],
-            ),
+            # destination_server (dc_destinations) is COLCON_IGNOREd on the jazzy line pending
+            # the DC 2.0 embedded-Fluent-Bit demolition slice (#241/#242) and is not launched here.
             Node(
                 package="dc_lifecycle_manager",
                 executable="lifecycle_manager",
@@ -188,12 +177,9 @@ def generate_launch_description():
                     {
                         "autostart": autostart,
                         "node_names": [
-                            "destination_server",
-                            "destination_server",
-                            "measurement_server",
                             "measurement_server",
                         ],
-                        "transitions": ["configure", "activate", "configure", "activate"],
+                        "transitions": ["configure", "activate"],
                         "bond_timeout": 10.0,
                     },
                 ],
@@ -255,6 +241,8 @@ def generate_launch_description():
                 parameters=[configured_params],
                 arguments=["--ros-args", "--log-level", log_level],
             ),
+            # destination_server (dc_destinations) is COLCON_IGNOREd on the jazzy line pending
+            # the DC 2.0 embedded-Fluent-Bit demolition slice (#241/#242) and is not loaded here.
             LoadComposableNodes(
                 target_container=container_name,
                 composable_node_descriptions=[
@@ -265,12 +253,6 @@ def generate_launch_description():
                         parameters=[configured_params],
                     ),
                     ComposableNode(
-                        package="dc_destinations",
-                        plugin="destination_server::DestinationServer",
-                        name="destination_server",
-                        parameters=[configured_params],
-                    ),
-                    ComposableNode(
                         package="dc_lifecycle_manager",
                         plugin="dc_lifecycle_manager::LifecycleManager",
                         name="lifecycle_manager_dc",
@@ -278,12 +260,9 @@ def generate_launch_description():
                             {
                                 "autostart": autostart,
                                 "node_names": [
-                                    "destination_server",
-                                    "destination_server",
-                                    "measurement_server",
                                     "measurement_server",
                                 ],
-                                "transitions": ["configure", "activate", "configure", "activate"],
+                                "transitions": ["configure", "activate"],
                                 "bond_timeout": 10.0,
                             },
                         ],
