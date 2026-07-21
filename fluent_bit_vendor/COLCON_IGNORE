@@ -1,3 +1,3 @@
-Ignored on the jazzy line pending the DC 2.0 embedded-Fluent-Bit demolition slice
-(replaced by the external Vector shipper + Rust bridge). See issue #242 and the
-dc-2.0 epic (#241). Do not delete this package; it is dropped, not removed.
+Ignored on the jazzy line pending the DC 2.0 embedded-Fluent-Bit demolition (ADR-0001:
+replace the embedded Fluent Bit engine with an external Vector shipper). See the dc-2.0
+epic (#241). Do not delete this package; it is dropped, not removed.
