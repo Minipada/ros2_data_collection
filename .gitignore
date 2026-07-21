@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/ros
 # Edit at https://www.toptal.com/developers/gitignore?templates=ros
 
+### run_once.sh ###
+.worktrees/
+
 ### DOC ###
 doc/book
 doc/src/dc/requirements/html/
