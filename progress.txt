@@ -1,1 +1,35 @@
 ## Completed tasks
+
+### #242 - DC 2.0 S1: Port C++ core to ROS 2 Jazzy (Fluent Bit packages ignored)
+
+- Added `COLCON_IGNORE` (with a comment pointing at the demolition slice / #241 / #242) to
+  `dc_destinations`, `fluent_bit_plugins`, and `fluent_bit_vendor` — the embedded-Fluent-Bit
+  path being replaced by the Vector shipper + Rust bridge later in the epic.
+- Renamed `cv_bridge/cv_bridge.h` -> `cv_bridge/cv_bridge.hpp` includes (Jazzy dropped the old
+  header) in `dc_measurements` camera plugin and `dc_util` image/service utils.
+- Removed a stale Humble-era FIXME comment in `dc_lifecycle_manager/CMakeLists.txt` about a
+  `tf2_geometry_msgs` header that Jazzy already ships.
+- Updated `dc_bringup`'s launch file and `package.xml` to stop launching/depending on
+  `destination_server`, which is now ignored, so `measurement_server` + `lifecycle_manager`
+  still come up cleanly on their own.
+- Verified via a read-only structural survey (package.xml/CMakeLists/grep across all C++
+  sources) that the rest of the codebase was already Jazzy-clean: `nav2_util::LifecycleNode`
+  usage, typed `declare_parameter` calls, `.hpp` interface includes, executors, and
+  `PLUGINLIB_EXPORT_CLASS` sites all match current Jazzy APIs. Confirmed via `apt-cache policy`
+  against a real `ros:jazzy-ros-base` image that every remaining rosdep key (nav2_util,
+  nav2_msgs, bondcpp, diagnostic_updater, cv_bridge, rclpy_message_converter,
+  nlohmann_json_schema_validator_vendor, realsense2_description, nav2_bringup,
+  nav2_simple_commander, nav2_lifecycle_manager, tf2_geometry_msgs, message_filters) has a
+  released Jazzy package.
+- **Not done / left for CI**: could not run an actual `colcon build` on Jazzy in this sandbox —
+  the host disk is nearly full (both `/` and `/home` partitions), and a full workspace rosdep
+  install (nav2, OpenCV/ffmpeg, boost, etc.) exhausted available space mid-install. Ran
+  `pre-commit` locally instead (skipping the disk-heavy `build-doc` hook and two hooks broken by
+  local tool-environment gaps unrelated to this diff: `poetry-requirements`, `pycln`); all
+  hooks relevant to the changed files passed (`black`, `isort`, `clang-format`, XML lint, ROS
+  package metadata checks). A real `colcon build --packages-skip dc_destinations
+  fluent_bit_plugins fluent_bit_vendor` on Jazzy (CI once #249 lands, or a machine with more
+  disk) is still needed to fully close the "colcon build succeeds" and "gtest suites pass"
+  acceptance criteria.
+- CI/Docker (`.github/workflows/`, `docker/*/Dockerfile`) intentionally left targeting `humble`
+  — out of scope here per the earlier decision to handle Jazzy CI separately (#249).
