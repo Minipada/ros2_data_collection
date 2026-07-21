@@ -14,10 +14,6 @@ set(dependencies
   rclcpp_components
   std_msgs
   std_srvs
-  # FIXME nav2_util
-  # In file included from /root/ros2_data_collection/src/ros2_data_collection/dc_lifecycle_manager/src/lifecycle_manager_client.cpp:8:
-  #/opt/ros/humble/include/nav2_util/geometry_utils.hpp:25:10: fatal error: tf2_geometry_msgs/tf2_geometry_msgs.hpp: No such file or directory
-  #   25 | #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
   tf2_geometry_msgs
 )
 
