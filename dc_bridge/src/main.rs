@@ -3,17 +3,18 @@
 //! topic subscriptions and a readiness service. Only buildable inside a colcon workspace
 //! with the ros2_rust (`rclrs`) toolchain — see dc_bridge/README.md.
 //!
-//! Built and run end-to-end in a real ROS 2 Jazzy + ros2_rust Docker environment: `colcon
-//! build` succeeds, the node locates and supervises the vendored Vector binary, the
-//! `~/ready` service answers correctly, and a `StringStamped` Record published on a
-//! subscribed topic reaches Vector's console sink. See dc_bridge/README.md for the
-//! verification recipe and the two real API mismatches it caught.
+//! Built, run, and `colcon test`-covered (see tests/end_to_end.rs) in a real ROS 2
+//! Jazzy + ros2_rust Docker environment: the node locates and supervises the vendored
+//! Vector binary, the `~/ready` service answers correctly, a `StringStamped` Record
+//! published on a subscribed topic reaches Vector's console sink, and the supervised
+//! Vector process stops when dc_bridge receives SIGINT/SIGTERM. See dc_bridge/README.md
+//! for the verification recipe and the three real bugs it caught.
 
+use dc_bridge_core::{readiness, vector_config};
 use dc_bridge_core::{
     BridgeConfig, Forwarder, ForwarderConfig, Readiness, Record, Supervisor, SupervisorConfig,
     TopicConfig,
 };
-use dc_bridge_core::{readiness, vector_config};
 use dc_interfaces::msg::StringStamped;
 use rclrs::{CreateBasicExecutor, RclrsErrorFilter};
 use std::net::SocketAddr;
@@ -70,40 +71,59 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let vector_config_path = std::env::temp_dir().join("dc_bridge_vector.toml");
     std::fs::write(&vector_config_path, vector_config::render(forward_addr))?;
 
-    let mut supervisor = Supervisor::new(SupervisorConfig::vector(vector_binary, vector_config_path));
-    supervisor.start()?;
+    let supervisor = Arc::new(Mutex::new(Supervisor::new(SupervisorConfig::vector(
+        vector_binary,
+        vector_config_path,
+    ))));
+    supervisor.lock().unwrap().start()?;
 
     let readiness = Readiness::new();
     {
         let readiness = readiness.clone();
-        let mut supervisor = supervisor;
+        let supervisor = supervisor.clone();
         std::thread::spawn(move || loop {
-            let _ = supervisor.poll_restart();
+            let _ = supervisor.lock().unwrap().poll_restart();
             let ready = readiness::probe(forward_addr, Duration::from_millis(200));
             readiness.set_ready(ready);
             std::thread::sleep(Duration::from_millis(250));
         });
     }
 
-    let forwarder = Arc::new(Mutex::new(Forwarder::new(ForwarderConfig::new(forward_addr))));
+    // rclrs has no signal handling yet (`Context::ok()` unconditionally returns true, so
+    // `executor.spin()` below never returns on its own): without this, dc_bridge exiting
+    // via Ctrl-C, `ros2 launch` shutdown, or a plain SIGTERM would leave the supervised
+    // Vector process running forever, orphaned. SIGKILL still can't be caught (a Unix
+    // limit, not specific to this), but that's now the only path that leaks it.
+    {
+        let supervisor = supervisor.clone();
+        ctrlc::set_handler(move || {
+            supervisor.lock().unwrap().stop();
+            std::process::exit(0);
+        })?;
+    }
+
+    let forwarder = Arc::new(Mutex::new(Forwarder::new(ForwarderConfig::new(
+        forward_addr,
+    ))));
 
     // Held so subscriptions aren't dropped once out of scope; the node keeps them alive.
     let mut _subscriptions = Vec::new();
     for topic_config in config.topics {
         let forwarder = forwarder.clone();
         let tag = topic_config.tag.clone();
-        let subscription = node.create_subscription(
-            topic_config.topic.as_str(),
-            move |msg: StringStamped| {
+        let subscription =
+            node.create_subscription(topic_config.topic.as_str(), move |msg: StringStamped| {
                 let timestamp = header_stamp_to_system_time(&msg.header);
                 let payload = serde_json::from_str(&msg.data)
                     .unwrap_or_else(|_| serde_json::Value::String(msg.data.clone()));
                 let record = Record::new(tag.clone(), timestamp, payload);
                 if let Err(e) = forwarder.lock().unwrap().send(&record) {
-                    eprintln!("dc_bridge: failed to forward record on tag '{}': {}", tag, e);
+                    eprintln!(
+                        "dc_bridge: failed to forward record on tag '{}': {}",
+                        tag, e
+                    );
                 }
-            },
-        )?;
+            })?;
         _subscriptions.push(subscription);
     }
 
