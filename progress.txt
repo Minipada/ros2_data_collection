@@ -370,3 +370,97 @@ only ever been checked by hand, interactively, in the (now torn-down) Docker ses
   toolchain (every DC 2.0 Rust-package slice so far — #242, #243, #244, and this one —
   has rebuilt the same ad hoc Docker environment from scratch in-session, with nothing
   checked into the repo to reuse it; worth its own follow-up issue).
+
+### #246 - DC 2.0 S5: S3/file/console blessed destinations + passthrough contract
+
+- Completed the blessed Destination set in `dc_bridge_core::render` (ADR-0003):
+  `DestinationKind` now has `Postgres`, `S3`, `File`, and `Console` variants.
+  - `s3` → Vector `aws_s3` sink: required `bucket`; optional `region`, `endpoint`
+    (MinIO/Ceph-style custom endpoints), `key_prefix`, `access_key_id` +
+    `secret_access_key` (validated as both-or-neither — half a pair is a clear
+    `IncompleteS3Auth` startup error; omit both for ambient AWS credentials),
+    `force_path_style`, and `batch_timeout_secs` (>0 validated; omitted, Vector's own
+    300 s default applies). `secret_access_key` gets the same `$VAR` env expansion as
+    the Postgres `password`. `encoding.codec = "json"` (Vector 0.57 removed the `ndjson`
+    codec name; newline/array framing is the sink's default) + the shared disk buffer.
+  - `file` → Vector `file` sink: required `path` (Vector template syntax passes
+    through), JSON encoding, disk buffer.
+  - `console` → Vector `console` sink on stdout, JSON encoding, deliberately *no* disk
+    buffer (debugging sink; a disk buffer would replay old output across restarts).
+  - `time_key`/`time_format` moved from `PostgresParams` up to `Destination` — they
+    were always destination-generic (the Humble flb destinations all had them), and the
+    normalize transform now renders one `if includes([tags], .tag)` block per
+    destination of any type. `RawPostgresParams` became the flat, all-types
+    `RawDestinationParams` (mirroring how ROS declares `<name>.*` params).
+- **Aligned the passthrough routing contract with ADR-0003: routes are now per-Tag, not
+  per-Destination.** #245 rendered one route branch per Destination (`dc.<name>`); the
+  ADR and #246 fix the public name as `dc.<tag>` — one branch per distinct Tag across
+  every Destination's `inputs`, branch id = the Tag verbatim, so Records for Tag
+  `dc.measurement.uptime` are consumable at `dc.dc.measurement.uptime` (leading `dc.` =
+  the route transform id, rest = Tag). Blessed sinks now consume their inputs' per-Tag
+  routes (`sink_inputs`), and custom snippets consume exactly the same names. Verified
+  against the real Vector 0.57.0 binary *before* writing the Rust (downloaded, checksum
+  -verified against vector_vendor's pin): route ids containing dots validate and
+  resolve, multi-`--config` merging works, and duplicate component ids across files are
+  rejected by `vector validate` with a clear error.
+- Passthrough (`custom_config_files` parameter): a list of raw Vector TOML snippet
+  paths ($VAR-expanded), read at startup and validated by the new pure
+  `validate_custom_config_files`: must parse as TOML, define ≥1 component, and not
+  claim component ids owned by the rendered config (`dc_bridge_in`,
+  `dc_bridge_normalize`, `dc` — destination names colliding with those are now also
+  rejected via `ReservedDestinationName`, a latent #245 gap since a destination named
+  `dc` would have collided with the route transform) or by another snippet — each its
+  own `RenderError` variant with a test. Snippets are handed to Vector as extra
+  `--config` args (`SupervisorConfig::vector` now takes a path list). As a backstop,
+  `main.rs` runs `vector validate --no-environment` over the merged config set before
+  the Supervisor starts (catches what pure checks can't: dangling `dc.<tag>` inputs,
+  bad sink options), so every bad-snippet path is a loud startup error naming the file,
+  never a supervised-Vector crash loop.
+- Gold-file tests: 3 new fixtures (`s3_minio.toml` — custom endpoint + auth +
+  force_path_style + batch timeout; `s3_aws.toml` — region + ambient credentials;
+  `file_and_console.toml`) generated from the renderer's real output like #245's, and
+  all 6 fixtures (3 regenerated for per-Tag routes) `vector validate`d against the real
+  pinned binary. `dc_bridge_core` is now at 55 tests (`cargo test`, no ROS needed);
+  `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check` clean.
+- Docs: `doc/src/dc/destinations.md` got a "DC 2.0 (Jazzy)" section — config contract
+  with param tables for all four blessed types, **the `dc.<tag>` routing contract
+  documented as stable public API**, and a `custom_config_files` walkthrough with an
+  un-blessed `http` sink example; the Fluent Bit content below it is explicitly marked
+  Legacy (Humble). `dc_bringup/params/dc_params.yaml` gained commented-out s3 (MinIO)/
+  file/console/custom_config_files examples next to the live `pgsql` block.
+- **Verified in the real ROS 2 Jazzy + ros2_rust Docker environment** (fresh container
+  from the image the #244/#245 sessions built, this worktree bind-mounted;
+  `colcon build --packages-up-to dc_bridge` succeeded first try — zero changes needed
+  to main.rs). `tests/end_to_end.rs` grew from 3 to 6 `colcon test`-integrated tests:
+  - `published_record_reaches_minio_bucket_when_reachable` — the MinIO demo acceptance
+    criterion, automated: a real MinIO container (bucket `dc-records`, anonymous public
+    read so the test asserts via plain `curl` + `zcat` instead of a SigV4 client),
+    dc_bridge configured purely via ROS params, marker Record published, object
+    content-asserted (skips with a clear message when nothing listens on :9000).
+  - `custom_snippet_ships_records_to_an_http_sink` — the passthrough demo acceptance
+    criterion, automated and fully self-contained: the test binds its own TCP listener,
+    plays the HTTP server (200-everything, Content-Length-aware request capture), and
+    asserts a snippet's un-blessed `http` sink consuming `dc.dc.measurement.uptime`
+    delivers the published Record.
+  - `colliding_custom_snippet_fails_startup_loudly` — snippet claiming the `pgsql` sink
+    id must make dc_bridge exit non-zero naming the component, not start anyway.
+  - The 3 existing tests (readiness, SIGTERM, Postgres row) unchanged in behavior.
+- **Found and fixed one real bug the expanded test matrix caught**: with the containers
+  down (skip-path run), `stops_the_supervised_vector_process_on_sigterm` intermittently
+  failed — the ctrlc handler was installed only *after* `Supervisor::start()`, so a
+  SIGTERM landing in that window (widened in practice by the new `vector validate`
+  startup step shifting test timing) killed dc_bridge via the OS default and orphaned
+  the freshly-spawned Vector (the leftover PID from the failing run was later found as
+  a zombie, confirming the diagnosis). Fixed by installing the handler *before* the
+  first `start()` and making `Supervisor::start` a no-op after `stop()` (new
+  `start_never_spawns_after_stop` regression test alongside #245's
+  `poll_restart_never_respawns_after_stop`).
+- Final matrix: `colcon test --packages-select dc_bridge` green 6/6 tests in 11
+  consecutive runs — 5 with MinIO+Postgres up (real store assertions), 5 with both down
+  (skip paths) post-fix, plus the initial run — with zero leftover Vector processes.
+  `pre-commit` clean on every changed file (same `build-doc`/`poetry-requirements`/
+  `pycln`/`flake8` skips as #242-#245, all broken/heavy independent of this diff).
+- **Not done / left for follow-up**: `receives: files` (the File pipeline, ADR-0005,
+  issues #247/#248); a reusable committed dev container for the Jazzy+ros2_rust
+  toolchain (still rebuilt ad hoc per session — the #245 image was reused here, which
+  helped, but nothing is checked in).

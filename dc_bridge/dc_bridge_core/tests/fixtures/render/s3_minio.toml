@@ -1,24 +1,30 @@
 data_dir = "/home/dc/.dc/buffer"
 
-[sinks.pgsql]
-endpoint = "postgres://dc:hunter2@127.0.0.1:5432/dc"
-inputs = ["dc.dc.group.robot"]
-table = "dc"
-type = "postgres"
+[sinks.minio]
+bucket = "dc-records"
+endpoint = "http://127.0.0.1:9000"
+force_path_style = true
+inputs = [
+    "dc.dc.group.robot",
+    "dc.dc.measurement.uptime",
+]
+key_prefix = "robot1/"
+region = "us-east-1"
+type = "aws_s3"
 
-[sinks.pgsql.buffer]
+[sinks.minio.auth]
+access_key_id = "minioadmin"
+secret_access_key = "minioadmin"
+
+[sinks.minio.batch]
+timeout_secs = 2
+
+[sinks.minio.buffer]
 max_size = 268435488
 type = "disk"
 
-[sinks.pgsql_archive]
-endpoint = "postgres://dc:hunter2@127.0.0.1:5432/dc"
-inputs = ["dc.dc.measurement.uptime"]
-table = "dc"
-type = "postgres"
-
-[sinks.pgsql_archive.buffer]
-max_size = 268435488
-type = "disk"
+[sinks.minio.encoding]
+codec = "json"
 
 [sources.dc_bridge_in]
 address = "127.0.0.1:24224"
@@ -40,11 +46,8 @@ type = "vrl"
 [transforms.dc_bridge_normalize]
 inputs = ["dc_bridge_in"]
 source = """
-if includes(["dc.group.robot"], .tag) {
+if includes(["dc.group.robot", "dc.measurement.uptime"], .tag) {
   .date = to_float(to_unix_timestamp!(.timestamp, unit: "nanoseconds")) / 1000000000.0
-}
-if includes(["dc.measurement.uptime"], .tag) {
-  .date = format_timestamp!(.timestamp, format: "%Y-%m-%dT%H:%M:%S%.9f")
 }
 """
 type = "remap"

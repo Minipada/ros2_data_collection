@@ -8,14 +8,16 @@
 //! --packages-select dc_bridge` runs under the hood, via colcon-ros-cargo's
 //! `AmentCargoTestTask`, which is just `cargo test`); it cannot run in a plain sandbox.
 //!
-//! Since the config renderer (ADR-0003) only produces blessed-Destination sinks
-//! (`postgres` today — no more bare `console` sink to grep stdout for), every test here
-//! configures dc_bridge with one `postgres`-type destination. Two tests only need Vector
-//! to have started successfully (readiness, shutdown behavior) and work against a
-//! Postgres endpoint that need not actually be reachable; the third test verifies a
-//! Record actually lands in a real Postgres row, and skips itself with a clear message
-//! when no Postgres is reachable at the configured address, since `cargo test`/`colcon
-//! test` must still pass cleanly on machines with no Postgres container running.
+//! Since the config renderer (ADR-0003) only produces blessed-Destination sinks — no
+//! more bare tracer-bullet console sink — most tests here configure dc_bridge with one
+//! `postgres`-type destination. Two tests only need Vector to have started successfully
+//! (readiness, shutdown behavior) and work against a Postgres endpoint that need not
+//! actually be reachable; the Postgres- and MinIO-backed tests verify a Record actually
+//! lands in the real downstream store, and skip themselves with a clear message when
+//! nothing is listening at the configured address, since `cargo test`/`colcon test`
+//! must still pass cleanly on machines without those containers running. The
+//! passthrough test (`custom_config_files`, ADR-0003) is fully self-contained: the test
+//! itself plays the un-blessed HTTP sink's server.
 
 use dc_interfaces::msg::StringStamped;
 use postgres::{Client, NoTls};
@@ -97,9 +99,15 @@ fn postgres_destination_args() -> Vec<String> {
 }
 
 fn spawn_dc_bridge(extra_args: &[String], stdout: Stdio, stderr: Stdio) -> std::process::Child {
-    let bin = env!("CARGO_BIN_EXE_dc_bridge");
     let mut args = postgres_destination_args();
     args.extend(extra_args.iter().cloned());
+    spawn_dc_bridge_with_args(&args, stdout, stderr)
+}
+
+/// Spawns the binary under test with exactly `args` — for tests whose destination
+/// isn't the shared `pgsql` one `postgres_destination_args` declares.
+fn spawn_dc_bridge_with_args(args: &[String], stdout: Stdio, stderr: Stdio) -> std::process::Child {
+    let bin = env!("CARGO_BIN_EXE_dc_bridge");
     Command::new(bin)
         .args(args)
         .stdout(stdout)
@@ -360,6 +368,345 @@ fn published_record_lands_in_postgres_when_reachable() {
         "expected `date` ({date}) to be a plausible Unix-epoch-seconds timestamp \
          between {before} and {after}"
     );
+}
+
+/// ADR-0003's passthrough contract, end to end: a raw Vector snippet listed in
+/// `custom_config_files` ships Records to an un-blessed sink type (`http`) by consuming
+/// the public per-Tag route `dc.dc.measurement.uptime` (`dc.<tag>` for Tag
+/// `dc.measurement.uptime`). The test itself plays the HTTP server on an ephemeral
+/// port, so this runs everywhere — no external container needed.
+#[test]
+fn custom_snippet_ships_records_to_an_http_sink() {
+    let _guard = PROCESS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+    let listener = std::net::TcpListener::bind("127.0.0.1:0")
+        .expect("failed to bind the test HTTP server socket");
+    let port = listener.local_addr().unwrap().port();
+    let received = Arc::new(Mutex::new(String::new()));
+    {
+        // Answers 200 to everything (including Vector's sink healthcheck) and collects
+        // every request into `received`; detached, dies with the test binary.
+        let received = received.clone();
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { continue };
+                let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
+                let mut request = Vec::new();
+                let mut chunk = [0u8; 4096];
+                loop {
+                    match std::io::Read::read(&mut stream, &mut chunk) {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => {
+                            request.extend_from_slice(&chunk[..n]);
+                            // Stop once the whole body announced by Content-Length has
+                            // arrived (the header separator alone isn't enough — the
+                            // body may land in a later read).
+                            let text = String::from_utf8_lossy(&request);
+                            if let Some((head, body)) = text.split_once("\r\n\r\n") {
+                                let content_length: usize = head
+                                    .lines()
+                                    .find_map(|l| {
+                                        let (k, v) = l.split_once(':')?;
+                                        k.eq_ignore_ascii_case("content-length")
+                                            .then(|| v.trim().parse().ok())?
+                                    })
+                                    .unwrap_or(0);
+                                if body.len() >= content_length {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                received
+                    .lock()
+                    .unwrap()
+                    .push_str(&String::from_utf8_lossy(&request));
+                let _ = std::io::Write::write_all(
+                    &mut stream,
+                    b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                );
+            }
+        });
+    }
+
+    let snippet_path = std::env::temp_dir().join(format!(
+        "dc_bridge_e2e_http_snippet_{}.toml",
+        std::process::id()
+    ));
+    std::fs::write(
+        &snippet_path,
+        format!(
+            r#"[sinks.e2e_http]
+type = "http"
+inputs = ["dc.dc.measurement.uptime"]
+uri = "http://127.0.0.1:{port}/ingest"
+encoding.codec = "json"
+batch.timeout_secs = 1
+"#
+        ),
+    )
+    .expect("failed to write the custom config snippet");
+
+    let mut child = spawn_dc_bridge(
+        &[
+            "-p".to_string(),
+            format!("custom_config_files:=[\"{}\"]", snippet_path.display()),
+        ],
+        Stdio::null(),
+        Stdio::null(),
+    );
+    assert!(
+        wait_for_ready(Instant::now() + Duration::from_secs(30)),
+        "dc_bridge's readiness service never reported ready within 30s with a \
+         custom_config_files snippet configured"
+    );
+
+    const MARKER_UPTIME_S: i32 = 653_421;
+    let context = rclrs::Context::default_from_env().expect("failed to create an rclrs context");
+    let executor = context.create_basic_executor();
+    let node = executor
+        .create_node("dc_bridge_end_to_end_http_test")
+        .expect("failed to create the test node");
+    let publisher = node
+        .create_publisher::<StringStamped>("/dc/measurement/uptime")
+        .expect("failed to create a publisher on /dc/measurement/uptime");
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap();
+    let mut message = StringStamped::default();
+    message.header.stamp.sec = now.as_secs() as i32;
+    message.header.stamp.nanosec = now.subsec_nanos();
+    message.data = format!(r#"{{"uptime_s": {MARKER_UPTIME_S}}}"#);
+
+    let marker_number = MARKER_UPTIME_S.to_string();
+    let deadline = Instant::now() + Duration::from_secs(30);
+    let mut delivered = false;
+    while !delivered && Instant::now() < deadline {
+        publisher
+            .publish(&message)
+            .expect("failed to publish the test Record");
+        std::thread::sleep(Duration::from_millis(300));
+        delivered = received.lock().unwrap().contains(&marker_number);
+    }
+
+    terminate(&mut child);
+    std::fs::remove_file(&snippet_path).ok();
+
+    assert!(
+        delivered,
+        "expected the custom http-sink snippet to deliver the published Record to the \
+         test HTTP server within 30s, but the marker never arrived; received so far:\n{}",
+        received.lock().unwrap()
+    );
+}
+
+/// "Invalid or colliding custom snippet names fail loudly at startup, not silently":
+/// a snippet claiming a component id the rendered config owns (the `pgsql` sink) must
+/// make dc_bridge itself exit non-zero with a clear error naming the file — not start
+/// up anyway, and not crash-loop the supervised Vector.
+#[test]
+fn colliding_custom_snippet_fails_startup_loudly() {
+    let _guard = PROCESS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+    let snippet_path = std::env::temp_dir().join(format!(
+        "dc_bridge_e2e_colliding_snippet_{}.toml",
+        std::process::id()
+    ));
+    std::fs::write(
+        &snippet_path,
+        "[sinks.pgsql]\ntype = \"console\"\ninputs = [\"dc.dc.measurement.uptime\"]\nencoding.codec = \"json\"\n",
+    )
+    .expect("failed to write the colliding snippet");
+
+    let mut child = spawn_dc_bridge(
+        &[
+            "-p".to_string(),
+            format!("custom_config_files:=[\"{}\"]", snippet_path.display()),
+        ],
+        Stdio::null(),
+        Stdio::piped(),
+    );
+
+    let deadline = Instant::now() + Duration::from_secs(20);
+    let status = loop {
+        match child.try_wait().expect("failed to poll dc_bridge") {
+            Some(status) => break Some(status),
+            None if Instant::now() >= deadline => break None,
+            None => std::thread::sleep(Duration::from_millis(100)),
+        }
+    };
+    let status = status.unwrap_or_else(|| {
+        terminate(&mut child);
+        std::fs::remove_file(&snippet_path).ok();
+        panic!(
+            "expected dc_bridge to exit at startup when a custom snippet collides with \
+             a rendered component, but it was still running after 20s"
+        );
+    });
+
+    let mut stderr = String::new();
+    if let Some(mut pipe) = child.stderr.take() {
+        let _ = std::io::Read::read_to_string(&mut pipe, &mut stderr);
+    }
+    std::fs::remove_file(&snippet_path).ok();
+
+    assert!(
+        !status.success(),
+        "expected a non-zero exit for a colliding custom snippet, got: {status}"
+    );
+    assert!(
+        stderr.contains("pgsql"),
+        "expected dc_bridge's startup error to name the colliding component; stderr:\n{stderr}"
+    );
+}
+
+/// Whether an S3-compatible server answers at 127.0.0.1:9000 (MinIO's default port) —
+/// used to skip the MinIO-backed test below on machines without one running.
+fn minio_reachable() -> bool {
+    let addr: SocketAddr = "127.0.0.1:9000"
+        .parse()
+        .expect("the MinIO address must parse");
+    TcpStream::connect_timeout(&addr, Duration::from_millis(500)).is_ok()
+}
+
+/// Exercises the `s3` blessed destination end-to-end against a real MinIO: dc_bridge is
+/// configured purely via ROS params (custom `endpoint`, explicit credentials,
+/// `force_path_style`, a short `batch_timeout_secs`), a Record is published, and the
+/// test asserts an object containing the marker value lands in the bucket.
+///
+/// Requires a MinIO at 127.0.0.1:9000 with credentials `minioadmin`/`minioadmin` and an
+/// existing bucket `dc-records` whose anonymous access policy allows public
+/// read/list (`mc anonymous set public`), so the assertion side can use plain
+/// unauthenticated HTTP (via `curl`) instead of a full SigV4 client; objects are
+/// gzip-decoded with `zcat` (Vector's `aws_s3` default compression).
+#[test]
+fn published_record_reaches_minio_bucket_when_reachable() {
+    if !minio_reachable() {
+        eprintln!(
+            "skipping published_record_reaches_minio_bucket_when_reachable: nothing \
+             listening at 127.0.0.1:9000; start a MinIO container (minioadmin/minioadmin) \
+             with a public-read bucket 'dc-records' to run this test"
+        );
+        return;
+    }
+
+    let _guard = PROCESS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+    const MARKER_UPTIME_S: i32 = 786_534;
+    // A unique prefix per run, so the assertion below can't match an object left over
+    // from an earlier run against the same long-lived MinIO container.
+    let prefix = format!(
+        "e2e/{}_{}/",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+
+    let mut child = spawn_dc_bridge_with_args(
+        &[
+            "--ros-args".to_string(),
+            "-p".to_string(),
+            format!("shipper.data_dir:={}", unique_data_dir()),
+            "-p".to_string(),
+            "destinations:=[\"minio\"]".to_string(),
+            "-p".to_string(),
+            "minio.type:=s3".to_string(),
+            "-p".to_string(),
+            "minio.inputs:=[\"/dc/measurement/uptime\"]".to_string(),
+            "-p".to_string(),
+            "minio.bucket:=dc-records".to_string(),
+            "-p".to_string(),
+            "minio.endpoint:=http://127.0.0.1:9000".to_string(),
+            "-p".to_string(),
+            "minio.region:=us-east-1".to_string(),
+            "-p".to_string(),
+            "minio.access_key_id:=minioadmin".to_string(),
+            "-p".to_string(),
+            "minio.secret_access_key:=minioadmin".to_string(),
+            "-p".to_string(),
+            "minio.force_path_style:=true".to_string(),
+            "-p".to_string(),
+            format!("minio.key_prefix:={prefix}"),
+            "-p".to_string(),
+            "minio.batch_timeout_secs:=2".to_string(),
+        ],
+        Stdio::null(),
+        Stdio::null(),
+    );
+    assert!(
+        wait_for_ready(Instant::now() + Duration::from_secs(30)),
+        "dc_bridge's readiness service never reported ready within 30s with an s3-type \
+         destination configured"
+    );
+
+    let context = rclrs::Context::default_from_env().expect("failed to create an rclrs context");
+    let executor = context.create_basic_executor();
+    let node = executor
+        .create_node("dc_bridge_end_to_end_minio_test")
+        .expect("failed to create the test node");
+    let publisher = node
+        .create_publisher::<StringStamped>("/dc/measurement/uptime")
+        .expect("failed to create a publisher on /dc/measurement/uptime");
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap();
+    let mut message = StringStamped::default();
+    message.header.stamp.sec = now.as_secs() as i32;
+    message.header.stamp.nanosec = now.subsec_nanos();
+    message.data = format!(r#"{{"uptime_s": {MARKER_UPTIME_S}}}"#);
+
+    let deadline = Instant::now() + Duration::from_secs(45);
+    let mut found = false;
+    while !found && Instant::now() < deadline {
+        publisher
+            .publish(&message)
+            .expect("failed to publish the test Record");
+        std::thread::sleep(Duration::from_millis(500));
+        found = minio_prefix_contains_marker(&prefix, &MARKER_UPTIME_S.to_string());
+    }
+
+    terminate(&mut child);
+
+    assert!(
+        found,
+        "expected an object containing uptime_s = {MARKER_UPTIME_S} under prefix \
+         '{prefix}' of bucket 'dc-records' within 45s of publishing"
+    );
+}
+
+/// Lists `dc-records` objects under `prefix` via anonymous HTTP (`curl`) and returns
+/// whether any of them, gzip-decoded (`zcat`), contains `marker`.
+fn minio_prefix_contains_marker(prefix: &str, marker: &str) -> bool {
+    let listing = Command::new("curl")
+        .args([
+            "-s",
+            &format!("http://127.0.0.1:9000/dc-records?list-type=2&prefix={prefix}"),
+        ])
+        .output()
+        .expect("failed to run curl against MinIO");
+    let listing = String::from_utf8_lossy(&listing.stdout).into_owned();
+    for key in listing
+        .split("<Key>")
+        .skip(1)
+        .filter_map(|part| part.split("</Key>").next())
+    {
+        let object = Command::new("sh")
+            .args([
+                "-c",
+                &format!("curl -s 'http://127.0.0.1:9000/dc-records/{key}' | zcat 2>/dev/null"),
+            ])
+            .output()
+            .expect("failed to fetch an object from MinIO");
+        if String::from_utf8_lossy(&object.stdout).contains(marker) {
+            return true;
+        }
+    }
+    false
 }
 
 /// Sends SIGTERM (dc_bridge's install-hooked signal, not SIGKILL) and waits for exit.

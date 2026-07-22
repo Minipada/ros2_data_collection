@@ -1592,6 +1592,10 @@ name = "composition_interfaces"
 version = "2.0.4"
 
 [[patch.unused]]
+name = "dc_bridge"
+version = "0.1.0"
+
+[[patch.unused]]
 name = "diagnostic_msgs"
 version = "5.3.8"
 
