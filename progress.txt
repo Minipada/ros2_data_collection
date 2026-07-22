@@ -33,3 +33,47 @@
   acceptance criteria.
 - CI/Docker (`.github/workflows/`, `docker/*/Dockerfile`) intentionally left targeting `humble`
   — out of scope here per the earlier decision to handle Jazzy CI separately (#249).
+
+### #243 - DC 2.0 S2: vector_vendor — pinned Vector binary at build time
+
+- Added a new `vector_vendor` ament package (ADR-0002) with a `CMakeLists.txt` that: detects
+  `x86_64`/`aarch64` via `CMAKE_SYSTEM_PROCESSOR`, downloads the matching official static Vector
+  binary tarball (`vector-<version>-<arch>-unknown-linux-musl.tar.gz`) from the GitHub releases
+  page, verifies it against a per-architecture SHA-256 pinned in the file via `file(DOWNLOAD
+  ... EXPECTED_HASH SHA256=...)` (fails loudly — `FATAL_ERROR` — on mismatch, no silent
+  fallback), extracts it, checks `vector --version` matches the pinned version, and installs the
+  binary to `lib/vector_vendor/vector`.
+- Pinned Vector `0.57.0` (latest stable release as of writing), with real checksums fetched from
+  upstream's own `SHA256SUMS` file for both `x86_64` and `aarch64` musl static tarballs. Bumping
+  the version means changing `VECTOR_VERSION` plus the two `VECTOR_SHA256_*` lines at the top of
+  the file.
+- Added the documented override: a `vector_path` CMake cache variable (settable via `colcon
+  build --cmake-args -Dvector_path=/path/to/vector`, or via a `VECTOR_PATH` environment variable
+  picked up as the cache default) that skips the download entirely and vendors a
+  system-installed binary instead — for air-gapped builds or distro packages.
+- `package.xml` follows the `format="3"` / 4-space-indent / `0.1.0` convention used by the other
+  new Jazzy-line packages (`dc_core`, `dc_bringup`), rather than mirroring legacy
+  `fluent_bit_vendor` (`format="2"`, version `2.0.0`) — `vector_vendor` isn't a `dc_*` package so
+  the `ros2_ws_same_versions` pre-commit hook (which pins all `dc_.*` packages to one version)
+  doesn't apply to it either way.
+- **Verified without `colcon`/`ament_cmake`** (not installed in this sandbox, and the ROS 2
+  install disk-space issue from #242 is still unresolved): copied the file into a bare
+  `project()`-only CMakeLists and ran real `cmake -S/-B` + `cmake --install` end to end against
+  the live GitHub releases endpoint (internet access is available here). Confirmed: (1) the
+  happy path downloads, checksum-verifies, extracts, and installs a runnable `vector 0.57.0`
+  binary; (2) a deliberately corrupted pinned checksum fails the configure step with a clear
+  hash-mismatch error; (3) both the `-Dvector_path=...` cmake-arg and the `VECTOR_PATH`
+  environment variable skip the download and install the given binary directly. All four
+  scriptable acceptance criteria are covered by this; a real `colcon build` of `vector_vendor`
+  is still needed once CI/a machine with `ament_cmake` is available to close the loop formally.
+- Ran `pre-commit` (with `build-doc`, `poetry-requirements`, `pycln` skipped, same as #242, since
+  the disk-heavy doc build and the two broken tool-environment hooks are unrelated to this
+  change) — all hooks that touched the new files passed (`black`, `check-xml`,
+  `ros2_ws_same_versions`, `ros2_ws_set_metadata`, codespell, etc.).
+- **Aside, not part of this task**: this worktree has no `CONTEXT.md` or `docs/adr/` even
+  though `CLAUDE.md` and issue #241 both point at them — they exist only as **untracked** files
+  in the main repo checkout (`/home/dbensoussan/dev/ros2_data_collection/{CONTEXT.md,docs/adr/}`)
+  from an earlier session, never committed, so `git worktree` checkouts (including this one)
+  don't see them. Read ADR-0002 and `CONTEXT.md` from that location to inform this
+  implementation. Worth committing them to the repo in a follow-up so future worktrees/agents
+  don't have to know to look there.
