@@ -15,6 +15,12 @@ path = "src/main.rs"
 # tests, runnable with plain `cargo test` (no ROS install required).
 dc_bridge_core = { path = "dc_bridge_core" }
 serde_json = "1"
+# rclrs has no signal handling yet (see main.rs); this is what actually stops the
+# supervised Vector process on a normal shutdown (Ctrl-C, `ros2 launch`, SIGTERM). The
+# `termination` feature is required for SIGTERM/SIGHUP, not just SIGINT (Ctrl-C) —
+# without it dc_bridge would only clean up on Ctrl-C, not on the SIGTERM `ros2 launch`
+# and plain `kill <pid>` actually send.
+ctrlc = { version = "3", features = ["termination"] }
 
 # Only resolvable inside a colcon workspace built with the colcon-cargo /
 # colcon-ros-cargo extensions (which generate the local registry these come from); see

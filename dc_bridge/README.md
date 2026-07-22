@@ -26,20 +26,31 @@ Shipper → output end-to-end, with a console sink standing in for real Destinat
 
 - **`src/main.rs`** — the actual ROS node. It declares parameters (`topics`,
   `vector_forward_host`, `vector_forward_port`, `vector_binary`), starts the Supervisor
-  against the vendored `vector_vendor` binary, subscribes to each configured topic, and
-  exposes a `~/ready` (`std_srvs/Trigger`) readiness service. It depends on `rclrs`,
-  `dc_interfaces`, `std_msgs`, and `std_srvs`, all only resolvable inside a colcon
-  workspace (see below).
+  against the vendored `vector_vendor` binary, subscribes to each configured topic,
+  exposes a `~/ready` (`std_srvs/Trigger`) readiness service, and installs a SIGINT/
+  SIGTERM handler that stops Vector before exiting (see "Runtime flow" below — rclrs
+  doesn't do this on its own). It depends on `rclrs`, `dc_interfaces`, `std_msgs`, and
+  `std_srvs`, all only resolvable inside a colcon workspace (see below).
+
+- **`tests/end_to_end.rs`** — a `colcon test`-integrated integration test (colcon-ros-cargo
+  runs `cargo test` + `cargo fmt --check` for `ament_cargo` packages, same as any other
+  Cargo package) that spawns the *real* `dc_bridge` binary and `rclrs`-drives a test
+  client against it: publishing a Record and asserting it reaches Vector's console sink,
+  and asserting the supervised Vector process actually stops when dc_bridge receives
+  SIGTERM. This is what caught the signal-handling bug below — manual verification alone
+  had missed it.
 
 ## Verified in a real ROS 2 Jazzy + ros2_rust environment
 
-`colcon build --packages-select dc_bridge` succeeds, and the full pipeline was run
-end-to-end in a Docker container (`ros:jazzy-ros-base` + rustup + `colcon-cargo`/
-`colcon-ros-cargo` + the Jazzy message repos + `rosidl_rust`, per the recipe below):
-`ros2 run dc_bridge dc_bridge` locates and spawns the vendored Vector binary, the
-`~/ready` service answers `true` once Vector is listening, and a `StringStamped`
-published on a subscribed topic shows up on Vector's console sink with the derived tag,
-e.g. publishing `{data: '{"uptime_s": 42}'}` on `/dc/measurement/uptime` produced:
+`colcon build --packages-select dc_bridge` succeeds, and `colcon test --packages-select
+dc_bridge` passes (2/2, run repeatedly with no flakiness once the test correctly
+disambiguated its own Vector process — see below), in a Docker container
+(`ros:jazzy-ros-base` + rustup + `colcon-cargo`/`colcon-ros-cargo` + the Jazzy message
+repos + `rosidl_rust`, per the recipe below). `ros2 run dc_bridge dc_bridge` locates and
+spawns the vendored Vector binary, the `~/ready` service answers `true` once Vector is
+listening, and a `StringStamped` published on a subscribed topic shows up on Vector's
+console sink with the derived tag, e.g. publishing `{data: '{"uptime_s": 42}'}` on
+`/dc/measurement/uptime` produced:
 
 ```
 {"host":"127.0.0.1","source_type":"fluent","tag":"dc.measurement.uptime","timestamp":"1970-01-01T00:00:00Z","uptime_s":42}
@@ -49,8 +60,9 @@ Killing the real (vendored) Vector process was also confirmed to trigger an auto
 respawn (a new PID, Vector re-listening) via the Supervisor, and readiness recovers
 to `true` afterward.
 
-Two real bugs surfaced only in this environment (unit tests can't catch either one,
-since they're specific to the generated/real rclrs API surface):
+Three real bugs surfaced only in this environment (unit tests can't catch any of them,
+since they're specific to the generated/real rclrs API surface, or to dc_bridge's own
+process-supervision behavior under signals):
 
 - **`rosidl_runtime_rs` version skew**: the `rosidl_rust` code generator's git `main`
   branch (the version the Jazzy build recipe below tells you to clone) emits idiomatic
@@ -63,6 +75,14 @@ since they're specific to the generated/real rclrs API surface):
   `Vec<RclrsError>::first_error` are extension-trait methods (`CreateBasicExecutor`,
   `RclrsErrorFilter`) that the ros2_rust examples get "for free" via `use rclrs::*`;
   explicit imports were needed here.
+- **Vector orphaned on shutdown**: `rclrs::Context::ok()` unconditionally returns `true`
+  today (no signal handling yet), so `executor.spin()` never returns on Ctrl-C,
+  `ros2 launch` shutdown, or a plain `kill <pid>` — the process just dies via the OS
+  default, and the Supervisor's `Drop` (which would stop Vector) never runs since it
+  lives in a detached background thread that loops forever. Fixed by installing an
+  explicit `ctrlc` handler (the `termination` feature, not just default SIGINT) that
+  stops Vector before exiting. SIGKILL still can't be caught by any userspace handler —
+  that part is an inherent, unavoidable Unix limit, not specific to this.
 
 ## Building via colcon (cargo integration)
 
@@ -110,3 +130,8 @@ Bridge subscribes and starts forwarding → the readiness service starts answeri
 once a TCP probe against Vector's Forward port succeeds → the lifecycle manager can
 gate activating collection nodes on that. If Vector dies, the Supervisor respawns it and
 readiness drops to `false` until the new process is accepting connections again.
+
+On shutdown, a SIGINT/SIGTERM handler explicitly stops Vector before the process exits
+(see the "Vector orphaned on shutdown" bug above) — dc_bridge doesn't rely on Rust's
+`Drop` running here, since the Supervisor lives in a detached background thread that
+would otherwise never unwind.
