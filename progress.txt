@@ -212,3 +212,52 @@ rather than the local ROS install:
   this verification pass, matching how #242/#243 also left "real colcon build" to a
   machine/CI with more resources. Making a permanent ros2_rust-enabled dev environment
   (documented dev-container, or CI once #249 lands) is a separate follow-up.
+
+### #244 follow-up — added a colcon-test-integrated integration test, found and fixed a real Vector-orphaning bug it caught
+
+Prompted by "do we have any tests?" / "we always need integration tests for the
+workflow": `dc_bridge_core`'s 16 tests cover the ROS-independent logic, but `dc_bridge`'s
+actual ROS node (`src/main.rs`) had zero automated coverage — everything about it had
+only ever been checked by hand, interactively, in the (now torn-down) Docker session.
+
+- Confirmed `colcon test` for an `ament_cargo` package is just `cargo test` + `cargo fmt
+  --check` (colcon-ros-cargo's `AmentCargoTestTask` wraps `colcon_cargo.task.cargo.test`
+  — read its source directly rather than guessing), so a real Rust integration test in
+  `dc_bridge/tests/end_to_end.rs` gets picked up by the standard `colcon test` pipeline
+  with no new package or build-type wrinkle needed.
+- Added `dc_bridge/tests/end_to_end.rs`, two tests:
+  - `published_record_reaches_vectors_console_sink` — spawns the real `dc_bridge`
+    binary, uses `rclrs` itself (a test-side node: a `std_srvs::srv::Trigger` client
+    polling `/dc_bridge/ready`, a publisher on the configured topic) to wait for
+    readiness then publish a Record, and asserts the JSON reaches Vector's console sink
+    via the child process's captured stdout. Automates the manual demo from the
+    original #244 verification pass.
+  - `stops_the_supervised_vector_process_on_sigterm` — sends SIGTERM to `dc_bridge` and
+    asserts its supervised Vector process (identified precisely as `dc_bridge`'s direct
+    child via `pgrep -P`, not by matching the Vector binary path system-wide, which
+    proved flaky once leftover Vector processes from earlier debugging accumulated in
+    the long-lived verification container) actually stops.
+- The second test caught a real, undocumented bug: `rclrs::Context::ok()`
+  unconditionally returns `true` today (confirmed by reading `rclrs/src/context.rs` —
+  no signal handler exists yet), so `executor.spin()` in `main.rs` never returned on
+  its own. Combined with the Supervisor living inside a `std::thread::spawn`'d closure
+  that loops forever (never dropped through any normal control flow), this meant
+  **Vector was orphaned on every shutdown** — Ctrl-C, `ros2 launch` stopping the node,
+  or a plain `kill <pid>` — not just an unavoidable SIGKILL. Fixed by wrapping the
+  Supervisor in `Arc<Mutex<_>>` and installing an explicit `ctrlc::set_handler` (the
+  `termination` feature is required for SIGTERM/SIGHUP, not just SIGINT — missing it
+  was itself a dead end diagnosed and fixed along the way) that stops Vector and exits
+  before the process would otherwise just die via the OS default.
+- Iterated against the real Docker environment throughout (writing rclrs-API-correct
+  Rust from the cloned ros2_rust/rclrs source rather than guessing, same discipline as
+  the original #244 pass): fixed a type-inference gap in the service-client call, ran
+  `cargo fmt` to satisfy colcon's bundled format check, and diagnosed a genuinely flaky
+  first version of the SIGTERM test down to its root cause (broad `pgrep -f` matching
+  ANY Vector process on the machine, not the one this specific test spawned) rather
+  than accepting the flakiness or loosening the assertion.
+- `colcon test --packages-select dc_bridge` now passes 2/2 reliably (run 8+ times in a
+  row, including deliberately in a container already contaminated with leftover/zombie
+  processes from earlier debugging, to prove the fix was real and not environment luck).
+- `dc_bridge/README.md` and the `main.rs` module doc comment updated to describe the
+  test file, the three real bugs found in this environment (adding the Vector-orphaning
+  one to the two from the original pass), and the shutdown behavior.
