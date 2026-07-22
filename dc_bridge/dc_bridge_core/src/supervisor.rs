@@ -17,13 +17,15 @@ pub struct SupervisorConfig {
 }
 
 impl SupervisorConfig {
-    pub fn vector(binary: PathBuf, config_path: PathBuf) -> Self {
+    /// `config_paths` is the rendered config plus any `custom_config_files` passthrough
+    /// snippets (ADR-0003) — Vector merges multiple `--config` files natively.
+    pub fn vector(binary: PathBuf, config_paths: impl IntoIterator<Item = PathBuf>) -> Self {
         Self {
             program: binary,
-            args: vec![
-                "--config".to_string(),
-                config_path.to_string_lossy().into_owned(),
-            ],
+            args: config_paths
+                .into_iter()
+                .flat_map(|path| ["--config".to_string(), path.to_string_lossy().into_owned()])
+                .collect(),
             restart_backoff: Duration::from_millis(500),
         }
     }
@@ -55,7 +57,13 @@ impl Supervisor {
         }
     }
 
+    /// Spawns the supervised process. A no-op once [`Supervisor::stop`] has been
+    /// called, so a signal handler installed *before* the first `start()` (as `main.rs`
+    /// does) can never race it into spawning a process nobody will ever stop.
     pub fn start(&mut self) -> io::Result<()> {
+        if self.stopped {
+            return Ok(());
+        }
         let child = Command::new(&self.config.program)
             .args(&self.config.args)
             .spawn()?;

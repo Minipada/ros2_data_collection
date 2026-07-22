@@ -1,24 +1,24 @@
 data_dir = "/home/dc/.dc/buffer"
 
-[sinks.pgsql]
-endpoint = "postgres://dc:hunter2@127.0.0.1:5432/dc"
+[sinks.debug_console]
 inputs = ["dc.dc.group.robot"]
-table = "dc"
-type = "postgres"
+target = "stdout"
+type = "console"
 
-[sinks.pgsql.buffer]
+[sinks.debug_console.encoding]
+codec = "json"
+
+[sinks.local_log]
+inputs = ["dc.dc.group.robot"]
+path = "/var/log/dc/records-%Y-%m-%d.log"
+type = "file"
+
+[sinks.local_log.buffer]
 max_size = 268435488
 type = "disk"
 
-[sinks.pgsql_archive]
-endpoint = "postgres://dc:hunter2@127.0.0.1:5432/dc"
-inputs = ["dc.dc.measurement.uptime"]
-table = "dc"
-type = "postgres"
-
-[sinks.pgsql_archive.buffer]
-max_size = 268435488
-type = "disk"
+[sinks.local_log.encoding]
+codec = "json"
 
 [sources.dc_bridge_in]
 address = "127.0.0.1:24224"
@@ -33,18 +33,14 @@ type = "route"
 source = '.tag == "dc.group.robot"'
 type = "vrl"
 
-[transforms.dc.route."dc.measurement.uptime"]
-source = '.tag == "dc.measurement.uptime"'
-type = "vrl"
-
 [transforms.dc_bridge_normalize]
 inputs = ["dc_bridge_in"]
 source = """
 if includes(["dc.group.robot"], .tag) {
   .date = to_float(to_unix_timestamp!(.timestamp, unit: "nanoseconds")) / 1000000000.0
 }
-if includes(["dc.measurement.uptime"], .tag) {
-  .date = format_timestamp!(.timestamp, format: "%Y-%m-%dT%H:%M:%S%.9f")
+if includes(["dc.group.robot"], .tag) {
+  .date = to_float(to_unix_timestamp!(.timestamp, unit: "nanoseconds")) / 1000000000.0
 }
 """
 type = "remap"

@@ -13,8 +13,9 @@ pub use config::{BridgeConfig, TopicConfig};
 pub use forwarder::{Forwarder, ForwarderConfig, ForwarderError, Record};
 pub use readiness::Readiness;
 pub use render::{
-    destination_from_raw, expand_env, render as render_vector_config, Destination, DestinationKind,
-    PostgresParams, RawPostgresParams, Receives, RenderConfig, RenderError, TimeFormat,
-    MIN_DISK_BUFFER_BYTES, ROUTE_TRANSFORM_ID,
+    destination_from_raw, expand_env, render as render_vector_config, route_output_for_tag,
+    validate_custom_config_files, CustomConfigFile, Destination, DestinationKind, FileParams,
+    PostgresParams, RawDestinationParams, Receives, RenderConfig, RenderError, S3Auth, S3Params,
+    TimeFormat, MIN_DISK_BUFFER_BYTES, ROUTE_TRANSFORM_ID,
 };
 pub use supervisor::{Supervisor, SupervisorConfig};

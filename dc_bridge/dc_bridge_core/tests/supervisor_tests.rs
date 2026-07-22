@@ -81,3 +81,26 @@ fn poll_restart_never_respawns_after_stop() {
     }
     assert!(!supervisor.is_running());
 }
+
+/// Companion to the test above, for the startup side of the same class of race:
+/// `main.rs` installs its SIGTERM handler *before* the first `start()`, so a signal
+/// landing during startup calls `stop()` on a supervisor that hasn't spawned anything
+/// yet — a subsequent `start()` must then be a no-op rather than spawning a process
+/// nobody will ever stop (hit for real as an intermittent `colcon test` failure of
+/// `stops_the_supervised_vector_process_on_sigterm` while the startup sequence also
+/// grew a `vector validate` step).
+#[test]
+fn start_never_spawns_after_stop() {
+    let mut supervisor = Supervisor::new(SupervisorConfig {
+        program: "sh".into(),
+        args: vec!["-c".to_string(), "sleep 5".to_string()],
+        restart_backoff: Duration::from_millis(0),
+    });
+
+    supervisor.stop();
+    supervisor.start().unwrap();
+    assert!(
+        !supervisor.is_running(),
+        "start() must not spawn anything once the supervisor has been stopped"
+    );
+}

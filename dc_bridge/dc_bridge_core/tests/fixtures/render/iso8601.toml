@@ -2,7 +2,7 @@ data_dir = "/home/dc/.dc/buffer"
 
 [sinks.pgsql]
 endpoint = "postgres://dc:hunter2@127.0.0.1:5432/dc"
-inputs = ["dc.pgsql"]
+inputs = ["dc.dc.group.robot"]
 table = "dc"
 type = "postgres"
 
@@ -19,8 +19,8 @@ inputs = ["dc_bridge_normalize"]
 reroute_unmatched = false
 type = "route"
 
-[transforms.dc.route.pgsql]
-source = 'includes(["dc.group.robot"], .tag)'
+[transforms.dc.route."dc.group.robot"]
+source = '.tag == "dc.group.robot"'
 type = "vrl"
 
 [transforms.dc_bridge_normalize]
@@ -31,4 +31,3 @@ if includes(["dc.group.robot"], .tag) {
 }
 """
 type = "remap"
-

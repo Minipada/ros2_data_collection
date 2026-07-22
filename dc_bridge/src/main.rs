@@ -4,12 +4,16 @@
 //! with the ros2_rust (`rclrs`) toolchain — see dc_bridge/README.md.
 //!
 //! Vector's own configuration (the Fluent Forward source, the timestamp/Tag-normalizing
-//! VRL transform, the `dc.<name>` route per Destination, and the blessed sinks
-//! themselves) is produced by `dc_bridge_core::render` (ADR-0003) from the `shipper` and
-//! `destinations` parameters below — this node's job is just to declare those
-//! parameters, expand the `$HOME`/`$DC_PG_PASSWORD`-style env references the config
-//! contract uses, and hand the result to the Supervisor. The set of topics subscribed
-//! is derived from every configured Destination's `inputs`, not a separate parameter.
+//! VRL transform, the public per-Tag `dc.<tag>` routes, and the blessed sinks —
+//! `postgres`, `s3`, `file`, `console`) is produced by `dc_bridge_core::render`
+//! (ADR-0003) from the `shipper` and `destinations` parameters below — this node's job
+//! is just to declare those parameters, expand the `$HOME`/`$DC_PG_PASSWORD`-style env
+//! references the config contract uses, and hand the result to the Supervisor. The set
+//! of topics subscribed is derived from every configured Destination's `inputs`, not a
+//! separate parameter. Raw Vector snippets listed in `custom_config_files` (ADR-0003's
+//! passthrough) are collision-checked, `vector validate`d together with the rendered
+//! config so a bad snippet fails loudly at startup, and passed to Vector as additional
+//! `--config` files.
 //!
 //! Built, run, and `colcon test`-covered (see tests/end_to_end.rs) in a real ROS 2
 //! Jazzy + ros2_rust Docker environment: the node locates and supervises the vendored
@@ -19,8 +23,8 @@
 //! for the verification recipe and the three real bugs it caught.
 
 use dc_bridge_core::render::{
-    destination_from_raw, expand_env, render as render_vector_config, RawPostgresParams,
-    RenderConfig, MIN_DISK_BUFFER_BYTES,
+    destination_from_raw, expand_env, render as render_vector_config, validate_custom_config_files,
+    CustomConfigFile, RawDestinationParams, RenderConfig, MIN_DISK_BUFFER_BYTES,
 };
 use dc_bridge_core::{readiness, vector_config};
 use dc_bridge_core::{
@@ -62,6 +66,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let render_config = build_render_config(&node, forward_addr)?;
     let rendered_vector_config = render_vector_config(&render_config)?;
 
+    // ADR-0003 passthrough: raw Vector config snippets merged natively by Vector via
+    // additional `--config` arguments. Collision-checked against the rendered config
+    // here so a bad snippet is a clear startup error naming the file, not a
+    // supervised-Vector crash loop.
+    let custom_config_paths: Arc<[Arc<str>]> = node
+        .declare_parameter("custom_config_files")
+        .default(Arc::from(Vec::<Arc<str>>::new()))
+        .mandatory()?
+        .get();
+    let mut custom_config_files = Vec::with_capacity(custom_config_paths.len());
+    for path_raw in custom_config_paths.iter() {
+        let path = expand_env(path_raw, |name| std::env::var(name).ok())?;
+        let content = std::fs::read_to_string(&path)
+            .map_err(|e| format!("failed to read custom config file '{path}': {e}"))?;
+        custom_config_files.push(CustomConfigFile { path, content });
+    }
+    validate_custom_config_files(&render_config, &custom_config_files)?;
+
     let vector_binary = if !vector_binary_override.is_empty() {
         PathBuf::from(vector_binary_override.to_string())
     } else {
@@ -73,10 +95,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let vector_config_path = std::env::temp_dir().join("dc_bridge_vector.toml");
     std::fs::write(&vector_config_path, rendered_vector_config)?;
 
+    let vector_config_paths: Vec<PathBuf> = std::iter::once(vector_config_path)
+        .chain(custom_config_files.iter().map(|f| PathBuf::from(&f.path)))
+        .collect();
+
     let supervisor = Arc::new(Mutex::new(Supervisor::new(SupervisorConfig::vector(
-        vector_binary,
-        vector_config_path,
+        vector_binary.clone(),
+        vector_config_paths.clone(),
     ))));
+
+    // rclrs has no signal handling yet (`Context::ok()` unconditionally returns true, so
+    // `executor.spin()` below never returns on its own): without this, dc_bridge exiting
+    // via Ctrl-C, `ros2 launch` shutdown, or a plain SIGTERM would leave the supervised
+    // Vector process running forever, orphaned. SIGKILL still can't be caught (a Unix
+    // limit, not specific to this), but that's now the only path that leaks it.
+    // Installed *before* the Supervisor ever starts Vector: `Supervisor::start` is a
+    // no-op after `stop`, so a signal landing during startup can't race the handler
+    // into leaving an unsupervised Vector behind.
+    {
+        let supervisor = supervisor.clone();
+        ctrlc::set_handler(move || {
+            supervisor.lock().unwrap().stop();
+            std::process::exit(0);
+        })?;
+    }
+
+    // Backstop for anything the pure checks above can't see (e.g. a snippet consuming a
+    // `dc.<tag>` route no configured Destination subscribes, or sink options Vector
+    // itself rejects): run Vector's own validator on the merged config set before
+    // starting the Supervisor, so an invalid config is a loud startup failure instead
+    // of a crash loop.
+    validate_with_vector(&vector_binary, &vector_config_paths)?;
+
     supervisor.lock().unwrap().start()?;
 
     let readiness = Readiness::new();
@@ -89,19 +139,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             readiness.set_ready(ready);
             std::thread::sleep(Duration::from_millis(250));
         });
-    }
-
-    // rclrs has no signal handling yet (`Context::ok()` unconditionally returns true, so
-    // `executor.spin()` below never returns on its own): without this, dc_bridge exiting
-    // via Ctrl-C, `ros2 launch` shutdown, or a plain SIGTERM would leave the supervised
-    // Vector process running forever, orphaned. SIGKILL still can't be caught (a Unix
-    // limit, not specific to this), but that's now the only path that leaks it.
-    {
-        let supervisor = supervisor.clone();
-        ctrlc::set_handler(move || {
-            supervisor.lock().unwrap().stop();
-            std::process::exit(0);
-        })?;
     }
 
     let forwarder = Arc::new(Mutex::new(Forwarder::new(ForwarderConfig::new(
@@ -155,6 +192,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Runs `vector validate --no-environment` on the full `--config` set (rendered config
+/// plus passthrough snippets) and turns a failure into a startup error carrying
+/// Vector's own diagnostics. `--no-environment` skips healthchecks and
+/// environment-dependent checks (ports, data_dir, remote endpoints) — this is a config
+/// correctness gate, not a connectivity probe.
+fn validate_with_vector(
+    vector_binary: &std::path::Path,
+    config_paths: &[PathBuf],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let output = std::process::Command::new(vector_binary)
+        .args(["validate", "--no-environment"])
+        .args(config_paths.iter().map(|p| p.as_os_str()))
+        .output()
+        .map_err(|e| format!("failed to run '{}' validate: {e}", vector_binary.display()))?;
+    if !output.status.success() {
+        return Err(format!(
+            "vector rejected the merged configuration:\n{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        )
+        .into());
+    }
+    Ok(())
+}
+
 /// Declares the `shipper`/`destinations` parameters (ADR-0003's config contract) and
 /// builds the [`RenderConfig`] the config renderer needs. `$NAME`/`${NAME}` references in
 /// `shipper.data_dir` and each Postgres destination's `password` are expanded against the
@@ -196,15 +258,24 @@ fn build_render_config(
     })
 }
 
-/// Declares every `<name>.*` parameter one Destination needs and validates them into a
-/// typed `Destination` via `dc_bridge_core::render::destination_from_raw` — this is
-/// where an invalid `type`/`receives`/`time_format`, or a missing required Postgres
-/// field, turns into the clear startup error the acceptance criteria call for, rather
-/// than a confusing failure deep inside Vector.
+/// Declares every `<name>.*` parameter one Destination might need — the flat union
+/// across all blessed types, mirroring `RawDestinationParams` — and validates them into
+/// a typed `Destination` via `dc_bridge_core::render::destination_from_raw` — this is
+/// where an invalid `type`/`receives`/`time_format`, or a missing required field, turns
+/// into the clear startup error the acceptance criteria call for, rather than a
+/// confusing failure deep inside Vector.
 fn declare_destination(
     node: &rclrs::Node,
     name: &str,
 ) -> Result<dc_bridge_core::render::Destination, Box<dyn std::error::Error>> {
+    let declare_str = |param: &str| -> Result<Option<Arc<str>>, Box<dyn std::error::Error>> {
+        let value: Option<Arc<str>> = node
+            .declare_parameter(format!("{name}.{param}"))
+            .optional()?
+            .get();
+        Ok(value)
+    };
+
     let type_str: Arc<str> = node
         .declare_parameter(format!("{name}.type"))
         .default(Arc::from(""))
@@ -221,52 +292,62 @@ fn declare_destination(
         .mandatory()?
         .get();
 
-    let host: Option<Arc<str>> = node
-        .declare_parameter(format!("{name}.host"))
-        .optional()?
-        .get();
+    let time_key = declare_str("time_key")?;
+    let time_format = declare_str("time_format")?;
+    // postgres
+    let host = declare_str("host")?;
     let port: Option<i64> = node
         .declare_parameter(format!("{name}.port"))
         .optional()?
         .get();
-    let user: Option<Arc<str>> = node
-        .declare_parameter(format!("{name}.user"))
+    let user = declare_str("user")?;
+    let password_raw = declare_str("password")?;
+    let database = declare_str("database")?;
+    let table = declare_str("table")?;
+    // s3
+    let bucket = declare_str("bucket")?;
+    let region = declare_str("region")?;
+    let endpoint = declare_str("endpoint")?;
+    let key_prefix = declare_str("key_prefix")?;
+    let access_key_id = declare_str("access_key_id")?;
+    let secret_access_key_raw = declare_str("secret_access_key")?;
+    let force_path_style: Option<bool> = node
+        .declare_parameter(format!("{name}.force_path_style"))
         .optional()?
         .get();
-    let password_raw: Option<Arc<str>> = node
-        .declare_parameter(format!("{name}.password"))
+    let batch_timeout_secs: Option<i64> = node
+        .declare_parameter(format!("{name}.batch_timeout_secs"))
         .optional()?
         .get();
-    let database: Option<Arc<str>> = node
-        .declare_parameter(format!("{name}.database"))
-        .optional()?
-        .get();
-    let table: Option<Arc<str>> = node
-        .declare_parameter(format!("{name}.table"))
-        .optional()?
-        .get();
-    let time_key: Option<Arc<str>> = node
-        .declare_parameter(format!("{name}.time_key"))
-        .optional()?
-        .get();
-    let time_format: Option<Arc<str>> = node
-        .declare_parameter(format!("{name}.time_format"))
-        .optional()?
-        .get();
+    // file
+    let path = declare_str("path")?;
 
+    // Credentials support `$DC_PG_PASSWORD`-style env references (ADR-0003 contract).
     let password = password_raw
         .map(|p| expand_env(&p, |var| std::env::var(var).ok()))
         .transpose()?;
+    let secret_access_key = secret_access_key_raw
+        .map(|s| expand_env(&s, |var| std::env::var(var).ok()))
+        .transpose()?;
 
-    let postgres = RawPostgresParams {
+    let raw = RawDestinationParams {
+        time_key: time_key.as_deref(),
+        time_format: time_format.as_deref(),
         host: host.as_deref(),
         port,
         user: user.as_deref(),
         password: password.as_deref(),
         database: database.as_deref(),
         table: table.as_deref(),
-        time_key: time_key.as_deref(),
-        time_format: time_format.as_deref(),
+        bucket: bucket.as_deref(),
+        region: region.as_deref(),
+        endpoint: endpoint.as_deref(),
+        key_prefix: key_prefix.as_deref(),
+        access_key_id: access_key_id.as_deref(),
+        secret_access_key: secret_access_key.as_deref(),
+        force_path_style,
+        batch_timeout_secs,
+        path: path.as_deref(),
     };
 
     let inputs: Vec<String> = inputs.iter().map(|s| s.to_string()).collect();
@@ -275,7 +356,7 @@ fn declare_destination(
         &type_str,
         &receives_str,
         inputs,
-        postgres,
+        raw,
     )?)
 }
 
