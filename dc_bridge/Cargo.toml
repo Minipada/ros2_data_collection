@@ -31,6 +31,12 @@ dc_interfaces = "*"
 std_msgs = "*"
 std_srvs = "*"
 
+[dev-dependencies]
+# Used only by tests/end_to_end.rs's Postgres-backed test to verify a forwarded Record
+# actually lands in the database; not a runtime dependency of the dc_bridge binary
+# itself (Vector, not dc_bridge, talks to Postgres in production).
+postgres = "0.19"
+
 # The Jazzy build recipe (README.md) sources the rosidl_rust code generator from its git
 # main branch, which emits idiomatic-message conversions (Sequence<T> -> Vec<T> for
 # unbounded primitive arrays, e.g. dc_interfaces' DrawImage.srv `uint16[] color`) that

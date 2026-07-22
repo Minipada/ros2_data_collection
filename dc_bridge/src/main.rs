@@ -3,6 +3,14 @@
 //! topic subscriptions and a readiness service. Only buildable inside a colcon workspace
 //! with the ros2_rust (`rclrs`) toolchain — see dc_bridge/README.md.
 //!
+//! Vector's own configuration (the Fluent Forward source, the timestamp/Tag-normalizing
+//! VRL transform, the `dc.<name>` route per Destination, and the blessed sinks
+//! themselves) is produced by `dc_bridge_core::render` (ADR-0003) from the `shipper` and
+//! `destinations` parameters below — this node's job is just to declare those
+//! parameters, expand the `$HOME`/`$DC_PG_PASSWORD`-style env references the config
+//! contract uses, and hand the result to the Supervisor. The set of topics subscribed
+//! is derived from every configured Destination's `inputs`, not a separate parameter.
+//!
 //! Built, run, and `colcon test`-covered (see tests/end_to_end.rs) in a real ROS 2
 //! Jazzy + ros2_rust Docker environment: the node locates and supervises the vendored
 //! Vector binary, the `~/ready` service answers correctly, a `StringStamped` Record
@@ -10,13 +18,17 @@
 //! Vector process stops when dc_bridge receives SIGINT/SIGTERM. See dc_bridge/README.md
 //! for the verification recipe and the three real bugs it caught.
 
+use dc_bridge_core::render::{
+    destination_from_raw, expand_env, render as render_vector_config, RawPostgresParams,
+    RenderConfig, MIN_DISK_BUFFER_BYTES,
+};
 use dc_bridge_core::{readiness, vector_config};
 use dc_bridge_core::{
-    BridgeConfig, Forwarder, ForwarderConfig, Readiness, Record, Supervisor, SupervisorConfig,
-    TopicConfig,
+    Forwarder, ForwarderConfig, Readiness, Record, Supervisor, SupervisorConfig, TopicConfig,
 };
 use dc_interfaces::msg::StringStamped;
 use rclrs::{CreateBasicExecutor, RclrsErrorFilter};
+use std::collections::BTreeSet;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -30,11 +42,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // rclrs's ParameterVariant is only implemented for Arc<str>/Arc<[Arc<str>]> (not
     // String/Vec<String>), so parameters are declared in those types and converted.
-    let topics: Arc<[Arc<str>]> = node
-        .declare_parameter("topics")
-        .default(Arc::from(Vec::<Arc<str>>::new()))
-        .mandatory()?
-        .get();
     let vector_host: Arc<str> = node
         .declare_parameter("vector_forward_host")
         .default(Arc::from("127.0.0.1"))
@@ -50,15 +57,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .default(Arc::from(""))
         .mandatory()?
         .get();
+    let forward_addr: SocketAddr = format!("{}:{}", vector_host, vector_port).parse()?;
 
-    let config = BridgeConfig {
-        topics: topics
-            .iter()
-            .map(|t| TopicConfig::new(t.to_string(), None))
-            .collect(),
-        vector_forward_addr: format!("{}:{}", vector_host, vector_port),
-    };
-    let forward_addr: SocketAddr = config.vector_forward_addr.parse()?;
+    let render_config = build_render_config(&node, forward_addr)?;
+    let rendered_vector_config = render_vector_config(&render_config)?;
 
     let vector_binary = if !vector_binary_override.is_empty() {
         PathBuf::from(vector_binary_override.to_string())
@@ -69,7 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let vector_config_path = std::env::temp_dir().join("dc_bridge_vector.toml");
-    std::fs::write(&vector_config_path, vector_config::render(forward_addr))?;
+    std::fs::write(&vector_config_path, rendered_vector_config)?;
 
     let supervisor = Arc::new(Mutex::new(Supervisor::new(SupervisorConfig::vector(
         vector_binary,
@@ -106,9 +108,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         forward_addr,
     ))));
 
+    // Every Destination's `inputs` topic is subscribed to exactly once, even if more
+    // than one Destination consumes it.
+    let mut subscribed_topics = BTreeSet::new();
+    for destination in &render_config.destinations {
+        for topic in &destination.inputs {
+            subscribed_topics.insert(topic.clone());
+        }
+    }
+
     // Held so subscriptions aren't dropped once out of scope; the node keeps them alive.
     let mut _subscriptions = Vec::new();
-    for topic_config in config.topics {
+    for topic in subscribed_topics {
+        let topic_config = TopicConfig::new(topic, None);
         let forwarder = forwarder.clone();
         let tag = topic_config.tag.clone();
         let subscription =
@@ -141,6 +153,130 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     executor.spin(rclrs::SpinOptions::default()).first_error()?;
     Ok(())
+}
+
+/// Declares the `shipper`/`destinations` parameters (ADR-0003's config contract) and
+/// builds the [`RenderConfig`] the config renderer needs. `$NAME`/`${NAME}` references in
+/// `shipper.data_dir` and each Postgres destination's `password` are expanded against the
+/// real process environment (`std::env::var`) here — `dc_bridge_core::render` itself
+/// never touches the environment, so it stays pure and testable without ROS or Vector.
+fn build_render_config(
+    node: &rclrs::Node,
+    forward_addr: SocketAddr,
+) -> Result<RenderConfig, Box<dyn std::error::Error>> {
+    let data_dir_raw: Arc<str> = node
+        .declare_parameter("shipper.data_dir")
+        .default(Arc::from("$HOME/.dc/buffer"))
+        .mandatory()?
+        .get();
+    let data_dir = expand_env(&data_dir_raw, |name| std::env::var(name).ok())?;
+
+    let buffer_max_bytes: i64 = node
+        .declare_parameter("shipper.buffer_max_bytes")
+        .default(MIN_DISK_BUFFER_BYTES as i64)
+        .mandatory()?
+        .get();
+
+    let destination_names: Arc<[Arc<str>]> = node
+        .declare_parameter("destinations")
+        .default(Arc::from(Vec::<Arc<str>>::new()))
+        .mandatory()?
+        .get();
+
+    let mut destinations = Vec::with_capacity(destination_names.len());
+    for name in destination_names.iter() {
+        destinations.push(declare_destination(node, name)?);
+    }
+
+    Ok(RenderConfig {
+        forward_addr,
+        data_dir,
+        buffer_max_bytes: buffer_max_bytes.max(0) as u64,
+        destinations,
+    })
+}
+
+/// Declares every `<name>.*` parameter one Destination needs and validates them into a
+/// typed `Destination` via `dc_bridge_core::render::destination_from_raw` — this is
+/// where an invalid `type`/`receives`/`time_format`, or a missing required Postgres
+/// field, turns into the clear startup error the acceptance criteria call for, rather
+/// than a confusing failure deep inside Vector.
+fn declare_destination(
+    node: &rclrs::Node,
+    name: &str,
+) -> Result<dc_bridge_core::render::Destination, Box<dyn std::error::Error>> {
+    let type_str: Arc<str> = node
+        .declare_parameter(format!("{name}.type"))
+        .default(Arc::from(""))
+        .mandatory()?
+        .get();
+    let receives_str: Arc<str> = node
+        .declare_parameter(format!("{name}.receives"))
+        .default(Arc::from("records"))
+        .mandatory()?
+        .get();
+    let inputs: Arc<[Arc<str>]> = node
+        .declare_parameter(format!("{name}.inputs"))
+        .default(Arc::from(Vec::<Arc<str>>::new()))
+        .mandatory()?
+        .get();
+
+    let host: Option<Arc<str>> = node
+        .declare_parameter(format!("{name}.host"))
+        .optional()?
+        .get();
+    let port: Option<i64> = node
+        .declare_parameter(format!("{name}.port"))
+        .optional()?
+        .get();
+    let user: Option<Arc<str>> = node
+        .declare_parameter(format!("{name}.user"))
+        .optional()?
+        .get();
+    let password_raw: Option<Arc<str>> = node
+        .declare_parameter(format!("{name}.password"))
+        .optional()?
+        .get();
+    let database: Option<Arc<str>> = node
+        .declare_parameter(format!("{name}.database"))
+        .optional()?
+        .get();
+    let table: Option<Arc<str>> = node
+        .declare_parameter(format!("{name}.table"))
+        .optional()?
+        .get();
+    let time_key: Option<Arc<str>> = node
+        .declare_parameter(format!("{name}.time_key"))
+        .optional()?
+        .get();
+    let time_format: Option<Arc<str>> = node
+        .declare_parameter(format!("{name}.time_format"))
+        .optional()?
+        .get();
+
+    let password = password_raw
+        .map(|p| expand_env(&p, |var| std::env::var(var).ok()))
+        .transpose()?;
+
+    let postgres = RawPostgresParams {
+        host: host.as_deref(),
+        port,
+        user: user.as_deref(),
+        password: password.as_deref(),
+        database: database.as_deref(),
+        table: table.as_deref(),
+        time_key: time_key.as_deref(),
+        time_format: time_format.as_deref(),
+    };
+
+    let inputs: Vec<String> = inputs.iter().map(|s| s.to_string()).collect();
+    Ok(destination_from_raw(
+        name,
+        &type_str,
+        &receives_str,
+        inputs,
+        postgres,
+    )?)
 }
 
 fn header_stamp_to_system_time(header: &std_msgs::msg::Header) -> SystemTime {
