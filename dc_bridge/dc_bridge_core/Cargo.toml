@@ -1,0 +1,21 @@
+[package]
+name = "dc_bridge_core"
+version = "0.1.0"
+edition = "2021"
+license = "MPL-2.0"
+description = "ROS-independent Bridge logic (Forwarder, Supervisor, Readiness) for dc_bridge"
+
+# Marks this crate as the root of its own workspace so it never gets swept into
+# ../Cargo.toml's implicit workspace via its path dependency on this crate. That keeps
+# `cargo test` runnable here in isolation, without resolving dc_bridge's rclrs/dc_interfaces
+# dependencies, which only resolve inside a colcon + ros2_rust build (see ../README.md).
+[workspace]
+
+[dependencies]
+rmpv = "1"
+toml = "0.8"
+serde_json = "1"
+thiserror = "1"
+
+[dev-dependencies]
+socket2 = "0.5"
