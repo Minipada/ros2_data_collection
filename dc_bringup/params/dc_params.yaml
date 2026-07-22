@@ -5,3 +5,9 @@ measurement_server:
       plugin: "dc_measurements/Uptime"
       group_key: "uptime"
       topic_output: "/dc/measurement/uptime"
+
+dc_bridge:
+  ros__parameters:
+    topics: ["/dc/measurement/uptime"]
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
