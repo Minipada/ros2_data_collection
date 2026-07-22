@@ -77,3 +77,138 @@
   don't see them. Read ADR-0002 and `CONTEXT.md` from that location to inform this
   implementation. Worth committing them to the repo in a follow-up so future worktrees/agents
   don't have to know to look there.
+
+### #244 - DC 2.0 S3: dc_bridge tracer bullet — Records flow to Vector console
+
+- Added a new `dc_bridge` package (ADRs 0001/0004/0006): the first Rust package in the
+  repo, `package.xml` build type `ament_cargo` (colcon's Rust/ros2_rust integration,
+  distinct from `ament_cmake` used everywhere else).
+- Split it into two crates so the ROS-independent logic is unit-testable without a ROS
+  install:
+  - `dc_bridge/dc_bridge_core/` — a standalone Cargo crate (declares `[workspace]` so it
+    never gets pulled into the outer package's workspace) with **zero ROS dependencies**:
+    - `forwarder.rs` — `Forwarder::send(record)` hides Fluent Forward msgpack framing
+      (`rmpv`), socket lifecycle, lazy reconnection (drops the connection on any write
+      error other than would-block/timeout, so the *next* `send()` reconnects), and
+      backpressure (a write that blocks past `write_timeout` is reported as
+      `ForwarderError::Backpressure` *without* dropping the connection, since the peer
+      may just be slow to drain).
+    - `supervisor.rs` — `Supervisor` spawns an arbitrary `Command` and `poll_restart()`s
+      it back to life if it has exited, subject to a `restart_backoff` to avoid restart
+      storms. Deliberately agnostic to what program it supervises so the tests exercise
+      it without needing the real Vector binary.
+    - `readiness.rs` — `Readiness` (shared atomic ready/not-ready state) plus a plain TCP
+      connect `probe()` against Vector's Forward address (ADR-0006: the Bridge has no
+      lifecycle state beyond "process up + ready service answers").
+    - `config.rs` — `TopicConfig` derives a Fluent Forward tag from a ROS topic name
+      (`/dc/measurement/uptime` → `dc.measurement.uptime`) unless one is given explicitly.
+    - `vector_config.rs` — renders the minimal Vector config (Fluent Forward source →
+      console sink) and locates the vendored binary by scanning `AMENT_PREFIX_PATH` for
+      `lib/vector_vendor/vector` (the path `vector_vendor`'s CMakeLists.txt installs to).
+  - `dc_bridge/src/main.rs` — the actual `rclrs` ROS node: declares `topics`,
+    `vector_forward_host`, `vector_forward_port`, `vector_binary` parameters; starts the
+    Supervisor against the vendored Vector binary; subscribes to each configured topic,
+    converting `StringStamped` (`header.stamp` + `data` JSON + `group_key`) into a
+    `Record` and forwarding it; exposes a `~/ready` (`std_srvs/Trigger`) readiness
+    service backed by a background thread that polls both `Supervisor::poll_restart()`
+    and the readiness probe.
+- Wired `dc_bridge` into `dc_bringup`: added a `dc_bridge` params block to
+  `dc_params.yaml`, and a plain `Node` action for it in both the composed and
+  non-composed branches of `dc_bringup.launch.py` (rclrs has no `rclcpp_components`
+  equivalent, so unlike `measurement_server` it's never a `ComposableNode` — consistent
+  with ADR-0006, it's also not in `lifecycle_manager_dc`'s `node_names`). Replaces the
+  `dc_destinations`-COLCON_IGNORE comment's "nothing launched here" note with a pointer
+  at `dc_bridge` as its ADR-0001/0004/0006 replacement.
+- **Verified without `colcon`/`rclrs`** (no ROS 2 or ros2_rust install in this sandbox,
+  same constraint as #242/#243): ran `cargo test` for real inside
+  `dc_bridge/dc_bridge_core/` — all 16 tests pass (5 runs in a row, no flakiness),
+  covering every scriptable Forwarder/Supervisor/Readiness acceptance criterion:
+  - Frame correctness (decodes the exact `[tag, [[time, record]]]` Forward Mode
+    structure via `rmpv`, including non-object payloads wrapped in a `message` field)
+    and tag handling (independent tags on a shared connection) against a mock Fluent
+    Forward TCP server.
+  - Reconnection: a mock server abortively closes (`SO_LINGER(0)`, forcing an RST)
+    after the first frame; the Forwarder is asserted to reconnect and deliver a second
+    frame on a *new* TCP connection.
+  - Backpressure: a mock server shrinks its receive buffer and never reads; a large
+    payload reliably trips `ForwarderError::Backpressure` within a short
+    `write_timeout` rather than hanging.
+  - Supervisor restart (generic `sh -c` commands, not the real Vector binary) and its
+    restart-backoff window (a bug where `start()` was unconditionally resetting
+    `last_exit`, defeating the backoff check entirely, was caught by this test and
+    fixed).
+  - `cargo clippy --all-targets` and `cargo fmt` are clean on `dc_bridge_core`.
+- **Not done / left for CI or a real ros2_rust environment**: `dc_bridge/src/main.rs`
+  itself could not be compiled or run — it depends on `rclrs`, `dc_interfaces`,
+  `std_msgs`, `std_srvs`, none of which are resolvable outside a colcon workspace built
+  with the `colcon-cargo`/`colcon-ros-cargo` extensions and a vendored ros2_rust (none of
+  which exist yet in this repo; this is the first Rust package, see ADR-0004). It was
+  written against the current rclrs (`Context`/`Executor` split) API from documentation,
+  not compiled — verify it against a real ros2_rust checkout before relying on it. The
+  full "colcon build" and "demo: launch measurement_server + Bridge, Records appear on
+  Vector's console" acceptance criteria are consequently still open, same caveat as
+  #242/#243's "colcon build succeeds" criterion.
+- Ran `pre-commit` (skipping `build-doc`, `poetry-requirements`, `pycln` — disk-heavy/
+  broken tool-environment gaps, same as #242/#243 — and `flake8`, newly confirmed broken
+  independent of this diff: its `flake8-logging-format` plugin fails to import with
+  `ModuleNotFoundError: No module named 'pkg_resources'` even against an untouched file
+  on `main`). Everything else that touched the changed files passed: `check-xml`,
+  `check-yaml`, `check-toml`, `black`, `isort`, `ros2_ws_same_versions`,
+  `ros2_ws_set_metadata`. `codespell` false-positived `crate` → `create` (a legitimate
+  Rust term) in three spots; reverted those specific words back to `crate` after the hook
+  ran, keeping its other (correct) fixes. Added `crate` to `.codespell.txt` so this
+  stops recurring on future Rust packages in this line.
+
+### #244 follow-up — verified the actual `colcon build` + demo in a real environment
+
+Once disk space was freed on the host, re-verified the parts of #244 that could only be
+caveated before, using Docker (rootless, `Docker Root Dir` on `/home` which had headroom)
+rather than the local ROS install:
+
+- Built a `ros:jazzy-ros-base` image with `rustup`, `libclang-dev`,
+  `colcon-cargo`/`colcon-ros-cargo` (`pip install --break-system-packages`), and the
+  Jazzy message repos + `rosidl_rust` code generator cloned into a workspace per
+  ros2_rust's own Jazzy build recipe (`common_interfaces`, `example_interfaces`,
+  `rcl_interfaces`, `rosidl_core`, `rosidl_defaults`, `unique_identifier_msgs`,
+  `rosidl_rust`, all at the `jazzy` tag except `rosidl_rust` which has no distro
+  branches). Bind-mounted `dc_interfaces`, `vector_vendor`, and `dc_bridge` into
+  `/ws/src` and ran `colcon build --packages-up-to dc_bridge` there, iterating on the
+  real compiler output.
+- Found and fixed two real bugs the sandbox `cargo test` pass couldn't catch, since
+  they're specific to the real rclrs/rosidl_generator_rs surface:
+  1. **`rosidl_runtime_rs` version skew**: the git-`main` code generator (which the
+     Jazzy recipe requires, since Jazzy doesn't ship `rosidl_generator_rs` yet) emits
+     `Sequence<T> -> Vec<T>` conversions for unbounded primitive-array fields (hit via
+     `dc_interfaces`' pre-existing `DrawImage.srv` `uint16[] color`/`polygon` fields)
+     that need a `rosidl_runtime_rs` trait impl only present on ITS OWN git `main`
+     branch, not yet in the crates.io `0.6.0` release colcon-ros-cargo resolves by
+     default. Fixed with `[patch.crates-io] rosidl_runtime_rs = { git = "..." }` in
+     `dc_bridge/Cargo.toml`, symmetric with how the generator itself is sourced.
+  2. **Missing rclrs extension-trait imports**: `Context::create_basic_executor` and
+     `Vec<RclrsError>::first_error` are trait methods (`CreateBasicExecutor`,
+     `RclrsErrorFilter`) the real ros2_rust examples pull in via a `use rclrs::*` glob
+     import; `main.rs` used targeted imports instead and needed both named explicitly.
+     No other API mismatches — the parameter types (`Arc<str>`/`Arc<[Arc<str>]>`, fixed
+     earlier from a source read of `rclrs::parameter::value`), subscription/service
+     closure signatures, and message field names were all already correct.
+- With those two fixes, `colcon build --packages-select dc_bridge` succeeds cleanly.
+  Ran the actual demo: `ros2 run dc_bridge dc_bridge --ros-args -p
+  topics:='["/dc/measurement/uptime"]'` locates and spawns the real vendored Vector
+  binary, `ros2 service call /dc_bridge/ready std_srvs/srv/Trigger` returns
+  `success=True` once it's listening, and `ros2 topic pub --once
+  /dc/measurement/uptime dc_interfaces/msg/StringStamped "{data: '{\"uptime_s\":
+  42}'}"` produced this line on Vector's console sink (i.e. in `dc_bridge`'s own
+  stdout, since it supervises Vector as a child process):
+  `{"host":"127.0.0.1","source_type":"fluent","tag":"dc.measurement.uptime","timestamp":"1970-01-01T00:00:00Z","uptime_s":42}`
+  — closing the "colcon build succeeds" and "Demo: Records appear on Vector's console
+  output end-to-end" acceptance criteria (via `ros2 topic pub` standing in for
+  `measurement_server`, which the Bridge is agnostic to either way).
+- Also confirmed the Supervisor's restart behavior against the *real* Vector binary
+  (previously only exercised against a generic `sh` stand-in in `dc_bridge_core`'s
+  tests): `pkill -9` on the vendored `vector` process reliably produced a fresh PID
+  listening again within ~1s (observed across 3 separate kills), and
+  `/dc_bridge/ready` recovered to `success=True` afterward.
+- Not wired into this repo's own toolchain/CI — the Docker environment was ad hoc for
+  this verification pass, matching how #242/#243 also left "real colcon build" to a
+  machine/CI with more resources. Making a permanent ros2_rust-enabled dev environment
+  (documented dev-container, or CI once #249 lands) is a separate follow-up.

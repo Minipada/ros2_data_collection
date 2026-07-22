@@ -163,7 +163,22 @@ def generate_launch_description():
                 arguments=["--ros-args", "--log-level", log_level],
             ),
             # destination_server (dc_destinations) is COLCON_IGNOREd on the jazzy line pending
-            # the DC 2.0 embedded-Fluent-Bit demolition slice (#241/#242) and is not launched here.
+            # the DC 2.0 embedded-Fluent-Bit demolition slice (#241/#242); dc_bridge (Rust)
+            # stands in its place, forwarding Records to the Vector shipper it supervises
+            # internally (ADRs 0001/0004/0006). It is a plain node outside the lifecycle
+            # manager, so it isn't in lifecycle_manager_dc's node_names below.
+            Node(
+                package="dc_bridge",
+                executable="dc_bridge",
+                name="dc_bridge",
+                output={
+                    "stdout": "screen",
+                    "stderr": "screen",
+                },
+                respawn=use_respawn,
+                respawn_delay=2.0,
+                parameters=[configured_params],
+            ),
             Node(
                 package="dc_lifecycle_manager",
                 executable="lifecycle_manager",
@@ -242,7 +257,19 @@ def generate_launch_description():
                 arguments=["--ros-args", "--log-level", log_level],
             ),
             # destination_server (dc_destinations) is COLCON_IGNOREd on the jazzy line pending
-            # the DC 2.0 embedded-Fluent-Bit demolition slice (#241/#242) and is not loaded here.
+            # the DC 2.0 embedded-Fluent-Bit demolition slice (#241/#242); dc_bridge (Rust)
+            # stands in its place. rclrs has no rclcpp_components equivalent, so it always
+            # runs as a plain node (ADR-0006), even when the rest of the stack is composed.
+            Node(
+                package="dc_bridge",
+                executable="dc_bridge",
+                name="dc_bridge",
+                output={
+                    "stdout": "screen",
+                    "stderr": "screen",
+                },
+                parameters=[configured_params],
+            ),
             LoadComposableNodes(
                 target_container=container_name,
                 composable_node_descriptions=[

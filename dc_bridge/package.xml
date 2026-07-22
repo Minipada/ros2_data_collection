@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>dc_bridge</name>
+  <version>0.1.0</version>
+  <description>
+    Rust (rclrs) Bridge node: subscribes to StringStamped Record topics and forwards
+    them to the Vector shipper over the Fluent Forward protocol (ADRs 0001/0004/0006).
+  </description>
+  <maintainer email="d.bensoussan@proton.me">David Bensoussan</maintainer>
+  <license>MPL-2.0</license>
+
+  <depend>rclrs</depend>
+  <depend>rosidl_runtime_rs</depend>
+  <depend>dc_interfaces</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <exec_depend>vector_vendor</exec_depend>
+
+  <export>
+    <build_type>ament_cargo</build_type>
+  </export>
+</package>
