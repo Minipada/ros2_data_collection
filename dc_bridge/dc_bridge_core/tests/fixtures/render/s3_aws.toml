@@ -1,14 +1,17 @@
 data_dir = "/home/dc/.dc/buffer"
 
-[sinks.pgsql]
-endpoint = "postgres://dc:hunter2@127.0.0.1:5432/dc"
+[sinks.s3_archive]
+bucket = "dc-records"
 inputs = ["dc.dc.group.robot"]
-table = "dc"
-type = "postgres"
+region = "eu-west-1"
+type = "aws_s3"
 
-[sinks.pgsql.buffer]
+[sinks.s3_archive.buffer]
 max_size = 268435488
 type = "disk"
+
+[sinks.s3_archive.encoding]
+codec = "json"
 
 [sources.dc_bridge_in]
 address = "127.0.0.1:24224"
@@ -27,7 +30,7 @@ type = "vrl"
 inputs = ["dc_bridge_in"]
 source = """
 if includes(["dc.group.robot"], .tag) {
-  .date = to_float(to_unix_timestamp!(.timestamp, unit: "nanoseconds")) / 1000000000.0
+  .date = format_timestamp!(.timestamp, format: "%Y-%m-%dT%H:%M:%S%.9f")
 }
 """
 type = "remap"

@@ -2,8 +2,10 @@
 
 The Bridge (ADRs 0001/0004/0006): a Rust (`rclrs`) node that subscribes to `dc_interfaces/msg/StringStamped`
 Record topics and forwards every Record to the Vector shipper over the Fluent Forward
-protocol. This package is the DC 2.0 tracer bullet proving Measurement → Bridge →
-Shipper → output end-to-end, with a console sink standing in for real Destinations.
+protocol. It renders Vector's configuration from ROS parameters for the blessed
+Destination set (`postgres`, `s3`, `file`, `console` — ADR-0003) and passes raw Vector
+snippets (`custom_config_files`) through for everything else in Vector's sink catalog,
+via the public per-Tag `dc.<tag>` routes documented in `doc/src/dc/destinations.md`.
 
 ## Layout
 
@@ -34,13 +36,17 @@ Shipper → output end-to-end, with a console sink standing in for real Destinat
   below — rclrs doesn't do this on its own). It depends on `rclrs`, `dc_interfaces`,
   `std_msgs`, and `std_srvs`, all only resolvable inside a colcon workspace (see below).
 
-- **`tests/end_to_end.rs`** — a `colcon test`-integrated integration test (colcon-ros-cargo
+- **`tests/end_to_end.rs`** — `colcon test`-integrated integration tests (colcon-ros-cargo
   runs `cargo test` + `cargo fmt --check` for `ament_cargo` packages, same as any other
-  Cargo package) that spawns the *real* `dc_bridge` binary and `rclrs`-drives a test
-  client against it: publishing a Record and asserting it reaches Vector's console sink,
-  and asserting the supervised Vector process actually stops when dc_bridge receives
-  SIGTERM. This is what caught the signal-handling bug below — manual verification alone
-  had missed it.
+  Cargo package) that spawn the *real* `dc_bridge` binary and `rclrs`-drive a test
+  client against it: readiness with a postgres destination; the supervised Vector
+  process stopping on SIGTERM; a Record landing as a real Postgres row (skips when no
+  Postgres listens at 127.0.0.1:5432); a Record landing as an object in a MinIO bucket
+  configured purely via ROS params (skips when no MinIO listens at 127.0.0.1:9000); a
+  `custom_config_files` snippet shipping Records to an un-blessed `http` sink by
+  consuming the public `dc.<tag>` route (self-contained — the test plays the HTTP
+  server); and a colliding snippet failing dc_bridge startup loudly. This file is what
+  caught the signal-handling bug below — manual verification alone had missed it.
 
 ## Config renderer (ADR-0003)
 
@@ -72,33 +78,42 @@ it renders: the Fluent Forward source; one `remap` (VRL) transform that normaliz
 blessed destination's timestamp field into `time_key` per `time_format` — `double`
 (Unix epoch seconds as a float) or `iso8601` (`%Y-%m-%dT%H:%M:%S%.9f`), replacing the
 Humble-era chained Lua filters (`dc_destinations/include/dc_destinations/
-flb_destination.hpp` on the `humble` branch); one `route` transform named `dc`, giving
-every Destination a stable output at `dc.<name>` (the passthrough contract other
-`custom_sinks` snippets are meant to consume, per ADR-0003) — the route's branch
-condition and the normalize transform's per-destination `if` both match on the same
-Fluent Forward tag `TopicConfig` derives from that Destination's `inputs` topics; a disk
-buffer (`shipper.data_dir`, minimum ~256 MiB per Vector's own `postgres` sink
-constraint) per sink; and the sink itself. Only `postgres` is implemented; `s3`, `file`,
-`console` are reserved blessed-type names that reject clearly (`RenderError::
-UnsupportedType`) until their own issues land.
+flb_destination.hpp` on the `humble` branch); one `route` transform named `dc` with one
+branch per distinct Tag across every Destination's `inputs`, so each Tag's Records get a
+stable public output at `dc.<tag>` (ADR-0003's passthrough contract, documented as API
+in `doc/src/dc/destinations.md`) that blessed sinks and `custom_config_files` snippets
+alike consume; a disk buffer (`shipper.data_dir`, minimum ~256 MiB per Vector's own
+`postgres` sink constraint) per persistent sink; and the sinks themselves. All four
+blessed types are implemented: `postgres`, `s3` (AWS or MinIO-style custom `endpoint`),
+`file`, and `console` (no disk buffer — it's a debugging sink).
 
 Two layers, both pure and gold-file-tested (`src/render.rs`'s `#[cfg(test)]` module,
 comparing against checked-in fixtures under `tests/fixtures/render/*.toml` via parsed
 `toml::Table` equality so incidental formatting differences don't make the tests
-brittle):
+brittle — every fixture is also `vector validate`d against the real pinned binary
+whenever it changes):
 
-- `destination_from_raw` / `PostgresParams::from_raw` validate the flat, stringly-typed
-  values ROS parameters naturally give (`<name>.type`, `<name>.host`, …) into typed
-  config — every "invalid-parameter rejection" acceptance criterion (unknown `type`,
-  bad `time_format`/`receives`, missing required field, out-of-range `port`, empty
-  `inputs`/`destinations`, duplicate/invalid destination names, an undersized disk
-  buffer) is a `RenderError` variant with its own test.
+- `destination_from_raw` (with the per-type `*Params::from_raw` constructors) validates
+  the flat, stringly-typed values ROS parameters naturally give (`<name>.type`,
+  `<name>.host`, …) into typed config — every "invalid-parameter rejection" acceptance
+  criterion (unknown `type`, bad `time_format`/`receives`, missing required field, half
+  an S3 credential pair, out-of-range `port`, empty `inputs`/`destinations`,
+  duplicate/invalid/reserved destination names, an undersized disk buffer) is a
+  `RenderError` variant with its own test.
 - `render` turns already-validated `RenderConfig` into the Vector TOML text above.
 
+`validate_custom_config_files` (also pure) checks the passthrough side: every
+`custom_config_files` snippet must parse as TOML, define at least one component, and
+not claim a component id owned by the rendered config or another snippet — so a bad
+snippet fails loudly at Bridge startup with an error naming the file. As a backstop,
+`main.rs` also runs `vector validate --no-environment` over the merged `--config` set
+(catching e.g. a snippet consuming a `dc.<tag>` route no Destination subscribes) before
+the Supervisor ever starts Vector.
+
 `expand_env` (also pure — it takes an injected lookup function rather than reading the
-real environment) implements the `$NAME`/`${NAME}` expansion `shipper.data_dir` and
-each destination's `password` use; `main.rs` is the only place that calls it with
-`std::env::var`.
+real environment) implements the `$NAME`/`${NAME}` expansion `shipper.data_dir`,
+destination credentials (`password`, `secret_access_key`), and `custom_config_files`
+paths use; `main.rs` is the only place that calls it with `std::env::var`.
 
 Run just these tests (no ROS, Vector, or Postgres needed):
 
@@ -150,6 +165,13 @@ process-supervision behavior under signals):
   explicit `ctrlc` handler (the `termination` feature, not just default SIGINT) that
   stops Vector before exiting. SIGKILL still can't be caught by any userspace handler —
   that part is an inherent, unavoidable Unix limit, not specific to this.
+- **Vector orphaned by a SIGTERM during startup**: the handler above used to be
+  installed only *after* `Supervisor::start()`, so a signal landing in between (hit
+  intermittently by `stops_the_supervised_vector_process_on_sigterm` once the startup
+  sequence also grew a `vector validate` step) killed dc_bridge via the OS default and
+  left the just-spawned Vector running. Fixed by installing the handler before the
+  first `start()` and making `Supervisor::start` a no-op after `stop()`, so the handler
+  can fire at any point of the startup sequence without leaking a process.
 
 ## Building via colcon (cargo integration)
 

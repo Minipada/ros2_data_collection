@@ -26,5 +26,35 @@ dc_bridge:
       table: "dc"
       time_key: "date"
       time_format: "double"
+    # The other blessed destination types (add the name to `destinations` to enable):
+    #
+    # minio:                      # S3-compatible object storage (MinIO/Ceph/AWS)
+    #   type: s3
+    #   receives: records
+    #   inputs: ["/dc/measurement/uptime"]
+    #   bucket: "dc-records"
+    #   endpoint: "http://127.0.0.1:9000"   # omit for AWS S3
+    #   region: "us-east-1"
+    #   access_key_id: "minioadmin"         # omit both to use ambient AWS credentials
+    #   secret_access_key: "$DC_S3_SECRET"  # $VAR / ${VAR} env references are expanded
+    #   force_path_style: true              # MinIO-style path addressing
+    #   key_prefix: "robot1/"
+    #   batch_timeout_secs: 60              # object write interval; Vector default 300
+    #
+    # local_log:                  # newline-delimited JSON on local disk
+    #   type: file
+    #   receives: records
+    #   inputs: ["/dc/measurement/uptime"]
+    #   path: "/var/log/dc/records-%Y-%m-%d.log"
+    #
+    # debug_console:              # JSON on the Bridge's stdout (debugging)
+    #   type: console
+    #   receives: records
+    #   inputs: ["/dc/measurement/uptime"]
+    #
+    # Any other Vector sink type via the ADR-0003 passthrough: raw Vector config
+    # snippets consuming the public per-Tag `dc.<tag>` routes (see
+    # doc/src/dc/destinations.md for the routing contract).
+    # custom_config_files: ["$HOME/.dc/custom_sinks.toml"]
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224
