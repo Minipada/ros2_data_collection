@@ -75,20 +75,32 @@ This is the recipe used to verify this package (see above):
    `pip install --break-system-packages colcon-cargo colcon-ros-cargo` — these colcon
    extensions recognize `ament_cargo` packages and resolve `rclrs`/`dc_interfaces`/
    `std_msgs`/`std_srvs` to the workspace's generated crates or crates.io.
-2. Clone the Jazzy message repos and the Rust code generator into the workspace, since
-   Jazzy doesn't yet ship `rosidl_generator_rs` and pre-built apt message packages don't
-   carry Rust bindings — only source-built ones do (see
-   [ros2_rust's README](https://github.com/ros2-rust/ros2_rust#ros-2-jazzy-jalisco) for
-   the exact list: `common_interfaces`, `example_interfaces`, `rcl_interfaces`,
-   `rosidl_core`, `rosidl_defaults`, `unique_identifier_msgs`, `rosidl_rust`).
+2. `vcs import src < ros2_data_collection_jazzy.repos` into the workspace `src/`
+   alongside this repo, *before* `rosdep install`/`colcon build` (matching the existing
+   `docker/ci/Dockerfile` and `docker/source/Dockerfile` convention for extra source
+   deps). This pulls in the message repos and the `rosidl_rust` code generator, since
+   Jazzy doesn't yet ship `rosidl_generator_rs` and pre-built apt message packages carry
+   no Rust bindings — only source-built ones do. `rosidl_rust` is pinned to the exact
+   commit this package was verified against, since it and `rosidl_runtime_rs` (pinned
+   separately in `dc_bridge/Cargo.lock` — see the version-skew bug below) are developed
+   in lockstep and have drifted out of sync before.
 3. `colcon build --packages-up-to dc_bridge` then builds like any other package in this
    workspace, generating `lib/dc_bridge/dc_bridge`.
 
-None of steps 1–2 exist yet in this repo's own toolchain setup (this is the first Rust
-package; see ADR-0004) — they were done ad hoc in a throwaway container for this
-verification, not wired into `rosdep`/CI. Wiring a permanent ros2_rust-enabled build
-environment (CI, or a documented dev-container) is a follow-up, not part of this tracer
-bullet.
+Note that `rosdep install --from-paths src --ignore-src` will still report
+`rosidl_runtime_rs` as unresolvable — that's expected, not a setup mistake. Neither it
+nor `rclrs` have (or ever will have) a rosdep key: they're plain Cargo/crates.io
+dependencies that colcon-ros-cargo resolves through its own Cargo-registry patching,
+entirely bypassing rosdep. `<depend>` tags for them in `package.xml` exist only so
+colcon knows about the dependency for build ordering. rosdep's error summary also only
+ever surfaces one unresolved key per package even when several are unresolvable, so
+don't read "only one reported" as "the others resolved."
+
+Step 1 (the Rust/cargo toolchain itself, plus the colcon-cargo/colcon-ros-cargo
+extensions) still isn't wired into this repo's own Docker images or CI (this is the
+first Rust package; see ADR-0004) — only step 2's source-import path is. Adding Rust to
+`docker/source/Dockerfile` (conditionally, since `humble` images have no Rust package to
+build) is a follow-up, not part of this tracer bullet.
 
 ## Runtime flow (ADR-0006)
 
