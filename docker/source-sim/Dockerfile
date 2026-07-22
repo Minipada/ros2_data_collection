@@ -21,8 +21,8 @@ RUN --mount=type=cache,target=/root/.ccache/ \
     # Enable ccache
     PATH=/usr/lib/ccache:$PATH && \
     # Fetch required upstream sources for building
-    if [ -r "src/ros2_data_collection/ros2_data_collection_${ROS_DISTRO}.repos" ] ; then vcs import src < src/ros2_data_collection/ros2_data_collection_sim.repos ; fi  && \
-    if [ -r "src/ros2_data_collection/ros2_data_collection_${ROS_DISTRO}.repos" ] ; then vcs import src < "src/ros2_data_collection/ros2_data_collection_sim_${ROS_DISTRO}.repos" ; fi && \
+    if [ -r "src/ros2_data_collection/ros2_data_collection_sim.repos" ] ; then vcs import src < src/ros2_data_collection/ros2_data_collection_sim.repos ; fi  && \
+    if [ -r "src/ros2_data_collection/ros2_data_collection_sim_${ROS_DISTRO}.repos" ] ; then vcs import src < "src/ros2_data_collection/ros2_data_collection_sim_${ROS_DISTRO}.repos" ; fi && \
     #
     apt-get update && \
     rosdep update --include-eol-distros && \
