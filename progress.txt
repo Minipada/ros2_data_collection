@@ -261,3 +261,112 @@ only ever been checked by hand, interactively, in the (now torn-down) Docker ses
 - `dc_bridge/README.md` and the `main.rs` module doc comment updated to describe the
   test file, the three real bugs found in this environment (adding the Vector-orphaning
   one to the two from the original pass), and the shutdown behavior.
+
+### #245 - DC 2.0 S4: Config renderer + PostgreSQL blessed destination
+
+- Added `dc_bridge_core::render` (`dc_bridge/dc_bridge_core/src/render.rs`, new module):
+  a pure, I/O-free config renderer (ADR-0003) mapping the unified `shipper`/
+  `destinations` ROS parameter contract to a complete Vector TOML config — a `fluent`
+  source; one `remap` (VRL) transform that normalizes each blessed destination's
+  timestamp into its `time_key` per `time_format` (`double` = Unix epoch seconds as an
+  f64, `iso8601` = `%Y-%m-%dT%H:%M:%S%.9f`), replacing the Humble-era chained Lua filters
+  (`dc_destinations/include/dc_destinations/flb_destination.hpp` on `humble`); one
+  `route` transform literally named `dc`, so Vector's own `<transform_id>.<route_id>`
+  addressing convention gives every Destination a stable `dc.<name>` output for free
+  (ADR-0003's passthrough contract) — verified this addressing scheme, and the VRL
+  itself, against the real vendored Vector 0.57.0 binary (`vector vrl`, `vector validate
+  --no-environment`) before writing any Rust; a disk buffer (`shipper.data_dir`,
+  Vector's own documented ~256 MiB `postgres`-sink minimum, `MIN_DISK_BUFFER_BYTES`); and
+  a `postgres`-type sink per destination (`postgres://user:pass@host:port/db`, with
+  byte-wise percent-encoding of user/password so arbitrary credential characters can't
+  corrupt the URI). Only `postgres` is implemented; `s3`/`file`/`console` are reserved
+  blessed-type names that reject clearly (`RenderError::UnsupportedType`) until their
+  own issues land.
+- Two pure, independently-testable layers: `destination_from_raw`/
+  `PostgresParams::from_raw` validate the flat, stringly-typed values ROS parameters
+  naturally give (`<name>.type`, `<name>.host`, …) into typed config — this is where
+  every "invalid-parameter rejection" acceptance criterion (unknown `type`, bad
+  `time_format`/`receives`, missing required field, out-of-range port, empty
+  `inputs`/`destinations`, duplicate/invalid destination names, an undersized disk
+  buffer) becomes a `RenderError` variant with its own test; `render` turns an
+  already-validated `RenderConfig` into the Vector TOML text. `expand_env` implements
+  the `$NAME`/`${NAME}` expansion `shipper.data_dir` and each destination's `password`
+  use, via an injected lookup closure rather than reading the real environment, so it
+  stays pure/deterministic under test.
+- 36 new tests in `dc_bridge_core` (37 after the Supervisor fix below), including
+  gold-file tests comparing rendered TOML — parsed as `toml::Table` so incidental
+  formatting differences don't make them brittle — against checked-in fixtures under
+  `dc_bridge/dc_bridge_core/tests/fixtures/render/*.toml` (`basic_double.toml`,
+  `iso8601.toml`, `multiple_destinations.toml`), generated from the renderer's own real
+  output (not hand-typed) so they can't silently drift from what the code actually
+  produces. All pass with plain `cargo test` (no ROS/Vector/Postgres needed); `cargo
+  clippy --all-targets -- -D warnings` and `cargo fmt --check` are clean.
+- Wired into `dc_bridge/src/main.rs`: declares `shipper.data_dir`,
+  `shipper.buffer_max_bytes`, `destinations` (a list of names), and per-destination
+  `<name>.type`/`<name>.receives`/`<name>.inputs`/`<name>.host`/`<name>.port`/
+  `<name>.user`/`<name>.password`/`<name>.database`/`<name>.table`/`<name>.time_key`/
+  `<name>.time_format` parameters; builds a `RenderConfig` (expanding `$HOME`/
+  `$DC_PG_PASSWORD`-style references against the real environment via `expand_env`),
+  renders it, and writes the result as Vector's config instead of the old tracer-bullet
+  `vector_config::render`. The flat `topics` parameter is gone — the Bridge now
+  subscribes to the union of every configured Destination's `inputs` topics instead.
+- Updated `dc_bringup/params/dc_params.yaml`'s `dc_bridge` block to the new `shipper`/
+  `destinations`/`pgsql` shape, pointed at `tools/infrastructure/docker/
+  docker-compose.postgresql.yaml`'s existing Postgres service (user/password/database
+  `dc`/`password`/`dc`) so the bringup demo exercises the real blessed-destination path
+  end-to-end rather than the old bare console sink. No launch-file changes were needed —
+  `dc_bringup.launch.py` already wires `dc_bridge` purely through the params file.
+- **Verified in a real ROS 2 Jazzy + ros2_rust + Postgres environment** (same Docker
+  recipe as #244, reused from that pass): `colcon build --packages-up-to dc_bridge`
+  succeeded on the first attempt with **zero changes needed to `main.rs`** — the `rclrs`
+  parameter API (`.declare_parameter(...).default(...).mandatory()?.get()` /
+  `.optional()?.get()`, `Arc<str>`/`Arc<[Arc<str>]>` types) was used correctly the first
+  time. Ran the real demo against a live Postgres 13 (`docker-compose.postgresql.yaml`'s
+  credentials, table `dc(date double precision, uptime_s integer)`): `~/ready` answered
+  `success=True`, and `ros2 topic pub --once /dc/measurement/uptime
+  dc_interfaces/msg/StringStamped "{data: '{\"uptime_s\": 42}'}"` produced a real row
+  (`date=0, uptime_s=42` — `date=0` is expected, since `ros2 topic pub` doesn't set a
+  real `header.stamp`, same caveat as the #244 console demo).
+- **Found and fixed one real bug this environment caught, in `dc_bridge_core`'s
+  `Supervisor` (not in the new renderer/main.rs code)**: `Supervisor::stop()` clears its
+  `child` and kills the process, but the background thread `main.rs` spawns also calls
+  `poll_restart()` in a loop; without a `stopped` flag, a `poll_restart` tick landing
+  right after `stop()` read the just-cleared `child` as "the process crashed" and
+  respawned a **brand-new Vector**, which then got orphaned the instant `dc_bridge`
+  itself exited right after (the SIGTERM handler calls `stop()` then
+  `std::process::exit`). Reproduced by hand twice with a direct `kill -TERM` on a live
+  process before the fix, confirmed gone after. Fixed by adding a `stopped: bool` field
+  that `poll_restart` checks and short-circuits on; added a regression test,
+  `poll_restart_never_respawns_after_stop`, in
+  `dc_bridge/dc_bridge_core/tests/supervisor_tests.rs`.
+- Rewrote `dc_bridge/tests/end_to_end.rs` (the old bare-console-sink test had nothing
+  left to assert against, since the renderer now only produces blessed-Destination
+  sinks) into three `colcon test`-integrated tests: readiness with a postgres
+  destination configured (proves Vector accepts the rendered sink config and starts,
+  without needing Postgres reachable — `~/ready` only probes the Fluent port);
+  SIGTERM-stops-the-supervised-Vector (unchanged behavior, updated to the new params);
+  and a Postgres-backed test that publishes a Record with a distinctive marker value and
+  asserts the row lands with a plausible `date` and correct value, but TCP-probes
+  `127.0.0.1:5432` first and skips itself with a clear printed message if nothing's
+  listening, so `colcon test`/`cargo test` still passes cleanly on machines with no
+  Postgres container running (explicitly confirmed both ways: stopped Postgres and
+  reran — skip message printed, suite still `3 passed`; restarted Postgres and reran —
+  all 3 passed including the DB assertion). Added `postgres = "0.19"` as a
+  `dc_bridge`-only dev-dependency (Vector, not `dc_bridge` itself, talks to Postgres in
+  production). Iterating against the real environment caught and fixed three more small
+  bugs specific to this test file (a ROS-node-naming collision from using `ThreadId`'s
+  `Debug` output, which contains characters ROS node names reject; a test message
+  defaulting `header.stamp` to zero, making the `date` plausibility assertion trivially
+  pass/fail meaninglessly; and real cross-run flakiness from every test sharing one
+  `shipper.data_dir` — since `Supervisor::stop` uses `SIGKILL`, a run's unflushed
+  disk-buffered rows survived and got redelivered by the *next* run's Vector, fixed by
+  giving every spawned `dc_bridge` a fresh `shipper.data_dir`). `colcon test
+  --packages-select dc_bridge` then passed 3/3 across 17 consecutive runs with zero
+  leftover live processes each time. `cargo clippy --all-targets -- -D warnings` and
+  `cargo fmt --check` are clean for both `dc_bridge_core` and `dc_bridge`.
+- **Not done / left for follow-up**: `s3`/`file`/`console` blessed destination types
+  (reserved names only, per this issue's scope — PostgreSQL was the one required to
+  land end-to-end); a documented/reusable dev container for this Jazzy+ros2_rust+Rust
+  toolchain (every DC 2.0 Rust-package slice so far — #242, #243, #244, and this one —
+  has rebuilt the same ad hoc Docker environment from scratch in-session, with nothing
+  checked into the repo to reuse it; worth its own follow-up issue).

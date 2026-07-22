@@ -8,6 +8,23 @@ measurement_server:
 
 dc_bridge:
   ros__parameters:
-    topics: ["/dc/measurement/uptime"]
+    # ADR-0003 config contract: the config renderer (dc_bridge_core::render) turns
+    # `shipper`/`destinations` into a complete Vector config. `pgsql` here matches
+    # tools/infrastructure/docker/docker-compose.postgresql.yaml's credentials.
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["pgsql"]
+    pgsql:
+      type: postgres
+      receives: records
+      inputs: ["/dc/measurement/uptime"]
+      host: "127.0.0.1"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc"
+      time_key: "date"
+      time_format: "double"
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224

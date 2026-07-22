@@ -33,6 +33,16 @@ pub struct Supervisor {
     config: SupervisorConfig,
     child: Option<Child>,
     last_exit: Option<Instant>,
+    /// Set by [`Supervisor::stop`]; once true, [`Supervisor::poll_restart`] refuses to
+    /// respawn. Without this, a caller that stops the supervised process (e.g.
+    /// `main.rs`'s SIGTERM handler, which explicitly kills Vector before exiting) races
+    /// the background thread that also calls `poll_restart` in a loop: `stop` sets
+    /// `child` to `None`, and if the next `poll_restart` tick lands before the process
+    /// actually exits, it reads that same `None` as "the process died, respawn it" and
+    /// spawns a brand-new, now-permanently-orphaned Vector — reproduced by hand (a
+    /// direct `kill -TERM` on a real, running `dc_bridge` left a freshly-spawned Vector
+    /// child reparented to init once dc_bridge itself had exited).
+    stopped: bool,
 }
 
 impl Supervisor {
@@ -41,6 +51,7 @@ impl Supervisor {
             config,
             child: None,
             last_exit: None,
+            stopped: false,
         }
     }
 
@@ -60,8 +71,13 @@ impl Supervisor {
     }
 
     /// Checks whether the supervised process has exited and, if so, restarts it
-    /// (subject to `restart_backoff`). Returns `Ok(true)` if a restart happened.
+    /// (subject to `restart_backoff`). Returns `Ok(true)` if a restart happened. A
+    /// no-op, returning `Ok(false)`, once [`Supervisor::stop`] has been called — see
+    /// the `stopped` field doc for the respawn-after-stop race this prevents.
     pub fn poll_restart(&mut self) -> io::Result<bool> {
+        if self.stopped {
+            return Ok(false);
+        }
         let exited = match &mut self.child {
             Some(child) => child.try_wait()?.is_some(),
             None => true,
@@ -81,7 +97,11 @@ impl Supervisor {
         Ok(true)
     }
 
+    /// Stops the supervised process and permanently disables future respawns from
+    /// `poll_restart` (there is no corresponding "un-stop": a `Supervisor` is only ever
+    /// stopped once, right before the owning process exits).
     pub fn stop(&mut self) {
+        self.stopped = true;
         if let Some(mut child) = self.child.take() {
             let _ = child.kill();
             let _ = child.wait();
