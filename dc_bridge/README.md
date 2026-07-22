@@ -9,11 +9,11 @@ Shipper → output end-to-end, with a console sink standing in for real Destinat
 
 - **`dc_bridge_core/`** — the ROS-independent core: `Forwarder` (msgpack framing, socket
   lifecycle, reconnection, backpressure), `Supervisor` (generic process respawn),
-  `Readiness` (TCP-accept probe), `config` (topic → Fluent Forward tag), and
-  `vector_config` (renders the minimal Vector config, locates the vendored binary). It's
-  a standalone crate with its own `Cargo.toml` (declaring `[workspace]` so it never gets
-  swept into the outer package's workspace) and zero ROS dependencies, so it builds and
-  tests with plain Cargo:
+  `Readiness` (TCP-accept probe), `config` (topic → Fluent Forward tag), `vector_config`
+  (locates the vendored binary), and `render` (ADR-0003's config renderer — see below).
+  It's a standalone crate with its own `Cargo.toml` (declaring `[workspace]` so it never
+  gets swept into the outer package's workspace) and zero ROS dependencies, so it builds
+  and tests with plain Cargo:
 
   ```sh
   cd dc_bridge/dc_bridge_core
@@ -24,13 +24,15 @@ Shipper → output end-to-end, with a console sink standing in for real Destinat
   were verified in a sandbox with no ROS 2 or ros2_rust install available — no `colcon`
   or `rclrs` toolchain is required to run these tests.
 
-- **`src/main.rs`** — the actual ROS node. It declares parameters (`topics`,
-  `vector_forward_host`, `vector_forward_port`, `vector_binary`), starts the Supervisor
-  against the vendored `vector_vendor` binary, subscribes to each configured topic,
-  exposes a `~/ready` (`std_srvs/Trigger`) readiness service, and installs a SIGINT/
-  SIGTERM handler that stops Vector before exiting (see "Runtime flow" below — rclrs
-  doesn't do this on its own). It depends on `rclrs`, `dc_interfaces`, `std_msgs`, and
-  `std_srvs`, all only resolvable inside a colcon workspace (see below).
+- **`src/main.rs`** — the actual ROS node. It declares `shipper.*`/`destinations`/
+  `<name>.*` parameters (ADR-0003's config contract — see below), `vector_forward_host`,
+  `vector_forward_port`, and `vector_binary`; renders the full Vector config via
+  `dc_bridge_core::render` and hands it to the Supervisor (which supervises the vendored
+  `vector_vendor` binary); subscribes to the union of every configured Destination's
+  `inputs` topics; exposes a `~/ready` (`std_srvs/Trigger`) readiness service; and
+  installs a SIGINT/SIGTERM handler that stops Vector before exiting (see "Runtime flow"
+  below — rclrs doesn't do this on its own). It depends on `rclrs`, `dc_interfaces`,
+  `std_msgs`, and `std_srvs`, all only resolvable inside a colcon workspace (see below).
 
 - **`tests/end_to_end.rs`** — a `colcon test`-integrated integration test (colcon-ros-cargo
   runs `cargo test` + `cargo fmt --check` for `ament_cargo` packages, same as any other
@@ -39,6 +41,71 @@ Shipper → output end-to-end, with a console sink standing in for real Destinat
   and asserting the supervised Vector process actually stops when dc_bridge receives
   SIGTERM. This is what caught the signal-handling bug below — manual verification alone
   had missed it.
+
+## Config renderer (ADR-0003)
+
+`dc_bridge_core::render` is a pure, I/O-free module (`src/render.rs`) mapping ROS
+parameters to a complete Vector configuration. Given the unified-destinations config
+contract:
+
+```yaml
+dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["pgsql"]
+    pgsql:
+      type: postgres            # blessed types: postgres | s3 | file | console
+      receives: records          # records (default) | files
+      inputs: ["/dc/group/robot"]
+      host: "127.0.0.1"
+      port: 5432
+      user: "dc"
+      password: "$DC_PG_PASSWORD"   # env expansion, consistent with existing $HOME usage
+      database: "dc"
+      table: "dc"
+      time_key: "date"
+      time_format: "double"      # double | iso8601
+```
+
+it renders: the Fluent Forward source; one `remap` (VRL) transform that normalizes each
+blessed destination's timestamp field into `time_key` per `time_format` — `double`
+(Unix epoch seconds as a float) or `iso8601` (`%Y-%m-%dT%H:%M:%S%.9f`), replacing the
+Humble-era chained Lua filters (`dc_destinations/include/dc_destinations/
+flb_destination.hpp` on the `humble` branch); one `route` transform named `dc`, giving
+every Destination a stable output at `dc.<name>` (the passthrough contract other
+`custom_sinks` snippets are meant to consume, per ADR-0003) — the route's branch
+condition and the normalize transform's per-destination `if` both match on the same
+Fluent Forward tag `TopicConfig` derives from that Destination's `inputs` topics; a disk
+buffer (`shipper.data_dir`, minimum ~256 MiB per Vector's own `postgres` sink
+constraint) per sink; and the sink itself. Only `postgres` is implemented; `s3`, `file`,
+`console` are reserved blessed-type names that reject clearly (`RenderError::
+UnsupportedType`) until their own issues land.
+
+Two layers, both pure and gold-file-tested (`src/render.rs`'s `#[cfg(test)]` module,
+comparing against checked-in fixtures under `tests/fixtures/render/*.toml` via parsed
+`toml::Table` equality so incidental formatting differences don't make the tests
+brittle):
+
+- `destination_from_raw` / `PostgresParams::from_raw` validate the flat, stringly-typed
+  values ROS parameters naturally give (`<name>.type`, `<name>.host`, …) into typed
+  config — every "invalid-parameter rejection" acceptance criterion (unknown `type`,
+  bad `time_format`/`receives`, missing required field, out-of-range `port`, empty
+  `inputs`/`destinations`, duplicate/invalid destination names, an undersized disk
+  buffer) is a `RenderError` variant with its own test.
+- `render` turns already-validated `RenderConfig` into the Vector TOML text above.
+
+`expand_env` (also pure — it takes an injected lookup function rather than reading the
+real environment) implements the `$NAME`/`${NAME}` expansion `shipper.data_dir` and
+each destination's `password` use; `main.rs` is the only place that calls it with
+`std::env::var`.
+
+Run just these tests (no ROS, Vector, or Postgres needed):
+
+```sh
+cd dc_bridge/dc_bridge_core
+cargo test render::
+```
 
 ## Verified in a real ROS 2 Jazzy + ros2_rust environment
 

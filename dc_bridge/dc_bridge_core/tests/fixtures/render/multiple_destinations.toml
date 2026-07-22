@@ -1,0 +1,51 @@
+data_dir = "/home/dc/.dc/buffer"
+
+[sinks.pgsql]
+endpoint = "postgres://dc:hunter2@127.0.0.1:5432/dc"
+inputs = ["dc.pgsql"]
+table = "dc"
+type = "postgres"
+
+[sinks.pgsql.buffer]
+max_size = 268435488
+type = "disk"
+
+[sinks.pgsql_archive]
+endpoint = "postgres://dc:hunter2@127.0.0.1:5432/dc"
+inputs = ["dc.pgsql_archive"]
+table = "dc"
+type = "postgres"
+
+[sinks.pgsql_archive.buffer]
+max_size = 268435488
+type = "disk"
+
+[sources.dc_bridge_in]
+address = "127.0.0.1:24224"
+type = "fluent"
+
+[transforms.dc]
+inputs = ["dc_bridge_normalize"]
+reroute_unmatched = false
+type = "route"
+
+[transforms.dc.route.pgsql]
+source = 'includes(["dc.group.robot"], .tag)'
+type = "vrl"
+
+[transforms.dc.route.pgsql_archive]
+source = 'includes(["dc.measurement.uptime"], .tag)'
+type = "vrl"
+
+[transforms.dc_bridge_normalize]
+inputs = ["dc_bridge_in"]
+source = """
+if includes(["dc.group.robot"], .tag) {
+  .date = to_float(to_unix_timestamp!(.timestamp, unit: "nanoseconds")) / 1000000000.0
+}
+if includes(["dc.measurement.uptime"], .tag) {
+  .date = format_timestamp!(.timestamp, format: "%Y-%m-%dT%H:%M:%S%.9f")
+}
+"""
+type = "remap"
+
