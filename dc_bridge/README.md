@@ -40,15 +40,18 @@ via the public per-Tag `dc.<tag>` routes documented in `doc/src/dc/destinations.
   runs `cargo test` + `cargo fmt --check` for `ament_cargo` packages, same as any other
   Cargo package) that spawn the *real* `dc_bridge` binary and `rclrs`-drive a test
   client against it: readiness with a postgres destination; the supervised Vector
-  process stopping on SIGTERM; a Record landing as a real Postgres row (skips when no
-  Postgres listens at 127.0.0.1:5432); a Record landing as an object in an
-  S3-compatible store's bucket configured purely via ROS params (verified against
-  RustFS, the recommended self-hosted store now that MinIO's community edition is
-  archived upstream; skips when nothing listens at 127.0.0.1:9000); a
-  `custom_config_files` snippet shipping Records to an un-blessed `http` sink by
-  consuming the public `dc.<tag>` route (self-contained — the test plays the HTTP
-  server); and a colliding snippet failing dc_bridge startup loudly. This file is what
-  caught the signal-handling bug below — manual verification alone had missed it.
+  process stopping on SIGTERM; a Record landing as a real Postgres row; a Record
+  landing as an object in an S3-compatible store's bucket configured purely via ROS
+  params (verified against RustFS, the recommended self-hosted store now that MinIO's
+  community edition is archived upstream); a `custom_config_files` snippet shipping
+  Records to an un-blessed `http` sink by consuming the public `dc.<tag>` route
+  (self-contained — the test plays the HTTP server); and a colliding snippet failing
+  dc_bridge startup loudly. The store-backed tests **require** a Postgres at
+  127.0.0.1:5432 and an S3-compatible store at 127.0.0.1:9000 and hard-fail
+  immediately with setup instructions when they're missing — they deliberately never
+  skip, since libtest swallows passing tests' output and a skipped run is
+  indistinguishable from a verified one. This file is what caught the signal-handling
+  bug below — manual verification alone had missed it.
 
 ## Config renderer (ADR-0003)
 
