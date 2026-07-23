@@ -484,3 +484,24 @@ only ever been checked by hand, interactively, in the (now torn-down) Docker ses
   skips — the bucket assertion ran for real, object content confirmed with normalized
   `date` and Tag) plus 1 run with stores down (skip path). Vector's `aws_s3` sink
   needed no changes to deliver to RustFS.
+
+### #246 follow-up — store-backed e2e tests hard-fail instead of skipping
+
+- Decision (from review discussion): the Postgres- and S3-backed end-to-end tests must
+  never skip. Investigation of the old skip path showed it was worse than intended:
+  libtest swallows passing tests' output, so the "skipping…" eprintln never appeared
+  anywhere in a default `colcon test` run (confirmed empirically — zero "skipping"
+  occurrences in colcon's captured stdout.log during stores-down runs) and a run whose
+  store assertions never executed reported the same "6 passed" as a real one — a change
+  could look verified when the pipeline was never exercised.
+- `published_record_lands_in_postgres` and `published_record_reaches_s3_bucket`
+  (renamed from `*_when_reachable`) now keep the fast TCP pre-probe but `assert!` on
+  it: missing store = immediate test failure (~3 s, not a slow pipeline timeout) with
+  setup instructions in the panic message (the compose file / the exact RustFS + `mc`
+  one-liners). Running the dc_bridge suite now *requires* both containers; module doc
+  and README updated to say so and why.
+- Verified both directions in the real environment: stores up → 6/6 green, 3
+  consecutive runs; stores down → exactly the two store tests fail immediately with
+  the instructive messages visible in the failure output, and `colcon test-result`
+  exits 1 (CI-gating works; `colcon test` itself always exits 0 by colcon convention)
+  — then green again after restarting the containers.

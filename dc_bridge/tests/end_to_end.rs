@@ -13,10 +13,13 @@
 //! `postgres`-type destination. Two tests only need Vector to have started successfully
 //! (readiness, shutdown behavior) and work against a Postgres endpoint that need not
 //! actually be reachable; the Postgres- and S3-store-backed (RustFS) tests verify a
-//! Record actually lands in the real downstream store, and skip themselves with a clear
-//! message when
-//! nothing is listening at the configured address, since `cargo test`/`colcon test`
-//! must still pass cleanly on machines without those containers running. The
+//! Record actually lands in the real downstream store, and **hard-fail immediately
+//! (with setup instructions) when nothing is listening at the configured address** —
+//! they deliberately never skip. They used to, but libtest swallows passing tests'
+//! output, so a "6 passed" run whose store assertions never executed was
+//! indistinguishable from a real pass — the suite could stay green while the pipeline
+//! was never exercised. Running this suite therefore requires the Postgres and RustFS
+//! containers (see each test's panic message for the one-liners to start them). The
 //! passthrough test (`custom_config_files`, ADR-0003) is fully self-contained: the test
 //! itself plays the un-blessed HTTP sink's server.
 
@@ -53,7 +56,7 @@ const PG_TABLE: &str = "dc";
 /// process finds the previous run's unflushed, disk-buffered records still on disk and
 /// redelivers them on startup — a stale row lands in Postgres carrying an *older* run's
 /// timestamp but the *same* hardcoded marker value, which was observed to intermittently
-/// fail `published_record_lands_in_postgres_when_reachable`'s plausibility assertion
+/// fail `published_record_lands_in_postgres`'s plausibility assertion
 /// before this was isolated per spawn.
 fn unique_data_dir() -> String {
     static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -223,11 +226,9 @@ fn stops_the_supervised_vector_process_on_sigterm() {
 }
 
 /// A quick TCP-connect probe (not a real Postgres handshake) for whether something is
-/// listening at `PG_HOST:PG_PORT` — used to skip the Postgres-backed test below with a
-/// clear message on machines with no Postgres container running, rather than making
-/// `cargo test`/`colcon test` hard-fail without one (a live Postgres, e.g. via
-/// `tools/infrastructure/docker/docker-compose.postgresql.yaml`, isn't available in
-/// every environment this runs in).
+/// listening at `PG_HOST:PG_PORT` — used to fail the Postgres-backed test below
+/// immediately with setup instructions, instead of a slow, confusing timeout deep in
+/// the pipeline assertions.
 fn postgres_reachable() -> bool {
     let addr: SocketAddr = format!("{PG_HOST}:{PG_PORT}")
         .parse()
@@ -240,18 +241,22 @@ fn postgres_reachable() -> bool {
 /// `inputs` topic, and asserts the row actually lands in the target table with `date`
 /// populated as a plausible Unix-epoch-seconds float and `uptime_s` equal to the
 /// published value — the same demo documented in dc_bridge/README.md, automated.
+///
+/// A live Postgres is REQUIRED: without one this test fails immediately (with setup
+/// instructions) rather than skipping. It used to skip — but libtest swallows a
+/// passing test's output, so a run whose store assertions never executed was
+/// indistinguishable from a real pass, and a change could look verified when the
+/// pipeline was in fact never exercised.
 #[test]
-fn published_record_lands_in_postgres_when_reachable() {
-    if !postgres_reachable() {
-        eprintln!(
-            "skipping published_record_lands_in_postgres_when_reachable: no Postgres \
-             reachable at {PG_HOST}:{PG_PORT}; start \
-             tools/infrastructure/docker/docker-compose.postgresql.yaml (or an \
-             equivalent postgres:13 container with user/password 'dc'/'password') to \
-             run this test"
-        );
-        return;
-    }
+fn published_record_lands_in_postgres() {
+    assert!(
+        postgres_reachable(),
+        "no Postgres reachable at {PG_HOST}:{PG_PORT} — this end-to-end test requires \
+         one and deliberately fails (not skips) without it. Start \
+         tools/infrastructure/docker/docker-compose.postgresql.yaml (or an equivalent \
+         postgres:13 container with user/password 'dc'/'password' and a \
+         'dc (date double precision, uptime_s integer)' table in database 'dc')"
+    );
 
     let _guard = PROCESS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
@@ -564,8 +569,9 @@ fn colliding_custom_snippet_fails_startup_loudly() {
 }
 
 /// Whether an S3-compatible server answers at 127.0.0.1:9000 (the standard S3 API port
-/// of RustFS/MinIO-style stores) — used to skip the store-backed test below on
-/// machines without one running.
+/// of RustFS/MinIO-style stores) — used to fail the store-backed test below
+/// immediately with setup instructions, instead of a slow, confusing timeout in the
+/// bucket-polling loop.
 fn s3_store_reachable() -> bool {
     let addr: SocketAddr = "127.0.0.1:9000"
         .parse()
@@ -579,7 +585,7 @@ fn s3_store_reachable() -> bool {
 /// `batch_timeout_secs`), a Record is published, and the test asserts an object
 /// containing the marker value lands in the bucket.
 ///
-/// Requires an S3-compatible store at 127.0.0.1:9000 with credentials
+/// REQUIRES an S3-compatible store at 127.0.0.1:9000 with credentials
 /// `rustfsadmin`/`rustfsadmin` and an existing bucket `dc-records` whose anonymous
 /// access policy allows public read/list (`mc anonymous set public`), so the assertion
 /// side can use plain unauthenticated HTTP (via `curl`) instead of a full SigV4
@@ -587,17 +593,19 @@ fn s3_store_reachable() -> bool {
 /// compression). RustFS (`rustfs/rustfs`, whose defaults these are) is the recommended
 /// store — MinIO's community edition was archived upstream in 2026 — and is what this
 /// test was verified against, but the `s3` type (and this test) is store-agnostic.
+/// Without a store this test fails immediately (with setup instructions) rather than
+/// skipping — see `published_record_lands_in_postgres` for why skipping was removed.
 #[test]
-fn published_record_reaches_s3_bucket_when_reachable() {
-    if !s3_store_reachable() {
-        eprintln!(
-            "skipping published_record_reaches_s3_bucket_when_reachable: nothing \
-             listening at 127.0.0.1:9000; start an S3-compatible store — e.g. a RustFS \
-             container (rustfsadmin/rustfsadmin) — with a public-read bucket \
-             'dc-records' to run this test"
-        );
-        return;
-    }
+fn published_record_reaches_s3_bucket() {
+    assert!(
+        s3_store_reachable(),
+        "nothing listening at 127.0.0.1:9000 — this end-to-end test requires an \
+         S3-compatible store and deliberately fails (not skips) without one. Start \
+         e.g. a RustFS container (credentials rustfsadmin/rustfsadmin) and create a \
+         public-read bucket: mc alias set local http://127.0.0.1:9000 rustfsadmin \
+         rustfsadmin && mc mb -p local/dc-records && mc anonymous set public \
+         local/dc-records"
+    );
 
     let _guard = PROCESS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
