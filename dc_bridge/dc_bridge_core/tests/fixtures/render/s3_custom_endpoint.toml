@@ -1,6 +1,6 @@
 data_dir = "/home/dc/.dc/buffer"
 
-[sinks.minio]
+[sinks.rustfs]
 bucket = "dc-records"
 endpoint = "http://127.0.0.1:9000"
 force_path_style = true
@@ -12,18 +12,18 @@ key_prefix = "robot1/"
 region = "us-east-1"
 type = "aws_s3"
 
-[sinks.minio.auth]
-access_key_id = "minioadmin"
-secret_access_key = "minioadmin"
+[sinks.rustfs.auth]
+access_key_id = "rustfsadmin"
+secret_access_key = "rustfsadmin"
 
-[sinks.minio.batch]
+[sinks.rustfs.batch]
 timeout_secs = 2
 
-[sinks.minio.buffer]
+[sinks.rustfs.buffer]
 max_size = 268435488
 type = "disk"
 
-[sinks.minio.encoding]
+[sinks.rustfs.encoding]
 codec = "json"
 
 [sources.dc_bridge_in]

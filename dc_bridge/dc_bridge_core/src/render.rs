@@ -107,13 +107,15 @@ pub struct PostgresParams {
 
 /// S3-compatible object storage (`type: s3`). With only `bucket` (and usually `region`)
 /// set, credentials come from the ambient AWS environment/instance profile; a
-/// MinIO-style server takes `endpoint`, explicit `access_key_id`/`secret_access_key`,
-/// and (typically) `force_path_style: true`.
+/// self-hosted server (RustFS is the recommended one — MinIO's community edition was
+/// archived upstream in 2026 — but any S3-compatible store works) takes `endpoint`,
+/// explicit `access_key_id`/`secret_access_key`, and (typically)
+/// `force_path_style: true`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct S3Params {
     pub bucket: String,
     pub region: Option<String>,
-    /// Custom S3-compatible endpoint URL (MinIO, Ceph RGW, …); omit for AWS.
+    /// Custom S3-compatible endpoint URL (RustFS, MinIO, Ceph RGW, …); omit for AWS.
     pub endpoint: Option<String>,
     pub key_prefix: Option<String>,
     pub auth: Option<S3Auth>,
@@ -852,10 +854,13 @@ mod tests {
         );
     }
 
+    /// The self-hosted custom-endpoint shape (issue #246's "MinIO-style" acceptance
+    /// criterion — RustFS is the recommended store now that MinIO's community edition
+    /// is archived upstream; the rendered config is identical either way).
     #[test]
-    fn renders_an_s3_destination_with_a_minio_style_custom_endpoint() {
+    fn renders_an_s3_destination_with_a_self_hosted_custom_endpoint() {
         let config = config_with(vec![destination(
-            "minio",
+            "rustfs",
             &["/dc/group/robot", "/dc/measurement/uptime"],
             TimeFormat::Double,
             DestinationKind::S3(S3Params {
@@ -864,8 +869,8 @@ mod tests {
                 endpoint: Some("http://127.0.0.1:9000".to_string()),
                 key_prefix: Some("robot1/".to_string()),
                 auth: Some(S3Auth {
-                    access_key_id: "minioadmin".to_string(),
-                    secret_access_key: "minioadmin".to_string(),
+                    access_key_id: "rustfsadmin".to_string(),
+                    secret_access_key: "rustfsadmin".to_string(),
                 }),
                 force_path_style: Some(true),
                 batch_timeout_secs: Some(2),
@@ -874,7 +879,7 @@ mod tests {
         let rendered = render(&config).unwrap();
         assert_matches_fixture(
             &parsed(&rendered),
-            include_str!("../tests/fixtures/render/s3_minio.toml"),
+            include_str!("../tests/fixtures/render/s3_custom_endpoint.toml"),
         );
     }
 
@@ -1073,15 +1078,15 @@ mod tests {
     #[test]
     fn destination_from_raw_builds_s3_file_and_console_kinds() {
         let s3 = destination_from_raw(
-            "minio",
+            "rustfs",
             "s3",
             "records",
             vec!["/dc/group/robot".to_string()],
             RawDestinationParams {
                 bucket: Some("dc-records"),
                 endpoint: Some("http://127.0.0.1:9000"),
-                access_key_id: Some("minioadmin"),
-                secret_access_key: Some("minioadmin"),
+                access_key_id: Some("rustfsadmin"),
+                secret_access_key: Some("rustfsadmin"),
                 force_path_style: Some(true),
                 ..Default::default()
             },
@@ -1227,31 +1232,31 @@ mod tests {
 
     #[test]
     fn s3_from_raw_rejects_a_missing_bucket() {
-        let err = S3Params::from_raw("minio", &RawDestinationParams::default()).unwrap_err();
+        let err = S3Params::from_raw("rustfs", &RawDestinationParams::default()).unwrap_err();
         assert_eq!(
             err,
-            RenderError::MissingField("minio".to_string(), "bucket".to_string())
+            RenderError::MissingField("rustfs".to_string(), "bucket".to_string())
         );
     }
 
     #[test]
     fn s3_from_raw_rejects_half_a_credential_pair() {
         let err = S3Params::from_raw(
-            "minio",
+            "rustfs",
             &RawDestinationParams {
                 bucket: Some("dc-records"),
-                access_key_id: Some("minioadmin"),
+                access_key_id: Some("rustfsadmin"),
                 ..Default::default()
             },
         )
         .unwrap_err();
-        assert_eq!(err, RenderError::IncompleteS3Auth("minio".to_string()));
+        assert_eq!(err, RenderError::IncompleteS3Auth("rustfs".to_string()));
     }
 
     #[test]
     fn s3_from_raw_rejects_a_non_positive_batch_timeout() {
         let err = S3Params::from_raw(
-            "minio",
+            "rustfs",
             &RawDestinationParams {
                 bucket: Some("dc-records"),
                 batch_timeout_secs: Some(0),
@@ -1261,7 +1266,7 @@ mod tests {
         .unwrap_err();
         assert_eq!(
             err,
-            RenderError::InvalidBatchTimeout("minio".to_string(), 0)
+            RenderError::InvalidBatchTimeout("rustfs".to_string(), 0)
         );
     }
 
