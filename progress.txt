@@ -464,3 +464,23 @@ only ever been checked by hand, interactively, in the (now torn-down) Docker ses
   issues #247/#248); a reusable committed dev container for the Jazzy+ros2_rust
   toolchain (still rebuilt ad hoc per session — the #245 image was reused here, which
   helped, but nothing is checked in).
+
+### #246 follow-up — RustFS replaces MinIO as the recommended self-hosted S3 store
+
+- Prompted by MinIO's community edition being discontinued (maintenance mode Dec 2025,
+  "no longer maintained" Feb 2026, repo archived Apr 2026 — verified via current
+  sources, not assumed): docs, params examples, code comments, and the e2e test now
+  recommend RustFS (Apache-2.0, S3-compatible, drop-in MinIO replacement,
+  `rustfs/rustfs` image, S3 API on :9000, defaults `rustfsadmin`/`rustfsadmin`)
+  instead. The `s3` blessed type itself is store-agnostic — nothing in the rendered
+  config changes; existing MinIO/Ceph deployments keep working and the docs say so.
+- Renames: fixture `s3_minio.toml` → `s3_custom_endpoint.toml` (re-`vector validate`d),
+  render test → `renders_an_s3_destination_with_a_self_hosted_custom_endpoint`, e2e
+  test → `published_record_reaches_s3_bucket_when_reachable` (destination name
+  `rustfs`, RustFS default credentials, store-agnostic skip message).
+- **Verified against a real RustFS container** (replacing the MinIO one in the dev
+  netns): `mc` works against it (alias/mb/anonymous-set-public all S3-standard), and
+  the full `colcon test` matrix passed 6/6 in 3 consecutive runs with RustFS up (zero
+  skips — the bucket assertion ran for real, object content confirmed with normalized
+  `date` and Tag) plus 1 run with stores down (skip path). Vector's `aws_s3` sink
+  needed no changes to deliver to RustFS.

@@ -21,7 +21,7 @@ dc_bridge:
     shipper:
       data_dir: "$HOME/.dc/buffer"   # Vector's disk-buffer directory
       # buffer_max_bytes: 268435488  # optional; Vector's disk-buffer minimum
-    destinations: ["pgsql", "minio"]
+    destinations: ["pgsql", "rustfs"]
     pgsql:
       type: postgres
       receives: records
@@ -32,19 +32,26 @@ dc_bridge:
       password: "$DC_PG_PASSWORD"          # $VAR / ${VAR} env references are expanded
       database: "dc"
       table: "dc"
-    minio:
+    rustfs:
       type: s3
       receives: records
       inputs: ["/dc/measurement/uptime"]
       bucket: "dc-records"
       endpoint: "http://127.0.0.1:9000"    # omit for AWS S3
       region: "us-east-1"
-      access_key_id: "minioadmin"          # omit both to use ambient AWS credentials
+      access_key_id: "rustfsadmin"         # omit both to use ambient AWS credentials
       secret_access_key: "$DC_S3_SECRET"
-      force_path_style: true               # MinIO-style path addressing
+      force_path_style: true               # path-style addressing for self-hosted stores
       key_prefix: "robot1/"
       batch_timeout_secs: 60               # object write interval; Vector default 300
 ```
+
+The `s3` type works with any S3-compatible store. For self-hosting,
+[RustFS](https://rustfs.com/) (Apache 2.0, S3-compatible, a drop-in MinIO
+replacement) is the recommended choice — MinIO's community edition was archived
+upstream in 2026 and no longer receives maintenance — but existing MinIO or Ceph RGW
+deployments work identically: set `endpoint`, explicit credentials, and (typically)
+`force_path_style: true`.
 
 Common parameters for every blessed type: `type`, `receives` (`records`; `files` is
 reserved for the File pipeline, ADR-0005), `inputs` (ROS topic names), `time_key`

@@ -41,8 +41,10 @@ via the public per-Tag `dc.<tag>` routes documented in `doc/src/dc/destinations.
   Cargo package) that spawn the *real* `dc_bridge` binary and `rclrs`-drive a test
   client against it: readiness with a postgres destination; the supervised Vector
   process stopping on SIGTERM; a Record landing as a real Postgres row (skips when no
-  Postgres listens at 127.0.0.1:5432); a Record landing as an object in a MinIO bucket
-  configured purely via ROS params (skips when no MinIO listens at 127.0.0.1:9000); a
+  Postgres listens at 127.0.0.1:5432); a Record landing as an object in an
+  S3-compatible store's bucket configured purely via ROS params (verified against
+  RustFS, the recommended self-hosted store now that MinIO's community edition is
+  archived upstream; skips when nothing listens at 127.0.0.1:9000); a
   `custom_config_files` snippet shipping Records to an un-blessed `http` sink by
   consuming the public `dc.<tag>` route (self-contained — the test plays the HTTP
   server); and a colliding snippet failing dc_bridge startup loudly. This file is what
@@ -84,7 +86,7 @@ stable public output at `dc.<tag>` (ADR-0003's passthrough contract, documented 
 in `doc/src/dc/destinations.md`) that blessed sinks and `custom_config_files` snippets
 alike consume; a disk buffer (`shipper.data_dir`, minimum ~256 MiB per Vector's own
 `postgres` sink constraint) per persistent sink; and the sinks themselves. All four
-blessed types are implemented: `postgres`, `s3` (AWS or MinIO-style custom `endpoint`),
+blessed types are implemented: `postgres`, `s3` (AWS, or a RustFS/MinIO-style custom `endpoint`),
 `file`, and `console` (no disk buffer — it's a debugging sink).
 
 Two layers, both pure and gold-file-tested (`src/render.rs`'s `#[cfg(test)]` module,

@@ -12,8 +12,9 @@
 //! more bare tracer-bullet console sink — most tests here configure dc_bridge with one
 //! `postgres`-type destination. Two tests only need Vector to have started successfully
 //! (readiness, shutdown behavior) and work against a Postgres endpoint that need not
-//! actually be reachable; the Postgres- and MinIO-backed tests verify a Record actually
-//! lands in the real downstream store, and skip themselves with a clear message when
+//! actually be reachable; the Postgres- and S3-store-backed (RustFS) tests verify a
+//! Record actually lands in the real downstream store, and skip themselves with a clear
+//! message when
 //! nothing is listening at the configured address, since `cargo test`/`colcon test`
 //! must still pass cleanly on machines without those containers running. The
 //! passthrough test (`custom_config_files`, ADR-0003) is fully self-contained: the test
@@ -562,32 +563,38 @@ fn colliding_custom_snippet_fails_startup_loudly() {
     );
 }
 
-/// Whether an S3-compatible server answers at 127.0.0.1:9000 (MinIO's default port) —
-/// used to skip the MinIO-backed test below on machines without one running.
-fn minio_reachable() -> bool {
+/// Whether an S3-compatible server answers at 127.0.0.1:9000 (the standard S3 API port
+/// of RustFS/MinIO-style stores) — used to skip the store-backed test below on
+/// machines without one running.
+fn s3_store_reachable() -> bool {
     let addr: SocketAddr = "127.0.0.1:9000"
         .parse()
-        .expect("the MinIO address must parse");
+        .expect("the S3 store address must parse");
     TcpStream::connect_timeout(&addr, Duration::from_millis(500)).is_ok()
 }
 
-/// Exercises the `s3` blessed destination end-to-end against a real MinIO: dc_bridge is
-/// configured purely via ROS params (custom `endpoint`, explicit credentials,
-/// `force_path_style`, a short `batch_timeout_secs`), a Record is published, and the
-/// test asserts an object containing the marker value lands in the bucket.
+/// Exercises the `s3` blessed destination end-to-end against a real self-hosted
+/// S3-compatible store: dc_bridge is configured purely via ROS params (custom
+/// `endpoint`, explicit credentials, `force_path_style`, a short
+/// `batch_timeout_secs`), a Record is published, and the test asserts an object
+/// containing the marker value lands in the bucket.
 ///
-/// Requires a MinIO at 127.0.0.1:9000 with credentials `minioadmin`/`minioadmin` and an
-/// existing bucket `dc-records` whose anonymous access policy allows public
-/// read/list (`mc anonymous set public`), so the assertion side can use plain
-/// unauthenticated HTTP (via `curl`) instead of a full SigV4 client; objects are
-/// gzip-decoded with `zcat` (Vector's `aws_s3` default compression).
+/// Requires an S3-compatible store at 127.0.0.1:9000 with credentials
+/// `rustfsadmin`/`rustfsadmin` and an existing bucket `dc-records` whose anonymous
+/// access policy allows public read/list (`mc anonymous set public`), so the assertion
+/// side can use plain unauthenticated HTTP (via `curl`) instead of a full SigV4
+/// client; objects are gzip-decoded with `zcat` (Vector's `aws_s3` default
+/// compression). RustFS (`rustfs/rustfs`, whose defaults these are) is the recommended
+/// store — MinIO's community edition was archived upstream in 2026 — and is what this
+/// test was verified against, but the `s3` type (and this test) is store-agnostic.
 #[test]
-fn published_record_reaches_minio_bucket_when_reachable() {
-    if !minio_reachable() {
+fn published_record_reaches_s3_bucket_when_reachable() {
+    if !s3_store_reachable() {
         eprintln!(
-            "skipping published_record_reaches_minio_bucket_when_reachable: nothing \
-             listening at 127.0.0.1:9000; start a MinIO container (minioadmin/minioadmin) \
-             with a public-read bucket 'dc-records' to run this test"
+            "skipping published_record_reaches_s3_bucket_when_reachable: nothing \
+             listening at 127.0.0.1:9000; start an S3-compatible store — e.g. a RustFS \
+             container (rustfsadmin/rustfsadmin) — with a public-read bucket \
+             'dc-records' to run this test"
         );
         return;
     }
@@ -612,27 +619,27 @@ fn published_record_reaches_minio_bucket_when_reachable() {
             "-p".to_string(),
             format!("shipper.data_dir:={}", unique_data_dir()),
             "-p".to_string(),
-            "destinations:=[\"minio\"]".to_string(),
+            "destinations:=[\"rustfs\"]".to_string(),
             "-p".to_string(),
-            "minio.type:=s3".to_string(),
+            "rustfs.type:=s3".to_string(),
             "-p".to_string(),
-            "minio.inputs:=[\"/dc/measurement/uptime\"]".to_string(),
+            "rustfs.inputs:=[\"/dc/measurement/uptime\"]".to_string(),
             "-p".to_string(),
-            "minio.bucket:=dc-records".to_string(),
+            "rustfs.bucket:=dc-records".to_string(),
             "-p".to_string(),
-            "minio.endpoint:=http://127.0.0.1:9000".to_string(),
+            "rustfs.endpoint:=http://127.0.0.1:9000".to_string(),
             "-p".to_string(),
-            "minio.region:=us-east-1".to_string(),
+            "rustfs.region:=us-east-1".to_string(),
             "-p".to_string(),
-            "minio.access_key_id:=minioadmin".to_string(),
+            "rustfs.access_key_id:=rustfsadmin".to_string(),
             "-p".to_string(),
-            "minio.secret_access_key:=minioadmin".to_string(),
+            "rustfs.secret_access_key:=rustfsadmin".to_string(),
             "-p".to_string(),
-            "minio.force_path_style:=true".to_string(),
+            "rustfs.force_path_style:=true".to_string(),
             "-p".to_string(),
-            format!("minio.key_prefix:={prefix}"),
+            format!("rustfs.key_prefix:={prefix}"),
             "-p".to_string(),
-            "minio.batch_timeout_secs:=2".to_string(),
+            "rustfs.batch_timeout_secs:=2".to_string(),
         ],
         Stdio::null(),
         Stdio::null(),
@@ -646,7 +653,7 @@ fn published_record_reaches_minio_bucket_when_reachable() {
     let context = rclrs::Context::default_from_env().expect("failed to create an rclrs context");
     let executor = context.create_basic_executor();
     let node = executor
-        .create_node("dc_bridge_end_to_end_minio_test")
+        .create_node("dc_bridge_end_to_end_s3_test")
         .expect("failed to create the test node");
     let publisher = node
         .create_publisher::<StringStamped>("/dc/measurement/uptime")
@@ -667,7 +674,7 @@ fn published_record_reaches_minio_bucket_when_reachable() {
             .publish(&message)
             .expect("failed to publish the test Record");
         std::thread::sleep(Duration::from_millis(500));
-        found = minio_prefix_contains_marker(&prefix, &MARKER_UPTIME_S.to_string());
+        found = bucket_prefix_contains_marker(&prefix, &MARKER_UPTIME_S.to_string());
     }
 
     terminate(&mut child);
@@ -681,7 +688,7 @@ fn published_record_reaches_minio_bucket_when_reachable() {
 
 /// Lists `dc-records` objects under `prefix` via anonymous HTTP (`curl`) and returns
 /// whether any of them, gzip-decoded (`zcat`), contains `marker`.
-fn minio_prefix_contains_marker(prefix: &str, marker: &str) -> bool {
+fn bucket_prefix_contains_marker(prefix: &str, marker: &str) -> bool {
     let listing = Command::new("curl")
         .args([
             "-s",
