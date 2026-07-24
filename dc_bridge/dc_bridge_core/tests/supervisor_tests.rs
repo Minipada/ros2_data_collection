@@ -104,3 +104,49 @@ fn start_never_spawns_after_stop() {
         "start() must not spawn anything once the supervisor has been stopped"
     );
 }
+
+/// The supervised process must not outlive whoever spawned it, even when the Bridge
+/// dies by a path no signal handler covers (SIGKILL, crash). `start()` sets
+/// `PR_SET_PDEATHSIG(SIGKILL)` on Linux, which the kernel delivers when the spawning
+/// *thread* exits — so spawning from a short-lived thread and joining it stands in
+/// for "the Bridge process was SIGKILLed" without having to kill the test runner.
+#[cfg(target_os = "linux")]
+#[test]
+fn supervised_process_dies_with_its_spawner() {
+    let child_pid = std::thread::spawn(|| {
+        let mut supervisor = Supervisor::new(SupervisorConfig {
+            program: "sh".into(),
+            args: vec!["-c".to_string(), "sleep 30".to_string()],
+            restart_backoff: Duration::from_millis(0),
+        });
+        supervisor.start().unwrap();
+        assert!(supervisor.is_running());
+        supervisor.child_id().unwrap()
+    })
+    .join()
+    .unwrap();
+
+    // Once PDEATHSIG fires the child is a zombie (state Z) until reaped — and nothing
+    // will reap it here, since its `Child` handle was dropped with the thread. /proc
+    // state is the visible difference (kill(pid, 0) still succeeds on zombies). Poll
+    // briefly: signal delivery on thread exit is fast but asynchronous. The state
+    // field is the first character after the ")" closing the comm field.
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    loop {
+        let state = std::fs::read_to_string(format!("/proc/{child_pid}/stat"))
+            .ok()
+            .and_then(|stat| {
+                let after_comm = &stat[stat.rfind(')')? + 1..];
+                after_comm.split_whitespace().next().map(str::to_string)
+            });
+        match state.as_deref() {
+            None | Some("Z") => break, // gone entirely, or killed-but-unreaped
+            _ if std::time::Instant::now() > deadline => {
+                panic!(
+                    "supervised process (pid {child_pid}) survived its spawner (state {state:?})"
+                );
+            }
+            _ => std::thread::sleep(Duration::from_millis(50)),
+        }
+    }
+}

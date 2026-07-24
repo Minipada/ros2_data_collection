@@ -17,4 +17,9 @@ install(
   DIRECTORY launch params
   DESTINATION share/${PROJECT_NAME})
 
+install(
+  PROGRAMS scripts/bridge_ready_gate.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME bridge_ready_gate)
+
 ament_package()

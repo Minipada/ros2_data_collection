@@ -128,7 +128,7 @@ template <typename NodeT>
 bool get_bool_type_param(NodeT node, const std::string& plugin_name, const std::string& param_name)
 {
   nav2_util::declare_parameter_if_not_declared(node, plugin_name + "." + param_name, rclcpp::PARAMETER_BOOL);
-  bool bool_param;
+  bool bool_param = false;
   try
   {
     if (!node->get_parameter(plugin_name + "." + param_name, bool_param))
@@ -152,7 +152,7 @@ bool get_bool_type_param(NodeT node, const std::string& plugin_name, const std::
 {
   nav2_util::declare_parameter_if_not_declared(node, plugin_name + "." + param_name,
                                                rclcpp::ParameterValue(default_value));
-  bool bool_param;
+  bool bool_param = false;
   try
   {
     if (!node->get_parameter(plugin_name + "." + param_name, bool_param))
@@ -174,7 +174,7 @@ template <typename NodeT>
 int get_int_type_param(NodeT node, const std::string& plugin_name, const std::string& param_name)
 {
   nav2_util::declare_parameter_if_not_declared(node, plugin_name + "." + param_name, rclcpp::PARAMETER_INTEGER);
-  int int_param;
+  int int_param = 0;
   try
   {
     if (!node->get_parameter(plugin_name + "." + param_name, int_param))
@@ -198,7 +198,7 @@ int get_int_type_param(NodeT node, const std::string& plugin_name, const std::st
 {
   nav2_util::declare_parameter_if_not_declared(node, plugin_name + "." + param_name,
                                                rclcpp::ParameterValue(default_value));
-  int int_param;
+  int int_param = 0;
   try
   {
     if (!node->get_parameter(plugin_name + "." + param_name, int_param))
@@ -220,7 +220,7 @@ template <typename NodeT>
 int get_float_type_param(NodeT node, const std::string& plugin_name, const std::string& param_name)
 {
   nav2_util::declare_parameter_if_not_declared(node, plugin_name + "." + param_name, rclcpp::PARAMETER_DOUBLE);
-  float float_param;
+  float float_param = 0.0F;
   try
   {
     if (!node->get_parameter(plugin_name + "." + param_name, float_param))
@@ -244,7 +244,7 @@ int get_float_type_param(NodeT node, const std::string& plugin_name, const std::
 {
   nav2_util::declare_parameter_if_not_declared(node, plugin_name + "." + param_name,
                                                rclcpp::ParameterValue(default_value));
-  float float_param;
+  float float_param = 0.0F;
   try
   {
     if (!node->get_parameter(plugin_name + "." + param_name, float_param))

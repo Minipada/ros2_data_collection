@@ -75,8 +75,8 @@ void Camera::onConfigure()
 
   if (std::find(detection_modules_.begin(), detection_modules_.end(), "barcode") != detection_modules_.end())
   {
-    cli_barcodes_ = node->create_client<dc_interfaces::srv::DetectBarcode>(
-        "/dc/service/detect_barcodes", rmw_qos_profile_services_default, client_cb_group_);
+    cli_barcodes_ = node->create_client<dc_interfaces::srv::DetectBarcode>("/dc/service/detect_barcodes",
+                                                                           rclcpp::ServicesQoS(), client_cb_group_);
     while (!cli_barcodes_->wait_for_service(std::chrono::seconds(1)))
     {
       if (!rclcpp::ok())
@@ -90,8 +90,8 @@ void Camera::onConfigure()
 
   if (draw_det_barcodes_)
   {
-    cli_draw_image_ = node->create_client<dc_interfaces::srv::DrawImage>(
-        "/dc/service/draw_image", rmw_qos_profile_services_default, client_cb_group_);
+    cli_draw_image_ = node->create_client<dc_interfaces::srv::DrawImage>("/dc/service/draw_image",
+                                                                         rclcpp::ServicesQoS(), client_cb_group_);
     while (!cli_draw_image_->wait_for_service(std::chrono::seconds(1)))
     {
       if (!rclcpp::ok())
