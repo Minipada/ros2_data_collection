@@ -724,6 +724,265 @@ fn bucket_prefix_contains_marker(prefix: &str, marker: &str) -> bool {
     false
 }
 
+/// The Uploader (ADR-0005, issue #248) end to end — the demo acceptance criterion "a
+/// camera Measurement's File lands in MinIO and its status row appears in PostgreSQL",
+/// automated (with `ros2 topic pub`-style publishing standing in for the camera
+/// Measurement, which the Bridge is agnostic to, and RustFS standing in for MinIO —
+/// same S3 API):
+///
+/// dc_bridge is configured with a `receives: files` s3 Destination named `rustfs` plus
+/// a Records `pgsql` Destination serving as `files.metadata_destination` (no topic
+/// inputs of its own — it only receives the Uploader's `dc.files` Tag). A camera-shaped
+/// Record referencing a real local JPEG via `local_paths`/`remote_paths` is published;
+/// the test asserts the File's bytes land in the bucket, the `file_status` row
+/// (uploaded, verified metadata) and the `group_complete` marker row land in Postgres
+/// through the Shipper's parameterized sink, and — `files.delete_when_sent: true` — the
+/// local File is deleted afterwards with a `deleted: true` status row appended.
+///
+/// REQUIRES both stores (Postgres at 127.0.0.1:5432, S3 store at 127.0.0.1:9000 with
+/// the public-read `dc-records` bucket) — fails immediately with setup instructions
+/// otherwise, same policy as the other store-backed tests here.
+#[test]
+fn camera_file_upload_reaches_s3_and_status_rows_reach_postgres() {
+    assert!(
+        postgres_reachable(),
+        "no Postgres reachable at {PG_HOST}:{PG_PORT} — this end-to-end test requires \
+         one and deliberately fails (not skips) without it. Start \
+         tools/infrastructure/docker/docker-compose.postgresql.yaml (or an equivalent \
+         postgres:13 container with user/password 'dc'/'password' and database 'dc')"
+    );
+    assert!(
+        s3_store_reachable(),
+        "nothing listening at 127.0.0.1:9000 — this end-to-end test requires an \
+         S3-compatible store and deliberately fails (not skips) without one. Start \
+         e.g. a RustFS container (credentials rustfsadmin/rustfsadmin) and create a \
+         public-read bucket: mc alias set local http://127.0.0.1:9000 rustfsadmin \
+         rustfsadmin && mc mb -p local/dc-records && mc anonymous set public \
+         local/dc-records"
+    );
+
+    let _guard = PROCESS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+    const STATUS_TABLE: &str = "dc_files_e2e";
+    let mut db = Client::connect(
+        &format!(
+            "host={PG_HOST} port={PG_PORT} user={PG_USER} password={PG_PASSWORD} \
+             dbname={PG_DATABASE}"
+        ),
+        NoTls,
+    )
+    .expect("failed to connect to the test Postgres instance");
+    db.batch_execute(&format!(
+        "CREATE TABLE IF NOT EXISTS {STATUS_TABLE} (
+            date double precision, kind text, group_name text, robot_name text,
+            local_path text, remote_path text, storage_type text, uploaded boolean,
+            on_filesystem boolean, deleted boolean, content_type text, size bigint,
+            file_count integer, complete boolean, updated_at double precision);
+         DELETE FROM {STATUS_TABLE};"
+    ))
+    .expect("failed to prepare the status table");
+
+    // The "camera Measurement output": a real JPEG-magic File on disk, referenced via
+    // the local_paths/remote_paths structure camera.cpp embeds.
+    let marker = format!(
+        "e2e_upload_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let local_dir = std::env::temp_dir().join(format!("dc_bridge_files_{marker}"));
+    std::fs::create_dir_all(&local_dir).expect("failed to create the camera output dir");
+    let local_path = local_dir.join("image.jpg");
+    let mut jpeg = b"\xff\xd8\xff\xe0".to_vec();
+    jpeg.extend_from_slice(marker.as_bytes());
+    std::fs::write(&local_path, &jpeg).expect("failed to write the camera File");
+    let remote_key = format!("e2e-files/{marker}/image.jpg");
+
+    let args: Vec<String> = [
+        "--ros-args",
+        "-p",
+        &format!("shipper.data_dir:={}", unique_data_dir()),
+        "-p",
+        "destinations:=[\"pgsql\", \"rustfs\"]",
+        // The metadata destination: a Records postgres Destination with no topic
+        // inputs — it exists to receive the Uploader's dc.files status Records.
+        "-p",
+        "pgsql.type:=postgres",
+        "-p",
+        &format!("pgsql.host:={PG_HOST}"),
+        "-p",
+        &format!("pgsql.port:={PG_PORT}"),
+        "-p",
+        &format!("pgsql.user:={PG_USER}"),
+        "-p",
+        &format!("pgsql.password:={PG_PASSWORD}"),
+        "-p",
+        &format!("pgsql.database:={PG_DATABASE}"),
+        "-p",
+        &format!("pgsql.table:={STATUS_TABLE}"),
+        // The files Destination (ADR-0005). Its name is the key the Record's
+        // remote_paths uses.
+        "-p",
+        "rustfs.type:=s3",
+        "-p",
+        "rustfs.receives:=files",
+        "-p",
+        "rustfs.inputs:=[\"/dc/measurement/camera\"]",
+        "-p",
+        "rustfs.bucket:=dc-records",
+        "-p",
+        "rustfs.endpoint:=http://127.0.0.1:9000",
+        "-p",
+        "rustfs.region:=us-east-1",
+        "-p",
+        "rustfs.access_key_id:=rustfsadmin",
+        "-p",
+        "rustfs.secret_access_key:=rustfsadmin",
+        "-p",
+        "rustfs.force_path_style:=true",
+        "-p",
+        "files.metadata_destination:=pgsql",
+        "-p",
+        "files.delete_when_sent:=true",
+    ]
+    .into_iter()
+    .map(str::to_string)
+    .collect();
+    let mut child = spawn_dc_bridge_with_args(&args, Stdio::null(), Stdio::null());
+    assert!(
+        wait_for_ready(Instant::now() + Duration::from_secs(30)),
+        "dc_bridge's readiness service never reported ready within 30s with a \
+         receives: files destination configured"
+    );
+
+    let context = rclrs::Context::default_from_env().expect("failed to create an rclrs context");
+    let executor = context.create_basic_executor();
+    let node = executor
+        .create_node("dc_bridge_end_to_end_files_test")
+        .expect("failed to create the test node");
+    let publisher = node
+        .create_publisher::<StringStamped>("/dc/measurement/camera")
+        .expect("failed to create a publisher on /dc/measurement/camera");
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap();
+    let mut message = StringStamped::default();
+    message.header.stamp.sec = now.as_secs() as i32;
+    message.header.stamp.nanosec = now.subsec_nanos();
+    message.data = format!(
+        r#"{{"name": "camera", "robot_name": "robot1",
+            "local_paths": {{"raw": "{}"}},
+            "remote_paths": {{"rustfs": {{"raw": "{remote_key}"}}}}}}"#,
+        local_path.display()
+    );
+
+    // Publish until the whole chain is observable: object in the bucket, uploaded +
+    // group_complete + deleted rows in Postgres, local File gone. (Republishing is
+    // deliberate: retried Records must stay idempotent.)
+    let deadline = Instant::now() + Duration::from_secs(60);
+    let mut object_ok = false;
+    let mut rows_ok = false;
+    let mut deleted_row_ok = false;
+    while Instant::now() < deadline && !(object_ok && rows_ok && deleted_row_ok) {
+        publisher
+            .publish(&message)
+            .expect("failed to publish the camera Record");
+        std::thread::sleep(Duration::from_millis(500));
+
+        if !object_ok {
+            let object = Command::new("curl")
+                .args([
+                    "-s",
+                    &format!("http://127.0.0.1:9000/dc-records/{remote_key}"),
+                ])
+                .output()
+                .expect("failed to fetch the uploaded object");
+            object_ok = String::from_utf8_lossy(&object.stdout).contains(&marker);
+        }
+        let rows = db
+            .query(
+                &format!(
+                    "SELECT kind, uploaded, on_filesystem, deleted, content_type, size, \
+                     storage_type, remote_path, complete, file_count, date \
+                     FROM {STATUS_TABLE} WHERE group_name = 'camera'"
+                ),
+                &[],
+            )
+            .expect("failed to query the status table");
+        let uploaded_row = rows.iter().any(|r| {
+            r.get::<_, String>(0) == "file_status"
+                && r.get::<_, bool>(1)
+                && r.get::<_, bool>(2)
+                && !r.get::<_, bool>(3)
+                && r.get::<_, String>(4) == "image/jpeg"
+                && r.get::<_, i64>(5) == jpeg.len() as i64
+                && r.get::<_, String>(6) == "rustfs"
+                && r.get::<_, String>(7) == format!("s3://dc-records/{remote_key}")
+                && r.get::<_, f64>(10) > 0.0
+        });
+        let complete_row = rows.iter().any(|r| {
+            r.get::<_, String>(0) == "group_complete"
+                && r.get::<_, bool>(8)
+                && r.get::<_, i32>(9) == 1
+        });
+        rows_ok = uploaded_row && complete_row;
+        deleted_row_ok = rows
+            .iter()
+            .any(|r| r.get::<_, String>(0) == "file_status" && r.get::<_, bool>(3));
+    }
+
+    // Idempotency across the repeated publishes above: exactly one row per status
+    // transition, no duplicates.
+    let counts: Vec<(String, i64)> = db
+        .query(
+            &format!(
+                "SELECT kind || '/' || COALESCE(deleted::text, ''), count(*) \
+                 FROM {STATUS_TABLE} WHERE group_name = 'camera' GROUP BY 1 ORDER BY 1"
+            ),
+            &[],
+        )
+        .expect("failed to count status rows")
+        .into_iter()
+        .map(|r| (r.get(0), r.get(1)))
+        .collect();
+
+    terminate(&mut child);
+    let local_file_gone = !local_path.exists();
+    std::fs::remove_dir_all(&local_dir).ok();
+
+    assert!(
+        object_ok,
+        "expected the camera File's bytes (marker '{marker}') at \
+         dc-records/{remote_key} within 60s"
+    );
+    assert!(
+        rows_ok,
+        "expected a verified file_status row and a group_complete row in \
+         {STATUS_TABLE} within 60s; got counts: {counts:?}"
+    );
+    assert!(
+        deleted_row_ok,
+        "expected a deleted=true status row after delete_when_sent; got counts: {counts:?}"
+    );
+    assert!(
+        local_file_gone,
+        "expected the local File to be deleted after verified upload (delete_when_sent)"
+    );
+    // `group_complete` rows carry no `deleted` field → NULL → the empty COALESCE arm.
+    assert_eq!(
+        counts,
+        vec![
+            ("file_status/false".to_string(), 1),
+            ("file_status/true".to_string(), 1),
+            ("group_complete/".to_string(), 1),
+        ],
+        "status rows must not be duplicated by republished (retried) Records"
+    );
+}
+
 /// Sends SIGTERM (dc_bridge's install-hooked signal, not SIGKILL) and waits for exit.
 /// `kill`'s own stderr is suppressed: if dc_bridge has already exited by the time this
 /// runs (e.g. it reacted fast enough that the signal is redundant), that's not this

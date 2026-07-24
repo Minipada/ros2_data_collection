@@ -15,6 +15,14 @@
 //! config so a bad snippet fails loudly at startup, and passed to Vector as additional
 //! `--config` files.
 //!
+//! `receives: files` Destinations (ADR-0005) are not rendered into the Vector config at
+//! all: Records on their `inputs` topics go to the Bridge's own Uploader
+//! (`dc_bridge_core::uploader`, worker thread spawned by [`spawn_uploader_worker`]),
+//! which uploads each referenced File to every such Destination via `object_store`,
+//! verifies it landed, and emits per-File status plus group-completion metadata Records
+//! back through the Forwarder under the `dc.files` Tag — routed by the rendered config
+//! to the `files.metadata_destination` Destination like any other Records.
+//!
 //! Built, run, and `colcon test`-covered (see tests/end_to_end.rs) in a real ROS 2
 //! Jazzy + ros2_rust Docker environment: the node locates and supervises the vendored
 //! Vector binary, the `~/ready` service answers correctly, a `StringStamped` Record
@@ -24,18 +32,20 @@
 
 use dc_bridge_core::render::{
     destination_from_raw, expand_env, render as render_vector_config, validate_custom_config_files,
-    CustomConfigFile, RawDestinationParams, RenderConfig, MIN_DISK_BUFFER_BYTES,
+    CustomConfigFile, Destination, DestinationKind, RawDestinationParams, Receives, RenderConfig,
+    MIN_DISK_BUFFER_BYTES,
 };
-use dc_bridge_core::{readiness, vector_config};
+use dc_bridge_core::{ffprobe_duration_prober, readiness, vector_config};
 use dc_bridge_core::{
-    Forwarder, ForwarderConfig, Readiness, Record, Supervisor, SupervisorConfig, TopicConfig,
+    Forwarder, ForwarderConfig, Readiness, Record, Storage, Supervisor, SupervisorConfig,
+    TopicConfig, Uploader, UploaderConfig, FILE_STATUS_TAG,
 };
 use dc_interfaces::msg::StringStamped;
 use rclrs::{CreateBasicExecutor, RclrsErrorFilter};
 use std::collections::BTreeSet;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std_srvs::srv::{Trigger_Request, Trigger_Response};
 
@@ -63,8 +73,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get();
     let forward_addr: SocketAddr = format!("{}:{}", vector_host, vector_port).parse()?;
 
-    let render_config = build_render_config(&node, forward_addr)?;
-    let rendered_vector_config = render_vector_config(&render_config)?;
+    let bridge_config = build_bridge_config(&node, forward_addr)?;
+    let render_config = &bridge_config.render_config;
+    let rendered_vector_config = render_vector_config(render_config)?;
 
     // ADR-0003 passthrough: raw Vector config snippets merged natively by Vector via
     // additional `--config` arguments. Collision-checked against the rendered config
@@ -82,7 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map_err(|e| format!("failed to read custom config file '{path}': {e}"))?;
         custom_config_files.push(CustomConfigFile { path, content });
     }
-    validate_custom_config_files(&render_config, &custom_config_files)?;
+    validate_custom_config_files(render_config, &custom_config_files)?;
 
     let vector_binary = if !vector_binary_override.is_empty() {
         PathBuf::from(vector_binary_override.to_string())
@@ -145,10 +156,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         forward_addr,
     ))));
 
+    // The Uploader (ADR-0005): `receives: files` Destinations are not Vector sinks —
+    // the Bridge itself uploads the Files those Records reference, verifies them, and
+    // emits status/metadata Records through the Forwarder under FILE_STATUS_TAG. A
+    // dedicated worker thread keeps slow uploads off the subscription callbacks.
+    // Mutex-wrapped because `mpsc::Sender` is Send but not Sync, while subscription
+    // callbacks (like the Forwarder's) may be shared across executor threads.
+    let uploader_tx = if bridge_config.files_destinations.is_empty() {
+        None
+    } else {
+        Some(Arc::new(Mutex::new(spawn_uploader_worker(
+            &bridge_config,
+            forward_addr,
+        )?)))
+    };
+
+    // Tags forwarded to Vector (Records-destination inputs) vs. tags scanned for File
+    // references (files-destination inputs). A topic can be in both sets.
+    let records_tags: BTreeSet<String> = render_config
+        .destinations
+        .iter()
+        .flat_map(|d| d.inputs.iter())
+        .map(|topic| TopicConfig::new(topic.clone(), None).tag)
+        .collect();
+    let files_tags: BTreeSet<String> = bridge_config
+        .files_destinations
+        .iter()
+        .flat_map(|d| d.inputs.iter())
+        .map(|topic| TopicConfig::new(topic.clone(), None).tag)
+        .collect();
+
     // Every Destination's `inputs` topic is subscribed to exactly once, even if more
     // than one Destination consumes it.
     let mut subscribed_topics = BTreeSet::new();
-    for destination in &render_config.destinations {
+    for destination in render_config
+        .destinations
+        .iter()
+        .chain(&bridge_config.files_destinations)
+    {
         for topic in &destination.inputs {
             subscribed_topics.insert(topic.clone());
         }
@@ -160,17 +205,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let topic_config = TopicConfig::new(topic, None);
         let forwarder = forwarder.clone();
         let tag = topic_config.tag.clone();
+        let forward_to_vector = records_tags.contains(&tag);
+        let uploader_tx = files_tags
+            .contains(&tag)
+            .then(|| uploader_tx.clone())
+            .flatten();
         let subscription =
             node.create_subscription(topic_config.topic.as_str(), move |msg: StringStamped| {
                 let timestamp = header_stamp_to_system_time(&msg.header);
                 let payload = serde_json::from_str(&msg.data)
                     .unwrap_or_else(|_| serde_json::Value::String(msg.data.clone()));
-                let record = Record::new(tag.clone(), timestamp, payload);
-                if let Err(e) = forwarder.lock().unwrap().send(&record) {
-                    eprintln!(
-                        "dc_bridge: failed to forward record on tag '{}': {}",
-                        tag, e
-                    );
+                if let Some(tx) = &uploader_tx {
+                    let _ = tx.lock().unwrap().send((tag.clone(), payload.clone()));
+                }
+                if forward_to_vector {
+                    let record = Record::new(tag.clone(), timestamp, payload);
+                    if let Err(e) = forwarder.lock().unwrap().send(&record) {
+                        eprintln!(
+                            "dc_bridge: failed to forward record on tag '{}': {}",
+                            tag, e
+                        );
+                    }
                 }
             })?;
         _subscriptions.push(subscription);
@@ -217,15 +272,33 @@ fn validate_with_vector(
     Ok(())
 }
 
-/// Declares the `shipper`/`destinations` parameters (ADR-0003's config contract) and
-/// builds the [`RenderConfig`] the config renderer needs. `$NAME`/`${NAME}` references in
-/// `shipper.data_dir` and each Postgres destination's `password` are expanded against the
-/// real process environment (`std::env::var`) here — `dc_bridge_core::render` itself
-/// never touches the environment, so it stays pure and testable without ROS or Vector.
-fn build_render_config(
+/// Everything the parameter contract configures: the Shipper-side [`RenderConfig`]
+/// (Records destinations only), the `receives: files` Destinations the Uploader
+/// handles (ADR-0005), and the `files.*` Uploader options.
+struct BridgeConfig {
+    render_config: RenderConfig,
+    files_destinations: Vec<Destination>,
+    files: FilesParams,
+}
+
+/// The `files.*` parameter block from the issue-#248 config contract.
+struct FilesParams {
+    delete_when_sent: bool,
+    ffprobe_binary: String,
+    multipart_threshold_bytes: Option<i64>,
+    multipart_part_size_bytes: Option<i64>,
+}
+
+/// Declares the `shipper`/`destinations`/`files` parameters (ADR-0003's config
+/// contract plus ADR-0005's Uploader) and builds the [`BridgeConfig`]. `$NAME`/
+/// `${NAME}` references in `shipper.data_dir` and destination credentials are expanded
+/// against the real process environment (`std::env::var`) here — `dc_bridge_core`
+/// itself never touches the environment, so it stays pure and testable without ROS or
+/// Vector.
+fn build_bridge_config(
     node: &rclrs::Node,
     forward_addr: SocketAddr,
-) -> Result<RenderConfig, Box<dyn std::error::Error>> {
+) -> Result<BridgeConfig, Box<dyn std::error::Error>> {
     let data_dir_raw: Arc<str> = node
         .declare_parameter("shipper.data_dir")
         .default(Arc::from("$HOME/.dc/buffer"))
@@ -250,12 +323,162 @@ fn build_render_config(
         destinations.push(declare_destination(node, name)?);
     }
 
-    Ok(RenderConfig {
-        forward_addr,
-        data_dir,
-        buffer_max_bytes: buffer_max_bytes.max(0) as u64,
-        destinations,
+    // `receives: files` Destinations are the Uploader's (ADR-0005), never Vector sinks.
+    let (files_destinations, mut records_destinations): (Vec<_>, Vec<_>) = destinations
+        .into_iter()
+        .partition(|d| d.receives == Receives::Files);
+
+    let delete_when_sent: bool = node
+        .declare_parameter("files.delete_when_sent")
+        .default(false)
+        .mandatory()?
+        .get();
+    let ffprobe_binary: Arc<str> = node
+        .declare_parameter("files.ffprobe_binary")
+        .default(Arc::from("ffprobe"))
+        .mandatory()?
+        .get();
+    let multipart_threshold_bytes: Option<i64> = node
+        .declare_parameter("files.multipart_threshold_bytes")
+        .optional()?
+        .get();
+    let multipart_part_size_bytes: Option<i64> = node
+        .declare_parameter("files.multipart_part_size_bytes")
+        .optional()?
+        .get();
+    let files = FilesParams {
+        delete_when_sent,
+        ffprobe_binary: ffprobe_binary.to_string(),
+        multipart_threshold_bytes,
+        multipart_part_size_bytes,
+    };
+    let metadata_destination: Arc<str> = node
+        .declare_parameter("files.metadata_destination")
+        .default(Arc::from(""))
+        .mandatory()?
+        .get();
+
+    if !files_destinations.is_empty() {
+        // The Uploader's status Records must land somewhere: the configured
+        // metadata destination gets the Uploader's Tag appended to its routed set.
+        if metadata_destination.is_empty() {
+            return Err(
+                "`files.metadata_destination` is required when a `receives: files` \
+                 destination is configured"
+                    .into(),
+            );
+        }
+        let target = records_destinations
+            .iter_mut()
+            .find(|d| d.name.as_str() == metadata_destination.as_ref())
+            .ok_or_else(|| {
+                format!(
+                    "files.metadata_destination '{metadata_destination}' does not name a \
+                     configured `receives: records` destination"
+                )
+            })?;
+        target.extra_tags.push(FILE_STATUS_TAG.to_string());
+    }
+
+    Ok(BridgeConfig {
+        render_config: RenderConfig {
+            forward_addr,
+            data_dir,
+            buffer_max_bytes: buffer_max_bytes.max(0) as u64,
+            destinations: records_destinations,
+        },
+        files_destinations,
+        files,
     })
+}
+
+/// Builds the Uploader from the `receives: files` Destinations and starts its worker
+/// thread. The returned channel receives `(tag, payload)` pairs from the topic
+/// subscriptions; the worker retries each Record (idempotently — verified objects are
+/// never re-uploaded, status rows never duplicated) with capped backoff until its
+/// Files are all verified, and emits status Records through its own Forwarder
+/// connection under [`FILE_STATUS_TAG`].
+fn spawn_uploader_worker(
+    bridge_config: &BridgeConfig,
+    forward_addr: SocketAddr,
+) -> Result<mpsc::Sender<(String, serde_json::Value)>, Box<dyn std::error::Error>> {
+    let mut storages = Vec::with_capacity(bridge_config.files_destinations.len());
+    for dest in &bridge_config.files_destinations {
+        let DestinationKind::S3(params) = &dest.kind else {
+            // destination_from_raw enforces `type: s3` for `receives: files`.
+            return Err(format!(
+                "internal error: files destination '{}' is not object storage",
+                dest.name
+            )
+            .into());
+        };
+        storages.push(Storage::s3(&dest.name, params)?);
+    }
+
+    let mut config = UploaderConfig::new(
+        PathBuf::from(&bridge_config.render_config.data_dir).join("uploader"),
+        bridge_config.files.delete_when_sent,
+    );
+    if let Some(threshold) = bridge_config.files.multipart_threshold_bytes {
+        config.multipart_threshold_bytes = threshold.max(1) as u64;
+    }
+    if let Some(part_size) = bridge_config.files.multipart_part_size_bytes {
+        config.multipart_part_size_bytes = part_size.max(1) as u64;
+    }
+    let prober = ffprobe_duration_prober(PathBuf::from(&bridge_config.files.ffprobe_binary));
+    let uploader = Uploader::new(config, storages, prober)?;
+
+    let (tx, rx) = mpsc::channel::<(String, serde_json::Value)>();
+    std::thread::spawn(move || {
+        // The Uploader's own Forwarder connection, so long uploads never hold the
+        // subscription callbacks' Forwarder lock.
+        let mut forwarder = Forwarder::new(ForwarderConfig::new(forward_addr));
+        let mut emit = move |row: serde_json::Value| -> Result<(), String> {
+            let record = Record::new(FILE_STATUS_TAG, SystemTime::now(), row);
+            let mut last_err = String::new();
+            // Vector may be briefly down (restart, backpressure); keep trying for a
+            // while before handing the whole Record back for an idempotent retry.
+            for _ in 0..120 {
+                match forwarder.send(&record) {
+                    Ok(()) => return Ok(()),
+                    Err(e) => {
+                        last_err = e.to_string();
+                        std::thread::sleep(Duration::from_millis(500));
+                    }
+                }
+            }
+            Err(last_err)
+        };
+
+        while let Ok((tag, payload)) = rx.recv() {
+            let mut backoff = Duration::from_secs(1);
+            loop {
+                match uploader.process_record(&payload, &tag, &mut emit) {
+                    Ok(summary) => {
+                        if summary.files > 0 {
+                            eprintln!(
+                                "dc_bridge uploader: group '{}': {} file(s), {} verified, \
+                                 {} missing, {} deleted, complete={}",
+                                tag,
+                                summary.files,
+                                summary.verified,
+                                summary.missing,
+                                summary.deleted,
+                                summary.group_complete
+                            );
+                        }
+                        break;
+                    }
+                    Err(e) => {
+                        eprintln!("dc_bridge uploader: {e}; retrying in {backoff:?}");
+                        std::thread::sleep(backoff);
+                        backoff = (backoff * 2).min(Duration::from_secs(60));
+                    }
+                }
+            }
+        }
+    });
+    Ok(tx)
 }
 
 /// Declares every `<name>.*` parameter one Destination might need — the flat union
