@@ -52,6 +52,28 @@ dc_bridge:
     #   receives: records
     #   inputs: ["/dc/measurement/uptime"]
     #
+    # File uploads (ADR-0005): a `receives: files` destination is served by the
+    # Bridge's Uploader, not by a Vector sink — Records on its `inputs` topics are
+    # scanned for the `local_paths`/`remote_paths` File references Measurements embed
+    # (camera, map, …), each File is uploaded (multipart + resumable for large ones)
+    # and verified, and per-File status plus group-completion metadata Records are
+    # routed to `files.metadata_destination`. The destination name ("minio" here) must
+    # match the key the Measurement writes under `remote_paths`.
+    #
+    # minio:
+    #   type: s3
+    #   receives: files
+    #   inputs: ["/dc/measurement/camera"]
+    #   bucket: "dc-files"
+    #   endpoint: "http://127.0.0.1:9000"
+    #   access_key_id: "rustfsadmin"
+    #   secret_access_key: "$DC_S3_SECRET"
+    #   force_path_style: true
+    # files:
+    #   delete_when_sent: true         # delete local Files after verified upload everywhere
+    #   metadata_destination: "pgsql"  # receives the dc.files status/metadata Records
+    #   ffprobe_binary: "ffprobe"      # video duration probe (optional)
+    #
     # Any other Vector sink type via the ADR-0003 passthrough: raw Vector config
     # snippets consuming the public per-Tag `dc.<tag>` routes (see
     # doc/src/dc/destinations.md for the routing contract).

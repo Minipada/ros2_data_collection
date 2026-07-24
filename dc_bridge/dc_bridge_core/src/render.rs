@@ -69,6 +69,11 @@ pub struct Destination {
     /// ROS topic names feeding this Destination; the Fluent Forward tag each one is
     /// routed under is derived the same way `TopicConfig` derives it for subscriptions.
     pub inputs: Vec<String>,
+    /// Extra Fluent Forward Tags routed to this Destination that don't come from a
+    /// topic subscription — Bridge-internal producers. Today that's the Uploader's
+    /// status Tag (`dc.files`), appended to the `files.metadata_destination`
+    /// Destination by `main.rs`; never set from user parameters directly.
+    pub extra_tags: Vec<String>,
     /// Event field the normalized timestamp is written to before routing.
     pub time_key: String,
     pub time_format: TimeFormat,
@@ -162,8 +167,14 @@ pub enum RenderError {
     UnsupportedType(String, String),
     #[error("destination '{0}': receives '{1}' is invalid (expected 'records' or 'files')")]
     InvalidReceives(String, String),
-    #[error("destination '{0}': `receives: files` is not yet supported (only `records`)")]
-    FilesNotSupported(String),
+    #[error(
+        "destination '{0}': `receives: files` requires `type: s3` (object storage); got type '{1}'"
+    )]
+    FilesRequireObjectStorage(String, String),
+    #[error(
+        "internal error: `receives: files` destination '{0}' reached the shipper config renderer; File uploads are handled by the Bridge's Uploader (ADR-0005), not by a Vector sink"
+    )]
+    FilesDestinationInShipperConfig(String),
     #[error("destination '{0}': time_format '{1}' is invalid (expected 'double' or 'iso8601')")]
     InvalidTimeFormat(String, String),
     #[error("destination '{0}': missing required field `{1}`")]
@@ -323,8 +334,13 @@ pub fn destination_from_raw(
             ))
         }
     };
-    if receives != Receives::Records {
-        return Err(RenderError::FilesNotSupported(name.to_string()));
+    // A `receives: files` Destination is consumed by the Bridge's Uploader (ADR-0005),
+    // which speaks object storage — only the `s3` blessed type qualifies.
+    if receives == Receives::Files && type_str != "s3" {
+        return Err(RenderError::FilesRequireObjectStorage(
+            name.to_string(),
+            type_str.to_string(),
+        ));
     }
 
     let time_key = optional(raw.time_key).unwrap_or_else(|| "date".to_string());
@@ -360,6 +376,7 @@ pub fn destination_from_raw(
         name: name.to_string(),
         receives,
         inputs,
+        extra_tags: Vec::new(),
         time_key,
         time_format,
         kind,
@@ -442,11 +459,15 @@ fn validate(config: &RenderConfig) -> Result<(), RenderError> {
         if !seen.insert(dest.name.as_str()) {
             return Err(RenderError::DuplicateDestination(dest.name.clone()));
         }
-        if dest.inputs.is_empty() {
+        // A Destination fed only by Bridge-internal Tags (the metadata destination
+        // pattern) legitimately has no topic inputs.
+        if dest.inputs.is_empty() && dest.extra_tags.is_empty() {
             return Err(RenderError::EmptyInputs(dest.name.clone()));
         }
         if dest.receives != Receives::Records {
-            return Err(RenderError::FilesNotSupported(dest.name.clone()));
+            return Err(RenderError::FilesDestinationInShipperConfig(
+                dest.name.clone(),
+            ));
         }
     }
     Ok(())
@@ -533,6 +554,14 @@ fn derived_tags(inputs: &[String]) -> BTreeSet<String> {
         .collect()
 }
 
+/// Every Tag routed to a Destination: its `inputs` topics' derived Tags plus any
+/// Bridge-internal `extra_tags` (e.g. the Uploader's status Tag).
+fn destination_tags(dest: &Destination) -> BTreeSet<String> {
+    let mut tags = derived_tags(&dest.inputs);
+    tags.extend(dest.extra_tags.iter().cloned());
+    tags
+}
+
 /// A VRL `includes([...], .tag)` condition matching any of `tags`.
 fn tag_condition(tags: &BTreeSet<String>) -> String {
     let quoted: Vec<String> = tags.iter().map(|t| format!("{:?}", t)).collect();
@@ -542,7 +571,7 @@ fn tag_condition(tags: &BTreeSet<String>) -> String {
 fn render_normalize_source(config: &RenderConfig) -> String {
     let mut out = String::new();
     for dest in &config.destinations {
-        let cond = tag_condition(&derived_tags(&dest.inputs));
+        let cond = tag_condition(&destination_tags(dest));
         writeln!(out, "if {cond} {{").unwrap();
         match dest.time_format {
             TimeFormat::Double => writeln!(
@@ -583,7 +612,7 @@ fn percent_encode_userinfo(value: &str) -> String {
 /// its `inputs` topics.
 fn sink_inputs(dest: &Destination) -> Value {
     Value::Array(
-        derived_tags(&dest.inputs)
+        destination_tags(dest)
             .iter()
             .map(|tag| Value::String(route_output_for_tag(tag)))
             .collect(),
@@ -714,7 +743,7 @@ pub fn render(config: &RenderConfig) -> Result<String, RenderError> {
     let all_tags: BTreeSet<String> = config
         .destinations
         .iter()
-        .flat_map(|dest| derived_tags(&dest.inputs))
+        .flat_map(destination_tags)
         .collect();
     let mut route_branches = Table::new();
     for tag in &all_tags {
@@ -764,6 +793,7 @@ mod tests {
             name: name.to_string(),
             receives: Receives::Records,
             inputs: inputs.iter().map(|s| s.to_string()).collect(),
+            extra_tags: Vec::new(),
             time_key: "date".to_string(),
             time_format,
             kind,
@@ -1119,16 +1149,95 @@ mod tests {
     }
 
     #[test]
-    fn destination_from_raw_rejects_receives_files_clearly_for_now() {
-        let err = destination_from_raw(
-            "archive",
-            "postgres",
+    fn destination_from_raw_rejects_receives_files_on_non_object_storage_types() {
+        for bad_type in ["postgres", "file", "console"] {
+            let err = destination_from_raw(
+                "archive",
+                bad_type,
+                "files",
+                vec!["/dc/measurement/map".to_string()],
+                RawDestinationParams::default(),
+            )
+            .unwrap_err();
+            assert_eq!(
+                err,
+                RenderError::FilesRequireObjectStorage("archive".to_string(), bad_type.to_string()),
+                "type '{bad_type}' must be rejected for receives: files"
+            );
+        }
+    }
+
+    #[test]
+    fn destination_from_raw_accepts_a_receives_files_s3_destination() {
+        let dest = destination_from_raw(
+            "minio",
+            "s3",
             "files",
-            vec!["/dc/measurement/map".to_string()],
-            RawDestinationParams::default(),
+            vec!["/dc/measurement/camera".to_string()],
+            RawDestinationParams {
+                bucket: Some("dc-files"),
+                endpoint: Some("http://127.0.0.1:9000"),
+                access_key_id: Some("rustfsadmin"),
+                secret_access_key: Some("rustfsadmin"),
+                ..Default::default()
+            },
         )
-        .unwrap_err();
-        assert_eq!(err, RenderError::FilesNotSupported("archive".to_string()));
+        .unwrap();
+        assert_eq!(dest.receives, Receives::Files);
+        assert!(matches!(dest.kind, DestinationKind::S3(_)));
+    }
+
+    #[test]
+    fn render_rejects_a_files_destination_reaching_the_shipper_config() {
+        let mut config = basic_config(TimeFormat::Double);
+        config.destinations[0].receives = Receives::Files;
+        assert_eq!(
+            render(&config),
+            Err(RenderError::FilesDestinationInShipperConfig(
+                "pgsql".to_string()
+            ))
+        );
+    }
+
+    /// The metadata-destination pattern: the Uploader's status Tag is appended as an
+    /// `extra_tags` entry, so the normalize condition, the public route, and the sink's
+    /// inputs all carry it alongside topic-derived Tags.
+    #[test]
+    fn extra_tags_are_routed_normalized_and_consumed_like_topic_tags() {
+        let mut config = basic_config(TimeFormat::Double);
+        config.destinations[0]
+            .extra_tags
+            .push("dc.files".to_string());
+        let rendered = render(&config).unwrap();
+        let parsed = parsed(&rendered);
+
+        let route = parsed["transforms"]["dc"]["route"].as_table().unwrap();
+        assert_eq!(
+            route.keys().collect::<Vec<_>>(),
+            vec!["dc.files", "dc.group.robot"]
+        );
+        let inputs = parsed["sinks"]["pgsql"]["inputs"].as_array().unwrap();
+        assert_eq!(
+            inputs,
+            &[
+                Value::String("dc.dc.files".to_string()),
+                Value::String("dc.dc.group.robot".to_string()),
+            ]
+        );
+        let normalize = parsed["transforms"]["dc_bridge_normalize"]["source"]
+            .as_str()
+            .unwrap();
+        assert!(normalize.contains(r#"includes(["dc.files", "dc.group.robot"], .tag)"#));
+    }
+
+    #[test]
+    fn a_destination_with_only_extra_tags_needs_no_topic_inputs() {
+        let mut config = basic_config(TimeFormat::Double);
+        config.destinations[0].inputs = vec![];
+        config.destinations[0]
+            .extra_tags
+            .push("dc.files".to_string());
+        assert!(render(&config).is_ok());
     }
 
     #[test]

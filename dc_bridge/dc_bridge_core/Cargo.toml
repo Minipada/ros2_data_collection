@@ -14,11 +14,17 @@ description = "ROS-independent Bridge logic (Forwarder, Supervisor, Readiness) f
 [dependencies]
 rmpv = "1"
 toml = "0.8"
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
+object_store = { version = "0.12", features = ["aws"] }
+tokio = { version = "1", features = ["rt", "time", "net"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"
 
 [dev-dependencies]
 socket2 = "0.5"
+tempfile = "3"
+async-trait = "0.1"
+futures = "0.3"

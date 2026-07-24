@@ -578,3 +578,84 @@ only ever been checked by hand, interactively, in the (now torn-down) Docker ses
   into `colcon test` needs the full C++ stack in CI first — #249); the reusable dev
   container for the Jazzy+ros2_rust toolchain (still ad hoc, now also with the C++ stack
   deps installed on top of the #246 image).
+
+### #248 - DC 2.0 S7: Uploader — verified File uploads with metadata Records
+
+- Added `dc_bridge_core::uploader` (ADR-0005), replacing the Humble Go plugins
+  (`out_minio`, `out_files_metrics`) with a Rust module inside the Bridge:
+  - `uploader/group.rs` — parses the Files a Record references from the
+    `local_paths`/`remote_paths` structure Measurements already embed (verified against
+    `camera.cpp`/`map.cpp`; no more parallel `src_fields`/`upload_fields` arrays).
+    `remote_paths` is keyed by Destination name; the payload is walked recursively so
+    bare Measurement Records and Group-merged Records parse identically; `base64`
+    subtrees are skipped. All Files in one Record form one group.
+  - `uploader/store.rs` — the `object_store` abstraction the ADR names: an
+    `UploadStore` trait (`ObjectStore + MultipartStore`) + `Storage` per
+    `receives: files` Destination. S3 today (`AmazonS3Builder`, `from_env` for ambient
+    AWS credentials, custom endpoint + path-style for RustFS/MinIO/Ceph); GCS/Azure are
+    new constructors, not new upload logic.
+  - `uploader/multipart.rs` — multipart, *resumable* uploads on `MultipartStore`'s
+    low-level API (the high-level writer hides the `MultipartId`/`PartId`s that make
+    resumption possible): progress is checkpointed to a JSON sidecar after every part
+    (FNV-named, atomic tmp+rename), so an interrupted transfer — dropped connection or
+    Bridge restart — resumes from the last completed part instead of restarting.
+  - `uploader/content_type.rs` — magic-byte sniffing (PNG/JPEG/PGM/mp4/…, UTF-8 text
+    fallback) replacing Go's `http.DetectContentType`; duration probing only for
+    `video/*` (dropping Humble's probe-octet-stream quirk), via an injectable prober
+    (production: ffprobe, argument-vector not `sh -c`).
+  - `uploader/mod.rs` — the flow: per File × storage, head+size **verify-or-upload**
+    (an already-verified object short-circuits — idempotent retries), verified-only
+    status Records, group-completion marker only when *every* File in the group is
+    verified on *all* its storages, then `delete_when_sent` deletion strictly after
+    per-File verification everywhere, with `deleted: true` rows appended (append-only
+    status log — the insert-only parameterized sink replaces Humble's SQL UPDATE; no
+    SQL strings anywhere). Status rows preserve the Humble `files_metrics` column set.
+    Every emission is deduped by key, so retried/redelivered Records never duplicate
+    rows; a Record redelivered after deletion is recognized by its verified remote
+    objects (no spurious "missing" rows). Missing-on-disk Files get an
+    `on_filesystem: false` row and permanently block their group's completion marker.
+- Status Records are emitted through the Forwarder under the new `dc.files` Tag. The
+  renderer (`render.rs`) grew `extra_tags` on `Destination` (Bridge-internal Tags
+  routed/normalized/consumed exactly like topic-derived ones), `main.rs` appends
+  `dc.files` to the `files.metadata_destination` Destination, and a Destination with
+  only extra tags needs no topic inputs (the "metadata-only pgsql" pattern).
+  `receives: files` now validates as `type: s3`-only (`FilesRequireObjectStorage`) and
+  files-Destinations are partitioned out of the shipper config before rendering.
+- `main.rs`: declares `files.delete_when_sent` / `files.metadata_destination` /
+  `files.ffprobe_binary` / `files.multipart_{threshold,part_size}_bytes`; subscribes
+  files-Destination `inputs` topics and hands their Records to an Uploader worker
+  thread (own Forwarder connection; infinite capped-backoff retry per Record, safe
+  because processing is idempotent). Topics feeding only files-Destinations are not
+  forwarded to Vector.
+- Tests: `dc_bridge_core` 55 → 82 (`cargo test`, no ROS needed; clippy -D warnings +
+  fmt clean), including `tests/uploader_tests.rs` covering every #248 unit criterion
+  against `object_store`'s in-memory backend + temp files with an instrumented
+  failure-injecting wrapper: happy path, metadata-Record shape (Humble column set),
+  verify-fails-then-retry (exactly one put), delete-only-after-verified-everywhere
+  (failing second storage blocks deletion; healing completes it; redelivery after
+  delete adds nothing), no-duplicate-rows on retry, file-missing-on-disk,
+  partial-vs-complete group marker, video duration (injected prober + real ffprobe
+  code path against a stub binary), and interrupted-multipart resume (parts [0,1] then
+  exactly [2,3] on a fresh Uploader over the same state dir, one `create_multipart`
+  total, byte-identical object, sidecar cleaned up).
+- **Verified in the real ROS 2 Jazzy + ros2_rust environment** (fresh container from
+  the #244-era `dc_bridge_build_env` image with this worktree bound in, plus
+  postgres:13 and RustFS sharing its netns): `colcon build --packages-up-to dc_bridge`
+  succeeded first try — `main.rs` needed zero post-build fixes. New e2e test
+  `camera_file_upload_reaches_s3_and_status_rows_reach_postgres` automates the demo
+  criterion (publisher standing in for the camera Measurement, RustFS for MinIO): a
+  camera-shaped Record referencing a real JPEG → object bytes verified in the bucket,
+  `file_status` row (uploaded/verified metadata, `s3://` remote path) and
+  `group_complete` marker land in Postgres via the Shipper's parameterized sink, local
+  File deleted with a `deleted: true` row appended, and the repeated republishing the
+  test does proves end-to-end idempotency (exactly one row per status transition).
+  `colcon test --packages-select dc_bridge`: 7/7 green, 4 consecutive runs, zero
+  leftover Vector processes. Docs updated (`doc/src/dc/destinations.md` "File uploads"
+  section, `dc_params.yaml` files example, dc_bridge README).
+- `pre-commit` clean on the diff (same `build-doc`/`poetry-requirements`/`pycln`/
+  `flake8` environment-gap skips as #242-#247; `go-fmt` additionally fails locally for
+  lack of a `gofmt` binary, on untouched legacy Humble Go files only).
+- **Not done / left for follow-up**: GCS/Azure `Storage` constructors (config surface
+  undefined until a blessed type exists for them); thumbnail/preview generation is
+  #256; the reusable committed dev container (still ad hoc — this session again built
+  containers from the uncommitted `dc_bridge_build_env` image).

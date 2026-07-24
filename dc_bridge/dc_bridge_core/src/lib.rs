@@ -7,6 +7,7 @@ pub mod forwarder;
 pub mod readiness;
 pub mod render;
 pub mod supervisor;
+pub mod uploader;
 pub mod vector_config;
 
 pub use config::{BridgeConfig, TopicConfig};
@@ -19,3 +20,7 @@ pub use render::{
     TimeFormat, MIN_DISK_BUFFER_BYTES, ROUTE_TRANSFORM_ID,
 };
 pub use supervisor::{Supervisor, SupervisorConfig};
+pub use uploader::store::{Storage, UploadStore};
+pub use uploader::{
+    ffprobe_duration_prober, ProcessSummary, UploadError, Uploader, UploaderConfig, FILE_STATUS_TAG,
+};
