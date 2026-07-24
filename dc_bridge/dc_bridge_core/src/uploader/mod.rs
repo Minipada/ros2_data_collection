@@ -30,16 +30,18 @@
 pub mod content_type;
 pub mod group;
 pub mod multipart;
+mod status;
 pub mod store;
 
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use group::{FileGroup, FileRef};
 use object_store::path::Path as ObjectPath;
+use status::StatusContext;
 use store::Storage;
 
 /// The Tag the Uploader's status/metadata Records are emitted under. The Destination
@@ -148,6 +150,13 @@ enum EnsureOutcome {
     MissingLocal,
 }
 
+/// What [`Uploader::upload_and_verify_file`] found for one File across all its
+/// Destinations.
+struct FileOutcome {
+    verified_everywhere: bool,
+    missing: bool,
+}
+
 pub struct Uploader {
     config: UploaderConfig,
     storages: Vec<Storage>,
@@ -203,43 +212,11 @@ impl Uploader {
         let mut verified_files: Vec<&FileRef> = Vec::new();
 
         for file in &group.files {
-            let meta = self.file_meta(&file.local_path);
-            let mut verified_everywhere = true;
-
-            for (storage_name, remote_path) in &file.remote_paths {
-                let storage = self
-                    .storages
-                    .iter()
-                    .find(|s| &s.name == storage_name)
-                    .expect("parse_file_group only keeps configured storages");
-
-                match self.ensure_uploaded(storage, file, meta.as_ref(), remote_path) {
-                    Ok(EnsureOutcome::Verified) => {
-                        let meta = meta.as_ref().expect("Verified implies a local file");
-                        self.emit_once(
-                            emit,
-                            &format!("uploaded|{}|{}", file.local_path, storage.name),
-                            uploaded_row(&group, file, storage, remote_path, meta),
-                        )?;
-                    }
-                    Ok(EnsureOutcome::VerifiedRemoteOnly) => {}
-                    Ok(EnsureOutcome::MissingLocal) => {
-                        verified_everywhere = false;
-                        summary.missing += 1;
-                        self.emit_once(
-                            emit,
-                            &format!("missing|{}|{}", file.local_path, storage.name),
-                            missing_row(&group, file, storage, remote_path),
-                        )?;
-                    }
-                    Err(e) => {
-                        verified_everywhere = false;
-                        failures.push(format!("'{}' -> {}: {e}", file.local_path, storage.name));
-                    }
-                }
+            let outcome = self.upload_and_verify_file(&group, file, emit, &mut failures)?;
+            if outcome.missing {
+                summary.missing += 1;
             }
-
-            if verified_everywhere {
+            if outcome.verified_everywhere {
                 summary.verified += 1;
                 verified_files.push(file);
             }
@@ -250,38 +227,15 @@ impl Uploader {
         // incomplete forever — loud in the status table, never guessed complete.
         if summary.verified == summary.files {
             summary.group_complete = true;
-            let files_key: Vec<&str> = group.files.iter().map(|f| f.local_path.as_str()).collect();
-            self.emit_once(
-                emit,
-                &format!("group|{}|{}", group.group_name, files_key.join("|")),
-                group_complete_row(&group),
-            )?;
+            self.emit_group_complete(&group, emit)?;
         }
 
         // Deletion strictly after verified upload on all storages — per File, so one
         // permanently failing File doesn't strand its group-mates on a full disk.
         if self.config.delete_when_sent {
             for file in &verified_files {
-                let local = Path::new(&file.local_path);
-                if !local.exists() {
-                    continue;
-                }
-                if let Err(e) = std::fs::remove_file(local) {
-                    failures.push(format!("failed to delete '{}': {e}", file.local_path));
-                    continue;
-                }
-                summary.deleted += 1;
-                for (storage_name, remote_path) in &file.remote_paths {
-                    let storage = self
-                        .storages
-                        .iter()
-                        .find(|s| &s.name == storage_name)
-                        .expect("parse_file_group only keeps configured storages");
-                    self.emit_once(
-                        emit,
-                        &format!("deleted|{}|{}", file.local_path, storage.name),
-                        deleted_row(&group, file, storage, remote_path),
-                    )?;
+                if self.delete_verified_file(&group, file, emit, &mut failures)? {
+                    summary.deleted += 1;
                 }
             }
         }
@@ -290,6 +244,106 @@ impl Uploader {
             return Err(UploadError::Incomplete(failures.join("; ")));
         }
         Ok(summary)
+    }
+
+    /// Uploads and verifies one File on every Destination that receives it, emitting
+    /// an `uploaded`/`missing` status row per Destination as each result lands.
+    fn upload_and_verify_file(
+        &self,
+        group: &FileGroup,
+        file: &FileRef,
+        emit: &mut dyn FnMut(Value) -> Result<(), String>,
+        failures: &mut Vec<String>,
+    ) -> Result<FileOutcome, UploadError> {
+        let meta = self.file_meta(&file.local_path);
+        let mut outcome = FileOutcome {
+            verified_everywhere: true,
+            missing: false,
+        };
+
+        for (storage_name, remote_path) in &file.remote_paths {
+            let storage = self.storage(storage_name);
+            let ctx = StatusContext::new(group, file, storage, remote_path);
+
+            match self.ensure_uploaded(storage, file, meta.as_ref(), remote_path) {
+                Ok(EnsureOutcome::Verified) => {
+                    let meta = meta.as_ref().expect("Verified implies a local file");
+                    self.emit_once(
+                        emit,
+                        &format!("uploaded|{}|{}", file.local_path, storage.name),
+                        ctx.uploaded(meta),
+                    )?;
+                }
+                Ok(EnsureOutcome::VerifiedRemoteOnly) => {}
+                Ok(EnsureOutcome::MissingLocal) => {
+                    outcome.verified_everywhere = false;
+                    outcome.missing = true;
+                    self.emit_once(
+                        emit,
+                        &format!("missing|{}|{}", file.local_path, storage.name),
+                        ctx.missing(),
+                    )?;
+                }
+                Err(e) => {
+                    outcome.verified_everywhere = false;
+                    failures.push(format!("'{}' -> {}: {e}", file.local_path, storage.name));
+                }
+            }
+        }
+
+        Ok(outcome)
+    }
+
+    fn emit_group_complete(
+        &self,
+        group: &FileGroup,
+        emit: &mut dyn FnMut(Value) -> Result<(), String>,
+    ) -> Result<(), UploadError> {
+        let files_key: Vec<&str> = group.files.iter().map(|f| f.local_path.as_str()).collect();
+        self.emit_once(
+            emit,
+            &format!("group|{}|{}", group.group_name, files_key.join("|")),
+            status::group_complete_row(group),
+        )
+    }
+
+    /// Deletes one already-verified File and emits a `deleted` row per Destination.
+    /// A no-op (returns `false`) if the File is already gone or fails to delete.
+    fn delete_verified_file(
+        &self,
+        group: &FileGroup,
+        file: &FileRef,
+        emit: &mut dyn FnMut(Value) -> Result<(), String>,
+        failures: &mut Vec<String>,
+    ) -> Result<bool, UploadError> {
+        let local = Path::new(&file.local_path);
+        if !local.exists() {
+            return Ok(false);
+        }
+        if let Err(e) = std::fs::remove_file(local) {
+            failures.push(format!("failed to delete '{}': {e}", file.local_path));
+            return Ok(false);
+        }
+        for (storage_name, remote_path) in &file.remote_paths {
+            let storage = self.storage(storage_name);
+            let ctx = StatusContext::new(group, file, storage, remote_path);
+            self.emit_once(
+                emit,
+                &format!("deleted|{}|{}", file.local_path, storage.name),
+                ctx.deleted(),
+            )?;
+        }
+        Ok(true)
+    }
+
+    /// Looks up a configured Destination by name. Every name that reaches here comes
+    /// from `group::parse_file_group`, which only keeps names present in
+    /// `storage_names` — so this can never miss.
+    fn storage(&self, name: &str) -> &Storage {
+        self.storages
+            .iter()
+            .find(|s| s.name == name)
+            .expect("parse_file_group only keeps configured storages")
     }
 
     fn file_meta(&self, local_path: &str) -> Option<FileMeta> {
@@ -403,103 +457,4 @@ impl Uploader {
         self.emitted.lock().unwrap().insert(dedup_key.to_string());
         Ok(())
     }
-}
-
-fn unix_now() -> f64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs_f64()
-}
-
-/// The shared status-row fields, preserving the Humble `out_files_metrics` column set.
-fn base_row(
-    group: &FileGroup,
-    file: &FileRef,
-    storage: &Storage,
-    remote_path: &str,
-) -> serde_json::Map<String, Value> {
-    let mut row = serde_json::Map::new();
-    row.insert("kind".into(), json!("file_status"));
-    row.insert("group_name".into(), json!(group.group_name));
-    if let Some(robot_name) = &group.robot_name {
-        row.insert("robot_name".into(), json!(robot_name));
-    }
-    if let Some(robot_id) = &group.robot_id {
-        row.insert("robot_id".into(), robot_id.clone());
-    }
-    row.insert("local_path".into(), json!(file.local_path));
-    row.insert(
-        "remote_path".into(),
-        json!(format!(
-            "{}{}",
-            storage.url_prefix,
-            storage.object_key(remote_path)
-        )),
-    );
-    row.insert("storage_type".into(), json!(storage.name));
-    row.insert("updated_at".into(), json!(unix_now()));
-    row
-}
-
-fn uploaded_row(
-    group: &FileGroup,
-    file: &FileRef,
-    storage: &Storage,
-    remote_path: &str,
-    meta: &FileMeta,
-) -> Value {
-    let mut row = base_row(group, file, storage, remote_path);
-    row.insert("uploaded".into(), json!(true));
-    row.insert("on_filesystem".into(), json!(true));
-    row.insert("deleted".into(), json!(false));
-    row.insert("content_type".into(), json!(meta.content_type));
-    row.insert("size".into(), json!(meta.size));
-    if let Some(duration) = meta.duration {
-        row.insert("duration".into(), json!(duration));
-    }
-    Value::Object(row)
-}
-
-fn missing_row(group: &FileGroup, file: &FileRef, storage: &Storage, remote_path: &str) -> Value {
-    let mut row = base_row(group, file, storage, remote_path);
-    row.insert("uploaded".into(), json!(false));
-    row.insert("on_filesystem".into(), json!(false));
-    row.insert("deleted".into(), json!(false));
-    Value::Object(row)
-}
-
-fn deleted_row(group: &FileGroup, file: &FileRef, storage: &Storage, remote_path: &str) -> Value {
-    let mut row = base_row(group, file, storage, remote_path);
-    row.insert("uploaded".into(), json!(true));
-    row.insert("on_filesystem".into(), json!(false));
-    row.insert("deleted".into(), json!(true));
-    Value::Object(row)
-}
-
-/// ADR-0005's group completion marker — the "manifest as completion checkpoint".
-fn group_complete_row(group: &FileGroup) -> Value {
-    let mut row = serde_json::Map::new();
-    row.insert("kind".into(), json!("group_complete"));
-    row.insert("group_name".into(), json!(group.group_name));
-    if let Some(robot_name) = &group.robot_name {
-        row.insert("robot_name".into(), json!(robot_name));
-    }
-    if let Some(robot_id) = &group.robot_id {
-        row.insert("robot_id".into(), robot_id.clone());
-    }
-    row.insert("complete".into(), json!(true));
-    row.insert("file_count".into(), json!(group.files.len()));
-    row.insert(
-        "files".into(),
-        Value::Array(
-            group
-                .files
-                .iter()
-                .map(|f| json!({ "key": f.key, "local_path": f.local_path }))
-                .collect(),
-        ),
-    );
-    row.insert("updated_at".into(), json!(unix_now()));
-    Value::Object(row)
 }
