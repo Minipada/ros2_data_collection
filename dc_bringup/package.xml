@@ -15,7 +15,10 @@
     <exec_depend>dc_group</exec_depend>
     <exec_depend>dc_measurements</exec_depend>
     <exec_depend>dc_services</exec_depend>
+    <exec_depend>nav2_common</exec_depend>
     <exec_depend>nav2_lifecycle_manager</exec_depend>
+    <exec_depend>rclpy</exec_depend>
+    <exec_depend>std_srvs</exec_depend>
 
     <export>
         <build_type>ament_cmake</build_type>

@@ -505,3 +505,76 @@ only ever been checked by hand, interactively, in the (now torn-down) Docker ses
   the instructive messages visible in the failure output, and `colcon test-result`
   exits 1 (CI-gating works; `colcon test` itself always exits 0 by colcon convention)
   — then green again after restarting the containers.
+
+### #247 - DC 2.0 S6: Launch integration — deterministic startup ordering
+
+- Rewired `dc_bringup/launch/dc_bringup.launch.py` (both composition branches) into the
+  ADR-0006 deterministic startup chain: dc_bridge (which spawns/supervises Vector) starts
+  first as a plain node; a new `bridge_ready_gate` process blocks on the Bridge's
+  `~/ready` service; only when the gate exits 0 does a `RegisterEventHandler(OnProcessExit)`
+  start the lifecycle manager (plain `Node` in the non-composed branch, deferred
+  `LoadComposableNodes` in the composed one), which configures+activates
+  `measurement_server` exactly as before. If the gate times out (Bridge never ready), the
+  handler logs it and issues a full launch `Shutdown` instead of leaving a half-started
+  pipeline. The Bridge's launch `respawn` is now unconditional (`respawn=True`,
+  independent of `use_respawn`) per ADR-0006 — in the composed branch it previously had
+  no respawn at all.
+- New `dc_bringup/scripts/bridge_ready_gate.py` (installed as `bridge_ready_gate`): rclpy
+  node polling a `std_srvs/Trigger` service until `success=True`; parameters `service`
+  (default `dc_bridge/ready`), `timeout_s` (120), `poll_interval_s` (0.5), configurable
+  from the params file (`bridge_ready_gate:` section); exit 0 = ready, 1 = deadline
+  passed. The gate nodes take `configured_params` like every other node. Added
+  `rclpy`/`std_srvs` exec_depends (plus the previously-undeclared `nav2_common` the launch
+  file already imported).
+- **Supervisor hardening in `dc_bridge_core` (found while verifying the "kill the Bridge"
+  criterion)**: `Supervisor::start` now sets `PR_SET_PDEATHSIG(SIGKILL)` on the spawned
+  Vector (Linux `pre_exec`), so Vector can never outlive the Bridge even when the Bridge
+  dies by SIGKILL/crash — paths the #244 ctrlc handler can't cover. Without it (verified
+  empirically as a negative control with the old binary): SIGKILL orphans Vector, which
+  keeps port 24224 bound; the launch-respawned Bridge then spawns a second Vector that
+  crash-loops on the bind, and data flows through the *unsupervised orphan* — looks
+  recovered until shutdown leaves the orphan behind. New `libc` dependency (Linux-only
+  target), new `child_id()` accessor, new `supervised_process_dies_with_its_spawner`
+  regression test (PDEATHSIG fires on spawner-thread exit, so a joined thread stands in
+  for the killed process). 56 `cargo test` pass, clippy/fmt clean.
+- **Three latent bugs fixed that this slice's first-ever real Jazzy build/run of the C++
+  stack exposed** (the #242 port was verified read-only; CI for Jazzy doesn't exist yet):
+  1. `dc_lifecycle_manager::startup()` paired node i with transition i, so with the
+     DC 2.0 single managed node (`measurement_server`) + `transitions: [configure,
+     activate]`, **activate never ran** — "Managed nodes are active" printed while the
+     LifecyclePublisher stayed inactive and zero Records flowed. Now each transition in
+     `transitions` is applied to all nodes in order (configure all, then activate all).
+  2. `dc_lifecycle_manager`/`dc_measurements` used Jazzy-removed `rmw_qos_profile_t`
+     create_service/create_client overloads (deprecation = error under `-Werror`); now
+     `rclcpp::ServicesQoS()`.
+  3. `dc_util/node_utils.hpp` primitive param locals were uninitialized →
+     `-Wmaybe-uninitialized` errors with GCC 13 at -O2; now initialized.
+- Docs: `doc/src/dc/data_pipeline.md` got a "DC 2.0 (Jazzy): deterministic startup
+  ordering" section (startup chain, gate params, supervision + drop semantics while the
+  Bridge is down); the Fluent Bit flowchart below is now explicitly "Legacy (Humble)".
+- **Verified in the real ROS 2 Jazzy + ros2_rust Docker environment** (extended the #246
+  container with the full C++ stack: rosdep-installed nav2/OpenCV/etc. deps, built all 8
+  remaining dc_* packages with colcon). Acceptance criteria, all machine-checked by a
+  harness asserting on launch logs + a live Postgres (uptime Record per second,
+  `init_collect` at activation):
+  - **Startup order deterministic across 20 consecutive launches — in BOTH composition
+    modes (40 launches total)**: every run had gate-ready < lifecycle-bringup <
+    measurement-activation line order, zero pre-activation publish attempts (the
+    LifecyclePublisher "not activated" warn never appears in a gated launch), and zero
+    leftover processes between runs.
+  - **First emitted Record delivered in every run**: min(date) in Postgres within the
+    1-second Fluent-Forward-truncation window of the "Activating" log timestamp, and row
+    count == contiguous seconds span (no drops, no replays) in all 40 runs.
+  - **Kill the Bridge → respawn + recovery without operator action**: verified for both
+    SIGTERM and SIGKILL — launch respawns dc_bridge, `~/ready` recovers, rows resume
+    (e.g. 5 at kill → 18 after), exactly one live Vector during recovery, no orphans
+    after shutdown.
+  - **Gate failure = loud full shutdown**: with a broken destination (`port: 99999`) and
+    `timeout_s: 15`, the Bridge crash-loops with a clear `InvalidPort` error, the gate
+    exits 1 at 15 s, and launch prints "dc_bridge never became ready … shutting down"
+    and takes the whole system down cleanly (no survivors).
+- **Not done / left for follow-up**: a committed launch_testing-based automated test for
+  the ordering (the verification harness above lived in the session scratchpad; wiring it
+  into `colcon test` needs the full C++ stack in CI first — #249); the reusable dev
+  container for the Jazzy+ros2_rust toolchain (still ad hoc, now also with the C++ stack
+  deps installed on top of the #246 image).
