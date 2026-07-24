@@ -1,18 +1,27 @@
 # dc_bridge
 
-The Bridge (ADRs 0001/0004/0006): a Rust (`rclrs`) node that subscribes to `dc_interfaces/msg/StringStamped`
+The Bridge (ADRs 0001/0004/0005/0006): a Rust (`rclrs`) node that subscribes to `dc_interfaces/msg/StringStamped`
 Record topics and forwards every Record to the Vector shipper over the Fluent Forward
 protocol. It renders Vector's configuration from ROS parameters for the blessed
 Destination set (`postgres`, `s3`, `file`, `console` — ADR-0003) and passes raw Vector
 snippets (`custom_config_files`) through for everything else in Vector's sink catalog,
 via the public per-Tag `dc.<tag>` routes documented in `doc/src/dc/destinations.md`.
+It also hosts the **Uploader** (ADR-0005): `receives: files` Destinations are served by
+the Bridge itself — Records referencing Files (`local_paths`/`remote_paths`) get their
+Files uploaded via `object_store` (multipart + resumable), verified, and reported as
+status/metadata Records under the `dc.files` Tag (see `doc/src/dc/destinations.md`).
 
 ## Layout
 
 - **`dc_bridge_core/`** — the ROS-independent core: `Forwarder` (msgpack framing, socket
   lifecycle, reconnection, backpressure), `Supervisor` (generic process respawn),
   `Readiness` (TCP-accept probe), `config` (topic → Fluent Forward tag), `vector_config`
-  (locates the vendored binary), and `render` (ADR-0003's config renderer — see below).
+  (locates the vendored binary), `render` (ADR-0003's config renderer — see below), and
+  `uploader` (ADR-0005's Uploader: `group` parses the Files a Record references,
+  `store` wraps each `receives: files` Destination's `object_store` client,
+  `multipart` implements resumable multipart uploads with a per-part checkpoint
+  sidecar, `content_type` sniffs metadata; `tests/uploader_tests.rs` covers the #248
+  acceptance criteria against `object_store`'s in-memory backend with temp files).
   It's a standalone crate with its own `Cargo.toml` (declaring `[workspace]` so it never
   gets swept into the outer package's workspace) and zero ROS dependencies, so it builds
   and tests with plain Cargo:
@@ -45,8 +54,12 @@ via the public per-Tag `dc.<tag>` routes documented in `doc/src/dc/destinations.
   params (verified against RustFS, the recommended self-hosted store now that MinIO's
   community edition is archived upstream); a `custom_config_files` snippet shipping
   Records to an un-blessed `http` sink by consuming the public `dc.<tag>` route
-  (self-contained — the test plays the HTTP server); and a colliding snippet failing
-  dc_bridge startup loudly. The store-backed tests **require** a Postgres at
+  (self-contained — the test plays the HTTP server); a colliding snippet failing
+  dc_bridge startup loudly; and the Uploader demo (issue #248): a camera-shaped Record
+  whose File lands verified in the S3 store, with `file_status`/`group_complete`/
+  deletion rows landing in Postgres through the Shipper's parameterized sink, and
+  republished (retried) Records producing no duplicate rows. The store-backed tests
+  **require** a Postgres at
   127.0.0.1:5432 and an S3-compatible store at 127.0.0.1:9000 and hard-fail
   immediately with setup instructions when they're missing — they deliberately never
   skip, since libtest swallows passing tests' output and a skipped run is
