@@ -50,12 +50,12 @@ LifecycleManager::LifecycleManager(const rclcpp::NodeOptions& options)
   callback_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive, false);
   manager_srv_ = create_service<ManageLifecycleNodes>(get_name() + std::string("/manage_nodes"),
                                                       std::bind(&LifecycleManager::managerCallback, this, _1, _2, _3),
-                                                      rclcpp::ServicesQoS().get_rmw_qos_profile(), callback_group_);
+                                                      rclcpp::ServicesQoS(), callback_group_);
 
   is_active_srv_ =
       create_service<std_srvs::srv::Trigger>(get_name() + std::string("/is_active"),
                                              std::bind(&LifecycleManager::isActiveCallback, this, _1, _2, _3),
-                                             rclcpp::ServicesQoS().get_rmw_qos_profile(), callback_group_);
+                                             rclcpp::ServicesQoS(), callback_group_);
 
   transition_state_map_[Transition::TRANSITION_CONFIGURE] = State::PRIMARY_STATE_INACTIVE;
   transition_state_map_[Transition::TRANSITION_CLEANUP] = State::PRIMARY_STATE_UNCONFIGURED;
@@ -273,19 +273,14 @@ bool LifecycleManager::startup()
 {
   message("Starting managed nodes bringup...");
 
-  for (size_t i = 0; i < node_names_.size(); i++)
+  // Each transition in `transitions` is applied to every managed node before the
+  // next transition runs (all nodes configured, then all activated) — not paired
+  // index-wise with `node_names`, which silently dropped every transition beyond
+  // the node count (e.g. a single managed node was configured but never activated).
+  for (const auto& transition : transitions_)
   {
-    try
+    if (!changeStateForAllNodes(getTransition(transition)))
     {
-      if (!changeStateForNode(node_names_[i], getTransition(transitions_[i])))
-      {
-        return false;
-      }
-    }
-    catch (const std::runtime_error& e)
-    {
-      RCLCPP_ERROR(get_logger(), "Failed to change state for node: %s. Exception: %s.", node_names_[i].c_str(),
-                   e.what());
       return false;
     }
   }

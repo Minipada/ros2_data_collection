@@ -60,13 +60,32 @@ impl Supervisor {
     /// Spawns the supervised process. A no-op once [`Supervisor::stop`] has been
     /// called, so a signal handler installed *before* the first `start()` (as `main.rs`
     /// does) can never race it into spawning a process nobody will ever stop.
+    ///
+    /// On Linux the child gets `PR_SET_PDEATHSIG(SIGKILL)`, so it cannot outlive the
+    /// Bridge even when the Bridge dies by SIGKILL/crash (paths no signal handler can
+    /// cover). Without it, a SIGKILLed Bridge orphans Vector, which keeps the Fluent
+    /// Forward port bound — the launch-respawned Bridge then spawns a second Vector
+    /// that crash-loops on the bind, and the pipeline never recovers. Note the kernel
+    /// delivers the signal when the spawning *thread* exits, not just the process; both
+    /// `main.rs` call sites (main thread, and a background thread that lives until
+    /// process exit) satisfy this.
     pub fn start(&mut self) -> io::Result<()> {
         if self.stopped {
             return Ok(());
         }
-        let child = Command::new(&self.config.program)
-            .args(&self.config.args)
-            .spawn()?;
+        let mut command = Command::new(&self.config.program);
+        command.args(&self.config.args);
+        #[cfg(target_os = "linux")]
+        unsafe {
+            use std::os::unix::process::CommandExt;
+            command.pre_exec(|| {
+                if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) != 0 {
+                    return Err(io::Error::last_os_error());
+                }
+                Ok(())
+            });
+        }
+        let child = command.spawn()?;
         self.child = Some(child);
         Ok(())
     }
@@ -76,6 +95,11 @@ impl Supervisor {
             Some(child) => matches!(child.try_wait(), Ok(None)),
             None => false,
         }
+    }
+
+    /// Pid of the currently supervised process, if one has been spawned.
+    pub fn child_id(&self) -> Option<u32> {
+        self.child.as_ref().map(|child| child.id())
     }
 
     /// Checks whether the supervised process has exited and, if so, restarts it

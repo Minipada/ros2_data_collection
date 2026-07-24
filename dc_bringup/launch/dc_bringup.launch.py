@@ -6,14 +6,44 @@ from launch.actions import (
     DeclareLaunchArgument,
     GroupAction,
     IncludeLaunchDescription,
+    LogInfo,
+    RegisterEventHandler,
     SetEnvironmentVariable,
+    Shutdown,
 )
 from launch.conditions import IfCondition
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import LoadComposableNodes, Node, SetParameter
 from launch_ros.descriptions import ComposableNode
 from nav2_common.launch import RewrittenYaml
+
+
+def start_collection_after_gate(collection_actions):
+    """Handler for the bridge_ready_gate's exit (ADR-0006 startup ordering).
+
+    Gate exited 0 (Bridge reported ready): start the lifecycle manager, which
+    configures and activates the collection nodes. Gate exited non-zero (the
+    Bridge never became ready before the gate's deadline): shut the whole
+    launch down loudly rather than leave a half-started pipeline running.
+    """
+
+    def on_gate_exit(event, context):
+        if event.returncode == 0:
+            return [
+                LogInfo(msg="dc_bridge reports ready; activating collection nodes."),
+                *collection_actions,
+            ]
+        return [
+            LogInfo(
+                msg="dc_bridge never became ready "
+                f"(bridge_ready_gate exited {event.returncode}); shutting down."
+            ),
+            Shutdown(reason="dc_bridge never became ready"),
+        ]
+
+    return on_gate_exit
 
 
 def generate_launch_description():
@@ -104,6 +134,71 @@ def generate_launch_description():
         "group_node", default_value="False", description="Start group_node"
     )
 
+    # ADR-0006 deterministic startup: the Bridge (which spawns and supervises
+    # Vector) comes up as a plain node first; a readiness gate process blocks on
+    # its ~/ready service; only when the gate exits successfully does the
+    # lifecycle manager start and activate the collection nodes. No Record can
+    # be emitted before the pipeline can accept it. The gate and the deferred
+    # lifecycle manager exist once per composition branch because a launch
+    # action instance cannot be shared between groups.
+    lifecycle_manager_params = [
+        {
+            "use_sim_time": use_sim_time,
+            "autostart": autostart,
+            "node_names": [
+                "measurement_server",
+            ],
+            "transitions": ["configure", "activate"],
+            "bond_timeout": 10.0,
+        },
+    ]
+
+    bridge_ready_gate = Node(
+        package="dc_bringup",
+        executable="bridge_ready_gate",
+        name="bridge_ready_gate",
+        output={
+            "stdout": "screen",
+            "stderr": "screen",
+        },
+        parameters=[configured_params],
+    )
+
+    lifecycle_manager_node = Node(
+        package="dc_lifecycle_manager",
+        executable="lifecycle_manager",
+        name="lifecycle_manager_dc",
+        output={
+            "stdout": "screen",
+            "stderr": "screen",
+        },
+        arguments=["--ros-args", "--log-level", log_level],
+        parameters=lifecycle_manager_params,
+    )
+
+    bridge_ready_gate_composed = Node(
+        package="dc_bringup",
+        executable="bridge_ready_gate",
+        name="bridge_ready_gate",
+        output={
+            "stdout": "screen",
+            "stderr": "screen",
+        },
+        parameters=[configured_params],
+    )
+
+    load_lifecycle_manager_composed = LoadComposableNodes(
+        target_container=container_name,
+        composable_node_descriptions=[
+            ComposableNode(
+                package="dc_lifecycle_manager",
+                plugin="dc_lifecycle_manager::LifecycleManager",
+                name="lifecycle_manager_dc",
+                parameters=lifecycle_manager_params,
+            ),
+        ],
+    )
+
     load_nodes = GroupAction(
         condition=IfCondition(PythonExpression(["not ", use_composition])),
         actions=[
@@ -166,7 +261,8 @@ def generate_launch_description():
             # the DC 2.0 embedded-Fluent-Bit demolition slice (#241/#242); dc_bridge (Rust)
             # stands in its place, forwarding Records to the Vector shipper it supervises
             # internally (ADRs 0001/0004/0006). It is a plain node outside the lifecycle
-            # manager, so it isn't in lifecycle_manager_dc's node_names below.
+            # manager, so it isn't in lifecycle_manager_dc's node_names; launch respawn
+            # supervises it unconditionally (ADR-0006), independent of use_respawn.
             Node(
                 package="dc_bridge",
                 executable="dc_bridge",
@@ -175,29 +271,16 @@ def generate_launch_description():
                     "stdout": "screen",
                     "stderr": "screen",
                 },
-                respawn=use_respawn,
+                respawn=True,
                 respawn_delay=2.0,
                 parameters=[configured_params],
             ),
-            Node(
-                package="dc_lifecycle_manager",
-                executable="lifecycle_manager",
-                name="lifecycle_manager_dc",
-                output={
-                    "stdout": "screen",
-                    "stderr": "screen",
-                },
-                arguments=["--ros-args", "--log-level", log_level],
-                parameters=[
-                    {
-                        "autostart": autostart,
-                        "node_names": [
-                            "measurement_server",
-                        ],
-                        "transitions": ["configure", "activate"],
-                        "bond_timeout": 10.0,
-                    },
-                ],
+            bridge_ready_gate,
+            RegisterEventHandler(
+                OnProcessExit(
+                    target_action=bridge_ready_gate,
+                    on_exit=start_collection_after_gate([lifecycle_manager_node]),
+                )
             ),
         ],
     )
@@ -259,7 +342,8 @@ def generate_launch_description():
             # destination_server (dc_destinations) is COLCON_IGNOREd on the jazzy line pending
             # the DC 2.0 embedded-Fluent-Bit demolition slice (#241/#242); dc_bridge (Rust)
             # stands in its place. rclrs has no rclcpp_components equivalent, so it always
-            # runs as a plain node (ADR-0006), even when the rest of the stack is composed.
+            # runs as a plain node (ADR-0006), even when the rest of the stack is composed;
+            # launch respawn supervises it unconditionally, independent of use_respawn.
             Node(
                 package="dc_bridge",
                 executable="dc_bridge",
@@ -268,6 +352,8 @@ def generate_launch_description():
                     "stdout": "screen",
                     "stderr": "screen",
                 },
+                respawn=True,
+                respawn_delay=2.0,
                 parameters=[configured_params],
             ),
             LoadComposableNodes(
@@ -279,22 +365,14 @@ def generate_launch_description():
                         name="measurement_server",
                         parameters=[configured_params],
                     ),
-                    ComposableNode(
-                        package="dc_lifecycle_manager",
-                        plugin="dc_lifecycle_manager::LifecycleManager",
-                        name="lifecycle_manager_dc",
-                        parameters=[
-                            {
-                                "autostart": autostart,
-                                "node_names": [
-                                    "measurement_server",
-                                ],
-                                "transitions": ["configure", "activate"],
-                                "bond_timeout": 10.0,
-                            },
-                        ],
-                    ),
                 ],
+            ),
+            bridge_ready_gate_composed,
+            RegisterEventHandler(
+                OnProcessExit(
+                    target_action=bridge_ready_gate_composed,
+                    on_exit=start_collection_after_gate([load_lifecycle_manager_composed]),
+                )
             ),
         ],
     )
