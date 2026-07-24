@@ -36,6 +36,10 @@ The DC component that receives Records from ROS topics and hands them to the Shi
 The external process (Vector by default) that buffers, transforms, and reliably delivers Records to Destinations.
 _Avoid_: forwarder, agent, data plane, backend
 
+**Shipper ingest protocol**:
+The wire format on the local socket between the Bridge and the Shipper (default port 24224). It is Fluentd's open "Forward" specification — chosen as the cheapest Shipper-native listener with built-in receipt acknowledgement (ADR-0002) — but **no Fluentd or Fluent Bit software runs anywhere in DC 2.0**: the Bridge implements the sender side itself (~170 lines of msgpack). Say "shipper ingest protocol"; the word "fluent" should only appear in the generated Shipper config (`type = "fluent"`) and interop docs.
+_Avoid_: "Fluent Forward" as a component name — it is a message format, not software in the pipeline
+
 **File**:
 A binary artifact produced by a Measurement (image, video, map) that is uploaded to object storage as-is; only its metadata travels as a Record.
 
