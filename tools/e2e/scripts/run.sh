@@ -9,10 +9,14 @@
 # from dc_bridge/Vector's point of view: both surface as "destination unreachable",
 # and both are recovered by the same disk-buffer-then-reconnect path, ADR-0002), does a
 # full stack restart while destinations are still down, restores them, drains, then
-# hard-asserts exactly-once/zero-loss (tools/e2e/scripts/verify_zero_loss.py). Every
-# gate is a real, hard-failing assertion — nothing here is skip-on-missing (matching
-# the #246 follow-up decision for dc_bridge's own store-backed tests: a verification
-# that silently didn't run must never look identical to one that passed).
+# hard-asserts zero-loss (tools/e2e/scripts/verify_zero_loss.py). The shipper is
+# at-least-once (ADR-0002), so a record in-flight at outage time can be re-sent on
+# recovery — the verifier deduplicates on the natural key (exactly-once on read) and
+# reports such boundary re-sends as notes; only actual loss fails the run. The
+# startup-latency and zero-loss gates are real, hard-failing assertions — nothing here is
+# skip-on-missing (matching the #246 follow-up decision for dc_bridge's own store-backed
+# tests: a verification that silently didn't run must never look identical to one that
+# passed).
 #
 # Env vars (all optional):
 #   DC_E2E_OUTAGE_SECONDS         outage duration (default 600 = the PRD's 10 minutes;
@@ -162,7 +166,7 @@ sleep 5
 kill "$STATS_PID" 2>/dev/null || true
 STATS_PID=""
 
-log "verifying zero-loss / exactly-once"
+log "verifying zero-loss (duplicates from the at-least-once boundary are deduped on read)"
 python3 "$SCRIPT_DIR/verify_zero_loss.py" \
   --compose-file "$E2E_DIR/compose.yaml" \
   --num-synth-topics 14 \
