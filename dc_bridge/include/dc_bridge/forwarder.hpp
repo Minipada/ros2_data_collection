@@ -1,7 +1,6 @@
 // Forwarder: send(record) hides Fluent Forward msgpack framing, socket lifecycle,
 // reconnection, and backpressure behind one call. The wire protocol is the interface;
-// nothing else about Vector or the transport leaks past this class. (Port of the Rust
-// dc_bridge_core::forwarder — ADR-0004 reversed by ADR-0007.)
+// nothing else about Vector or the transport leaks past this class.
 #ifndef DC_BRIDGE__FORWARDER_HPP_
 #define DC_BRIDGE__FORWARDER_HPP_
 
@@ -33,9 +32,9 @@ struct ForwarderConfig
   std::chrono::milliseconds write_timeout{ 200 };
 };
 
-/// Error categories a send() can fail with, mirroring the Rust ForwarderError variants
-/// so callers (and tests) can distinguish backpressure (retryable, connection kept)
-/// from a dropped connection / connect failure.
+/// Error categories a send() can fail with, so callers (and tests) can distinguish
+/// backpressure (retryable, connection kept) from a dropped connection / connect
+/// failure.
 enum class ForwarderErrorKind
 {
   Connect,       ///< could not establish the TCP connection

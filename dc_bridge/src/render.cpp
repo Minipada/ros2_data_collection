@@ -41,9 +41,10 @@ std::optional<std::string> optional_field(const std::optional<std::string>& valu
   return std::nullopt;
 }
 
-// Reproduces Rust's `{:?}` on a string for the tag/route VRL literals: double-quoted,
-// with `"` and `\` escaped. Tags are derived from topic names (alphanumeric/underscore/
-// dot), so no other escaping arises in practice; handled minimally for safety.
+// Debug-quotes a string for the tag/route VRL literals: double-quoted, with `"` and `\`
+// escaped — the quoting the checked-in gold fixtures expect. Tags are derived from topic
+// names (alphanumeric/underscore/dot), so no other escaping arises in practice; handled
+// minimally for safety.
 std::string debug_quote(const std::string& s)
 {
   std::string out = "\"";
@@ -95,8 +96,8 @@ std::string trim(const std::string& s)
 }
 
 // The distinct Fluent Forward tags a Destination's inputs topics derive to, plus its
-// Bridge-internal extra_tags — sorted+unique (std::set), matching the Rust BTreeSet so
-// rendered arrays/VRL are deterministic.
+// Bridge-internal extra_tags — sorted+unique (std::set) so rendered arrays/VRL are
+// deterministic.
 std::set<std::string> destination_tags(const Destination& dest)
 {
   std::set<std::string> tags;
