@@ -12,7 +12,7 @@
 #               podman --cache-from/--cache-to target. podman's build cache is
 #               otherwise local-only and doesn't survive a fresh machine/runner —
 #               CI sets this so a cold GitHub-hosted runner still gets warm layers
-#               for the (rarely-changing) toolchain stage. Omit for a plain local
+#               for the (rarely-changing) apt/toolchain RUN. Omit for a plain local
 #               build with no registry round-trip.
 set -euo pipefail
 
