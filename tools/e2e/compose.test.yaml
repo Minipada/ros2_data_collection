@@ -27,6 +27,9 @@ services:
       retries: 30
 
   rustfs:
-    image: docker.io/rustfs/rustfs:latest
+    # rustfs/rustfs 1.0.0-beta.11 — pinned by digest, not :latest, so an upstream
+    # image change can't silently alter CI/local test behavior. Bump deliberately:
+    # check https://hub.docker.com/r/rustfs/rustfs/tags for the new digest.
+    image: docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c
     container_name: dc_rustfs_test
     network_mode: host
