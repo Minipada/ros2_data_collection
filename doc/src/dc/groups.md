@@ -54,11 +54,11 @@ group_server:
       output: "/dc/group/cameras"
       sync_delay: 5.0
       group_key: "cameras"
-      tags: ["minio", "console"]
+      tags: ["rustfs", "console"]
     map:
       inputs: ["/dc/measurement/map"]
       output: "/dc/group/map"
       sync_delay: 5.0
       group_key: "map"
-      tags: ["minio", "console"]
+      tags: ["rustfs", "console"]
 ```

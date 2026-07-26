@@ -122,7 +122,7 @@ the remote key the Measurement is configured with:
 {
   "name": "map",
   "local_paths":  { "yaml": "/tmp/map.yaml", "pgm": "/tmp/map.pgm" },
-  "remote_paths": { "minio": { "yaml": "robot/map.yaml", "pgm": "robot/map.pgm" } }
+  "remote_paths": { "rustfs": { "yaml": "robot/map.yaml", "pgm": "robot/map.pgm" } }
 }
 ```
 

@@ -130,7 +130,7 @@ flowchart LR
 
     subgraph d_n["Destination node"]
         pl_pgsql["PostgreSQL"]
-        pl_minio["Minio"]
+        pl_rustfs["RustFS"]
         pl_s3["S3"]
     end
 
@@ -151,8 +151,8 @@ flowchart LR
     gr_boot_system -- os, network interfaces\n, permissions and uptime --> pl_pgsql
     gr_robot -- Robot cmd_vel, position. speed --> pl_pgsql
     gr_system -- Available space,\n memory used and cpu usage --> pl_pgsql
-    gr_inspection -- Image paths on s3 and minio --> pl_pgsql
-    gr_inspection -- Raw, rotated and/or inspected images --> pl_minio
+    gr_inspection -- Image paths on s3 and rustfs --> pl_pgsql
+    gr_inspection -- Raw, rotated and/or inspected images --> pl_rustfs
     gr_inspection -- Raw, rotated and/or inspected images --> pl_s3
 ```
 

@@ -57,10 +57,10 @@ dc_bridge:
     # scanned for the `local_paths`/`remote_paths` File references Measurements embed
     # (camera, map, …), each File is uploaded (multipart + resumable for large ones)
     # and verified, and per-File status plus group-completion metadata Records are
-    # routed to `files.metadata_destination`. The destination name ("minio" here) must
+    # routed to `files.metadata_destination`. The destination name ("rustfs" here) must
     # match the key the Measurement writes under `remote_paths`.
     #
-    # minio:
+    # rustfs:
     #   type: s3
     #   receives: files
     #   inputs: ["/dc/measurement/camera"]
