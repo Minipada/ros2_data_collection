@@ -15,17 +15,23 @@
 #define DC_BRIDGE__BRIDGE_NODE_HPP_
 
 #include <atomic>
+#include <condition_variable>
+#include <deque>
 #include <memory>
 #include <mutex>
+#include <nlohmann/json.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <std_srvs/srv/trigger.hpp>
+#include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "dc_bridge/forwarder.hpp"
 #include "dc_bridge/readiness.hpp"
 #include "dc_bridge/render.hpp"
 #include "dc_bridge/supervisor.hpp"
+#include "dc_bridge/uploader/uploader.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
 
 namespace dc_bridge
@@ -44,6 +50,10 @@ public:
 
 private:
   void run_prober(std::string forward_host, std::uint16_t forward_port);
+  // The Uploader worker (ADR-0005): drains the queue, processes each Record (infinite
+  // capped-backoff retry — safe because processing is idempotent), and emits status
+  // Records through its own Forwarder connection under FILE_STATUS_TAG.
+  void run_uploader_worker(std::string forward_host, std::uint16_t forward_port);
 
   std::shared_ptr<Supervisor> supervisor_;
   std::mutex supervisor_mutex_;
@@ -58,6 +68,16 @@ private:
   std::thread prober_thread_;
   std::atomic<bool> prober_stop_{ false };
   std::atomic<bool> stopped_{ false };
+
+  // Uploader (ADR-0005) — created only when a `receives: files` destination is
+  // configured. Records on files-destination topics are queued here; the worker thread
+  // uploads their Files and emits status Records.
+  std::unique_ptr<uploader::Uploader> uploader_;
+  std::thread uploader_thread_;
+  std::mutex upload_queue_mutex_;
+  std::condition_variable upload_queue_cv_;
+  std::deque<std::pair<std::string, nlohmann::json>> upload_queue_;
+  bool upload_stop_{ false };
 };
 
 }  // namespace dc_bridge

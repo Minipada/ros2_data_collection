@@ -113,8 +113,8 @@ also checked with `vector validate` before the Shipper is started.
 A Destination with `receives: files` (only `type: s3` qualifies) is served by the
 Bridge's **Uploader**, not by a Vector sink: Records arriving on its `inputs` topics
 are scanned for the `local_paths`/`remote_paths` File references Measurements embed
-(camera, map, …), and each referenced File is uploaded via the `object_store`
-abstraction to every `receives: files` Destination whose **name appears as a key in
+(camera, map, …), and each referenced File is uploaded (multipart + resumable for large
+Files) to every `receives: files` Destination whose **name appears as a key in
 the Record's `remote_paths`** — so the Destination name in the params file must match
 the remote key the Measurement is configured with:
 

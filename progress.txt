@@ -855,3 +855,62 @@ matter for whoever touches this next:
   turnaround — see `tools/e2e/README.md`); publishing the CI/E2E images to a registry
   for reuse beyond the build cache (this repo has none configured for that, unlike the
   monorepo's `registry.bensoussan.de`).
+
+### Bridge reverted from Rust to C++ (ADR-0007 supersedes ADR-0004)
+
+Prompted by review during #249: the rclrs/ros2_rust pilot (ADR-0004, PRs #260-264)
+could not deliver plug-and-play on Jazzy today — no stable rosidl_generator_rs (source-
+built message repos + a git-pinned code generator), incomplete colcon-ros-cargo link-flag
+generation (the whole example_interfaces/sibling-package COLCON_IGNORE saga above was a
+symptom), and a Rust toolchain in every CI/dev image. None of the Bridge's actual work
+needs Rust. Exercised ADR-0004's own exit clause ("if not, the loss is one small
+package") and rewrote dc_bridge in C++. ADR-0007 records the decision and rationale.
+
+- **dc_bridge is now `ament_cmake` C++ (`rclcpp`).** Faithful port of every Rust module,
+  as clean classes:
+  - Core (ROS-independent, gtest'd without ROS, buildable via a standalone
+    `dc_bridge/test/local/` CMake for fast iteration): `forwarder` (msgpack-cxx framing +
+    socket lifecycle/reconnect/backpressure), `supervisor` (fork/exec/waitpid +
+    PR_SET_PDEATHSIG), `readiness`, `topic_config`, `render` (the 1500-line ADR-0003
+    config renderer, toml++, gold-file tests reuse the old Rust fixtures byte-for-byte),
+    `vector_binary`, and the whole `uploader/` (group/content_type/status/multipart/
+    uploader) built on an abstract `ObjectStore` interface so it's tested against an
+    in-memory fake with no cloud dep — the same split the Rust design had with
+    object_store's InMemory.
+  - Node (`bridge_node.cpp`/`main.cpp`): declares the shipper/destinations/files
+    parameters, renders + `vector validate`s the config, spawns/supervises Vector,
+    subscribes inputs, forwards Records, runs the Uploader worker thread, `~/ready`
+    service. rclcpp handles SIGINT/SIGTERM + on_shutdown (no more manual ctrlc handler).
+  - `uploader/s3_object_store.cpp`: the aws-sdk-cpp ObjectStore impl (the only piece
+    linking the SDK).
+- **New `aws_sdk_vendor` package**: builds aws-cpp-sdk-core+s3 from source (pinned tag
+  1.11.600, `-DBUILD_ONLY=s3`, zlib compression off). Verified aws-sdk-cpp works fully
+  with RustFS (PutObject + real multipart, both with and without the SDK's default
+  request checksums) via a live smoke test *before* adopting it — the one real risk
+  (newer AWS SDKs' default x-amz-checksum-crc32 header breaking S3-compat servers) is
+  retired for RustFS. Builds in ~20 min; cached across CI runs.
+- **The entire Rust toolchain leaves**: no rustup, colcon-cargo/colcon-ros-cargo,
+  libclang, `ros2_data_collection_jazzy.repos` (deleted), or COLCON_IGNORE/--skip-keys
+  Rust workarounds. `tools/e2e/Containerfile`, `ci.yaml`, and `test.sh` de-Rusted.
+  dc_cli's stale dc_destinations exec_depend (a #242 leftover) removed.
+- **Dependencies are all rosdep-resolvable**: rclcpp, dc_interfaces, std_msgs, std_srvs,
+  nlohmann-json-dev, aws_sdk_vendor. The two header-only libs with no upstream rosdistro
+  key (tomlplusplus, msgpack-cxx) resolve via a small repo-local rosdep source
+  (`rosdep/dc.yaml`), registered by the Containerfile / documented for local dev in
+  dc_bridge/README.md. A user now does `rosdep install && colcon build` like any dc_*
+  package — the plug-and-play the Rust pilot couldn't deliver.
+- **Verified in a real ROS 2 Jazzy container**: Phase 1 (records path) — colcon build
+  --packages-up-to dc_bridge succeeds, 63 gtests pass. aws_sdk_vendor builds and installs
+  a relocatable AWSSDKConfig.cmake + libaws-cpp-sdk-s3.so. The uploader core's 11 gtests
+  (happy path, metadata shape, verify-retry, delete-after-verified-everywhere,
+  no-dup-rows, missing-file, partial-vs-complete group, video duration, ffprobe parse,
+  interrupted-multipart-resume, no-files-noop) pass against the in-memory fake.
+- **Delivered in two commits**: Phase 1 (records path, `6c1c1c7`) then Phase 2
+  (aws_sdk_vendor + Uploader).
+- **Docs**: ADR-0007; dc_bridge/README.md rewritten for the C++ package; CLAUDE.md
+  de-Rusted; doc/src/dc/logo_prompt.md added (new-logo AI prompts).
+- **Not done / left for follow-up**: eliminating the one-line local rosdep registration
+  (contribute tomlplusplus/msgpack-cxx keys upstream, or vendor the two headers); a
+  prebuilt aws-sdk-cpp to avoid the ~20-min source build; GCS/Azure ObjectStore
+  implementations (S3 only today, matching the Rust); the #268 gz-sim port
+  (dc_demos/dc_simulation still COLCON_IGNORE'd, unrelated to the language change).
