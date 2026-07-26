@@ -9,20 +9,25 @@
 # class of ros2_rust/Jazzy build friction is gone. dc_bridge builds with rosdep + colcon
 # like every other dc_* package.
 #
-# Two stages so CI's `--cache-from`/`--cache-to` (a registry-backed build cache — see
-# ci.yaml) gets real value even though the workspace layer below invalidates on every
-# source change: the `toolchain` stage (a handful of apt packages, no DC source) is a
-# near-permanent cache hit.
+# Single stage on purpose: the build keeps everything it produces (no slim runtime to
+# `COPY --from` a subset into), so there's nothing for a second stage to earn. CI's
+# `--cache-from`/`--cache-to` (a registry-backed build cache — see ci.yaml) still gets
+# full value: Podman caches each RUN layer independently, so the apt/toolchain layer
+# below (no DC source) is a near-permanent cache hit while only the source-dependent
+# rosdep+colcon layer invalidates on a code change.
 
 ARG ROS_DISTRO=jazzy
 
-FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS toolchain
+FROM docker.io/library/ros:${ROS_DISTRO}-ros-base
 
 ARG APT_CACHEBUST=unknown
+# ARG, not ENV: only affects this build's CMAKE_CXX_FLAGS below, not the running image.
+ARG CCOV=false
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Daily apt cache-bust (see CLAUDE.md "Containers: Podman, not Docker"): a date-valued
 # build-arg rebuilds the apt layer once per UTC day so OS security patches don't go stale.
+# Its own RUN layer (no DC source) so it stays a cache hit across code changes.
 # fastcov: tools/code_coverage_report.bash's C++ coverage tool; lcov/ccache round it out.
 RUN echo "apt cache bust: ${APT_CACHEBUST}" && \
     apt-get -q update && \
@@ -31,11 +36,6 @@ RUN echo "apt cache bust: ${APT_CACHEBUST}" && \
     git python3-pip ccache lcov && \
     pip install --break-system-packages --no-cache-dir fastcov && \
     rm -rf /var/lib/apt/lists/*
-
-FROM toolchain AS workspace
-
-# ARG, not ENV: only affects this build's CMAKE_CXX_FLAGS below, not the running image.
-ARG CCOV=false
 
 WORKDIR /root/ws
 COPY . src/ros2_data_collection
