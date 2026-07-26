@@ -30,7 +30,7 @@ CCOV="${CCOV:-false}"
 # on failure.
 DOCKERIGNORE="$REPO_ROOT/.dockerignore"
 mv "$DOCKERIGNORE" "$DOCKERIGNORE.e2e-bak"
-trap 'mv -f "$DOCKERIGNORE.e2e-bak" "$DOCKERIGNORE" 2>/dev/null || true' EXIT
+trap 'if [ -f "$DOCKERIGNORE.e2e-bak" ]; then mv -f "$DOCKERIGNORE.e2e-bak" "$DOCKERIGNORE"; fi' EXIT
 
 ARGS=(
   build --layers
