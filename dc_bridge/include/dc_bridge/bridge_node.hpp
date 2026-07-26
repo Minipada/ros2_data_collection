@@ -1,6 +1,6 @@
-// The dc_bridge ROS node (ADRs 0001/0003/0006, and ADR-0007 which reverts the Rust
-// pilot of ADR-0004): wires the ROS-independent core (Forwarder, Supervisor, Readiness,
-// ConfigRenderer) to topic subscriptions and a readiness service.
+// The dc_bridge ROS node (ADRs 0001/0003/0006/0007): wires the ROS-independent core
+// (Forwarder, Supervisor, Readiness, ConfigRenderer) to topic subscriptions and a
+// readiness service.
 //
 // Vector's own configuration is produced by dc_bridge::render (ADR-0003) from the
 // `shipper`/`destinations` parameters; this node declares those parameters, expands the

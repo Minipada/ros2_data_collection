@@ -4,10 +4,8 @@
 # harness's own runtime bits) build from. Built once, reused as-is by CI so its test
 # image doesn't carry anything harness-only.
 #
-# Since ADR-0007 reverted the Rust Bridge pilot, this is plain ROS 2 + C++: no Rust
-# toolchain, no colcon-cargo, no source-built message repos, no rosidl_rust — the whole
-# class of ros2_rust/Jazzy build friction is gone. dc_bridge builds with rosdep + colcon
-# like every other dc_* package.
+# Plain ROS 2 + C++: no separate language toolchain, no source-built message repos.
+# dc_bridge builds with rosdep + colcon like every other dc_* package.
 #
 # Single stage on purpose: the build keeps everything it produces (no slim runtime to
 # `COPY --from` a subset into), so there's nothing for a second stage to earn. CI's

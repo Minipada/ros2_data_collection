@@ -20,9 +20,9 @@ namespace dc_bridge
 namespace
 {
 
-// Packs a nlohmann::json value onto a msgpack packer, mirroring the Rust
-// json_to_value: numbers keep integer/unsigned/float distinctions, everything else maps
-// 1:1. (msgpack-cxx has no built-in nlohmann::json adaptor, so we walk the tree.)
+// Packs a nlohmann::json value onto a msgpack packer: numbers keep
+// integer/unsigned/float distinctions, everything else maps 1:1. (msgpack-cxx has no
+// built-in nlohmann::json adaptor, so we walk the tree.)
 template <typename Packer>
 void pack_json(Packer& pk, const nlohmann::json& value)
 {
@@ -69,7 +69,7 @@ void pack_json(Packer& pk, const nlohmann::json& value)
 
 // The Fluent Forward wire record must be a map. A Record's JSON payload usually is one;
 // anything else (bare string/number/array) is wrapped in {"message": ...} rather than
-// dropped — matching the Rust record_to_msgpack_map.
+// dropped.
 template <typename Packer>
 void pack_record_map(Packer& pk, const nlohmann::json& payload)
 {
@@ -209,7 +209,7 @@ void Forwarder::send(const Record& record)
     if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
     {
       // Peer stalled: keep the connection (it may just be slow to drain), report
-      // backpressure. Matches the Rust WouldBlock/TimedOut arm.
+      // backpressure.
       throw ForwarderError(ForwarderErrorKind::Backpressure,
                            "peer stalled: write did not complete within the configured timeout");
     }

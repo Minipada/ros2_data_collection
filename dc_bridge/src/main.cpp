@@ -1,6 +1,5 @@
 // dc_bridge node entry point. rclcpp handles SIGINT/SIGTERM and returns from spin();
-// on_shutdown stops the supervised Vector before exit so it's never orphaned (the same
-// guarantee the Rust node's ctrlc handler provided, but native to rclcpp here).
+// on_shutdown stops the supervised Vector before exit so it's never orphaned.
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
 

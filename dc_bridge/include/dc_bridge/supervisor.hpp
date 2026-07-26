@@ -61,8 +61,7 @@ public:
   /// Checks whether the supervised process has exited and, if so, restarts it (subject
   /// to restart_backoff). Returns true if a restart happened. A no-op returning false
   /// once stop() has been called — prevents the respawn-after-stop race a background
-  /// poll loop would otherwise hit against a concurrent stop() (see the Rust
-  /// supervisor's `stopped` field doc / regression tests).
+  /// poll loop would otherwise hit against a concurrent stop().
   bool poll_restart();
 
   /// Stops the supervised process and permanently disables future respawns from

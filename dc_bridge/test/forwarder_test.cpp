@@ -1,6 +1,5 @@
-// Port of dc_bridge_core forwarder_tests: frame correctness / tag handling decode the
-// static frame() bytes directly; reconnection and backpressure use a mock Fluent Forward
-// TCP server, matching the Rust acceptance tests.
+// Frame correctness / tag handling decode the static frame() bytes directly;
+// reconnection and backpressure use a mock Fluent Forward TCP server.
 #include "dc_bridge/forwarder.hpp"
 
 #include <arpa/inet.h>

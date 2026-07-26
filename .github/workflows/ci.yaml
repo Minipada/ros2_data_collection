@@ -1,6 +1,6 @@
 # DC 2.0 (Jazzy) CI (#249). This branch only builds the jazzy line (external Vector
-# shipper, C++ dc_bridge — the Rust pilot of ADR-0004 was reverted in ADR-0007). The
-# humble-line `industrial_ci`/Docker workflow this repo used to run doesn't apply here and
+# shipper, C++ dc_bridge). The humble-line `industrial_ci`/Docker workflow this repo used
+# to run doesn't apply here and
 # isn't carried over onto this branch (it still exists on `humble`, a separate branch/tree
 # — deleting it here doesn't touch that). This repo is moving off Docker in favor of
 # Podman (CLAUDE.md "Containers: Podman, not Docker").
