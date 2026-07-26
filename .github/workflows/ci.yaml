@@ -90,9 +90,12 @@ jobs:
           timeout 60 bash -c 'until podman exec dc_pg_ci pg_isready -U dc >/dev/null 2>&1; do sleep 1; done'
           timeout 60 bash -c 'until curl -sf http://127.0.0.1:9000 >/dev/null 2>&1 || curl -s http://127.0.0.1:9000 >/dev/null 2>&1; do sleep 1; done'
           # A `dc-records` bucket the store-backed tests can use (the S3 sink doesn't
-          # create it).
-          podman run --rm --network host docker.io/minio/mc:latest \
-            sh -c 'mc alias set local http://127.0.0.1:9000 rustfsadmin rustfsadmin && mc mb -p local/dc-records'
+          # create it). AWS CLI over --endpoint-url speaks the same S3 protocol dc_bridge's
+          # Uploader does — no separate object-store client (the retired minio/mc) needed.
+          podman run --rm --network host \
+            -e AWS_ACCESS_KEY_ID=rustfsadmin -e AWS_SECRET_ACCESS_KEY=rustfsadmin -e AWS_DEFAULT_REGION=us-east-1 \
+            docker.io/amazon/aws-cli:latest \
+            --endpoint-url http://127.0.0.1:9000 s3 mb s3://dc-records
 
       - name: colcon test (C++ gtest) + coverage
         env:
