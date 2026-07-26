@@ -5,8 +5,13 @@
 # Measurements alongside real sensor drivers.
 set -euo pipefail
 
+# colcon/ROS setup files reference unset vars (COLCON_TRACE, AMENT_TRACE_SETUP_FILES,
+# …); sourcing them under `set -u` aborts the entrypoint ("COLCON_TRACE: unbound
+# variable") before the stack ever launches. Source with nounset off, then restore it.
+set +u
 # shellcheck disable=SC1091
 source /root/ws/install/setup.bash
+set -u
 
 # Backgrounded (not `exec`'d) so the TERM/INT trap below — set on this script's own
 # shell — actually fires: `exec` replaces the shell process image, and a replaced

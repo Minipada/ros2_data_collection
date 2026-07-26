@@ -23,8 +23,12 @@ podman run --rm --network host \
   -c '
     set -euo pipefail
     cd /root/ws
+    # colcon/ROS setup files reference unset vars (COLCON_TRACE, AMENT_TRACE_SETUP_FILES,
+    # …), so they must be sourced with nounset off; restore -u for the rest of the script.
+    set +u
     # shellcheck disable=SC1091
     source install/setup.bash
+    set -u
 
     set +e
     colcon test --event-handlers desktop_notification- status-

@@ -27,6 +27,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 E2E_DIR="$(dirname "$SCRIPT_DIR")"
 RUN_DIR="$E2E_DIR/.run"
 
+# Pin the compose provider to podman-compose. `podman compose` otherwise prefers the
+# docker-compose cli-plugin when present, which talks to a Docker-compatible API socket
+# (the rootless Podman socket) that isn't running in a bare shell — it fails with
+# "daemon not running". podman-compose shells out to `podman` directly: no socket, no
+# Docker binary in the loop (CLAUDE.md "Containers: Podman, not Docker"). Same provider
+# locally and in CI.
+export PODMAN_COMPOSE_PROVIDER=podman-compose
+if ! command -v podman-compose >/dev/null 2>&1; then
+  echo "podman-compose is required (pip install podman-compose / apt install podman-compose)" >&2
+  exit 1
+fi
+
 OUTAGE_SECONDS="${DC_E2E_OUTAGE_SECONDS:-600}"
 STEADY_STATE_SECONDS="${DC_E2E_STEADY_STATE_SECONDS:-30}"
 DRAIN_SECONDS="${DC_E2E_DRAIN_SECONDS:-30}"

@@ -146,6 +146,13 @@ jobs:
       - name: Verify podman
         run: podman --version
 
+      # run.sh pins the socket-free podman-compose provider (see its header); the runner
+      # doesn't ship it. Pure-podman, no docker-compose plugin / Docker API socket.
+      - name: Install podman-compose
+        run: |
+          pip install --user podman-compose
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Log in to ghcr.io (for the registry-backed build cache)
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
