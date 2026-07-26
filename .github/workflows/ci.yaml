@@ -170,9 +170,10 @@ jobs:
       - name: Run zero-loss E2E harness (CI-sized outage window)
         # Same code paths as the full 10-minute local proof (tools/e2e/README.md); CI
         # uses a shorter outage window so the job finishes in reasonable time. Both the
-        # startup-latency gate (<10s) and the zero-loss/exactly-once gate are real,
-        # hard-failing assertions here — nothing is skipped or informational except the
-        # resource-usage report. DC_WORKSPACE_IMAGE points run.sh at the tested image
+        # startup-latency gate (<10s) and the zero-loss gate are real, hard-failing
+        # assertions here — nothing is skipped or informational except the resource-usage
+        # report and the at-least-once boundary re-sends (deduped on read).
+        # DC_WORKSPACE_IMAGE points run.sh at the tested image
         # from build-and-test, so the harness reuses it instead of rebuilding.
         env:
           DC_E2E_OUTAGE_SECONDS: "60"
