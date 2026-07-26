@@ -47,7 +47,7 @@ Collect UID, GID, if a file or directory exists and its permissions (in rwx or i
 permission_home_dc:
   plugin: "dc_measurements/Permissions"
   topic_output: "/dc/measurement/permissions_home_dc"
-  tags: ["flb_stdout"]
+  tags: ["console"]
   path: "$HOME/dc"
   format: "rwx"
 ```

@@ -53,33 +53,27 @@ camera:
   remote_keys: ["minio"] # Will create paths for Minio, does not send the file
 ```
 
-### Destination node configuration
-Now that the path is set, it can be used to know where to send the image:
+### Destination (dc_bridge) configuration
+Now that the path is set, it can be used to know where to send the image. The
+Destination name (`minio`) must match the `remote_keys` entry above — the Uploader
+matches a Record's `remote_paths` keys against `receives: files` Destination names (see
+[Destinations](../destinations.md)):
 
 ```yaml
-...
-flb_minio:
-  verbose_plugin: false
-  time_format: "iso8601"
-  plugin: "dc_destinations/FlbMinIO"
-  inputs: ["/dc/group/cameras"]
-  endpoint: 127.0.0.1:9000
-  access_key_id: XEYqG4ZcPY5jiq5i
-  secret_access_key: ji011KCtI82ZeQS6UwsQAg8x9VR4lSaQ
-  use_ssl: false
-  create_bucket: true
-  bucket: "mybucket"
-  src_fields:
-    [
-      "camera.local_img_paths.raw",
-      "camera.local_img_paths.inspected"
-    ]
-  upload_fields: # Remote paths created by the measurement node configuration
-    [
-      "camera.minio_img_paths.raw",
-      "camera.minio_img_paths.inspected"
-    ]
-...
+dc_bridge:
+  ros__parameters:
+    destinations: ["minio", "pgsql"]
+    minio:
+      type: s3
+      receives: files
+      inputs: ["/dc/group/cameras"]
+      endpoint: "http://127.0.0.1:9000"
+      access_key_id: "XEYqG4ZcPY5jiq5i"
+      secret_access_key: "ji011KCtI82ZeQS6UwsQAg8x9VR4lSaQ"
+      force_path_style: true
+      bucket: "mybucket"
+    files:
+      metadata_destination: "pgsql"  # a receives: records Destination for status rows
 ```
 
 ## Schema

@@ -16,8 +16,7 @@ Measurements are a single data unit presented in JSON format, that can contain d
 
 ## Node parameters
 
-The node starts the fluent bit engine and its ros2 plugin and enables data collection from ROS 2 topics. This plugin will subscribe to the configured ROS 2 topics and data will be collected by Fluent Bit to destinations enabled by the [destination node](./destinations.md).
-Each topic is configured in a measurement, which is loaded in this node with pluginlib.
+This node enables data collection from ROS 2 topics. Each topic is configured in a measurement, which is loaded in this node with pluginlib; the Bridge (`dc_bridge`) subscribes to the same topics and forwards Records to the destinations enabled there (see [Destinations](./destinations.md)).
 In addition, conditions are pluginlibs plugin also loaded dynamically. They are optional plugins that allow to collect on some conditions, e.g robot is moving.
 
 | Parameter name                                 | Description                                                                                                                                                 | Type(s)     | Default                       |
@@ -54,7 +53,7 @@ Each measurement is collected through a node and has these configuration paramet
 | **condition_max_measurements** | Collect a maximum of n measurements when conditions are activated (-1 = never, 0 = infinite) | int         | 0                                    |
 | **enable_validator**           | Will validate the data against a JSON schema                                                 | bool        | true                                 |
 | **json_schema_path**           | Path to the JSON schema, ignored if empty string                                             | str         | N/A (optional)                       |
-| **tags**                       | Tags used by Fluent Bit to do the matching to destinations                                   | list\[str\] | N/A (mandatory)                      |
+| **tags**                       | Destination names, used by the Bridge to match Records to destinations                       | list\[str\] | N/A (mandatory)                      |
 | **remote_prefixes**            | Prefixes to apply to the paths when sending files to a destination                           | str         | N/A (optional)                       |
 | **remote_keys**                | Used by some plugins to generate remote paths                                                | list\[str\] | N/A (optional)                       |
 | **if_all_conditions**          | Collect only if all conditions are activated                                                 | list\[str\] | N/A (optional)                       |

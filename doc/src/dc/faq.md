@@ -6,45 +6,23 @@ Even though measurements and destinations will constantly be added in the future
 
 Create a feature request in [Github Discussions](https://github.com/Minipada/ros2_data_collection/discussions/categories/ideas-and-feature-requests)...or better, write your plugin and do a Pull Request.
 
-## Can I use DC without Fluent Bit backend?
-It is possible to use DC without Fluent Bit as backend. There is an example with the RCL destination, which subscribes to a ROS topic and prints it in the console.
+## How can I send data to a Destination that isn't blessed?
 
-Still, a lot of work would be required to disable Fluent Bit and keep similar features (backpressure handling, data persistence and measurements and destinations available)
+The Bridge (`dc_bridge`) renders its Shipper's (Vector) config from plain ROS
+parameters for a **blessed set** of Destination types only (PostgreSQL,
+S3-compatible storage, file, console — see [Destinations](./destinations.md)). Every
+other sink in [Vector's catalog](https://vector.dev/docs/reference/configuration/sinks/)
+(Kafka, Kinesis, InfluxDB, webhooks, …) is reachable through the **passthrough**: list a
+raw Vector config snippet (TOML) in the `custom_config_files` parameter, and consume the
+public `dc.<tag>` route it needs. No DC code, plugin, or extra language required — only
+Vector configuration.
 
-## How can I add a Fluent Bit plugin?
+## Can a passthrough snippet be generated or written in a language other than TOML?
 
-Currently, from my knowledge, it is only possible to load a plugin using the C api which loads a shared library. Because of that, I expect more languages can be used, such as Rust, the only requirement is to use the bindings. For measurements, it is not a problem, we can write a node in any language publishing on a StringStamped message and use the measurement plugin with the same name.
-
-Destination plugins can be written in C or Go. You can find examples in the fluent_bit_plugins package.
-
-## How can I use a Python API with Fluent Bit
-
-Adding a destination plugin which uses a Python library is not cleared. We have not yet solved this problem and would welcome one, since many API libraries are available in this language.
-
-Note for the courageous ones: I tried once to create python-C bindings of Fluent Bit, by creating .h files like in the [fluent-bit-go](https://github.com/fluent/fluent-bit-go) and use ctypesgen(https://github.com/ctypesgen/ctypesgen), like this:
-
-```bash
-ctypesgen \
-  --allow-gnu-c \
-  --output-language=py32 \
-  ~/ws/fluent-bit/include/fluent-bit.h \
-  -I./lib/msgpack-c/include/ \
-  -I./lib/monkey/include \
-  -I./build/lib/monkey/include/monkey \
-  -I./lib/cfl/include \
-  -I./lib/cfl/lib/xxhash \
-  -I./include \
-  -I./lib/flb_libco \
-  -I./lib/c-ares-1.19.0/include \
-  -I./lib/cmetrics/include \
-  -I./lib/ctraces/include \
-  -I./lib/ctraces/lib/mpack/src \
-  -o fluent_bit.py
-```
-
-It creates a base for the bindings. While I suppose it is possible to generate them, I'm puzzled as how this will be loaded by Fluent Bit afterwards.
-
-Whatever you write, feel free to make a Pull Request and share your work!
+The snippet the Bridge merges in must be Vector's own TOML configuration syntax — DC
+does not transform it. If you would rather generate that TOML from another language or
+tool, nothing stops you from doing so as a build or deploy step; the Bridge only reads
+the resulting file.
 
 ## My group data is not published on the group topic
 

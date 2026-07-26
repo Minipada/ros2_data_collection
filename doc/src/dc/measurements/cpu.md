@@ -80,7 +80,7 @@ Collect cpu usage: average cpu, number of processes running and processes sorted
 cpu:
   plugin: "dc_measurements/Cpu"
   topic_output: "/dc/measurement/cpu"
-  tags: ["flb_stdout"]
+  tags: ["console"]
   max_processes: 10
   cpu_min: 10.0
 ```

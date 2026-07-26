@@ -6,13 +6,16 @@ There are a few key concepts that are really important to understand how DC oper
 
 ROS 2 is the core middleware used for DC. If you are unfamilar with this, please visit [the ROS 2 documentation](https://docs.ros.org/en/rolling/) before continuing.
 
-## Fluent Bit
+## Shipper (Vector)
 
-Fluent Bit is used in the backend for most plugins in DC. If you are unfamilar with this, please visit [the Fluent Bit documentation](https://docs.fluentbit.io/manual/)
-
-The DC destination ROS node starts it using the fluent bit C api and thus DC directly gets all benefits from it.
-
-Fluent Bit configuration has been wrapped in this node and all its configuration parameters can be passed from the YAML configuration file.
+DC's data plane is an external **Shipper** process, [Vector](https://vector.dev/),
+fed over the Fluent Forward protocol by the **Bridge** (`dc_bridge`). The Bridge
+renders Vector's configuration from plain ROS parameters — see
+[Destinations](./destinations.md) — spawns and supervises the Vector process, and
+forwards every Record it receives on its configured input topics. DC gets Vector's
+disk buffering, retries, and native sinks (PostgreSQL, S3-compatible storage, and
+many more) without embedding or forking the Shipper itself (ADR-0001,
+`docs/adr/`).
 
 ## Lifecycle Nodes and Bond
 *(Source: [Nav2 documentation](https://navigation.ros.org/concepts/index.html))*
@@ -44,23 +47,24 @@ Measurements are a single data unit presented in JSON format, that can contain d
 
 Every incoming piece of data that belongs to a log or a metric that is retrieved by DC is considered an Event or Record.
 
-Internally, when using Fluent Bit based plugins, it will contain 2 components: its timestamp and its message. For us, in DC, it will always be a JSON string sent in a ROS message of StringStamped type. This ROS message contains:
+Internally, it will always be a JSON string sent in a ROS message of StringStamped type. This ROS message contains:
 
 1. **header**: ROS timestamp as std_msgs/Header
 2. **data**: JSON message as string
 3. **group_key**: a string used as a key for the new message when grouping multiple messages together
 
 ## Tag(s)
-Every measurement requires to have at least a tag configured (via the `tags` parameter) so it is sent to its destination(s). This tag corresponds to the name of the plugin you defined in the same configuration. It is then used in a later stage by the Router to decide which Filter or Output phase it must go through.
+Every measurement requires to have at least a tag configured (via the `tags` parameter) so it is sent to its destination(s). This tag corresponds to the name of a Destination declared on the Bridge (`dc_bridge`) in the same configuration.
 
 Example:
 
 ```yaml
-destination_server:
+dc_bridge:
   ros__parameters:
-    destination_plugins: ["flb_stdout"]
-    flb_stdout: # Custom name for the plugin
-      plugin: "dc_destinations/FlbStdout"
+    destinations: ["console"]
+    console: # Custom name for the Destination
+      type: console
+      receives: records
       inputs: ["/dc/measurement/string_stamped"]
 measurement_server:
   ros__parameters:
@@ -68,21 +72,17 @@ measurement_server:
     uptime:
       plugin: "dc_measurements/Uptime"
       topic_output: "/dc/measurement/uptime"
-      tags: ["flb_stdout"] # Match the plugin set in the destination_server
+      tags: ["console"] # Match the Destination name set on the Bridge
 ```
 
-To manage the tags in DC, we pass the tags as parameter to each measurement and automatically use 2 Fluent Bit filters to assign the ROS message to a certain Fluent Bit output:
-
-1. rewrite_tag filter: Modify the message tag to the destination(s) configured
-2. lua filter: Take the flags received as a string containing a list and set the tags internally in Fluent Bit.
-
-You can find th code in flb_destination.hpp
-
-## Match
-Fluent Bit allows to deliver your collected and processed Events to one or multiple destinations, this is done through a routing phase. A Match represent a simple rule to select Events where its tags matches a defined rule.
+See [Destinations](./destinations.md) for the full config renderer contract, including
+`inputs`/`tags` matching and the `dc.<tag>` routing convention.
 
 ## Destinations
-A destination is where the data will be sent: AWS S3, stdout, AWS Kinesis. It has the possibility to use [outputs from fluentbit](https://docs.fluentbit.io/manual/pipeline/outputs).
+A destination is where the data will be sent: PostgreSQL, S3-compatible storage, a
+file, or the console are blessed (rendered from plain ROS parameters); any other
+Vector sink is reachable through the passthrough. See [Destinations](./destinations.md)
+for the full contract.
 
 ## Conditions
 A condition enables or disables one or multiple measurements to be published and thus collected. We could for example enable collecting camera images only when a robot is stopped.
@@ -110,20 +110,17 @@ Each measurement has its own JSON schema, which can be overwritten in a custom p
 
 ## Buffering and data persistence
 
-Fluent Bit has its own buffering management, explained in [its documentation](https://docs.fluentbit.io/manual/concepts/buffering). Data can be stored in Memory or/and filesystem.
-
-By default, DC uses the memory buffering for a small amount of data (5M) and then uses filesystem buffering.
-
-The configuration is printed when starting the destination server:
-
-```bash
-[destination_server-2] [2023/02/24 10:36:15] [ info] [storage] ver=1.3.0, type=memory+filesystem, sync=full, checksum=off, max_chunks_up=128
-[destination_server-2] [2023/02/24 10:36:15] [ info] [input:ros2:ros2.0] storage_strategy='filesystem' (memory + filesystem)
-[destination_server-2] [2023/02/24 10:36:15] [ info] [input:storage_backlog:storage_backlog.1] queue memory limit: 976.6K
-```
-
-This buffering ensures data will persist across reboots
+Vector, the Shipper, manages its own disk buffer (`shipper.data_dir` on the Bridge's
+parameters) with a documented minimum size (`shipper.buffer_max_bytes`). This buffer
+persists across reboots: Records accepted by the Bridge but not yet delivered to a
+Destination survive an outage of that Destination, a robot reboot, or a Bridge
+restart, and are delivered — with end-to-end acknowledgements — once the Destination
+is reachable again.
 
 ## Scheduling and Retries
 
-DC inherits from Fluent Bit features of scheduling and retries. It can be configured in the destination node. More about it can be read on the [Fluent Bit documentation](https://docs.fluentbit.io/manual/administration/scheduling-and-retries)
+Vector retries delivery to a Destination on failure with its own backoff, independent
+of DC code; see [its documentation](https://vector.dev/docs/) for details. The Bridge
+itself is supervised by DC (launch respawn) and, in turn, supervises its own Vector
+child process — including a Linux parent-death signal so Vector can never outlive the
+Bridge across a crash or SIGKILL.

@@ -28,5 +28,5 @@ Time since when the robot PC has been on.
 uptime:
   plugin: "dc_measurements/Uptime"
   topic_output: "/dc/measurement/uptime"
-  tags: ["flb_stdout"]
+  tags: ["console"]
 ```

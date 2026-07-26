@@ -231,7 +231,7 @@ public:
   void addTags(dc_interfaces::msg::StringStamped& msg)
   {
     // Only put the tags in if the conditions are ok. This way, we still publish the data
-    // and can check in conditions but with no tags, this is not received by the destination_server
+    // and can check in conditions but with no tags, this is not received by the Bridge
     if (!tags_.empty())
     {
       try
@@ -267,7 +267,7 @@ public:
   void addMeasurementName(dc_interfaces::msg::StringStamped& msg)
   {
     // Only put the tags in if the conditions are ok. This way, we still publish the data
-    // and can check in conditions but with no tags, this is not received by the destination_server
+    // and can check in conditions but with no tags, this is not received by the Bridge
     if (include_measurement_name_)
     {
       try
@@ -287,7 +287,7 @@ public:
   void addMeasurementPluginName(dc_interfaces::msg::StringStamped& msg)
   {
     // Only put the tags in if the conditions are ok. This way, we still publish the data
-    // and can check in conditions but with no tags, this is not received by the destination_server
+    // and can check in conditions but with no tags, this is not received by the Bridge
     if (include_measurement_plugin_)
     {
       try

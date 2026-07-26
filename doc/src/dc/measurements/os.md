@@ -41,5 +41,5 @@ Collects the Operating System information: cpus, operating system name and kerne
 os:
   plugin: "dc_measurements/OS"
   topic_output: "/dc/measurement/os"
-  tags: ["flb_stdout"]
+  tags: ["console"]
 ```

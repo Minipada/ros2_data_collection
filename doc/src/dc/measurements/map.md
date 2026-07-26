@@ -95,7 +95,7 @@ Save map using nav2_map_server and collect the map of the local map saved. The m
 map:
   plugin: "dc_measurements/Map"
   topic_output: "/dc/measurement/map"
-  tags: ["flb_stdout"]
+  tags: ["console"]
   topic: "/map"
   save_map: "map/%Y-%m-%dT%H:%M:%S"
   save_map_timeout: 0.2

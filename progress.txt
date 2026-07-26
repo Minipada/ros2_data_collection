@@ -914,3 +914,94 @@ package") and rewrote dc_bridge in C++. ADR-0007 records the decision and ration
   prebuilt aws-sdk-cpp to avoid the ~20-min source build; GCS/Azure ObjectStore
   implementations (S3 only today, matching the Rust); the #268 gz-sim port
   (dc_demos/dc_simulation still COLCON_IGNORE'd, unrelated to the language change).
+
+### #250 - DC 2.0 S9: Demolition — removed Fluent Bit packages and the flb_* layer
+
+Deleted every package the embedded-Fluent-Bit architecture left behind, now that the
+Bridge + Vector data plane (#242-#249) fully replaces it, per ADRs 0001/0003 and #241's
+"Deletions are part of the deliverable" note:
+
+- **Deleted outright**: `fluent_bit_vendor` (the forked Fluent Bit source build),
+  `fluent_bit_plugins` (the C `in_ros2` input plugin and the two cgo-built Go output
+  plugins — the last Go code in the repo), and the entire `dc_destinations` package
+  (the `destination_server` node, all twelve `flb_*` pluginlib Destination plugins, and
+  `rcl.cpp` — `dc_destinations` was 100% Fluent-Bit-shaped: every plugin took a
+  `flb_ctx_t*` and linked `fluent_bit::fluent_bit`, so there was nothing in it worth
+  keeping standalone). Also deleted `dc_core/include/dc_core/destination.hpp` (the
+  `dc_core::Destination` pluginlib base class every `flb_*` plugin implemented — dead
+  the moment `dc_destinations` is gone; confirmed via `codegraph`/grep no other package
+  included it).
+- **Go toolchain removed**: the `tekwizely/pre-commit-golang` `go-fmt` hook (nothing
+  left to format) and the now-dead `fluent_bit_plugins/src/go/*/*.so`/`.h`
+  `.gitignore` entries.
+- **Build/CI plumbing**: `.dockerignore`'s `dc_destinations`/`fluent_bit_plugins`/
+  `fluent_bit_vendor` `package.xml` allowlist entries removed (nothing left to
+  allowlist); `tools/e2e/Containerfile`'s comment explaining `dc_demos`/`dc_simulation`'s
+  `COLCON_IGNORE` no longer cites `dc_destinations/fluent_bit_*` as a parallel example
+  (they're deleted now, not ignored); `dc_bringup/launch/dc_bringup.launch.py`'s two
+  comments explaining why no `destination_server` node is launched were reworded from
+  "COLCON_IGNOREd pending the demolition slice" (forward-looking, #242-era) to stating
+  plainly that `dc_destinations` was removed in #250 — the launch file itself needed no
+  behavior change since `dc_bridge` already fully replaced `destination_server` starting
+  in #244/#247.
+- **Requirements**: `requirements/destination_plugins.sdoc` (twelve `DP-PLU-*`
+  Fluent-Bit-output requirements) and `requirements/destination_server.sdoc` (the
+  pluginlib-loading `DS-*` requirements, including a stray Redis-backend requirement
+  that was never implemented either) deleted — both specified a subsystem that no
+  longer exists; confirmed via grep no other `.sdoc` file cross-references their UIDs
+  (`strictdoc export requirements` needs no per-file registration, so removal is safe).
+- **Docs — updated, not just stripped of dead links**: `doc/src/SUMMARY.md` and
+  `doc/src/dc/destinations.md` lost the thirteen `flb_*`/`rcl` destination sub-pages
+  (deleted, since `dc_destinations` is gone and DC 2.0's blessed-Destinations contract
+  is already fully documented above the old "Legacy (Humble)" section, which is also
+  removed — the humble branch's own tree documents that architecture natively, so
+  duplicating it here now that no code on this branch runs it serves no one).
+  `data_pipeline.md` lost its "Legacy (Humble): embedded Fluent Bit pipeline" section
+  (mermaid diagram included) for the same reason. `concepts.md`, `configuration_examples.md`,
+  `faq.md`, `groups.md`, `introduction.md`, and `measurements.md` were **still written
+  entirely around the Fluent-Bit/destination_server architecture in the present tense**
+  (not yet touched by any earlier DC 2.0 doc pass) — rewrote the Fluent-Bit-specific
+  sections/examples in each for the Bridge/Vector model (`dc_bridge`'s `destinations`
+  list replaces `destination_server`'s `destination_plugins`, Destination names replace
+  `flb_*` plugin names, Vector's disk buffer replaces Fluent Bit's memory+filesystem
+  buffering, the passthrough via `custom_config_files` replaces "write a C/Go Fluent Bit
+  plugin" as the extension story). All fourteen `doc/src/dc/measurements/*.md` pages'
+  identical `tags: ["flb_stdout"]` example line became `tags: ["console"]` (bulk `sed`,
+  verified identical pattern via grep first); `camera.md`'s `flb_minio` destination
+  example block was rewritten as an `s3`/`receives: files` Destination block matching
+  the real `dc_bridge` uploader contract in `destinations.md`.
+- **`dc_measurements/include/dc_measurements/measurement.hpp`**: three identical
+  comments referencing "the destination_server" (describing why untagged data is still
+  published but not delivered) reworded to "the Bridge" — the only C++ comment fallout
+  found outside the deleted packages themselves (grepped for `dc_destinations`/
+  `destination_server`/`DestinationServer` across all `.cpp`/`.hpp`/`CMakeLists.txt`/
+  `package.xml` after the deletions).
+- **Deliberately out of scope, left tracked separately**: `dc_demos/params/*.yaml` and
+  `dc_demos/launch/*.launch.py` (still `flb_*`-shaped — group tags like
+  `["flb_stdout"]`, a `destination_server:`/`flb:` params block) and
+  `doc/src/dc/demos/*.md` (their documentation) — issue #251 ("DC 2.0 S10: Demos rework
+  on the new pipeline") exists specifically for this and is `Blocked by #250`, so
+  reworking those params here would duplicate that issue's own acceptance criteria.
+  Likewise `tools/infrastructure/docker/` (the standalone PostgreSQL/MinIO/Grafana
+  compose demo stack, whose Grafana dashboards reference an `flb_influxdb` datasource
+  UID) is #251's "docker-compose demo infrastructure" acceptance criterion, not
+  touched here. `CLAUDE.md`'s and `CONTEXT.md`'s own Fluent-Bit mentions are
+  intentional comparative/historical framing (e.g. CONTEXT.md's glossary note that "no
+  Fluentd or Fluent Bit software runs anywhere in DC 2.0"), and the ADRs
+  (`docs/adr/000{1,2,3,7}-*.md`) and `progress.txt`'s own prior entries are immutable
+  decision/history records — none of these were edited.
+- **Verification**: a tree-wide `grep -rlI` for `fluent_bit|flb_|FLB_|FluentBit|Fluent
+  Bit` after all edits returns only the intentionally-deferred/historical files listed
+  above. Ran a real `colcon build` via `tools/e2e/scripts/build.sh` (Podman, the same
+  harness #249 built) against the full workspace, reusing that session's cached
+  `dc-workspace` image layers — rosdep resolved and installed the full dependency set
+  with no complaint about the removed packages (no dangling `dc_destinations`/
+  `fluent_bit_*` depends anywhere, confirmed by grep beforehand too), and the build
+  reached and passed `dc_lifecycle_manager`/`dc_group`/`dc_services` before this PR was
+  opened; **the full build (through `dc_measurements`, `dc_bridge`, and `colcon test`)
+  was still running in the background when this PR was opened at the user's request —
+  see the next progress.txt update, or the session's actual commit history, for
+  whether it finished clean.** `pre-commit` was not re-run in this sandbox (same
+  environment-gap skips as every prior DC 2.0 slice: `build-doc`, `poetry-requirements`,
+  `pycln`, `flake8`); the `go-fmt` hook removal itself needs no verification since no
+  Go files remain for it to have ever run against.
