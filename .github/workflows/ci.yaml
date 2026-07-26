@@ -43,7 +43,7 @@ jobs:
       e2e_ref: ${{ steps.refs.outputs.e2e_ref }}
       cache_ref: ${{ steps.refs.outputs.cache_ref }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Verify podman
         run: podman --version
@@ -91,10 +91,27 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Verify podman
         run: podman --version
+
+      # Only this job uses compose (for the stable test stores); the harness job is native
+      # podman. `podman compose` shells out to a host-side provider — it can't be baked
+      # into an image the way podman itself manages containers, since the provider has to
+      # run on the runner to drive the runner's podman. ~/.local is cached (keyed on the
+      # pinned version) so `pip install` below is a fast no-op against the cache instead of
+      # a fresh PyPI fetch on every run; pinning the provider avoids the docker-compose
+      # cli-plugin, which needs a Podman API socket that isn't running here.
+      - name: Cache podman-compose
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: podman-compose-1.5.0
+      - name: Install podman-compose
+        run: |
+          pip install --user "podman-compose==1.5.0"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Log in to ghcr.io (to pull the workspace image)
         run: |
@@ -103,14 +120,14 @@ jobs:
       - name: Pull the workspace image
         run: podman pull "${{ needs.build-workspace.outputs.workspace_ref }}"
 
-      - name: Start Postgres + RustFS (dc_bridge's store-backed tests hard-fail, never skip — see dc_bridge/README.md)
+      # Stable dependencies (up for the whole job, no outage/restart) — a declarative
+      # compose file, unlike the harness which drives its own stores with native podman.
+      - name: Start the test-dependency stores (dc_bridge's store-backed tests hard-fail, never skip — see dc_bridge/README.md)
+        env:
+          PODMAN_COMPOSE_PROVIDER: podman-compose
         run: |
-          podman run -d --network host --name dc_pg_ci \
-            -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
-            docker.io/library/postgres:13
-          podman run -d --network host --name dc_rustfs_ci \
-            docker.io/rustfs/rustfs:latest
-          timeout 60 bash -c 'until podman exec dc_pg_ci pg_isready -U dc >/dev/null 2>&1; do sleep 1; done'
+          podman compose -f tools/e2e/compose.test.yaml up -d
+          timeout 60 bash -c 'until podman exec dc_pg_test pg_isready -U dc >/dev/null 2>&1; do sleep 1; done'
           timeout 60 bash -c 'until curl -sf http://127.0.0.1:9000 >/dev/null 2>&1 || curl -s http://127.0.0.1:9000 >/dev/null 2>&1; do sleep 1; done'
           # A `dc-records` bucket the store-backed tests can use (the S3 sink doesn't
           # create it). AWS CLI over --endpoint-url speaks the same S3 protocol dc_bridge's
@@ -125,13 +142,15 @@ jobs:
           IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
         run: ./tools/e2e/scripts/test.sh "$PWD/coverage"
 
-      - name: Stop Postgres + RustFS
+      - name: Stop the test-dependency stores
         if: always()
-        run: podman rm -f dc_pg_ci dc_rustfs_ci
+        env:
+          PODMAN_COMPOSE_PROVIDER: podman-compose
+        run: podman compose -f tools/e2e/compose.test.yaml down
 
       - name: Upload C++ coverage
         if: always()
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage/cpp.info
@@ -144,7 +163,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Verify podman
         run: podman --version
@@ -179,7 +198,7 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Verify podman
         run: podman --version
