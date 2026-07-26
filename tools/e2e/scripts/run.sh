@@ -72,9 +72,13 @@ timeout 60 bash -c 'until podman compose -f compose.yaml exec -T postgres pg_isr
 timeout 60 bash -c 'until curl -sf http://127.0.0.1:9000 >/dev/null 2>&1 || curl -s http://127.0.0.1:9000 >/dev/null 2>&1; do sleep 1; done' \
   || { log "RustFS never became ready"; exit 1; }
 
-log "creating the RustFS bucket (dc_bridge's S3 sink doesn't create it — see dc_bridge/tests/end_to_end.rs)"
-podman run --rm --network host docker.io/minio/mc:latest \
-  sh -c 'mc alias set local http://127.0.0.1:9000 rustfsadmin rustfsadmin && mc mb -p local/dc-e2e'
+log "creating the RustFS bucket (the S3 sink / Uploader doesn't create it)"
+# The AWS CLI talks plain S3 to RustFS via --endpoint-url — same protocol dc_bridge's
+# Uploader uses (aws-sdk-cpp), so no extra vendor (the retired minio/mc client) in the loop.
+podman run --rm --network host \
+  -e AWS_ACCESS_KEY_ID=rustfsadmin -e AWS_SECRET_ACCESS_KEY=rustfsadmin -e AWS_DEFAULT_REGION=us-east-1 \
+  docker.io/amazon/aws-cli:latest \
+  --endpoint-url http://127.0.0.1:9000 s3 mb s3://dc-e2e
 
 # Resource usage (CPU/RSS) is informational per the PRD, not gating — sampled for the
 # whole run so tools/e2e/scripts/measure_resources.sh's summary covers steady state.
