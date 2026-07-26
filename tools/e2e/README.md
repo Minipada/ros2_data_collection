@@ -74,12 +74,12 @@ not just a local tool.
 
 ## Layout
 
-- `Containerfile` — builds the full DC workspace (every `dc_*` package, including the
-  Rust `dc_bridge`). Two stages: `toolchain` (ROS/Rust/colcon-cargo, no DC source —
-  rarely changes) and `workspace` (`FROM toolchain`, the actual `rosdep
-  install`/`colcon build`, `ARG CCOV` gates coverage-instrumented compiler flags). Jazzy
-  CI (`ci.yaml`) builds and uses **only** this image — `colcon test` runs directly
-  against it, no harness-specific files needed.
+- `Containerfile` — builds the full DC workspace (every `dc_*` package, all C++ since
+  ADR-0007). Single stage: an apt/toolchain `RUN` (no DC source — rarely changes, so it
+  stays a build-cache hit) followed by the `rosdep install`/`colcon build` `RUN` (`ARG
+  CCOV` gates coverage-instrumented compiler flags). Jazzy CI (`ci.yaml`) builds and uses
+  **only** this image — `colcon test` runs directly against it, no harness-specific files
+  needed.
 - `Containerfile.e2e` — a thin `FROM <workspace image>` layer adding just the harness's
   own runtime bits (the synthetic workload generator, its params, the entrypoint).
   Never built by CI. Its build context is `tools/e2e/` itself, not the repo root — it
