@@ -7,9 +7,9 @@ powers analytics and dashboards. It is a telemetry pipeline, not an ML dataset p
 Read [CONTEXT.md](./CONTEXT.md) first for the domain vocabulary (Measurement, Record, Group,
 Destination, Bridge, Shipper, Tag, File, …) — use those terms, not synonyms, in code, commits,
 and PRs. Read [docs/adr/](./docs/adr/) for the DC 2.0 architecture decisions (external Vector
-shipper replacing embedded Fluent Bit, the C++ Bridge — ADR-0007 reverted the ADR-0004 Rust
-pilot, blessed destinations + passthrough, etc.) before touching pipeline internals — most
-non-obvious design choices are already recorded there rather than in code comments.
+shipper replacing embedded Fluent Bit, the C++ Bridge, blessed destinations +
+passthrough, etc.) before touching pipeline internals — most non-obvious design choices
+are already recorded there rather than in code comments.
 
 ## Branches
 
@@ -62,14 +62,21 @@ Docker — Docker is being phased out repo-wide, matching the direction already 
 `~/dev/monorepo` (see `~/dev/monorepo/server/docs/adr/002-rootless-podman-quadlet.md`
 and `~/dev/monorepo/ci/Containerfile` + `.github/actions/{image-ref,docker-build,
 podman-push,registry-login,trivy-image-scan}` for the reference conventions this repo
-follows). The pre-existing `docker/` tree, root `docker-compose.yaml`, and
-`.github/workflows/docker.yaml` are humble-line legacy — they exist only on the
-`humble` branch's own tree at this point (`.github/workflows/ci.yaml` on this branch
-was replaced outright by the jazzy-line Podman CI; there was no reason to keep an
-unreachable Docker/industrial_ci workflow around on a branch that can't build
-`fluent_bit_plugins`/`dc_destinations` in the first place — both `COLCON_IGNORE`d per
-ADR-0001/#242). New Podman-based container tooling lives under `tools/e2e/` (#249 is
-the first jazzy-line CI/container work).
+follows). Most of the pre-existing `docker/` tree, root `docker-compose.yaml`, and
+`.github/workflows/docker.yaml` were humble-line legacy — removed from this branch's
+tree (they still exist on `humble`'s own tree, a separate branch/tree; deleting them
+here doesn't touch that): `.github/workflows/ci.yaml` on this branch was replaced
+outright by the jazzy-line Podman CI, and the industrial_ci `ci`/`ci-testing`/`source`/
+`source-sim` jobs those files served were unreachable anyway on a branch that can't
+build `fluent_bit_plugins`/`dc_destinations` in the first place — both `COLCON_IGNORE`d
+per ADR-0001/#242. `docker/doc/Dockerfile` (the mdbook docs-site builder) was renamed to
+match the Podman convention below (`containers/doc/Containerfile`) but is **not yet
+live** — the `docker.yaml` job that built and pushed its image is gone along with the
+rest, and nothing has replaced it; `.github/workflows/doc.yaml` and
+`tools/ci/pre-commit/build_doc.sh` still point at the now-stale published tag. Wiring a
+real jazzy docs build is tracked at #252 (DC 2.0 S11), not done as part of this cleanup.
+New Podman-based container tooling otherwise lives under `tools/e2e/` (#249 is the first
+jazzy-line CI/container work).
 
 Conventions for new container tooling here, adapted from the monorepo (no private
 registry or self-hosted runners in this repo, so the parts of that pattern needing
@@ -78,8 +85,12 @@ those are dropped):
 - **`Containerfile`, not `Dockerfile`** as the filename (Podman/OCI convention).
 - **Fully-qualified base images** (`docker.io/library/ros:...`, not bare `ros:...`) —
   Podman has no default unqualified-search registry configured, unlike Docker.
-- **`podman build`**/**`podman run`**/**`podman compose`**, not `docker build`/`docker
-  run`/`docker compose` or `docker-compose`.
+- **`podman build`**/**`podman run`**, not `docker build`/`docker run`. Use
+  `podman compose` (not `docker compose`/`docker-compose`) only for stores that stay up
+  for a whole run with no lifecycle control needed; drive containers directly with
+  `podman run`/`stop`/`restart` when the tooling itself needs to control their lifecycle
+  (e.g. the zero-loss E2E harness's induced outage + restart, `tools/e2e/scripts/run.sh`
+  — compose has no supported way to stop/restart one of its services mid-run).
 - **Tag images with the commit SHA** (`<name>:<github.sha>`), mirroring the monorepo's
   `image-ref` action's immutable `:<sha>` ref — even for images that stay local to a CI
   run rather than being pushed to a registry, so a build is traceable back to the

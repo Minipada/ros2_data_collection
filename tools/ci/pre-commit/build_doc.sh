@@ -2,7 +2,12 @@
 
 set -e
 
-# Build the documentation
+# Build the documentation.
+#
+# Pulls a published minipada/ros2_data_collection:<ROS_VERSION>-doc image; nothing
+# currently builds/pushes a fresh one (the workflow job that did, docker.yaml's `doc`
+# job, was removed as humble-line dead weight — see containers/doc/Containerfile's
+# header). A live jazzy docs build is tracked at #252 (DC 2.0 S11), not this script.
 
 # Arguments parsing
 # Example:

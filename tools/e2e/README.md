@@ -111,11 +111,11 @@ not just a local tool.
 ## `.dockerignore`
 
 This repo's root `.dockerignore` is an "ignore everything, whitelist `package.xml`"
-allowlist scoped to the legacy `docker/ci/Dockerfile`'s narrow rosdep-only needs (mirrors
-`docker.yaml`'s own `source`/`source-sim` jobs, which `rm .dockerignore` before a
-full-source build for the same reason). `scripts/build.sh` moves it aside for the
-duration of the build and restores it afterward — `podman build --ignorefile` does
-**not** override `.dockerignore`, only supplements it (verified empirically).
+allowlist, originally scoped to a narrow rosdep-only image (the now-removed
+humble-line `docker/ci/Dockerfile`). `scripts/build.sh` moves it aside for the
+duration of this build, which needs every source file, and restores it afterward —
+`podman build --ignorefile` does **not** override `.dockerignore`, only supplements it
+(verified empirically).
 
 ## Not done / left for follow-up
 

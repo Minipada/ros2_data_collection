@@ -1,0 +1,24 @@
+# ghcr.io/minipada/ros2_data_collection:${ROS_DISTRO}-doc
+# Image to build the documentation. Currently orphaned on this branch: the humble-line
+# `.github/workflows/docker.yaml` `doc` job that built and pushed this image was removed
+# (dead weight — disabled, humble-branch-scoped, same as the ci/ci-testing/source/
+# source-sim Dockerfiles it shipped alongside); `.github/workflows/doc.yaml` and
+# `tools/ci/pre-commit/build_doc.sh` still pull the tag it used to produce. Kept
+# (renamed docker/doc/Dockerfile -> containers/doc/Containerfile per the Podman
+# convention) rather than deleted because #252 (DC 2.0 S11: migration guide + docs
+# overhaul) is the tracked place to re-wire a live jazzy docs build — do that there,
+# not by reviving this file in isolation.
+FROM rust:1.68.2-bullseye AS ros2_dc_doc_builder
+
+WORKDIR /
+
+COPY requirements.txt .
+COPY requirements-dev.txt .
+
+RUN apt-get -q update && \
+    # Python3
+    apt-get -q install --no-install-recommends -y python-is-python3 python3-pip && \
+    pip3 install --no-cache-dir -r requirements.txt -r requirements-dev.txt && \
+    cargo install mdbook mdbook-admonish mdbook-linkcheck mdbook-mermaid mdbook-open-on-gh && \
+    # Clear apt-cache to reduce image size
+    rm -rf /var/lib/apt/lists/*
