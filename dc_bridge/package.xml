@@ -26,6 +26,9 @@
        libtomlplusplus-dev / libmsgpack-cxx-dev so `rosdep install` resolves them. -->
   <depend>tomlplusplus</depend>
   <depend>msgpack-cxx</depend>
+  <!-- The AWS SDK for C++ (s3), built from source — the Uploader's object-storage client
+       (ADR-0005). -->
+  <depend>aws_sdk_vendor</depend>
 
   <exec_depend>vector_vendor</exec_depend>
 

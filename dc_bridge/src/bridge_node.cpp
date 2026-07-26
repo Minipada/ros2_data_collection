@@ -198,12 +198,11 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
     }
   }
 
-  // files.* parameters (ADR-0005). Declared here so the parameter surface is stable;
-  // the Uploader worker itself is Phase 2.
-  this->declare_parameter<bool>("files.delete_when_sent", false);
-  this->declare_parameter<std::string>("files.ffprobe_binary", "ffprobe");
-  declare_optional_int(this, "files.multipart_threshold_bytes");
-  declare_optional_int(this, "files.multipart_part_size_bytes");
+  // files.* parameters (ADR-0005).
+  const bool files_delete_when_sent = this->declare_parameter<bool>("files.delete_when_sent", false);
+  const std::string files_ffprobe = this->declare_parameter<std::string>("files.ffprobe_binary", "ffprobe");
+  const auto files_multipart_threshold = declare_optional_int(this, "files.multipart_threshold_bytes");
+  const auto files_multipart_part_size = declare_optional_int(this, "files.multipart_part_size_bytes");
   const std::string metadata_destination = this->declare_parameter<std::string>("files.metadata_destination", "");
 
   if (!files_destinations.empty())
@@ -220,10 +219,36 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
       throw std::runtime_error("files.metadata_destination '" + metadata_destination +
                                "' does not name a configured `receives: records` destination");
     }
-    target->extra_tags.push_back("dc.files");
-    RCLCPP_WARN(this->get_logger(),
-                "receives: files destination(s) configured; the C++ Uploader is Phase 2 — Files will "
-                "not be uploaded yet, but the Records pipeline is fully active");
+    // The Uploader's status Records land at the configured metadata destination: append
+    // its Tag to that Destination's routed set (rendered/normalized/consumed like any
+    // topic-derived Tag).
+    target->extra_tags.push_back(uploader::FILE_STATUS_TAG);
+
+    // Build the Uploader (ADR-0005): one S3 storage per `receives: files` Destination.
+    std::vector<Storage> storages;
+    for (const auto& dest : files_destinations)
+    {
+      const auto* s3 = std::get_if<S3Params>(&dest.kind);
+      if (s3 == nullptr)
+      {
+        // destination_from_raw enforces `type: s3` for `receives: files`.
+        throw std::runtime_error("internal error: files destination '" + dest.name + "' is not object storage");
+      }
+      storages.push_back(make_s3_storage(dest.name, *s3));
+    }
+    uploader::UploaderConfig ucfg(data_dir + "/uploader", files_delete_when_sent);
+    if (files_multipart_threshold)
+    {
+      ucfg.multipart_threshold_bytes =
+          static_cast<std::uint64_t>(std::max<std::int64_t>(1, *files_multipart_threshold));
+    }
+    if (files_multipart_part_size)
+    {
+      ucfg.multipart_part_size_bytes =
+          static_cast<std::uint64_t>(std::max<std::int64_t>(1, *files_multipart_part_size));
+    }
+    uploader_ = std::make_unique<uploader::Uploader>(std::move(ucfg), std::move(storages),
+                                                     uploader::ffprobe_duration_prober(files_ffprobe));
   }
 
   RenderConfig render_config;
@@ -308,8 +333,14 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
   // Background prober: respawns Vector if it dies and keeps the readiness flag current.
   prober_thread_ = std::thread(&BridgeNode::run_prober, this, vector_host, forward_port);
 
-  // Subscribe to the union of every Destination's inputs topics, once each. A Record on
-  // a Records-Destination topic is forwarded to Vector under its derived Tag.
+  // The Uploader worker (ADR-0005), if any `receives: files` destination is configured.
+  if (uploader_)
+  {
+    uploader_thread_ = std::thread(&BridgeNode::run_uploader_worker, this, vector_host, forward_port);
+  }
+
+  // Topics feeding Records destinations (forwarded to Vector) vs. topics feeding files
+  // destinations (scanned for File references by the Uploader). A topic can be in both.
   std::set<std::string> records_topics;
   for (const auto& d : render_config.destinations)
   {
@@ -318,26 +349,27 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
       records_topics.insert(t);
     }
   }
-  std::set<std::string> subscribed;
-  for (const auto& d : render_config.destinations)
+  std::set<std::string> files_topics;
+  for (const auto& d : files_destinations)
   {
     for (const auto& t : d.inputs)
     {
-      subscribed.insert(t);
+      files_topics.insert(t);
     }
   }
-  // (files-destination inputs are subscribed by the Uploader in Phase 2.)
+
+  // Subscribe to the union, once each.
+  std::set<std::string> subscribed = records_topics;
+  subscribed.insert(files_topics.begin(), files_topics.end());
 
   for (const auto& topic : subscribed)
   {
     const std::string tag = TopicConfig::derive_tag(topic);
     const bool forward_to_vector = records_topics.count(topic) > 0;
+    const bool feeds_uploader = files_topics.count(topic) > 0;
     auto sub = this->create_subscription<dc_interfaces::msg::StringStamped>(
-        topic, rclcpp::QoS(10), [this, tag, forward_to_vector](const dc_interfaces::msg::StringStamped& msg) {
-          if (!forward_to_vector)
-          {
-            return;
-          }
+        topic, rclcpp::QoS(10),
+        [this, tag, forward_to_vector, feeds_uploader](const dc_interfaces::msg::StringStamped& msg) {
           nlohmann::json payload;
           try
           {
@@ -347,18 +379,31 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
           {
             payload = nlohmann::json(msg.data);
           }
-          Record record;
-          record.tag = tag;
-          record.timestamp_secs = static_cast<std::uint64_t>(std::max<std::int32_t>(0, msg.header.stamp.sec));
-          record.payload = std::move(payload);
-          try
+
+          if (feeds_uploader)
           {
-            std::lock_guard<std::mutex> lock(forwarder_mutex_);
-            forwarder_->send(record);
+            {
+              std::lock_guard<std::mutex> lock(upload_queue_mutex_);
+              upload_queue_.emplace_back(tag, payload);
+            }
+            upload_queue_cv_.notify_one();
           }
-          catch (const ForwarderError& e)
+
+          if (forward_to_vector)
           {
-            RCLCPP_WARN(this->get_logger(), "failed to forward record on tag '%s': %s", tag.c_str(), e.what());
+            Record record;
+            record.tag = tag;
+            record.timestamp_secs = static_cast<std::uint64_t>(std::max<std::int32_t>(0, msg.header.stamp.sec));
+            record.payload = std::move(payload);
+            try
+            {
+              std::lock_guard<std::mutex> lock(forwarder_mutex_);
+              forwarder_->send(record);
+            }
+            catch (const ForwarderError& e)
+            {
+              RCLCPP_WARN(this->get_logger(), "failed to forward record on tag '%s': %s", tag.c_str(), e.what());
+            }
           }
         });
     subscriptions_.push_back(sub);
@@ -373,6 +418,79 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
 
   RCLCPP_INFO(this->get_logger(), "dc_bridge up: %zu subscribed topic(s), supervising %s", subscriptions_.size(),
               vector_binary.c_str());
+}
+
+void BridgeNode::run_uploader_worker(std::string forward_host, std::uint16_t forward_port)
+{
+  // The Uploader's own Forwarder connection, so long uploads never hold the subscription
+  // callbacks' Forwarder lock.
+  ForwarderConfig fcfg;
+  fcfg.host = forward_host;
+  fcfg.port = forward_port;
+  Forwarder forwarder(fcfg);
+
+  auto emit = [&forwarder](const nlohmann::json& row) {
+    Record record;
+    record.tag = uploader::FILE_STATUS_TAG;
+    record.timestamp_secs = static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    record.payload = row;
+    // Vector may be briefly down (restart, backpressure); keep trying for a while before
+    // handing the whole Record back for an idempotent retry.
+    std::string last_err;
+    for (int i = 0; i < 120; ++i)
+    {
+      try
+      {
+        forwarder.send(record);
+        return;
+      }
+      catch (const std::exception& e)
+      {
+        last_err = e.what();
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      }
+    }
+    throw std::runtime_error(last_err);
+  };
+
+  for (;;)
+  {
+    std::pair<std::string, nlohmann::json> item;
+    {
+      std::unique_lock<std::mutex> lock(upload_queue_mutex_);
+      upload_queue_cv_.wait(lock, [this] { return upload_stop_ || !upload_queue_.empty(); });
+      if (upload_stop_ && upload_queue_.empty())
+      {
+        return;
+      }
+      item = std::move(upload_queue_.front());
+      upload_queue_.pop_front();
+    }
+
+    auto backoff = std::chrono::milliseconds(1000);
+    while (!upload_stop_)
+    {
+      try
+      {
+        const auto summary = uploader_->process_record(item.second, item.first, emit);
+        if (summary.files > 0)
+        {
+          RCLCPP_INFO(this->get_logger(),
+                      "uploader: group '%s': %zu file(s), %zu verified, %zu missing, %zu deleted, complete=%d",
+                      item.first.c_str(), summary.files, summary.verified, summary.missing, summary.deleted,
+                      static_cast<int>(summary.group_complete));
+        }
+        break;
+      }
+      catch (const std::exception& e)
+      {
+        RCLCPP_WARN(this->get_logger(), "uploader: %s; retrying", e.what());
+        std::this_thread::sleep_for(backoff);
+        backoff = std::min(backoff * 2, std::chrono::milliseconds(60000));
+      }
+    }
+  }
 }
 
 void BridgeNode::run_prober(std::string forward_host, std::uint16_t forward_port)
@@ -399,6 +517,15 @@ void BridgeNode::stop()
   if (prober_thread_.joinable())
   {
     prober_thread_.join();
+  }
+  {
+    std::lock_guard<std::mutex> lock(upload_queue_mutex_);
+    upload_stop_ = true;
+  }
+  upload_queue_cv_.notify_all();
+  if (uploader_thread_.joinable())
+  {
+    uploader_thread_.join();
   }
   std::lock_guard<std::mutex> lock(supervisor_mutex_);
   if (supervisor_)
