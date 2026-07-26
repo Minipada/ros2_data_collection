@@ -1,0 +1,14 @@
+# Repo-local rosdep rules for apt packages that upstream rosdistro has no key for.
+# Register as a local rosdep source before `rosdep install` (tools/e2e/Containerfile
+# does this in CI; see dc_bridge/README.md for the one-liner for local dev):
+#
+#   echo "yaml file://$(pwd)/rosdep/dc.yaml" | sudo tee /etc/ros/rosdep/sources.list.d/10-dc.list
+#   rosdep update
+#
+# Both are header-only C++ libraries the C++ dc_bridge (ADR-0007) uses.
+tomlplusplus:
+  ubuntu: [libtomlplusplus-dev]
+  debian: [libtomlplusplus-dev]
+msgpack-cxx:
+  ubuntu: [libmsgpack-cxx-dev]
+  debian: [libmsgpack-cxx-dev]

@@ -47,9 +47,52 @@ pip3 install -r requirements.txt   # or `poetry install`
 pre-commit run --all-files   # flake8, doc build, yaml/json/xml checks, etc. — see .pre-commit-config.yaml
 ```
 
-CI (`ci.yaml`) builds/tests through `industrial_ci` inside Docker per ROS distro — there's no
-single local `colcon test` invocation that reproduces it exactly; `pre-commit` plus a local
-`colcon build` covers what an agent can practically verify before opening a PR.
+CI (`.github/workflows/ci.yaml`) builds the shared DC workspace image
+(`tools/e2e/Containerfile`) with Podman and runs `colcon test` (C++ gtest + Rust cargo)
+against it — see "Containers: Podman, not Docker" below. `tools/e2e/scripts/build.sh` /
+`test.sh` are the same scripts CI calls, runnable locally too. Note: `ci.yaml` on the
+`humble` branch is a *different* file (that branch's own tree, `industrial_ci` inside
+Docker) — same filename, unrelated content, since each branch keeps its own
+`.github/workflows/`.
+
+## Containers: Podman, not Docker
+
+New container tooling in this repo (CI images, E2E harness) uses **Podman**, not
+Docker — Docker is being phased out repo-wide, matching the direction already taken in
+`~/dev/monorepo` (see `~/dev/monorepo/server/docs/adr/002-rootless-podman-quadlet.md`
+and `~/dev/monorepo/ci/Containerfile` + `.github/actions/{image-ref,docker-build,
+podman-push,registry-login,trivy-image-scan}` for the reference conventions this repo
+follows). The pre-existing `docker/` tree, root `docker-compose.yaml`, and
+`.github/workflows/docker.yaml` are humble-line legacy — they exist only on the
+`humble` branch's own tree at this point (`.github/workflows/ci.yaml` on this branch
+was replaced outright by the jazzy-line Podman CI; there was no reason to keep an
+unreachable Docker/industrial_ci workflow around on a branch that can't build
+`fluent_bit_plugins`/`dc_destinations` in the first place — both `COLCON_IGNORE`d per
+ADR-0001/#242). New Podman-based container tooling lives under `tools/e2e/` (#249 is
+the first jazzy-line CI/container work).
+
+Conventions for new container tooling here, adapted from the monorepo (no private
+registry or self-hosted runners in this repo, so the parts of that pattern needing
+those are dropped):
+
+- **`Containerfile`, not `Dockerfile`** as the filename (Podman/OCI convention).
+- **Fully-qualified base images** (`docker.io/library/ros:...`, not bare `ros:...`) —
+  Podman has no default unqualified-search registry configured, unlike Docker.
+- **`podman build`**/**`podman run`**/**`podman compose`**, not `docker build`/`docker
+  run`/`docker compose` or `docker-compose`.
+- **Tag images with the commit SHA** (`<name>:<github.sha>`), mirroring the monorepo's
+  `image-ref` action's immutable `:<sha>` ref — even for images that stay local to a CI
+  run rather than being pushed to a registry, so a build is traceable back to the
+  commit that produced it. Add a floating branch/tag ref alongside it only once this
+  repo actually publishes images for others to pull and run (it doesn't yet — no
+  registry is configured for that here the way `registry.bensoussan.de` is in the
+  monorepo). `ci.yaml` does push to `ghcr.io` today, but only as a `podman build
+  --cache-to`/`--cache-from` **build cache** (verified working — see
+  `tools/e2e/scripts/build.sh`'s `CACHE_REF`), which is a different thing from
+  publishing a runnable image.
+- **`hadolint`** lints every Containerfile (already wired into `.pre-commit-config.yaml`
+  for the legacy `docker/*/Dockerfile`s — new `Containerfile`s are covered by the same
+  hook via its glob).
 
 ## Issue-tracker workflow (used by `run_once.sh`)
 

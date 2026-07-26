@@ -1,0 +1,57 @@
+-- Pre-created tables for the E2E harness's Postgres destinations (dc_bridge/render.rs's
+-- postgres sink maps JSON event keys onto existing columns 1:1 — it does not create the
+-- table or add columns itself, see dc_bridge/dc_bridge_core/tests/end_to_end.rs).
+--
+-- dc_records: every "receives: records" Measurement in tools/e2e/params/e2e_params.yaml
+-- lands here. `tag` (added to every event by Vector's fluent source) + `date` (the
+-- normalized event timestamp, per the destination's time_key/time_format) are the
+-- verification key tools/e2e/scripts/verify_zero_loss.py uses.
+CREATE TABLE IF NOT EXISTS dc_records (
+  date double precision,
+  tag text,
+  group_key text,
+  -- memory
+  used double precision,
+  -- os
+  os text,
+  kernel text,
+  cpus integer,
+  memory double precision,
+  -- storage
+  free_percent double precision,
+  free bigint,
+  capacity bigint,
+  -- uptime
+  time double precision,
+  -- tcp_health
+  port integer,
+  host text,
+  server_name text,
+  active boolean,
+  -- dummy
+  message text,
+  -- synth00..synth13 (tools/e2e/scripts/workload_generator.py)
+  value integer,
+  source text
+);
+
+-- dc_files: file_status + group_complete Records from the Uploader (ADR-0005), same
+-- column set proven against real dc_bridge behavior in
+-- dc_bridge/dc_bridge_core/tests/uploader_tests.rs and dc_bridge/tests/end_to_end.rs.
+CREATE TABLE IF NOT EXISTS dc_files (
+  date double precision,
+  kind text,
+  group_name text,
+  robot_name text,
+  local_path text,
+  remote_path text,
+  storage_type text,
+  uploaded boolean,
+  on_filesystem boolean,
+  deleted boolean,
+  content_type text,
+  size bigint,
+  file_count integer,
+  complete boolean,
+  updated_at double precision
+);
