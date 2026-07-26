@@ -37,8 +37,12 @@ podman run --rm --network host \
     RESULT_EXIT=$?
     set -e
 
-    # C++ coverage (lcov/fastcov, reused from the humble CI pipeline).
-    src/ros2_data_collection/tools/code_coverage_report.bash ci || true
+    # C++ coverage (lcov/fastcov, reused from the humble CI pipeline). Best-effort: a
+    # non-coverage build has no .gcno data, so surface that as a warning (via `if !`,
+    # which errexit ignores) instead of masking every failure with `|| true`.
+    if ! src/ros2_data_collection/tools/code_coverage_report.bash ci; then
+      echo "warning: coverage report generation produced no data (non-coverage build?)" >&2
+    fi
     [ -f lcov/total_coverage.info ] && cp lcov/total_coverage.info coverage/cpp.info
 
     if [ "$TEST_EXIT" -ne 0 ] || [ "$RESULT_EXIT" -ne 0 ]; then
