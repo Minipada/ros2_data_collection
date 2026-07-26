@@ -1,0 +1,71 @@
+# Full DC workspace (every dc_* package, all C++) — the shared base both Jazzy CI
+# (.github/workflows/ci.yaml, `colcon test` run directly against this image) and the
+# zero-loss E2E harness (#249, Containerfile.e2e — a thin `FROM` layer adding the
+# harness's own runtime bits) build from. Built once, reused as-is by CI so its test
+# image doesn't carry anything harness-only.
+#
+# Since ADR-0007 reverted the Rust Bridge pilot, this is plain ROS 2 + C++: no Rust
+# toolchain, no colcon-cargo, no source-built message repos, no rosidl_rust — the whole
+# class of ros2_rust/Jazzy build friction is gone. dc_bridge builds with rosdep + colcon
+# like every other dc_* package.
+#
+# Two stages so CI's `--cache-from`/`--cache-to` (a registry-backed build cache — see
+# ci.yaml) gets real value even though the workspace layer below invalidates on every
+# source change: the `toolchain` stage (a handful of apt packages, no DC source) is a
+# near-permanent cache hit.
+
+ARG ROS_DISTRO=jazzy
+
+FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS toolchain
+
+ARG APT_CACHEBUST=unknown
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Daily apt cache-bust (see CLAUDE.md "Containers: Podman, not Docker"): a date-valued
+# build-arg rebuilds the apt layer once per UTC day so OS security patches don't go stale.
+# fastcov: tools/code_coverage_report.bash's C++ coverage tool; lcov/ccache round it out.
+RUN echo "apt cache bust: ${APT_CACHEBUST}" && \
+    apt-get -q update && \
+    apt-get -q -y dist-upgrade && \
+    apt-get -q install --no-install-recommends -y \
+    git python3-pip ccache lcov && \
+    pip install --break-system-packages --no-cache-dir fastcov && \
+    rm -rf /var/lib/apt/lists/*
+
+FROM toolchain AS workspace
+
+# ARG, not ENV: only affects this build's CMAKE_CXX_FLAGS below, not the running image.
+ARG CCOV=false
+
+WORKDIR /root/ws
+COPY . src/ros2_data_collection
+
+# dc_demos/dc_simulation (warehouse-sim demo packages) still target Gazebo Classic
+# (gazebo_ros / aws_robomaker_small_warehouse_world), which Jazzy dropped and this apt
+# mirror doesn't carry — COLCON_IGNORE excludes them from both rosdep's scan and
+# colcon's build (same mechanism #242 uses for dc_destinations/fluent_bit_*). Porting
+# them to gz-sim is tracked separately (#268), unrelated to the zero-loss pipeline here.
+#
+# rosdep/dc.yaml is registered as a local rosdep source so `rosdep install` resolves
+# tomlplusplus / msgpack-cxx (header-only C++ libs dc_bridge uses that upstream
+# rosdistro has no key for — see dc_bridge/package.xml).
+RUN touch src/ros2_data_collection/dc_demos/COLCON_IGNORE \
+      src/ros2_data_collection/dc_simulation/COLCON_IGNORE && \
+    echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
+      > /etc/ros/rosdep/sources.list.d/10-dc.list && \
+    apt-get -q update && \
+    rosdep update --include-eol-distros && \
+    DEBIAN_FRONTEND=noninteractive \
+    rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
+    # shellcheck disable=SC1091
+    . /opt/ros/jazzy/setup.sh && \
+    if [ "$CCOV" = "true" ]; then \
+      CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS='-Wall -Wextra --coverage -O0 -fno-omit-frame-pointer' -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_SHARED_LINKER_FLAGS=--coverage"; \
+    else \
+      CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release"; \
+    fi && \
+    eval colcon build --cmake-args "$CMAKE_ARGS" --event-handlers desktop_notification- status- && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV ROS_UNDERLAY=/root/ws/install
+RUN echo "source ${ROS_UNDERLAY}/setup.bash" >> /etc/bash.bashrc

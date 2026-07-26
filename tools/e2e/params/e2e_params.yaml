@@ -1,0 +1,194 @@
+measurement_server:
+  ros__parameters:
+    save_local_base_path: "$HOME/.dc/e2e/data/%Y/%M/%D/%H"
+    all_base_path: "e2e"
+    measurement_plugins: ["memory", "os", "storage", "uptime", "tcp_health", "dummy", "synth00", "synth01", "synth02", "synth03", "synth04", "synth05", "synth06", "synth07", "synth08", "synth09", "synth10", "synth11", "synth12", "synth13", "camera"]
+
+    memory:
+      plugin: "dc_measurements/Memory"
+      polling_interval: 1000
+      group_key: "memory"
+
+    os:
+      plugin: "dc_measurements/OS"
+      polling_interval: 1000
+      group_key: "os"
+
+    storage:
+      plugin: "dc_measurements/Storage"
+      polling_interval: 1000
+      path: "/tmp"
+      group_key: "storage"
+
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      polling_interval: 1000
+      group_key: "uptime"
+
+    tcp_health:
+      plugin: "dc_measurements/TCPHealth"
+      polling_interval: 1000
+      name: "vector_forward"
+      host: "127.0.0.1"
+      port: 24224
+      group_key: "tcp_health"
+
+    dummy:
+      plugin: "dc_measurements/Dummy"
+      polling_interval: 1000
+      group_key: "dummy"
+
+    camera:
+      plugin: "dc_measurements/Camera"
+      polling_interval: 15000
+      cam_name: "e2e_camera"
+      cam_topic: "/dc/e2e/camera/image_raw"
+      draw_det_barcodes: false
+      detection_modules: []
+      save_raw_img: true
+      save_rotated_img: false
+      save_detections_img: false
+      save_raw_base64: false
+      save_rotated_base64: false
+      save_inspected_base64: false
+      remote_keys: ["rustfs"]
+      remote_prefixes: ["camera"]
+      group_key: "camera"
+
+    synth00:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth00"
+      timer_based: true
+
+    synth01:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth01"
+      timer_based: true
+
+    synth02:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth02"
+      timer_based: true
+
+    synth03:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth03"
+      timer_based: true
+
+    synth04:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth04"
+      timer_based: true
+
+    synth05:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth05"
+      timer_based: true
+
+    synth06:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth06"
+      timer_based: true
+
+    synth07:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth07"
+      timer_based: true
+
+    synth08:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth08"
+      timer_based: true
+
+    synth09:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth09"
+      timer_based: true
+
+    synth10:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth10"
+      timer_based: true
+
+    synth11:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth11"
+      timer_based: true
+
+    synth12:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth12"
+      timer_based: true
+
+    synth13:
+      plugin: "dc_measurements/StringStamped"
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth13"
+      timer_based: true
+
+dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/e2e/buffer"
+    destinations: ["pgsql_records", "pgsql_files", "rustfs"]
+    pgsql_records:
+      type: postgres
+      receives: records
+      inputs: ["/dc/measurement/memory", "/dc/measurement/os", "/dc/measurement/storage", "/dc/measurement/uptime", "/dc/measurement/tcp_health", "/dc/measurement/dummy", "/dc/measurement/synth00", "/dc/measurement/synth01", "/dc/measurement/synth02", "/dc/measurement/synth03", "/dc/measurement/synth04", "/dc/measurement/synth05", "/dc/measurement/synth06", "/dc/measurement/synth07", "/dc/measurement/synth08", "/dc/measurement/synth09", "/dc/measurement/synth10", "/dc/measurement/synth11", "/dc/measurement/synth12", "/dc/measurement/synth13"]
+      host: "127.0.0.1"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc_records"
+      time_key: "date"
+      time_format: "double"
+
+    pgsql_files:
+      type: postgres
+      receives: records
+      inputs: []
+      host: "127.0.0.1"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc_files"
+      time_key: "date"
+      time_format: "double"
+
+    rustfs:
+      type: s3
+      receives: files
+      inputs: ["/dc/measurement/camera"]
+      bucket: "dc-e2e"
+      endpoint: "http://127.0.0.1:9000"
+      region: "us-east-1"
+      access_key_id: "rustfsadmin"
+      secret_access_key: "rustfsadmin"
+      force_path_style: true
+
+    files:
+      delete_when_sent: false
+      metadata_destination: "pgsql_files"
+
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
+
+lifecycle_manager_dc:
+  ros__parameters:
+    node_names: ["measurement_server"]
+    transitions: [configure, activate]

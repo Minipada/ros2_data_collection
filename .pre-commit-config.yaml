@@ -128,6 +128,11 @@ repos:
     hooks:
       - id: hadolint-docker
         args: [--ignore, DL3008, --ignore, DL3005, --ignore, DL3013]
+        # Default hook `files` regex only matches `Dockerfile`; the jazzy line's
+        # Podman tooling (CLAUDE.md "Containers: Podman, not Docker") uses
+        # `Containerfile` instead (tools/e2e/), including suffixed variants like
+        # `Containerfile.e2e`.
+        files: (^|/)(Dockerfile|Containerfile)(\.[a-zA-Z0-9_-]+)?$
   - repo: https://github.com/asottile/yesqa
     rev: v1.4.0
     hooks:

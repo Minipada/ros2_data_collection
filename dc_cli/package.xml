@@ -8,7 +8,6 @@
   <license>MPL-2.0</license>
 
   <exec_depend>ament_index_python</exec_depend>
-  <exec_depend>dc_destinations</exec_depend>
   <exec_depend>dc_measurements</exec_depend>
 
   <export>
