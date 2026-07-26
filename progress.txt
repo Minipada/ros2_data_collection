@@ -996,12 +996,21 @@ Bridge + Vector data plane (#242-#249) fully replaces it, per ADRs 0001/0003 and
   harness #249 built) against the full workspace, reusing that session's cached
   `dc-workspace` image layers — rosdep resolved and installed the full dependency set
   with no complaint about the removed packages (no dangling `dc_destinations`/
-  `fluent_bit_*` depends anywhere, confirmed by grep beforehand too), and the build
-  reached and passed `dc_lifecycle_manager`/`dc_group`/`dc_services` before this PR was
-  opened; **the full build (through `dc_measurements`, `dc_bridge`, and `colcon test`)
-  was still running in the background when this PR was opened at the user's request —
-  see the next progress.txt update, or the session's actual commit history, for
-  whether it finished clean.** `pre-commit` was not re-run in this sandbox (same
-  environment-gap skips as every prior DC 2.0 slice: `build-doc`, `poetry-requirements`,
-  `pycln`, `flake8`); the `go-fmt` hook removal itself needs no verification since no
-  Go files remain for it to have ever run against.
+  `fluent_bit_*` depends anywhere, confirmed by grep beforehand too). **All 14
+  remaining `dc_*`/vendor packages built clean** (`aws_sdk_vendor`, `dc_bridge`,
+  `dc_bringup`, `dc_cli`, `dc_common`, `dc_core`, `dc_description`, `dc_group`,
+  `dc_interfaces`, `dc_lifecycle_manager`, `dc_measurements`, `dc_services`,
+  `dc_util`, `vector_vendor` — `dc_demos`/`dc_simulation` stay `COLCON_IGNORE`d for
+  the unrelated Gazebo-Classic reason, #268). Then started the CI-equivalent
+  Postgres+RustFS test stores (`podman compose -f tools/e2e/compose.test.yaml up -d`,
+  `PODMAN_COMPOSE_PROVIDER=podman-compose` — the docker-compose cli-plugin fallback
+  needs a podman API socket that isn't running in this sandbox) and ran `tools/e2e/
+  scripts/test.sh` (the same script `ci.yaml` calls): **`colcon test` — 84 tests, 0
+  errors, 0 failures, 0 skipped**, including `dc_bridge`'s store-backed tests against
+  the real stores (which hard-fail rather than skip per the #246 follow-up decision,
+  so this run genuinely exercised them, not a skip path). Stores torn down
+  afterward. This closes acceptance criteria 3 ("Full colcon build and all tests
+  pass after removal") and 4 ("Go toolchain no longer required") for real, not just
+  by inspection. `pre-commit` was not re-run in this sandbox (same environment-gap
+  skips as every prior DC 2.0 slice: `build-doc`, `poetry-requirements`, `pycln`,
+  `flake8`).
