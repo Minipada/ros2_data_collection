@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Hard-failing zero-loss verification for the E2E harness (#249).
 
-Queries Postgres through `podman compose exec` (no host-side psycopg2/psql dependency
-— only podman itself, already required to run the harness). Every check is a real
+Queries Postgres through `podman exec` on the Postgres container (no host-side
+psycopg2/psql dependency — only podman itself, already required). Every check is a real
 assertion: a query that can't run, or a table that doesn't exist, is a FAIL, not a
 skip — matching the #246 follow-up decision that a verification which silently didn't
 execute must never look identical to one that passed.
@@ -48,24 +48,9 @@ REAL_TAGS = [
 ]
 
 
-def psql(compose_file: str, query: str) -> str:
+def psql(pg_container: str, query: str) -> str:
     result = subprocess.run(
-        [
-            "podman",
-            "compose",
-            "-f",
-            compose_file,
-            "exec",
-            "-T",
-            "postgres",
-            "psql",
-            "-U",
-            "dc",
-            "-d",
-            "dc",
-            "-tAc",
-            query,
-        ],
+        ["podman", "exec", pg_container, "psql", "-U", "dc", "-d", "dc", "-tAc", query],
         capture_output=True,
         text=True,
         check=False,
@@ -75,20 +60,20 @@ def psql(compose_file: str, query: str) -> str:
     return result.stdout.strip()
 
 
-def scalar_int(compose_file: str, query: str) -> int:
-    out = psql(compose_file, query)
+def scalar_int(pg_container: str, query: str) -> int:
+    out = psql(pg_container, query)
     return int(out) if out else 0
 
 
-def check_synth_topic(compose_file: str, name: str, violations: list, notes: list, details: dict) -> None:
-    total = scalar_int(compose_file, f"SELECT count(*) FROM dc_records WHERE source='{name}'")
-    distinct = scalar_int(compose_file, f"SELECT count(DISTINCT value) FROM dc_records WHERE source='{name}'")
+def check_synth_topic(pg_container: str, name: str, violations: list, notes: list, details: dict) -> None:
+    total = scalar_int(pg_container, f"SELECT count(*) FROM dc_records WHERE source='{name}'")
+    distinct = scalar_int(pg_container, f"SELECT count(DISTINCT value) FROM dc_records WHERE source='{name}'")
     dup_values = scalar_int(
-        compose_file,
+        pg_container,
         f"SELECT count(*) FROM (SELECT value FROM dc_records "
         f"WHERE source='{name}' GROUP BY value HAVING count(*) > 1) t",
     )
-    max_out = psql(compose_file, f"SELECT max(value) FROM dc_records WHERE source='{name}'")
+    max_out = psql(pg_container, f"SELECT max(value) FROM dc_records WHERE source='{name}'")
     max_value = int(max_out) if max_out else None
 
     details[name] = {
@@ -117,10 +102,10 @@ def check_synth_topic(compose_file: str, name: str, violations: list, notes: lis
         )
 
 
-def check_real_tag(compose_file: str, tag: str, violations: list, notes: list, details: dict) -> None:
-    total = scalar_int(compose_file, f"SELECT count(*) FROM dc_records WHERE tag='{tag}'")
+def check_real_tag(pg_container: str, tag: str, violations: list, notes: list, details: dict) -> None:
+    total = scalar_int(pg_container, f"SELECT count(*) FROM dc_records WHERE tag='{tag}'")
     dup_count = scalar_int(
-        compose_file,
+        pg_container,
         f"SELECT count(*) FROM (SELECT date FROM dc_records "
         f"WHERE tag='{tag}' GROUP BY date HAVING count(*) > 1) t",
     )
@@ -137,17 +122,17 @@ def check_real_tag(compose_file: str, tag: str, violations: list, notes: list, d
         )
 
 
-def check_files(compose_file: str, violations: list, notes: list, details: dict) -> None:
+def check_files(pg_container: str, violations: list, notes: list, details: dict) -> None:
     status_count = scalar_int(
-        compose_file,
+        pg_container,
         "SELECT count(*) FROM dc_files WHERE kind='file_status' AND group_name='camera'",
     )
     complete_count = scalar_int(
-        compose_file,
+        pg_container,
         "SELECT count(*) FROM dc_files WHERE kind='group_complete' AND group_name='camera'",
     )
     dup_uploaded = scalar_int(
-        compose_file,
+        pg_container,
         "SELECT count(*) FROM (SELECT local_path FROM dc_files "
         "WHERE kind='file_status' AND group_name='camera' AND uploaded=true "
         "GROUP BY local_path HAVING count(*) > 1) t",
@@ -172,20 +157,22 @@ def check_files(compose_file: str, violations: list, notes: list, details: dict)
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--compose-file", default="compose.yaml")
+    parser.add_argument("--postgres-container", default="dc_e2e_postgres",
+                        help="name of the running Postgres container to query via podman exec")
     parser.add_argument("--num-synth-topics", type=int, default=14)
     parser.add_argument("--report", default=None, help="write a JSON report to this path")
     args = parser.parse_args()
 
+    pg = args.postgres_container
     violations: list = []
     notes: list = []
     details: dict = {}
 
     for i in range(args.num_synth_topics):
-        check_synth_topic(args.compose_file, f"synth{i:02d}", violations, notes, details)
+        check_synth_topic(pg, f"synth{i:02d}", violations, notes, details)
     for tag in REAL_TAGS:
-        check_real_tag(args.compose_file, tag, violations, notes, details)
-    check_files(args.compose_file, violations, notes, details)
+        check_real_tag(pg, tag, violations, notes, details)
+    check_files(pg, violations, notes, details)
 
     report = {"pass": not violations, "violations": violations, "notes": notes, "details": details}
     if args.report:

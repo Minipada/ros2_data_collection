@@ -11,21 +11,21 @@ Docker") — no Docker required.
 ./tools/e2e/scripts/run.sh
 ```
 
-One command. It builds the shared workspace image (`tools/e2e/Containerfile`, via
-`scripts/build.sh`) and, on top of it, the harness's thin runtime layer
-(`tools/e2e/Containerfile.e2e` — just the synthetic workload + entrypoint), brings up
-Postgres + RustFS + the full DC stack (`podman compose`, `tools/e2e/compose.yaml`), and
-runs the full sequence below. Every gate is a hard assertion — the script exits
-non-zero (and, by default, tears the stack down after dumping logs to
-`tools/e2e/.run/`) on any violation. Set `DC_E2E_KEEP=true` to leave a failed stack
-running for interactive debugging instead.
+One command. Locally it builds the shared workspace image (`tools/e2e/Containerfile`,
+via `scripts/build.sh`) and, on top of it, the harness's thin runtime layer
+(`tools/e2e/Containerfile.e2e` — just the synthetic workload + entrypoint), then brings
+up Postgres + RustFS + the full DC stack with plain `podman` (no compose — the
+outage/restart lifecycle below *is* the test, and driving the containers by hand is
+simpler and needs nothing installed) and runs the full sequence below. Every gate is a
+hard assertion — the script exits non-zero (and, by default, tears the stack down after
+dumping the `dc` container log to `tools/e2e/.run/`) on any violation. Set
+`DC_E2E_KEEP=true` to leave a failed stack running for interactive debugging instead.
 
-`tools/e2e/Containerfile` (the workspace build) is the **same base image**
-`.github/workflows/ci.yaml` uses — there's no separate CI-only build. CI runs
-`colcon test` (`scripts/test.sh`) directly against that base image; it never builds
-`Containerfile.e2e` at all, since the harness's synthetic workload/entrypoint are
-irrelevant to running the test suite. Building and testing are both plain scripts a
-developer runs the same way locally.
+The images are the **same artifacts CI builds** — there's no CI-only build path. In CI
+each image is built and pushed by its own job, and `run.sh` is handed the prebuilt
+`dc-e2e` image via `DC_E2E_IMAGE` so it runs that exact artifact instead of rebuilding
+(`DC_WORKSPACE_IMAGE` similarly reuses a prebuilt workspace base). `build.sh` /
+`test.sh` / `run.sh` are the same plain scripts a developer runs locally.
 
 By default the induced outage is the PRD's full 10 minutes
 (`DC_E2E_OUTAGE_SECONDS=600`); override it for faster local iteration, e.g.:
@@ -59,15 +59,16 @@ not just a local tool.
    rootless-Podman network-disconnect semantics that vary by version. `dc` (and the
    synthetic workload) keep running throughout, so Records keep being produced and
    buffered to disk while the destinations are down.
-4. **Full stack restart** while destinations are still down (`podman compose restart
-   dc`), then destinations are restored and the stack drains.
+4. **Full stack restart** while destinations are still down (`podman restart` on the
+   `dc` container), then destinations are restored and the stack drains.
 5. **Verification** (`tools/e2e/scripts/verify_zero_loss.py`): queries Postgres via
-   `podman compose exec` (no host psycopg2/psql needed) and hard-fails on: any missing
-   or duplicated synth-topic counter value, zero Records for any of the 20 measurement
-   Tags, duplicate `(tag, date)` rows for the real measurements, or any camera File
-   whose "uploaded" status row appears more than once (an Uploader idempotency
-   violation, ADR-0005/#248). Nothing here is a skip-on-missing check — a table that
-   doesn't exist or a query that fails is a FAIL, not silence.
+   `podman exec` on the Postgres container (no host psycopg2/psql needed). The shipper is
+   at-least-once (ADR-0002), so it **hard-fails on loss** — a gap in a synth topic's
+   counter (checked against the *distinct* values, so a re-send can't hide a gap), or
+   zero Records for any of the 20 measurement Tags — while a boundary **duplicate** (a
+   record re-sent on recovery) is reported as a note and deduplicated on read
+   (exactly-once on read), not failed. Nothing here is a skip-on-missing check — a table
+   that doesn't exist or a query that fails is a FAIL, not silence.
 6. **Resource usage** (`tools/e2e/scripts/measure_resources.sh`): samples the `dc`
    container's CPU/RSS throughout the run into `tools/e2e/.run/resource_usage.csv`.
    Informational only, per the PRD — it does not gate the run.
@@ -84,12 +85,12 @@ not just a local tool.
   own runtime bits (the synthetic workload generator, its params, the entrypoint).
   Never built by CI. Its build context is `tools/e2e/` itself, not the repo root — it
   doesn't need `.dockerignore` handling at all (see below).
-- `compose.yaml` — `postgres` (pre-seeded via `sql/init.sql` — Vector's `postgres` sink
-  maps JSON keys onto existing columns and doesn't create them, see
-  `dc_bridge/dc_bridge_core/tests/end_to_end.rs`), `rustfs`, and `dc`. Named volumes
-  (not bind mounts) so `dc_bridge`'s disk buffer and Postgres's data directory survive
-  a full stack restart — that persistence is what makes the zero-loss guarantee hold
-  across a restart, not just a live process.
+- `sql/init.sql` — pre-creates the `dc_records` / `dc_files` tables (Vector's `postgres`
+  sink maps JSON keys onto existing columns and doesn't create them). `run.sh` runs
+  `postgres`, `rustfs`, and the `dc` stack as plain `podman` containers on **named
+  volumes** (not bind mounts) so `dc_bridge`'s disk buffer and Postgres's data directory
+  survive a full stack restart — that persistence is what makes the zero-loss guarantee
+  hold across a restart, not just a live process.
 - `params/e2e_params.yaml` — the reference workload's ROS parameters (measurement
   plugins, `dc_bridge` destinations: `pgsql_records`, `pgsql_files` for the Uploader's
   metadata Records, `rustfs` for the actual File bytes).
@@ -98,11 +99,12 @@ not just a local tool.
 - `scripts/build.sh` — builds `Containerfile` (the shared workspace image: handles the
   `.dockerignore` dance below, the coverage `ARG`, and an optional registry-backed
   `--cache-from`/`--cache-to`). Used by both `run.sh` and `ci.yaml`.
-- `scripts/test.sh` — runs `colcon test` (C++ gtest + Rust cargo) plus coverage against
-  an already-built (workspace) image. Also used by both a developer locally and CI —
-  see `ci.yaml`'s `build-and-test` job.
-- `scripts/run.sh` — the one-command harness orchestrator described above (calls
-  `build.sh` for the workspace image, then builds `Containerfile.e2e` on top of it).
+- `scripts/test.sh` — runs `colcon test` (C++ gtest) plus coverage against an
+  already-built workspace image. Used by both a developer locally and CI's `colcon-test`
+  job.
+- `scripts/run.sh` — the one-command harness orchestrator described above. Builds the
+  workspace + `dc-e2e` images locally, or runs a prebuilt `dc-e2e` image when handed one
+  via `DC_E2E_IMAGE` (as CI's `e2e` job does).
 - `scripts/verify_zero_loss.py` — the hard-failing Postgres verification.
 - `scripts/measure_resources.sh` — the informational resource sampler.
 

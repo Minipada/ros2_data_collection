@@ -1,10 +1,11 @@
 # The zero-loss E2E harness's runtime layer: the synthetic reference-workload
 # generator, its params, and the entrypoint that launches the real DC stack alongside
-# it. A thin `FROM` on top of tools/e2e/Containerfile's built workspace image — CI
-# never builds this file (it runs `colcon test` directly against the base image
-# instead, see ci-jazzy.yaml) and this layer never touches DC's own source, so its
-# build context is just this directory, not the whole repo (no .dockerignore dance
-# needed here — see tools/e2e/scripts/build.sh, which builds the base this forms).
+# it. A thin `FROM` on top of tools/e2e/Containerfile's built workspace image. CI's
+# build-e2e-image job builds and pushes this (FROM the tested workspace image); the e2e
+# job then runs it via run.sh's DC_E2E_IMAGE (see .github/workflows/ci.yaml). This layer
+# never touches DC's own source, so its build context is just this directory, not the
+# whole repo — no .dockerignore dance needed here (see tools/e2e/scripts/build.sh, which
+# builds the base this forms).
 
 ARG BASE_IMAGE=dc-workspace:latest
 FROM ${BASE_IMAGE}
