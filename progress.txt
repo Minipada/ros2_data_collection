@@ -659,3 +659,199 @@ only ever been checked by hand, interactively, in the (now torn-down) Docker ses
   undefined until a blessed type exists for them); thumbnail/preview generation is
   #256; the reusable committed dev container (still ad hoc — this session again built
   containers from the uncommitted `dc_bridge_build_env` image).
+
+### #249 - DC 2.0 S8: Zero-loss E2E harness + Jazzy CI
+
+Two deliverables per the issue: a docker-compose-style test harness proving the
+zero-loss/startup-latency PRD claims, and the Jazzy CI matrix (C++ gtest + Rust cargo,
+coverage). Mid-session, direction changed to **Podman, not Docker**, for all new
+container tooling here (matching `~/dev/monorepo`'s own Docker→Podman migration,
+ADR-002 there) — recorded as a new "Containers: Podman, not Docker" section in
+`CLAUDE.md`. The pre-existing `docker/` tree / root `docker-compose.yaml` /
+`docker.yaml` (humble-line, Docker-based) are untouched on *this branch's tree* — but
+`.github/workflows/ci.yaml` itself was **replaced outright**, not left alongside a new
+`ci-jazzy.yaml`: the jazzy line can't build `fluent_bit_plugins`/`dc_destinations`
+(`COLCON_IGNORE`d per ADR-0001/#242) so the old Docker/`industrial_ci` workflow was
+already unreachable dead weight on this branch; deleting it doesn't touch `humble`'s
+own `ci.yaml`, since each git branch keeps an independent `.github/workflows/` tree.
+
+Three real architecture course-corrections happened mid-session, each prompted by
+direct pushback rather than found independently — recorded here because the *reasons*
+matter for whoever touches this next:
+
+- **One shared build, not a CI-only script.** The first pass split a toolchain-only
+  `ci/jazzy/Containerfile` from a bespoke `ci/jazzy/run_ci.sh` script that did the
+  actual `rosdep install`/`colcon build`/`colcon test` at container-*run* time,
+  separate from `tools/e2e/Containerfile`'s own full-workspace `RUN colcon build` —
+  duplicate build logic for no real gain, since the only reason for the split (avoid
+  rebuilding a multi-minute image every CI run) is solvable properly with a registry-
+  backed build cache instead (next point). `ci/jazzy/` no longer exists; there is one
+  `tools/e2e/Containerfile` (two stages: `toolchain` — ROS jazzy-ros-base +
+  Rust/rustup + `colcon-cargo`/`colcon-ros-cargo` + `libclang-dev` + `fastcov`/`lcov` —
+  then `workspace`, `FROM toolchain`, the actual build), and `tools/e2e/scripts/
+  build.sh`/`test.sh` are the *same* scripts a developer runs locally that CI also
+  calls directly — no CI-only script anywhere.
+- **Registry-backed build cache, verified before relying on it.** Podman's own
+  `--layers` cache is local-only and doesn't survive a GitHub-hosted runner (a fresh VM
+  every job). Confirmed `podman build --cache-from`/`--cache-to` against a registry
+  actually solves this (podman 5.4.2, not just from `--help` text) via a throwaway
+  local `registry:2` container: built with `--cache-to`, deleted the local image *and*
+  every layer (`podman rmi` + `podman image prune`), rebuilt with `--cache-from`
+  only — podman pulled the cache blobs from the registry and reused them on an
+  otherwise cold machine state. Wired to `ghcr.io/<repo>/dc-workspace-cache` in CI
+  (authenticated via the built-in `GITHUB_TOKEN`, no new secrets — same registry
+  `docker.yaml` already pushes humble images to). `build.sh`'s `CACHE_REF` env var is
+  optional and unset for a plain local build.
+- **Two Containerfiles after all — but layered, not duplicated.** Challenged again:
+  why bake the harness's synthetic-workload files into the *same* image CI uses for
+  `colcon test`, when CI never touches them? Split into **`tools/e2e/Containerfile`**
+  (the shared workspace build above — what CI builds and tests directly) and
+  **`tools/e2e/Containerfile.e2e`** (`ARG BASE_IMAGE` / `FROM ${BASE_IMAGE}`, just the
+  workload generator/params/entrypoint — never built by CI). This is a genuinely
+  different pattern from the `ci/jazzy/run_ci.sh` mistake above: a thin derived image
+  `FROM`ing a shared base is exactly what `docker/ci-testing/Dockerfile` FROMing
+  `docker/ci/Dockerfile` already does in this repo, not duplicate build logic. Bonus:
+  `Containerfile.e2e`'s build context is `tools/e2e/` itself (3 small files), not the
+  repo root, so it doesn't need the `.dockerignore` workaround below at all.
+  `tools/e2e/scripts/run.sh` builds both (base via `build.sh`, then the thin layer via
+  a plain `podman build` line — trivial enough not to need its own script either).
+- **rosdep resolves every key across every package *before* installing anything** — one
+  unresolvable key aborts the *whole* install with zero system packages installed, not
+  just that one package. A first attempt (`rosdep install ... || true`) masked this
+  instead of fixing it — it let the build proceed with *zero* system packages
+  installed, which only surfaced later as an unrelated "Could NOT find Boost" CMake
+  error. Fixed with `--skip-keys "rclrs rosidl_runtime_rs"` (genuinely rosdep-key-less
+  by design, `dc_bridge/README.md`) plus `COLCON_IGNORE` for `dc_demos`/`dc_simulation`
+  (need `gazebo_ros`/`aws_robomaker_small_warehouse_world`, unrelated to this issue's
+  scope, same mechanism #242 already uses for `dc_destinations`/`fluent_bit_*`). Also
+  needed a plain `apt-get update` before rosdep's install step in the `workspace`
+  stage — the `toolchain` stage's own apt layer ends with `rm -rf
+  /var/lib/apt/lists/*` to keep it small, so the index has to be refreshed downstream.
+- **`dc_cli/package.xml`** still declared `<exec_depend>dc_destinations</exec_depend>`
+  — stale since #242 gave `dc_destinations` a `COLCON_IGNORE`. rosdep's local-package
+  crawler skips `COLCON_IGNORE`d directories, so anything still depending on one fails
+  resolution outright (this and the rosdep point above are both real, pre-existing
+  bugs this session found because it's the first time anything has actually run
+  `rosdep install`/`colcon build` against the full tree since `dc_bridge` was added —
+  CI's been disabled repo-wide since before that). Removed the dangling depend.
+- **`example_interfaces` link failure, root-caused, not worked around.** Even after
+  the fixes above, `dc_bridge`'s Rust build failed to *link*: `unable to find library
+  -lexample_interfaces__rosidl_typesupport_c`. Traced it fully before touching
+  anything: `rclrs`'s own build script references several ROS interface packages
+  internally regardless of what `dc_bridge` itself uses. Building the *entire*
+  workspace (not `--packages-up-to dc_bridge`, the narrower selection #244-#248's
+  verification always used) made every sibling package inside the vcs-imported
+  `rcl_interfaces` git repo (it bundles `action_msgs`, `composition_interfaces`,
+  `rosgraph_msgs`, `service_msgs`, `statistics_msgs`, `test_msgs` alongside
+  `rcl_interfaces` itself) newly *discoverable*, which is what triggered the broader
+  link attempt in the first place. Confirmed via `dc_bridge/Cargo.lock` that none of
+  those siblings are real dependencies (they only appear under `[[patch.unused]]` —
+  colcon-ros-cargo registers a patch for every known interface package regardless of
+  whether anything resolves to it) and via `grep`ing every `dc_*/package.xml` that
+  nothing in this repo uses them either. `COLCON_IGNORE`d those six siblings in
+  `tools/e2e/Containerfile` (verified the exact post-clone directory names first by
+  cloning `ros2/rcl_interfaces` directly rather than guessing) — confirmed by rebuild
+  that this made every one of those specific link errors disappear. `example_interfaces`
+  itself is a genuinely different case: not a sibling of anything imported, never
+  vcs-imported at all, and while it has an apt candidate
+  (`ros-jazzy-example-interfaces`), pre-built apt message packages carry no Rust
+  bindings (same reason the other message repos are source-built — dc_bridge/
+  README.md). Added it to `ros2_data_collection_jazzy.repos` (same `jazzy`-branch git
+  pattern as the others) so it gets real Rust bindings from source.
+- **Rustup pinned + SHA-256 verified**, prompted directly: the original `curl
+  https://sh.rustup.rs | sh` had no integrity check. Matches the discipline
+  `vector_vendor/CMakeLists.txt` already uses for the Vector binary ("fails loudly on
+  mismatch, no silent fallback") — pinned `rustup` 1.29.0, x86_64 *and* aarch64
+  checksums (mirroring `vector_vendor`'s own multi-arch pattern), both cross-checked
+  against a fresh local download against rustup's own published `.sha256`
+  attestations before hardcoding them, not copied blind from the URL. Also switched
+  the build to `podman build --format docker` (`build.sh`), since podman's default OCI
+  image format silently ignores the Containerfile's `SHELL` instruction — needed for
+  `-o pipefail` on the `RUN curl ... | sh -s --` step to actually mean anything.
+- **`tools/e2e/`** — the harness (`podman compose`, `compose.yaml`; full write-up in
+  `tools/e2e/README.md`):
+  - Discovered along the way that this repo's `.dockerignore` is an "ignore
+    everything, whitelist `package.xml`" allowlist scoped to `docker/ci/Dockerfile`'s
+    narrow rosdep-only needs; a full-workspace build needs every source file.
+    `--ignorefile` does **not** override `.dockerignore` (verified empirically — it
+    only supplements it), so `build.sh` moves `.dockerignore` aside for the build and
+    restores it afterward (trap-guarded), matching `docker.yaml`'s own
+    `source`/`source-sim` jobs' `rm .dockerignore` precedent for the same reason.
+  - Reference workload (`tools/e2e/params/e2e_params.yaml`): 20 Measurements at 1 Hz —
+    6 real, hardware-free `dc_measurements` plugins (`memory`, `os`, `storage`,
+    `uptime`, `tcp_health` pointed at the Bridge's own Fluent Forward port so it needs
+    no extra listener, `dummy`) plus 14 `dc_measurements/StringStamped` instances fed by
+    a new synthetic rclpy node (`tools/e2e/scripts/workload_generator.py`) publishing a
+    strictly-incrementing per-topic counter — chosen deliberately over relying on
+    `header.stamp`/Fluent-Forward's 1s timestamp truncation, since a counter lets
+    verification detect gaps (loss) and repeats (double delivery) with certainty
+    independent of timestamp precision. Plus one `camera` Measurement fed synthetic
+    `sensor_msgs/msg/Image` frames every 15s by the same node, exercising the real
+    File-upload pipeline (ADR-0005) — required deriving the (previously undocumented in
+    this session's context) `measurement_server`-global `remote_keys`/`remote_prefixes`/
+    `all_base_path` param contract from `dc_measurements/measurement.hpp`/
+    `measurement_server.cpp` to wire `remote_paths.rustfs.*` correctly.
+  - Postgres tables (`tools/e2e/sql/init.sql`) are pre-created explicitly, since
+    (confirmed from `dc_bridge/dc_bridge_core/tests/end_to_end.rs`) Vector's `postgres`
+    sink maps JSON event keys onto existing columns 1:1 and never creates them.
+  - Sequence: build images → start Postgres/RustFS → create the RustFS bucket (`mc mb`,
+    same reason as the CI job) → start `dc`, measuring launch-to-first-Record latency
+    (hard gate, <10s per the PRD) → steady state → stop Postgres+RustFS for the outage
+    window (chosen over a real network-namespace disconnect: operationally equivalent
+    from dc_bridge/Vector's point of view — both surface as "destination unreachable"
+    and recover via the same disk-buffer-then-reconnect path, ADR-0002 — and it
+    sidesteps rootless-Podman network-disconnect semantics that vary by version) →
+    **full stack restart** (`podman compose restart dc`) while destinations are still
+    down → restore destinations → drain → stop `dc` → verify. Named volumes (not host
+    bind mounts) for `dc_bridge`'s disk buffer and Postgres's data directory, so the
+    restart doesn't itself lose the very state being tested.
+  - `tools/e2e/scripts/verify_zero_loss.py`: hard-failing (never skip-on-missing, same
+    #246-follow-up discipline as `dc_bridge`'s own tests) Postgres checks via `podman
+    compose exec` (no host psycopg2/psql dependency) — per-synth-topic counter gap/dup
+    detection, per-real-Tag presence + `(tag, date)` dup detection, and file-pipeline
+    consistency (`file_status`/`group_complete` row presence, no duplicate "uploaded"
+    row per `local_path` — the Uploader's ADR-0005/#248 idempotency guarantee, now
+    checked under an actual induced outage rather than just dc_bridge's own unit/e2e
+    tests). `tools/e2e/scripts/measure_resources.sh` samples the `dc` container's
+    CPU/RSS throughout the run (informational, per the PRD — not gating).
+- **`.github/workflows/ci.yaml`**: `podman login ghcr.io`, `build.sh` (with
+  `CCOV=true` and the cache ref), starts ephemeral Postgres + RustFS containers
+  (`dc_bridge`'s store-backed `tests/end_to_end.rs` tests hard-fail rather than skip
+  when they're missing — #246 follow-up decision), creates the `dc-records` bucket via
+  `mc` (RustFS doesn't auto-create buckets), then `test.sh` (C++ coverage via the
+  existing `tools/code_coverage_report.bash`/fastcov/lcov, Rust coverage via
+  `cargo-llvm-cov` on `dc_bridge_core` — the ROS-independent crate; instrumenting the
+  full `rclrs`-dependent `dc_bridge` package's own `colcon test` run was out of
+  scope), both uploaded to Codecov under separate flags. A second `e2e` job runs the
+  harness with a shortened (60s) outage window so it's CI-gating on every PR without a
+  10-minute job; it rebuilds the same workspace image via `run.sh`, so it also
+  benefits from the build-and-test job's just-pushed cache.
+- **Verified in this sandbox (Podman 5.4.2 + podman-compose, real network access,
+  `/home` has ample disk — same environment class as #244-#248's Docker sessions)**:
+  `tools/e2e/Containerfile`'s full-workspace `colcon build` reached `dc_bridge` (the
+  Rust package) and linked it cleanly — confirmed via a from-scratch rebuild done
+  specifically to prove the `example_interfaces`/sibling-package fix, not just
+  inferred, on the pre-`Containerfile.e2e`-split, pre-rustup-pinning version of the
+  file. The rustup-pinning and `Containerfile`/`Containerfile.e2e` split landed after
+  that confirmed build; both are structural/security changes (pinned version+checksum,
+  a `FROM`-layered second file) rather than build-recipe changes, but a fresh
+  from-scratch build covering the final state specifically was still in progress at
+  the time of writing (rebuilding the whole `toolchain` stage again, since the rustup
+  change invalidated that layer's cache) — see progress.txt's next update, or the
+  session's actual final commit history, for whether it completed clean.
+  `pre-commit` clean on every changed file for the hooks that aren't already
+  known-broken in this sandbox independent of this diff (`build-doc`,
+  `poetry-requirements`, `pycln`, `flake8` — same skips as #242-#248); `hadolint`
+  (broadened its `.pre-commit-config.yaml` `files:` regex to match `Containerfile` and
+  suffixed variants like `Containerfile.e2e`, not just `Dockerfile`) and `shellcheck`
+  both pass on every new file.
+- **Not done / left for follow-up**: an actual GitHub Actions run of
+  `.github/workflows/ci.yaml` (same caveat as every prior slice's "colcon build
+  succeeds" criterion — this sandbox has no way to exercise real GH-hosted-runner
+  semantics, GH Actions cache, or Codecov upload); a full local `tools/e2e/scripts/
+  run.sh` pass end-to-end including the outage/restart/verification sequence against
+  the final (post-restructure) `Containerfile`/`Containerfile.e2e` split; the full
+  10-minute outage window is only exercised by default locally (CI uses 60s for
+  turnaround — see `tools/e2e/README.md`); publishing the CI/E2E images to a registry
+  for reuse beyond the build cache (this repo has none configured for that, unlike the
+  monorepo's `registry.bensoussan.de`).

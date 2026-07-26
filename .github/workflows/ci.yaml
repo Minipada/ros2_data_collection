@@ -1,186 +1,127 @@
-# This config uses industrial_ci (https://github.com/ros-industrial/industrial_ci.git).
-# For troubleshooting, see readme (https://github.com/ros-industrial/industrial_ci/blob/master/README.rst)
+# DC 2.0 (Jazzy) CI (#249). This branch only builds the jazzy line (external Vector
+# shipper, C++ dc_bridge — the Rust pilot of ADR-0004 was reverted in ADR-0007). The
+# humble-line `industrial_ci`/Docker workflow this repo used to run doesn't apply here
+# and isn't carried over onto this branch (it still exists on `humble`, a separate
+# branch/tree — deleting it here doesn't touch that). Deliberately not industrial_ci,
+# which is Docker-only anyway — this repo is moving off Docker in favor of Podman (see
+# CLAUDE.md "Containers: Podman, not Docker"). Builds the shared DC workspace image
+# (tools/e2e/Containerfile, also used by the zero-loss E2E harness via
+# tools/e2e/Containerfile.e2e), runs colcon test (C++ gtest across every package) with
+# coverage, then runs the harness itself.
+#
+# No CI-only build/test scripts: every step below calls the same
+# tools/e2e/scripts/build.sh / test.sh / run.sh a developer runs locally.
 
 name: CI
 
 on:
   workflow_dispatch:
   pull_request:
+    branches:
+      - jazzy
   push:
     branches:
-      - humble
+      - jazzy
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
-  default:
-    strategy:
-      fail-fast: false
-      matrix:
-        env:
-          - IMAGE: humble-ci
-            CCOV: true
-            ROS_DISTRO: humble
-          # TODO: make it work. Currently, it is not reliable
-          # - IMAGE: humble-ci-testing
-          #   ROS_DISTRO: humble
-          #   CLANG_TIDY: pedantic
-          #   # Silent gmock/gtest warnings: https://github.com/ament/googletest/pull/21
-          #   AFTER_BUILD_UPSTREAM_WORKSPACE: |
-          #     git clone --quiet --branch clalancette/update-to-gtest-1.11 https://github.com/ament/googletest "${BASEDIR}/upstream_ws/src/googletest"
-          #     builder_run_build "/opt/ros/${ROS_DISTRO}" "${BASEDIR}/upstream_ws" --packages-select gtest_vendor gmock_vendor
-    permissions:
-      packages: write
-      contents: read
-    env:
-      # TODO Disabled -Wredundant-decls https://github.com/ros2/rosidl_typesupport_fastrtps/issues/28
-      CXXFLAGS: >-
-        -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith
-      CLANG_TIDY_ARGS: --fix --fix-errors --format-style=file
-      DOCKER_IMAGE: minipada/ros2_data_collection:${{ matrix.env.IMAGE }}
-      # Pull any updates to the upstream workspace (after restoring it from cache)
-      AFTER_SETUP_UPSTREAM_WORKSPACE: vcs pull $BASEDIR/upstream_ws/src
-      AFTER_SETUP_DOWNSTREAM_WORKSPACE: vcs pull $BASEDIR/downstream_ws/src
-      # Clear the ccache stats before and log the stats after the build
-      # AFTER_SETUP_CCACHE: ccache --zero-stats --max-size=10.0G
-      BEFORE_BUILD_UPSTREAM_WORKSPACE: ccache -z
-      AFTER_BUILD_TARGET_WORKSPACE: ccache -s
-      # Changing linker to lld as ld has a behavior where it takes a long time to finish
-      # Compile CCOV with Debug. Enable -Werror (except CLANG_TIDY=pedantic, which makes the clang-tidy step fail on warnings)
-      TARGET_CMAKE_ARGS: >
-        -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld
-        -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld
-        -DCMAKE_MODULE_LINKER_FLAGS=-fuse-ld=lld
-        -DCMAKE_BUILD_TYPE=${{ matrix.env.CCOV && 'Debug' || 'Release'}}
-        -DCMAKE_CXX_FLAGS="-Werror $CXXFLAGS${{ matrix.env.CCOV && ' --coverage -O2 -fno-omit-frame-pointer'}}"
-      UPSTREAM_CMAKE_ARGS: "-DCMAKE_CXX_FLAGS=''"
-      DOWNSTREAM_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-Wall -Wextra"
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      BASEDIR: ${{ github.workspace }}/.work
-      CLANG_TIDY_BASE_REF: ${{ github.event_name != 'workflow_dispatch' && (github.base_ref || github.ref) || '' }}
-      BEFORE_CLANG_TIDY_CHECKS: |
-        # Show list of applied checks
-        (cd $TARGET_REPO_PATH; clang-tidy --list-checks)
-      CC: ${{ matrix.env.CLANG_TIDY && 'clang' }}
-      CXX: ${{ matrix.env.CLANG_TIDY && 'clang++' }}
-      ADDITIONAL_DEBS: lld
+env:
+  IMAGE_TAG: dc-workspace:${{ github.sha }}
+  # podman's build cache is local-only by default and wouldn't survive a fresh
+  # GitHub-hosted runner (a new VM every job) — this registry ref makes
+  # tools/e2e/scripts/build.sh's --cache-from/--cache-to round-trip through ghcr.io
+  # instead, so the (rarely-changing) toolchain stage stays warm across runs. Verified
+  # this actually works — podman build --cache-to/--cache-from against a real registry,
+  # cold local state in between — before wiring it up here. Shared by both jobs below:
+  # the `e2e` job rebuilds the same workspace image (to layer
+  # tools/e2e/Containerfile.e2e on top of it) and gets a cache hit off what
+  # `build-and-test` just pushed.
+  CACHE_REF: ghcr.io/${{ github.repository }}/dc-workspace-cache
 
-    name: ${{ matrix.env.IMAGE }}${{ matrix.env.CCOV && ' + ccov' || ''}}${{ matrix.env.CLANG_TIDY && (github.event_name != 'workflow_dispatch' && ' + clang-tidy (delta)' || ' + clang-tidy (all)') || '' }}
+jobs:
+  build-and-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - uses: actions/checkout@v3
-      - uses: testspace-com/setup-testspace@v1
-        if: github.repository == 'minipada/ros2_data_collection'
-        with:
-          domain: Minipada
-      - name: Install Python dependencies
-        uses: py-actions/py-dependency-install@v4
-        with:
-          path: "requirements.txt"
-      - name: Install Python dependencies (dev)
-        uses: py-actions/py-dependency-install@v4
-        with:
-          path: "requirements-dev.txt"
-      - name: Setup ROS
-        uses: ros-tooling/setup-ros@v0.6
-        with:
-          required-ros-distributions: ${{env.ROS_DISTRO}}
-      - name: Get latest release date for rosdistro
-        id: rosdistro_release_date
-        uses: JafarAbdi/latest-rosdistro-release-date-action@main
-        with:
-          rosdistro: ${{ matrix.env.ROS_DISTRO }}
-      - name: Cache upstream workspace
-        uses: pat-s/always-upload-cache@v3
-        with:
-          path: ${{ env.BASEDIR }}/upstream_ws
-          key: ${{ env.CACHE_PREFIX }}-${{ github.run_id }}
-          restore-keys: ${{ env.CACHE_PREFIX }}
-        env:
-          CACHE_PREFIX: ${{ steps.rosdistro_release_date.outputs.date }}-upstream_ws-${{ steps.repos_edit_timestamp.outputs.timestamp }}-${{ matrix.env.IMAGE }}-${{ hashFiles('.github/workflows/ci.yaml') }}
-      # The target directory cache doesn't include the source directory because
-      # that comes from the checkout.  See "prepare target_ws for cache" task below
-      - name: Cache target workspace
-        if: "!matrix.env.CCOV"
-        uses: pat-s/always-upload-cache@v3
-        with:
-          path: ${{ env.BASEDIR }}/target_ws
-          key: ${{ env.CACHE_PREFIX }}-${{ github.run_id }}
-          restore-keys: ${{ env.CACHE_PREFIX }}
-        env:
-          CACHE_PREFIX: target_ws${{ matrix.env.CCOV && '-ccov' || '' }}-${{ matrix.env.IMAGE }}-${{ hashFiles('**/CMakeLists.txt', '**/package.xml', '.github/workflows/ci.yaml') }}
-      - name: Cache ccache
-        uses: pat-s/always-upload-cache@v3
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ${{ env.CACHE_PREFIX }}-${{ github.sha }}-${{ github.run_id }}
-          restore-keys: |
-            ${{ env.CACHE_PREFIX }}-${{ github.sha }}
-            ${{ env.CACHE_PREFIX }}
-        env:
-          CACHE_PREFIX: ccache-${{ matrix.env.IMAGE }}${{ matrix.env.CCOV && '-ccov' || '' }}
-      - name: Configure ccache
+      - uses: actions/checkout@v4
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Log in to ghcr.io (for the registry-backed build cache)
         run: |
-          mkdir -p ${{ env.CCACHE_DIR }}
-          cp .github/ccache.conf ${{ env.CCACHE_DIR }}/ccache.conf
-      - name: Workaround permission issue # https://github.com/actions/checkout/issues/760#issuecomment-1097501613
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build the DC workspace image (coverage-instrumented)
+        env:
+          CCOV: "true"
+        run: ./tools/e2e/scripts/build.sh
+
+      - name: Start Postgres + RustFS (dc_bridge's store-backed tests hard-fail, never skip — see dc_bridge/README.md)
         run: |
-          git config --global --add safe.directory '*'
-          find /home/runner/work/ -name package.xml | xargs dirname | tr '\n' '\0' |xargs -0 -n1 git config --global --add safe.directory || true
-      - id: ici
-        name: Run industrial_ci
-        uses: ros-industrial/industrial_ci@master
-        env: ${{ matrix.env }}
-      - name: Push result to Testspace
-        if: always() && (github.repository == 'minipada/ros2_data_collection')
-        run: |
-          testspace "[ ${{ matrix.env.IMAGE }} ]${{ env.BASEDIR }}/target_ws/**/test_results/**/*.xml"
-      - name: Workaround fix permission #https://github.com/actions/checkout/issues/211
-        # Needed when fetching fluent_bit_vendor
+          podman run -d --network host --name dc_pg_ci \
+            -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
+            docker.io/library/postgres:13
+          podman run -d --network host --name dc_rustfs_ci \
+            docker.io/rustfs/rustfs:latest
+          timeout 60 bash -c 'until podman exec dc_pg_ci pg_isready -U dc >/dev/null 2>&1; do sleep 1; done'
+          timeout 60 bash -c 'until curl -sf http://127.0.0.1:9000 >/dev/null 2>&1 || curl -s http://127.0.0.1:9000 >/dev/null 2>&1; do sleep 1; done'
+          # A `dc-records` bucket the store-backed tests can use (the S3 sink doesn't
+          # create it).
+          podman run --rm --network host docker.io/minio/mc:latest \
+            sh -c 'mc alias set local http://127.0.0.1:9000 rustfsadmin rustfsadmin && mc mb -p local/dc-records'
+
+      - name: colcon test (C++ gtest) + coverage
+        env:
+          IMAGE: ${{ env.IMAGE_TAG }}
+        run: ./tools/e2e/scripts/test.sh "$PWD/coverage"
+
+      - name: Stop Postgres + RustFS
         if: always()
-        run: |
-          sudo chown -R $USER:$USER ${{env.BASEDIR}}/*
-          sudo chmod -R a+rX ${{env.BASEDIR}}
-      - name: Upload test artifacts (on failure)
-        uses: actions/upload-artifact@v3
-        if: failure() && (steps.ici.outputs.run_target_test || steps.ici.outputs.target_test_results)
-        with:
-          name: test-results-${{ matrix.env.IMAGE }}
-          path: ${{ env.BASEDIR }}/target_ws/**/test_results/**/*.xml
-      - name: Generate codecov report
-        if: always() && matrix.env.CCOV && steps.ici.outputs.target_test_results == '0'
-        run: |
-          ${GITHUB_WORKSPACE}/tools/code_coverage_report.bash ci
-          cp lcov/total_coverage.info ${GITHUB_WORKSPACE}
-        working-directory: ${{ env.BASEDIR }}/target_ws
-      - name: Upload codecov report
-        if: always() && matrix.env.CCOV && steps.ici.outputs.target_test_results == '0'
+        run: podman rm -f dc_pg_ci dc_rustfs_ci
+
+      - name: Upload C++ coverage
+        if: always()
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: total_coverage.info
-        # run: |
-        #   curl -s https://codecov.io/bash > codecov
-        #   codecov_version=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2)
-        #   shasum -a 512 -c <(curl -s "https://raw.githubusercontent.com/codecov/codecov-bash/${codecov_version}/SHA512SUM" | grep -w "codecov")
-        #   bash codecov \
-        #     -f total_coverage.info \
-        #     -R "${GITHUB_WORKSPACE}" \
-        #     -t ${{ secrets.CODECOV_TOKEN }} \
-        #     -Z || echo 'Codecov upload failed'
-      - name: Upload clang-tidy changes
-        uses: rhaschke/upload-git-patch-action@main
-        if: always() && matrix.env.CLANG_TIDY
-        with:
-          name: clang-tidy
-          path: ${{ env.BASEDIR }}/target_ws/src/$(basename $(pwd))
-      - name: Prepare target_ws for cache
-        if: always() && !matrix.env.CCOV
+          files: coverage/cpp.info
+          flags: cpp-jazzy
+
+  e2e:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Log in to ghcr.io (for the registry-backed build cache)
         run: |
-          mkdir target_ws
-          du -sh ${{ env.BASEDIR }}/target_ws
-          sudo find ${{ env.BASEDIR }}/target_ws -wholename '*/test_results/*' -delete
-          sudo rm -rf ${{ env.BASEDIR }}/target_ws/src
-          du -sh ${{ env.BASEDIR }}/target_ws
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Run zero-loss E2E harness (CI-sized outage window)
+        # Same code paths as the full 10-minute local proof (tools/e2e/README.md); CI
+        # uses a shorter outage window so the job finishes in reasonable time. Both the
+        # startup-latency gate (<10s) and the zero-loss/exactly-once gate are real,
+        # hard-failing assertions here — nothing is skipped or informational except the
+        # resource-usage report.
+        env:
+          DC_E2E_OUTAGE_SECONDS: "60"
+          DC_E2E_STEADY_STATE_SECONDS: "30"
+        run: ./tools/e2e/scripts/run.sh
+
+      - name: Upload E2E harness logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-harness-logs
+          path: tools/e2e/.run/**

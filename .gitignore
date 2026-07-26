@@ -276,3 +276,13 @@ cython_debug/
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode
+
+### DC 2.0 Jazzy CI / E2E harness (#249) ###
+# CI's cached colcon workspace (.github/workflows/ci-jazzy.yaml) and the E2E harness's
+# run artifacts (logs, resource-usage samples, verification report) — both local/CI
+# scratch state, not source.
+.ci-ws/
+tools/e2e/.run/
+
+# dc_bridge local core test build dir (fast-iteration cmake, not colcon)
+dc_bridge/test/local/build/

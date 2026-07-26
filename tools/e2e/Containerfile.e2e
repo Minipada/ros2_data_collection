@@ -1,0 +1,17 @@
+# The zero-loss E2E harness's runtime layer: the synthetic reference-workload
+# generator, its params, and the entrypoint that launches the real DC stack alongside
+# it. A thin `FROM` on top of tools/e2e/Containerfile's built workspace image — CI
+# never builds this file (it runs `colcon test` directly against the base image
+# instead, see ci-jazzy.yaml) and this layer never touches DC's own source, so its
+# build context is just this directory, not the whole repo (no .dockerignore dance
+# needed here — see tools/e2e/scripts/build.sh, which builds the base this forms).
+
+ARG BASE_IMAGE=dc-workspace:latest
+FROM ${BASE_IMAGE}
+
+COPY scripts/workload_generator.py /opt/e2e/workload_generator.py
+COPY params/e2e_params.yaml /opt/e2e/e2e_params.yaml
+COPY scripts/entrypoint.sh /opt/e2e/entrypoint.sh
+RUN chmod +x /opt/e2e/entrypoint.sh
+
+ENTRYPOINT ["/opt/e2e/entrypoint.sh"]
