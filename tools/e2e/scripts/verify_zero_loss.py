@@ -65,9 +65,13 @@ def scalar_int(pg_container: str, query: str) -> int:
     return int(out) if out else 0
 
 
-def check_synth_topic(pg_container: str, name: str, violations: list, notes: list, details: dict) -> None:
+def check_synth_topic(
+    pg_container: str, name: str, violations: list, notes: list, details: dict
+) -> None:
     total = scalar_int(pg_container, f"SELECT count(*) FROM dc_records WHERE source='{name}'")
-    distinct = scalar_int(pg_container, f"SELECT count(DISTINCT value) FROM dc_records WHERE source='{name}'")
+    distinct = scalar_int(
+        pg_container, f"SELECT count(DISTINCT value) FROM dc_records WHERE source='{name}'"
+    )
     dup_values = scalar_int(
         pg_container,
         f"SELECT count(*) FROM (SELECT value FROM dc_records "
@@ -102,7 +106,9 @@ def check_synth_topic(pg_container: str, name: str, violations: list, notes: lis
         )
 
 
-def check_real_tag(pg_container: str, tag: str, violations: list, notes: list, details: dict) -> None:
+def check_real_tag(
+    pg_container: str, tag: str, violations: list, notes: list, details: dict
+) -> None:
     total = scalar_int(pg_container, f"SELECT count(*) FROM dc_records WHERE tag='{tag}'")
     dup_count = scalar_int(
         pg_container,
@@ -157,8 +163,11 @@ def check_files(pg_container: str, violations: list, notes: list, details: dict)
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--postgres-container", default="dc_e2e_postgres",
-                        help="name of the running Postgres container to query via podman exec")
+    parser.add_argument(
+        "--postgres-container",
+        default="dc_e2e_postgres",
+        help="name of the running Postgres container to query via podman exec",
+    )
     parser.add_argument("--num-synth-topics", type=int, default=14)
     parser.add_argument("--report", default=None, help="write a JSON report to this path")
     args = parser.parse_args()
