@@ -22,6 +22,27 @@ SupervisorConfig sh(const std::string& script, std::chrono::milliseconds backoff
   cfg.restart_backoff = backoff;
   return cfg;
 }
+
+// Polls `pred` until it's true or `timeout` elapses. A fixed sleep_for() followed by a
+// single assertion assumes the supervised child (fork+exec, then whatever it runs) is
+// always scheduled within that margin — a loaded/shared CI runner can stall it well
+// past a couple hundred milliseconds, which made RestartsProcessThatExitsOnItsOwn and
+// RespectsRestartBackoff flaky. Polling only waits as long as actually needed and
+// still fails loudly if the condition is never met by the deadline.
+template <typename Pred>
+bool wait_until(Pred pred, std::chrono::milliseconds timeout = std::chrono::seconds(5))
+{
+  const auto deadline = std::chrono::steady_clock::now() + timeout;
+  while (std::chrono::steady_clock::now() < deadline)
+  {
+    if (pred())
+    {
+      return true;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  return pred();
+}
 }  // namespace
 
 TEST(Supervisor, RestartsProcessThatExitsOnItsOwn)
@@ -30,8 +51,7 @@ TEST(Supervisor, RestartsProcessThatExitsOnItsOwn)
   s.start();
   EXPECT_TRUE(s.is_running());
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(300));
-  EXPECT_FALSE(s.is_running());
+  EXPECT_TRUE(wait_until([&] { return !s.is_running(); })) << "child never exited";
 
   EXPECT_TRUE(s.poll_restart());
   EXPECT_TRUE(s.is_running());
@@ -41,12 +61,10 @@ TEST(Supervisor, RespectsRestartBackoff)
 {
   Supervisor s(sh("exit 1", std::chrono::seconds(60)));
   s.start();
-  std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  EXPECT_FALSE(s.is_running());
+  EXPECT_TRUE(wait_until([&] { return !s.is_running(); })) << "child never exited";
 
   EXPECT_TRUE(s.poll_restart());  // first restart is immediate (no prior exit recorded)
-  std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  EXPECT_FALSE(s.is_running());
+  EXPECT_TRUE(wait_until([&] { return !s.is_running(); })) << "child never exited";
 
   EXPECT_FALSE(s.poll_restart());  // second exit within the 60s backoff window
 }
