@@ -1,3 +1,9 @@
+# Humble-line only (branches: humble below) and disabled_manually; the jazzy-line docs
+# build is tracked at #252 (DC 2.0 S11: migration guide + docs overhaul), not wired up
+# here yet. `container: image:` pulls a tag `.github/workflows/docker.yaml`'s `doc` job
+# used to build from containers/doc/Containerfile — that job is gone (see
+# containers/doc/Containerfile's header), so this workflow can't currently produce a
+# fresh image even if re-enabled.
 name: Documentation
 
 on:
