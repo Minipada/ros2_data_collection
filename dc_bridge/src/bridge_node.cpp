@@ -86,6 +86,10 @@ Destination declare_destination(rclcpp::Node* node, const std::string& name)
 {
   const std::string type_str = node->declare_parameter<std::string>(name + ".type", "");
   const std::string receives_str = node->declare_parameter<std::string>(name + ".receives", "records");
+  // Empty `inputs` is legitimate (a `receives: files` metadata destination takes no topic
+  // inputs — the Uploader routes to it internally). It must be *omitted* from the params
+  // file, not written as `inputs: []`: rclcpp can't load an empty YAML array (it has no
+  // inferable element type) and fatals before this code runs. Omitted -> this default {}.
   const std::vector<std::string> inputs =
       node->declare_parameter<std::vector<std::string>>(name + ".inputs", std::vector<std::string>{});
 
