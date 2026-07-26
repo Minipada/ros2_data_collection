@@ -1014,3 +1014,36 @@ Bridge + Vector data plane (#242-#249) fully replaces it, per ADRs 0001/0003 and
   by inspection. `pre-commit` was not re-run in this sandbox (same environment-gap
   skips as every prior DC 2.0 slice: `build-doc`, `poetry-requirements`, `pycln`,
   `flake8`).
+
+### #250 follow-up — fixed a real (pre-existing, unrelated) flaky test found by real CI
+
+The GitHub Actions run for this PR's rebased-for-DCO commit failed `colcon-test` once
+on `dc_bridge/test/supervisor_test.cpp`'s `Supervisor.RestartsProcessThatExitsOnItsOwn`
+— `is_running()` was still `true` after a fixed 300ms `sleep_for()` that assumed the
+supervised child (`sh -c "sleep 0.05"`) would always be forked, exited, and reaped well
+within that margin. `dc_bridge` has zero diff on this branch (this PR never touches
+it), the same test passed in this session's own local `colcon test` run (84/84) and in
+the prior successful `jazzy` CI run with identical code — pointing at CI-runner
+scheduling jitter (right after a full workspace build, on a shared 2-core runner) as
+the cause, not a real regression.
+
+- Root-caused rather than just retried: `RestartsProcessThatExitsOnItsOwn` and
+  `RespectsRestartBackoff` both asserted on the child's exit via a fixed
+  `sleep_for(200-300ms)` then a single check — inherently flaky under scheduler
+  jitter, and unnecessary, since the same test file already has the correct pattern
+  (`SupervisedProcessDiesWithItsSpawner`'s poll-with-deadline loop). Added a small
+  `wait_until(pred, timeout=5s)` helper (polls every 10ms) and switched both tests to
+  it — same final assertions, just no longer time-boxed by a wall-clock guess.
+- Verified the fix for real, not just by re-reading it: incrementally rebuilt
+  `dc_bridge` inside the exact `dc-workspace:latest` Podman image CI uses (bind-mounted
+  updated source over the already-built image, `colcon build --packages-select
+  dc_bridge`), then ran the `supervisor_test` binary directly 30 times in a row — 30/30
+  clean, and the fixed-margin tests now finish in ~60-80ms instead of always paying the
+  full 200-300ms fixed sleep.
+- Re-ran the failed GitHub Actions `colcon-test` job once (confirming the original
+  failure was transient, not reproducible) before pushing this fix; a fresh full CI run
+  against the fixed commit was kicked off to confirm end-to-end.
+- `clang-format` isn't installed in this sandbox and the Podman workspace image doesn't
+  carry it either (not part of the C++ toolchain it installs) — not run; the added code
+  was hand-matched to the file's existing style (2-space indent, brace-on-its-own-line,
+  same `namespace { … }` shape) instead.
