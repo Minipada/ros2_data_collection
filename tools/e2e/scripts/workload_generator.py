@@ -49,7 +49,9 @@ class WorkloadGenerator(Node):
         camera_period_s = self.get_parameter("camera_period_s").value
 
         self._names = [f"synth{i:02d}" for i in range(num_topics)]
-        self._publishers = {
+        # NB: not `self._publishers` — that name is rclpy.Node's own internal publisher
+        # list, and shadowing it with a dict breaks the next create_publisher() call.
+        self._synth_pubs = {
             name: self.create_publisher(StringStamped, f"{SYNTH_TOPIC_PREFIX}{i:02d}", 10)
             for i, name in enumerate(self._names)
         }
@@ -66,7 +68,7 @@ class WorkloadGenerator(Node):
 
     def _tick_synth(self) -> None:
         now = self.get_clock().now()
-        for name, pub in self._publishers.items():
+        for name, pub in self._synth_pubs.items():
             msg = StringStamped()
             msg.header.stamp = now.to_msg()
             msg.group_key = name
