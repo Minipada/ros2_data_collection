@@ -7,16 +7,16 @@ powers analytics and dashboards. It is a telemetry pipeline, not an ML dataset p
 Read [CONTEXT.md](./CONTEXT.md) first for the domain vocabulary (Measurement, Record, Group,
 Destination, Bridge, Shipper, Tag, File, …) — use those terms, not synonyms, in code, commits,
 and PRs. Read [docs/adr/](./docs/adr/) for the DC 2.0 architecture decisions (external Vector
-shipper replacing embedded Fluent Bit, Rust bridge, blessed destinations + passthrough, etc.)
-before touching pipeline internals — most non-obvious design choices are already recorded there
-rather than in code comments.
+shipper replacing embedded Fluent Bit, the C++ Bridge — ADR-0007 reverted the ADR-0004 Rust
+pilot, blessed destinations + passthrough, etc.) before touching pipeline internals — most
+non-obvious design choices are already recorded there rather than in code comments.
 
 ## Branches
 
 - `humble` — legacy/stable line, ROS 2 Humble, embedded Fluent Bit architecture. CI
   (`.github/workflows/ci.yaml`) still targets this branch.
-- `jazzy` — active development target for the DC 2.0 rewrite (external Vector shipper, Rust
-  bridge, ROS 2 Jazzy). New work — including everything `run_once.sh` picks up — branches from
+- `jazzy` — active development target for the DC 2.0 rewrite (external Vector shipper, C++
+  Bridge, ROS 2 Jazzy). New work — including everything `run_once.sh` picks up — branches from
   and merges into `jazzy`, not `humble`.
 
 ## Repo layout
@@ -48,8 +48,8 @@ pre-commit run --all-files   # flake8, doc build, yaml/json/xml checks, etc. —
 ```
 
 CI (`.github/workflows/ci.yaml`) builds the shared DC workspace image
-(`tools/e2e/Containerfile`) with Podman and runs `colcon test` (C++ gtest + Rust cargo)
-against it — see "Containers: Podman, not Docker" below. `tools/e2e/scripts/build.sh` /
+(`tools/e2e/Containerfile`) with Podman and runs `colcon test` (C++ gtest across every
+package) against it — see "Containers: Podman, not Docker" below. `tools/e2e/scripts/build.sh` /
 `test.sh` are the same scripts CI calls, runnable locally too. Note: `ci.yaml` on the
 `humble` branch is a *different* file (that branch's own tree, `industrial_ci` inside
 Docker) — same filename, unrelated content, since each branch keeps its own
