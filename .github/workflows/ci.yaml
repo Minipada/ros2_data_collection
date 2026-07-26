@@ -153,27 +153,31 @@ jobs:
           pip install --user podman-compose
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Log in to ghcr.io (for the registry-backed build cache)
+      - name: Log in to ghcr.io (to pull the workspace image build-and-test pushed)
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Compute cache ref
+      # The immutable :<sha> ref build-and-test built, tested, and pushed. This job uses
+      # that exact artifact — it does not rebuild the workspace (one job builds, one uses).
+      - name: Compute workspace image ref
         id: refs
         env:
           REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
         run: |
-          echo "cache_ref=ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')/dc-workspace-cache" >> "$GITHUB_OUTPUT"
+          echo "sha_ref=ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')/dc-workspace:$SHA" >> "$GITHUB_OUTPUT"
 
       - name: Run zero-loss E2E harness (CI-sized outage window)
         # Same code paths as the full 10-minute local proof (tools/e2e/README.md); CI
         # uses a shorter outage window so the job finishes in reasonable time. Both the
         # startup-latency gate (<10s) and the zero-loss/exactly-once gate are real,
         # hard-failing assertions here — nothing is skipped or informational except the
-        # resource-usage report. Reuses the build cache build-and-test just pushed.
+        # resource-usage report. DC_WORKSPACE_IMAGE points run.sh at the tested image
+        # from build-and-test, so the harness reuses it instead of rebuilding.
         env:
           DC_E2E_OUTAGE_SECONDS: "60"
           DC_E2E_STEADY_STATE_SECONDS: "30"
-          CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
+          DC_WORKSPACE_IMAGE: ${{ steps.refs.outputs.sha_ref }}
         run: ./tools/e2e/scripts/run.sh
 
       - name: Upload E2E harness logs (on failure)

@@ -21,6 +21,13 @@
 #   DC_E2E_DRAIN_SECONDS          settle time after recovery, before verifying (default 30)
 #   DC_E2E_STARTUP_TIMEOUT_SECONDS  startup-latency hard gate (default 10, per the PRD)
 #   DC_E2E_KEEP                  "true" to leave the stack up after a failure for debugging
+#   DC_WORKSPACE_IMAGE           a prebuilt DC workspace image ref to use as the harness
+#                                base instead of building one locally. CI's e2e job sets
+#                                this to the :<sha> image its build-and-test job already
+#                                built, tested, and pushed — so the harness runs against
+#                                the exact tested artifact rather than rebuilding it (one
+#                                job builds, the other uses). Unset locally: build.sh
+#                                builds dc-workspace:latest from the working tree.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -71,11 +78,18 @@ pg_exec() {
   podman compose -f compose.yaml exec -T postgres psql -U dc -d dc -tAc "$1"
 }
 
-log "building the DC workspace image (tools/e2e/scripts/build.sh — the same build CI uses)"
-"$SCRIPT_DIR/build.sh"
+if [ -n "${DC_WORKSPACE_IMAGE:-}" ]; then
+  log "using prebuilt DC workspace image: $DC_WORKSPACE_IMAGE (skipping build.sh)"
+  podman image exists "$DC_WORKSPACE_IMAGE" || podman pull "$DC_WORKSPACE_IMAGE"
+  WORKSPACE_IMAGE="$DC_WORKSPACE_IMAGE"
+else
+  log "building the DC workspace image (tools/e2e/scripts/build.sh — the same build CI uses)"
+  "$SCRIPT_DIR/build.sh"
+  WORKSPACE_IMAGE="dc-workspace:latest"
+fi
 
 log "building the E2E harness's thin runtime layer (Containerfile.e2e, FROM the workspace image)"
-podman build -t dc-e2e:latest -f Containerfile.e2e .
+podman build --build-arg "BASE_IMAGE=$WORKSPACE_IMAGE" -t dc-e2e:latest -f Containerfile.e2e .
 
 log "starting Postgres + RustFS"
 podman compose -f compose.yaml up -d postgres rustfs
