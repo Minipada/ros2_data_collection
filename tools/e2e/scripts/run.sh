@@ -127,9 +127,12 @@ podman run -d --network host --name "$PG_C" \
   -v dc_e2e_pgdata:/var/lib/postgresql/data \
   -v "$E2E_DIR/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro" \
   docker.io/library/postgres:13 >/dev/null
+# rustfs/rustfs 1.0.0-beta.11 — pinned by digest, not :latest, so an upstream image
+# change can't silently alter harness behavior. Bump deliberately: check
+# https://hub.docker.com/r/rustfs/rustfs/tags for the new digest.
 podman run -d --network host --name "$RUSTFS_C" \
   -v dc_e2e_rustfs_data:/data \
-  docker.io/rustfs/rustfs:latest >/dev/null
+  docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c >/dev/null
 
 timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
   || { log "Postgres never became ready"; exit 1; }
