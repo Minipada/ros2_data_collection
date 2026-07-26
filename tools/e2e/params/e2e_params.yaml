@@ -44,7 +44,10 @@ measurement_server:
       cam_name: "e2e_camera"
       cam_topic: "/dc/e2e/camera/image_raw"
       draw_det_barcodes: false
-      detection_modules: []
+      # No detection_modules key: an empty list ([]) has no inferable element type, so
+      # launch_ros rejects it when measurement_server loads as a composable node
+      # ("got '()' of type tuple"). The Camera plugin defaults it to an empty vector
+      # (declare_parameter_if_not_declared, camera.cpp), which is exactly what we want.
       save_raw_img: true
       save_rotated_img: false
       save_detections_img: false
@@ -57,84 +60,98 @@ measurement_server:
 
     synth00:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth00"
       timer_based: true
 
     synth01:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth01"
       timer_based: true
 
     synth02:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth02"
       timer_based: true
 
     synth03:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth03"
       timer_based: true
 
     synth04:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth04"
       timer_based: true
 
     synth05:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth05"
       timer_based: true
 
     synth06:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth06"
       timer_based: true
 
     synth07:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth07"
       timer_based: true
 
     synth08:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth08"
       timer_based: true
 
     synth09:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth09"
       timer_based: true
 
     synth10:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth10"
       timer_based: true
 
     synth11:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth11"
       timer_based: true
 
     synth12:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth12"
       timer_based: true
 
     synth13:
       plugin: "dc_measurements/StringStamped"
+      enable_validator: false
       polling_interval: 1000
       topic: "/dc/e2e/synth/synth13"
       timer_based: true
@@ -160,7 +177,11 @@ dc_bridge:
     pgsql_files:
       type: postgres
       receives: records
-      inputs: []
+      # No `inputs` key: this destination takes no topic subscriptions — it's the Files
+      # metadata_destination (see `files.metadata_destination` below), fed internally by
+      # the Uploader. `inputs: []` can't be used: rclcpp can't load an empty YAML array
+      # from a params file (no inferable element type) and dc_bridge fatals at startup
+      # ("parameter_value_from failed ... No parameter value set"). Omitted → empty inputs.
       host: "127.0.0.1"
       port: 5432
       user: "dc"
