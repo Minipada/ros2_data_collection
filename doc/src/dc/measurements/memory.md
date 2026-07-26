@@ -29,5 +29,5 @@ Collect memory used in percentage.
 memory:
   plugin: "dc_measurements/Memory"
   topic_output: "/dc/measurement/memory"
-  tags: ["flb_stdout"]
+  tags: ["console"]
 ```

@@ -44,5 +44,5 @@ Collect x, y and yaw of the robot.
 position:
   plugin: "dc_measurements/Position"
   topic_output: "/dc/measurement/position"
-  tags: ["flb_stdout"]
+  tags: ["console"]
 ```

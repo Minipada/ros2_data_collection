@@ -42,23 +42,23 @@ group_server:
       output: "/dc/group/memory_cpu"
       sync_delay: 5.0
       group_key: "memory_cpu"
-      tags: ["flb_pgsql"]
+      tags: ["pgsql"]
     memory_uptime:
       inputs: ["/dc/measurement/memory", "/dc/measurement/uptime"]
       output: "/dc/group/memory_uptime"
       sync_delay: 5.0
       group_key: "memory_uptime"
-      tags: ["flb_stdout"]
+      tags: ["console"]
     cameras:
       inputs: ["/dc/measurement/camera"]
       output: "/dc/group/cameras"
       sync_delay: 5.0
       group_key: "cameras"
-      tags: ["flb_minio", "flb_stdout"]
+      tags: ["minio", "console"]
     map:
       inputs: ["/dc/measurement/map"]
       output: "/dc/group/map"
       sync_delay: 5.0
       group_key: "map"
-      tags: ["flb_minio", "flb_stdout"]
+      tags: ["minio", "console"]
 ```

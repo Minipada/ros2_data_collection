@@ -45,7 +45,7 @@ For detailed instructions:
 
 The DC (Data Collection) project aims at integrating data collection pipelines into ROS 2. The goal is to integrate data collection pipelines with existing APIs to enable data analytics, rather than live monitoring, which already has excellent tools available. As companies increasingly turn to autonomous robots, the ability to understand and improve operations for any type of machine in any environment has become crucial. This involves mostly pick and drop and inspection operations. This framework aims at helping collecting, validating (through JSON schemas) and sending reliably the data to create such APIs and dashboards.
 
-DC uses a modular approach, based on [pluginlib](https://index.ros.org/p/pluginlib/) and greatly inspired by [Nav2](https://navigation.ros.org/) for its architecture. Pluginlib is used to configure which measurements are collected and where the data goes. Measurements and destinations are pluginlib plugins. In addition to pluginlib, most plugins use [Fluent Bit](https://fluentbit.io/) in the backend: *Fluent Bit is a super fast, lightweight, and highly scalable logging and metrics processor and forwarder. It is the preferred choice for cloud and containerized environments. Developed and interfaced in C, it has already many features we directly can use, especially: high performance, reliability and data integrity (backpressure handling and data buffering in memory and filesystem)*.
+DC uses a modular approach, based on [pluginlib](https://index.ros.org/p/pluginlib/) and greatly inspired by [Nav2](https://navigation.ros.org/) for its architecture. Pluginlib is used to configure which measurements are collected. Measurements are pluginlib plugins. Data leaves the robot through the Bridge (`dc_bridge`), a thin ROS 2 node that renders and supervises an external Shipper, [Vector](https://vector.dev/): *Vector is a fast, lightweight observability data pipeline, distributed as a single static binary, with native sinks for PostgreSQL, S3-compatible storage, and many more. DC gets its performance, reliability, and data integrity (backpressure handling and disk buffering) without embedding or forking it*.
 
 ## Why collect data from robots?
 
@@ -70,16 +70,16 @@ DC uses a modular approach, based on [pluginlib](https://index.ros.org/p/pluginl
 * **Trigger-based data collection**: collect data when a defined set of combination of all, any, or no condition are met
 * **Customizable record collection**: configure the number of records to collect at the start and when a condition is activated.
 * **Data inspection**: inspect data from camera input including barcode and QR codes
-* **Fast and efficient**: high performance, using Fluent Bit for backend processing, and designed to minimize code duplication and reduce human errors
+* **Fast and efficient**: high performance, using an external Vector shipper for backend processing, and designed to minimize code duplication and reduce human errors
 * **Grouped measurements**: measurements can be grouped using the group node based on the ApproximateTimeSynchronizer
 * **File saving**: files can be saved, including map_server maps, camera images, and any file produced by a measurement
 * **Easy to use**: designed to be easy to learn and use
 * **No C++ 3rd party library required**: all 3rd party libraries have a vendor package in the repository
 
-And inherited from Fluent Bit:
+And inherited from the Vector shipper:
 
-* [Backpressure handling](https://docs.fluentbit.io/manual/v/1.0/configuration/backpressure)
-* [Data buffering in memory and filesystem](https://docs.fluentbit.io/manual/v/1.0/configuration/buffering)
+* Backpressure handling
+* [Disk buffering](https://vector.dev/docs/reference/configuration/global-options/#data_dir), persisting Records across Destination outages and reboots
 
 Here is an example of a pipeline:
 

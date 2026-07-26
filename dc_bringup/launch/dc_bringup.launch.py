@@ -257,12 +257,11 @@ def generate_launch_description():
                 parameters=[configured_params],
                 arguments=["--ros-args", "--log-level", log_level],
             ),
-            # destination_server (dc_destinations) is COLCON_IGNOREd on the jazzy line pending
-            # the DC 2.0 embedded-Fluent-Bit demolition slice (#241/#242); dc_bridge stands
-            # in its place, forwarding Records to the Vector shipper it supervises internally
-            # (ADRs 0001/0006/0007). It is a plain node outside the lifecycle manager, so it
-            # isn't in lifecycle_manager_dc's node_names; launch respawn supervises it
-            # unconditionally (ADR-0006), independent of use_respawn.
+            # dc_bridge replaces the old destination_server/dc_destinations pluginlib layer
+            # (removed per ADR-0001/0003, #250), forwarding Records to the Vector shipper it
+            # supervises internally (ADRs 0001/0006/0007). It is a plain node outside the
+            # lifecycle manager, so it isn't in lifecycle_manager_dc's node_names; launch
+            # respawn supervises it unconditionally (ADR-0006), independent of use_respawn.
             Node(
                 package="dc_bridge",
                 executable="dc_bridge",
@@ -339,12 +338,11 @@ def generate_launch_description():
                 parameters=[configured_params],
                 arguments=["--ros-args", "--log-level", log_level],
             ),
-            # destination_server (dc_destinations) is COLCON_IGNOREd on the jazzy line pending
-            # the DC 2.0 embedded-Fluent-Bit demolition slice (#241/#242); dc_bridge stands
-            # in its place. It isn't built/registered as an rclcpp_components plugin, so it
-            # always runs as a plain node (ADR-0006), even when the rest of the stack is
-            # composed; launch respawn supervises it unconditionally, independent of
-            # use_respawn.
+            # dc_bridge replaces the old destination_server/dc_destinations pluginlib layer
+            # (removed per ADR-0001/0003, #250). It isn't built/registered as an
+            # rclcpp_components plugin, so it always runs as a plain node (ADR-0006), even
+            # when the rest of the stack is composed; launch respawn supervises it
+            # unconditionally, independent of use_respawn.
             Node(
                 package="dc_bridge",
                 executable="dc_bridge",

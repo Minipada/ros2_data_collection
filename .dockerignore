@@ -18,12 +18,9 @@
 !dc_measurements/package.xml
 !dc_services/package.xml
 !dc_cli/package.xml
-!dc_destinations/package.xml
-!fluent_bit_plugins/package.xml
 !dc_common/package.xml
 !dc_interfaces/package.xml
 !dc_util/package.xml
 !dc_description/package.xml
 !dc_core/package.xml
 !dc_group/package.xml
-!fluent_bit_vendor/package.xml

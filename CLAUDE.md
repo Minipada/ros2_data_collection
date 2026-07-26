@@ -28,7 +28,6 @@ are already recorded there rather than in code comments.
 | `dc_common` | Common support functionality used throughout the DC stack |
 | `dc_measurements` | Collect data with Measurement plugins |
 | `dc_group` | Group node — merges Records from several Measurements by time proximity |
-| `dc_destinations` | Send Records to Destination plugins |
 | `dc_services` | Collect uptime data |
 | `dc_lifecycle_manager` | Controller/manager for the DC system's lifecycle nodes |
 | `dc_interfaces` | Data collection ROS interfaces (msgs/srvs) |
@@ -37,7 +36,6 @@ are already recorded there rather than in code comments.
 | `dc_demos` | Demo packages |
 | `dc_simulation` | Warehouse simulation |
 | `dc_util` | General shared headers |
-| `fluent_bit_plugins`, `fluent_bit_vendor` | Embedded Fluent Bit (humble-era); being demolished per ADR-0001 in the `jazzy` line |
 
 ## Build / lint
 
