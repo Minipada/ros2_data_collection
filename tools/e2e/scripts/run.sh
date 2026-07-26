@@ -3,14 +3,16 @@
 #
 #   ./tools/e2e/scripts/run.sh
 #
-# Builds the images, brings up Postgres + RustFS + the full DC stack (podman compose),
-# asserts launch-to-first-Record < 10s, runs a steady-state warmup, induces an outage
-# (stops the destination containers — operationally equivalent to a network partition
-# from dc_bridge/Vector's point of view: both surface as "destination unreachable",
-# and both are recovered by the same disk-buffer-then-reconnect path, ADR-0002), does a
-# full stack restart while destinations are still down, restores them, drains, then
-# hard-asserts zero-loss (tools/e2e/scripts/verify_zero_loss.py). The shipper is
-# at-least-once (ADR-0002), so a record in-flight at outage time can be re-sent on
+# Brings up Postgres + RustFS + the full DC stack with plain `podman` (no compose — see
+# CLAUDE.md "Containers: Podman, not Docker"; the outage/restart lifecycle below IS the
+# test, and driving container lifecycle by hand is simpler and dependency-free than any
+# compose provider). Asserts launch-to-first-Record < 10s, runs a steady-state warmup,
+# induces an outage (stops the destination containers — operationally equivalent to a
+# network partition from dc_bridge/Vector's point of view: both surface as "destination
+# unreachable", and both are recovered by the same disk-buffer-then-reconnect path,
+# ADR-0002), does a full stack restart while destinations are still down, restores them,
+# drains, then hard-asserts zero-loss (tools/e2e/scripts/verify_zero_loss.py). The shipper
+# is at-least-once (ADR-0002), so a record in-flight at outage time can be re-sent on
 # recovery — the verifier deduplicates on the natural key (exactly-once on read) and
 # reports such boundary re-sends as notes; only actual loss fails the run. The
 # startup-latency and zero-loss gates are real, hard-failing assertions — nothing here is
@@ -20,35 +22,26 @@
 #
 # Env vars (all optional):
 #   DC_E2E_OUTAGE_SECONDS         outage duration (default 600 = the PRD's 10 minutes;
-#                                 CI uses a shorter override — see ci-jazzy.yaml)
+#                                 CI uses a shorter override — see ci.yaml)
 #   DC_E2E_STEADY_STATE_SECONDS   warmup before the outage (default 30)
 #   DC_E2E_DRAIN_SECONDS          settle time after recovery, before verifying (default 30)
 #   DC_E2E_STARTUP_TIMEOUT_SECONDS  startup-latency hard gate (default 10, per the PRD)
 #   DC_E2E_KEEP                  "true" to leave the stack up after a failure for debugging
-#   DC_WORKSPACE_IMAGE           a prebuilt DC workspace image ref to use as the harness
-#                                base instead of building one locally. CI's e2e job sets
-#                                this to the :<sha> image its build-and-test job already
-#                                built, tested, and pushed — so the harness runs against
-#                                the exact tested artifact rather than rebuilding it (one
-#                                job builds, the other uses). Unset locally: build.sh
-#                                builds dc-workspace:latest from the working tree.
+#   DC_E2E_IMAGE                 a prebuilt dc-e2e image ref to run as the DC stack instead
+#                                of building it here. CI's e2e job sets this to the :<sha>
+#                                image its build-e2e-image job built and pushed (which is
+#                                itself FROM the tested dc-workspace image) — so the harness
+#                                runs the exact built artifact, no build at run time (one
+#                                job builds, another uses). Unset locally: the image is
+#                                built from the working tree (see DC_WORKSPACE_IMAGE).
+#   DC_WORKSPACE_IMAGE           a prebuilt DC workspace image to use as the base for the
+#                                locally-built dc-e2e image (skips build.sh). Ignored when
+#                                DC_E2E_IMAGE is set. Unset: build.sh builds it.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 E2E_DIR="$(dirname "$SCRIPT_DIR")"
 RUN_DIR="$E2E_DIR/.run"
-
-# Pin the compose provider to podman-compose. `podman compose` otherwise prefers the
-# docker-compose cli-plugin when present, which talks to a Docker-compatible API socket
-# (the rootless Podman socket) that isn't running in a bare shell — it fails with
-# "daemon not running". podman-compose shells out to `podman` directly: no socket, no
-# Docker binary in the loop (CLAUDE.md "Containers: Podman, not Docker"). Same provider
-# locally and in CI.
-export PODMAN_COMPOSE_PROVIDER=podman-compose
-if ! command -v podman-compose >/dev/null 2>&1; then
-  echo "podman-compose is required (pip install podman-compose / apt install podman-compose)" >&2
-  exit 1
-fi
 
 OUTAGE_SECONDS="${DC_E2E_OUTAGE_SECONDS:-600}"
 STEADY_STATE_SECONDS="${DC_E2E_STEADY_STATE_SECONDS:-30}"
@@ -56,48 +49,89 @@ DRAIN_SECONDS="${DC_E2E_DRAIN_SECONDS:-30}"
 STARTUP_TIMEOUT_SECONDS="${DC_E2E_STARTUP_TIMEOUT_SECONDS:-10}"
 KEEP="${DC_E2E_KEEP:-false}"
 
+# Container + volume names. Volumes are named (not host bind-mounts) so a full stack
+# restart (podman restart / stop+start) preserves dc_bridge's on-disk buffer
+# (shipper.data_dir) and Postgres's data directory — that persistence is what makes the
+# zero-loss guarantee (ADR-0002) survive a restart, not just a live process.
+PG_C=dc_e2e_postgres
+RUSTFS_C=dc_e2e_rustfs
+DC_C=dc_e2e_dc
+VOLUMES=(dc_e2e_pgdata dc_e2e_rustfs_data dc_e2e_buffer dc_e2e_data)
+
 mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
 
 log() { echo "[e2e $(date -u +%H:%M:%S)] $*"; }
 
+remove_stack() {
+  # --ignore makes "no such container" a clean success while still surfacing real errors
+  # (a broken podman, a container that won't die); likewise only remove volumes that exist.
+  podman rm -f --ignore "$DC_C" "$PG_C" "$RUSTFS_C" >/dev/null
+  for v in "${VOLUMES[@]}"; do
+    if podman volume exists "$v"; then
+      podman volume rm "$v" >/dev/null
+    fi
+  done
+}
+
+pg_exec() {
+  podman exec "$PG_C" psql -U dc -d dc -tAc "$1"
+}
+
 STATS_PID=""
 cleanup() {
   local exit_code=$?
-  if [ -n "$STATS_PID" ]; then
-    kill "$STATS_PID" 2>/dev/null || true
+  if [ -n "$STATS_PID" ] && kill -0 "$STATS_PID" 2>/dev/null; then
+    kill "$STATS_PID"
   fi
   if [ "$exit_code" -ne 0 ] && [ "$KEEP" = "true" ]; then
     log "FAILED (exit $exit_code) — leaving the stack up (DC_E2E_KEEP=true) for debugging"
     exit "$exit_code"
   fi
   log "tearing down"
-  podman compose -f compose.yaml logs > "$RUN_DIR/compose.log" 2>&1 || true
-  podman compose -f compose.yaml down -v --timeout 10 || true
+  if podman container exists "$DC_C"; then
+    podman logs "$DC_C" > "$RUN_DIR/dc.log" 2>&1
+  fi
+  remove_stack
   exit "$exit_code"
 }
 trap cleanup EXIT
 
-pg_exec() {
-  podman compose -f compose.yaml exec -T postgres psql -U dc -d dc -tAc "$1"
-}
-
-if [ -n "${DC_WORKSPACE_IMAGE:-}" ]; then
-  log "using prebuilt DC workspace image: $DC_WORKSPACE_IMAGE (skipping build.sh)"
-  podman image exists "$DC_WORKSPACE_IMAGE" || podman pull "$DC_WORKSPACE_IMAGE"
-  WORKSPACE_IMAGE="$DC_WORKSPACE_IMAGE"
+# --- obtain the DC stack image ------------------------------------------------------
+if [ -n "${DC_E2E_IMAGE:-}" ]; then
+  log "using prebuilt E2E image: $DC_E2E_IMAGE (no build)"
+  podman image exists "$DC_E2E_IMAGE" || podman pull "$DC_E2E_IMAGE"
+  DC_IMAGE="$DC_E2E_IMAGE"
 else
-  log "building the DC workspace image (tools/e2e/scripts/build.sh — the same build CI uses)"
-  "$SCRIPT_DIR/build.sh"
-  WORKSPACE_IMAGE="dc-workspace:latest"
+  if [ -n "${DC_WORKSPACE_IMAGE:-}" ]; then
+    log "using prebuilt DC workspace image: $DC_WORKSPACE_IMAGE (skipping build.sh)"
+    podman image exists "$DC_WORKSPACE_IMAGE" || podman pull "$DC_WORKSPACE_IMAGE"
+    WORKSPACE_IMAGE="$DC_WORKSPACE_IMAGE"
+  else
+    log "building the DC workspace image (tools/e2e/scripts/build.sh — the same build CI uses)"
+    "$SCRIPT_DIR/build.sh"
+    WORKSPACE_IMAGE="dc-workspace:latest"
+  fi
+  log "building the E2E image (Containerfile.e2e, FROM the workspace image)"
+  podman build --build-arg "BASE_IMAGE=$WORKSPACE_IMAGE" -t dc-e2e:latest -f Containerfile.e2e .
+  DC_IMAGE="dc-e2e:latest"
 fi
 
-log "building the E2E harness's thin runtime layer (Containerfile.e2e, FROM the workspace image)"
-podman build --build-arg "BASE_IMAGE=$WORKSPACE_IMAGE" -t dc-e2e:latest -f Containerfile.e2e .
+# Clean any leftovers from a previous (possibly DC_E2E_KEEP=true) run.
+remove_stack
 
+# --- bring up the destinations ------------------------------------------------------
 log "starting Postgres + RustFS"
-podman compose -f compose.yaml up -d postgres rustfs
-timeout 60 bash -c 'until podman compose -f compose.yaml exec -T postgres pg_isready -U dc >/dev/null 2>&1; do sleep 1; done' \
+podman run -d --network host --name "$PG_C" \
+  -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
+  -v dc_e2e_pgdata:/var/lib/postgresql/data \
+  -v "$E2E_DIR/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro" \
+  docker.io/library/postgres:13 >/dev/null
+podman run -d --network host --name "$RUSTFS_C" \
+  -v dc_e2e_rustfs_data:/data \
+  docker.io/rustfs/rustfs:latest >/dev/null
+
+timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
   || { log "Postgres never became ready"; exit 1; }
 timeout 60 bash -c 'until curl -sf http://127.0.0.1:9000 >/dev/null 2>&1 || curl -s http://127.0.0.1:9000 >/dev/null 2>&1; do sleep 1; done' \
   || { log "RustFS never became ready"; exit 1; }
@@ -115,9 +149,13 @@ podman run --rm --network host \
 "$SCRIPT_DIR/measure_resources.sh" "$RUN_DIR/resource_usage.csv" &
 STATS_PID=$!
 
+# --- start the DC stack, measure launch-to-first-Record -----------------------------
 log "starting the DC stack — measuring launch-to-first-Record latency"
 START_TS=$(date +%s.%N)
-podman compose -f compose.yaml up -d dc
+podman run -d --network host --name "$DC_C" \
+  -v dc_e2e_buffer:/root/.dc/e2e/buffer \
+  -v dc_e2e_data:/root/.dc/e2e/data \
+  "$DC_IMAGE" >/dev/null
 
 FIRST_RECORD_LATENCY=""
 DEADLINE=$(echo "$START_TS + $STARTUP_TIMEOUT_SECONDS + 5" | bc)
@@ -144,31 +182,35 @@ log "PASS: startup latency gate (<${STARTUP_TIMEOUT_SECONDS}s)"
 log "steady state for ${STEADY_STATE_SECONDS}s"
 sleep "$STEADY_STATE_SECONDS"
 
+# --- outage → restart → restore -----------------------------------------------------
 log "inducing outage: stopping Postgres + RustFS for ${OUTAGE_SECONDS}s (dc_bridge/Vector keep running and buffering to disk — ADR-0002)"
-podman compose -f compose.yaml stop postgres rustfs
+podman stop "$PG_C" "$RUSTFS_C" >/dev/null
 sleep "$OUTAGE_SECONDS"
 
 log "full stack restart while destinations are still down (proves recovery doesn't depend on the Bridge having stayed up)"
-podman compose -f compose.yaml restart dc
+podman restart "$DC_C" >/dev/null
 
 log "restoring Postgres + RustFS"
-podman compose -f compose.yaml start postgres rustfs
-timeout 60 bash -c 'until podman compose -f compose.yaml exec -T postgres pg_isready -U dc >/dev/null 2>&1; do sleep 1; done' \
+podman start "$PG_C" "$RUSTFS_C" >/dev/null
+timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
   || { log "Postgres never came back"; exit 1; }
 
 log "draining for ${DRAIN_SECONDS}s"
 sleep "$DRAIN_SECONDS"
 
 log "stopping the workload so counts settle before verification"
-podman compose -f compose.yaml stop dc
+podman stop "$DC_C" >/dev/null
 sleep 5
 
-kill "$STATS_PID" 2>/dev/null || true
+if [ -n "$STATS_PID" ] && kill -0 "$STATS_PID" 2>/dev/null; then
+  kill "$STATS_PID"
+fi
 STATS_PID=""
 
+# --- verify -------------------------------------------------------------------------
 log "verifying zero-loss (duplicates from the at-least-once boundary are deduped on read)"
 python3 "$SCRIPT_DIR/verify_zero_loss.py" \
-  --compose-file "$E2E_DIR/compose.yaml" \
+  --postgres-container "$PG_C" \
   --num-synth-topics 14 \
   --report "$RUN_DIR/verification_report.json"
 
