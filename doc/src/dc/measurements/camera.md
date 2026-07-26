@@ -24,7 +24,7 @@ Save camera image files: raw, rotated and/or inspected. Images can be inspected 
 | **save_rotated_path**     | Path to save the rotated camera image. Expands environment variables and datetime format are expanded   | str                  | "camera/rotated/%Y-%m-%dT%H:%M:%S"   |
 
 ## Measurement node configuration
-The remote paths are also saved in the JSON under *<measurement_name>.<destination>_img_paths.(raw|rotated|inspected)*. If images want to be sent to Minio, add "minio" in *remote_keys*. This will add a remote path that can later be used in your API.
+The remote paths are also saved in the JSON under *<measurement_name>.<destination>_img_paths.(raw|rotated|inspected)*. If images want to be sent to a self-hosted S3-compatible store such as [RustFS](https://rustfs.com/), add "rustfs" in *remote_keys*. This will add a remote path that can later be used in your API.
 
 Note that this remote key is not included in the JSON schema, which only contains the local paths. If you want to enforce the schema with your custom remote key, you will need to write it and load it manually.
 
@@ -50,20 +50,20 @@ camera:
   rotation_angle: 0
   detection_modules: ["barcode"]
   remote_prefixes: [""]
-  remote_keys: ["minio"] # Will create paths for Minio, does not send the file
+  remote_keys: ["rustfs"] # Will create paths for RustFS, does not send the file
 ```
 
 ### Destination (dc_bridge) configuration
 Now that the path is set, it can be used to know where to send the image. The
-Destination name (`minio`) must match the `remote_keys` entry above — the Uploader
+Destination name (`rustfs`) must match the `remote_keys` entry above — the Uploader
 matches a Record's `remote_paths` keys against `receives: files` Destination names (see
 [Destinations](../destinations.md)):
 
 ```yaml
 dc_bridge:
   ros__parameters:
-    destinations: ["minio", "pgsql"]
-    minio:
+    destinations: ["rustfs", "pgsql"]
+    rustfs:
       type: s3
       receives: files
       inputs: ["/dc/group/cameras"]

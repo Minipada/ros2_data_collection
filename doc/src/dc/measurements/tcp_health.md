@@ -44,10 +44,10 @@ Collects status of a TCP server.
 ...
 tcp_health:
   plugin: "dc_measurements/TCPHealth"
-  topic_output: "/dc/measurement/minio_health"
-  group_key: "minio_health"
+  topic_output: "/dc/measurement/rustfs_health"
+  group_key: "rustfs_health"
   tags: ["console"]
   host: "127.0.0.1"
   port: 9000
-  name: "minio_api"
+  name: "rustfs_api"
 ```
