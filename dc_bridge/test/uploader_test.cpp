@@ -1,6 +1,5 @@
-// Port of dc_bridge_core uploader_tests: exercises the Uploader against an in-memory
-// ObjectStore fake with failure injection (mirroring the Rust `Instrumented` wrapper
-// over object_store's InMemory) — no aws-sdk-cpp / cloud dependency.
+// Exercises the Uploader against an in-memory ObjectStore fake with failure injection —
+// no aws-sdk-cpp / cloud dependency.
 #include "dc_bridge/uploader/uploader.hpp"
 
 #include <gtest/gtest.h>
@@ -70,7 +69,7 @@ public:
     }
     std::lock_guard<std::mutex> lock(mu_);
     uploads_[upload_id].parts[part_number] = bytes;
-    part_puts.push_back(part_number - 1);  // record 0-based, matching the Rust test
+    part_puts.push_back(part_number - 1);  // record 0-based
     return "etag-" + std::to_string(part_number);
   }
 

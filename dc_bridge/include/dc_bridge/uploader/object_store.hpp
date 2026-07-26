@@ -3,8 +3,7 @@
 // low-level multipart primitives whose persistent upload id makes interrupted transfers
 // resumable. The real S3 implementation (aws-sdk-cpp) lives in src/uploader/
 // s3_object_store.cpp; an in-memory fake in the tests exercises the logic without any
-// cloud dependency — the same split the Rust design had with object_store's InMemory
-// backend, keeping the upload logic testable and aws-free.
+// cloud dependency, keeping the upload logic testable and aws-free.
 #ifndef DC_BRIDGE__UPLOADER__OBJECT_STORE_HPP_
 #define DC_BRIDGE__UPLOADER__OBJECT_STORE_HPP_
 

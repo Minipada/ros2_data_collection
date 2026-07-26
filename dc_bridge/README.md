@@ -1,7 +1,7 @@
 # dc_bridge
 
-The Bridge (ADRs 0001/0003/0005/0006; ADR-0007 reverts the ADR-0004 Rust pilot): a C++
-(`rclcpp`) node that subscribes to `dc_interfaces/msg/StringStamped` Record topics and
+The Bridge (ADRs 0001/0003/0005/0006/0007): a C++ (`rclcpp`) node that subscribes to
+`dc_interfaces/msg/StringStamped` Record topics and
 forwards every Record to the [Vector](https://vector.dev) shipper over the Fluent Forward
 protocol. It renders Vector's configuration from ROS parameters for the blessed
 Destination set (`postgres`, `s3`, `file`, `console` — ADR-0003) and passes raw Vector
@@ -12,9 +12,8 @@ Records referencing Files get their Files uploaded to S3-compatible object stora
 `dc.files` Tag.
 
 `dc_bridge` is an ordinary `ament_cmake` C++ package. It builds with the same `rosdep
-install` + `colcon build` as every other `dc_*` package — no Rust toolchain, no
-`colcon-cargo`, no source-built message repos. See `docs/adr/0007-bridge-returns-to-cpp.md`
-for why the Rust pilot was reverted.
+install` + `colcon build` as every other `dc_*` package. See
+`docs/adr/0007-bridge-returns-to-cpp.md` for the architecture decision history.
 
 ## Layout
 

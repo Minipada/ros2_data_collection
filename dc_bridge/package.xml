@@ -6,9 +6,8 @@
   <description>
     Bridge node (C++): subscribes to StringStamped Record topics and forwards them to the
     Vector shipper over the Fluent Forward protocol, rendering Vector's config from ROS
-    parameters for the blessed Destination set (ADRs 0001/0003/0006). ADR-0007 reverts
-    the ADR-0004 Rust pilot: the Bridge is plain ament_cmake C++, so it builds with
-    rosdep + colcon like every other dc_* package.
+    parameters for the blessed Destination set (ADRs 0001/0003/0006/0007). Plain
+    ament_cmake C++, so it builds with rosdep + colcon like every other dc_* package.
   </description>
   <maintainer email="d.bensoussan@proton.me">David Bensoussan</maintainer>
   <license>MPL-2.0</license>

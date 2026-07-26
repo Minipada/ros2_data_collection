@@ -8,7 +8,7 @@
 // Two layers, both pure: destination_from_raw (+ the per-type from_raw builders) turns
 // the flat, stringly-typed values ROS parameters give into validated typed config (this
 // is where invalid-parameter rejection lives); render() turns already-validated typed
-// config into Vector TOML text. (Port of the Rust dc_bridge_core::render.)
+// config into Vector TOML text.
 #ifndef DC_BRIDGE__RENDER_HPP_
 #define DC_BRIDGE__RENDER_HPP_
 
@@ -112,8 +112,8 @@ struct RenderConfig
   std::vector<Destination> destinations;
 };
 
-/// Error categories mirroring the Rust RenderError variants; kind() lets tests assert
-/// the specific failure. Formatted message in what().
+/// Error categories a render() can fail with; kind() lets tests assert the specific
+/// failure. Formatted message in what().
 enum class RenderErrorKind
 {
   EmptyDataDir,

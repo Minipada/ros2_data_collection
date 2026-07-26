@@ -18,7 +18,7 @@ bool pnm_magic(const std::string& buf, char digit)
   return buf.size() >= 3 && buf[0] == 'P' && buf[1] == digit && std::isspace(static_cast<unsigned char>(buf[2]));
 }
 
-// Minimal UTF-8 validity check (matches Rust's std::str::from_utf8().is_ok()).
+// Minimal UTF-8 validity check.
 bool is_valid_utf8(const std::string& s)
 {
   std::size_t i = 0;

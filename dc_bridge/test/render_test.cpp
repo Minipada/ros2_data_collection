@@ -1,6 +1,5 @@
-// Port of dc_bridge_core::render's inline tests. Gold-file comparisons parse both the
-// rendered output and the checked-in fixture and compare toml++ tables (order/format
-// insensitive), same discipline as the Rust `assert_matches_fixture`.
+// Gold-file comparisons parse both the rendered output and the checked-in fixture and
+// compare toml++ tables (order/format insensitive) rather than raw text.
 #include "dc_bridge/render.hpp"
 
 #include <gtest/gtest.h>
