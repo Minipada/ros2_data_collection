@@ -25,9 +25,8 @@ CCOV="${CCOV:-false}"
 # The repo's .dockerignore is an "ignore everything, whitelist package.xml" allowlist
 # meant for a deps-only image — this build needs every source file. `--ignorefile`
 # does *not* override .dockerignore (verified empirically — it only supplements it),
-# so it has to be moved aside, matching docker.yaml's own `source`/`source-sim` jobs'
-# `rm .dockerignore` precedent for the same reason. Trap-guarded so it's restored even
-# on failure.
+# so it has to be moved aside for the duration of the build. Trap-guarded so it's
+# restored even on failure.
 DOCKERIGNORE="$REPO_ROOT/.dockerignore"
 mv "$DOCKERIGNORE" "$DOCKERIGNORE.e2e-bak"
 trap 'if [ -f "$DOCKERIGNORE.e2e-bak" ]; then mv -f "$DOCKERIGNORE.e2e-bak" "$DOCKERIGNORE"; fi' EXIT
