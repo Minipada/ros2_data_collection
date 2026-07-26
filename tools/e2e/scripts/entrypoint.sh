@@ -26,8 +26,12 @@ ros2 launch dc_bringup dc_bringup.launch.py \
 LAUNCH_PID=$!
 
 cleanup() {
-  kill "$LAUNCH_PID" "$GEN_PID" 2>/dev/null || true
-  wait "$LAUNCH_PID" "$GEN_PID" 2>/dev/null || true
+  # Best-effort shutdown: errexit is scoped off here (not masked per-command with
+  # `|| true`) because signalling or reaping a child that has already exited returns
+  # non-zero, which is expected during teardown — not an error to surface.
+  set +e
+  kill "$LAUNCH_PID" "$GEN_PID" 2>/dev/null
+  wait "$LAUNCH_PID" "$GEN_PID" 2>/dev/null
 }
 trap cleanup TERM INT
 
