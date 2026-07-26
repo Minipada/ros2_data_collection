@@ -1,19 +1,21 @@
 # DC 2.0 (Jazzy) CI (#249). This branch only builds the jazzy line (external Vector
 # shipper, C++ dc_bridge — the Rust pilot of ADR-0004 was reverted in ADR-0007). The
-# humble-line `industrial_ci`/Docker workflow this repo used to run doesn't apply here
-# and isn't carried over onto this branch (it still exists on `humble`, a separate
-# branch/tree — deleting it here doesn't touch that). Deliberately not industrial_ci,
-# which is Docker-only anyway — this repo is moving off Docker in favor of Podman (see
-# CLAUDE.md "Containers: Podman, not Docker").
+# humble-line `industrial_ci`/Docker workflow this repo used to run doesn't apply here and
+# isn't carried over onto this branch (it still exists on `humble`, a separate branch/tree
+# — deleting it here doesn't touch that). This repo is moving off Docker in favor of
+# Podman (CLAUDE.md "Containers: Podman, not Docker").
 #
-# Builds the shared DC workspace image (tools/e2e/Containerfile, also used by the
-# zero-loss E2E harness via tools/e2e/Containerfile.e2e), runs colcon test (C++ gtest
-# across every package) with coverage, **publishes the image to ghcr.io**, then runs the
-# harness. Image tagging follows the ~/dev/monorepo convention: an immutable `:<sha>` ref
-# (pushed on every event) plus a floating `:<branch-slug>` ref (pushed on non-PR events).
+# One job builds each artifact and pushes it; the others pull and use it (build once, use
+# many). The immutable :<sha> ref is the only tag published — per CLAUDE.md, a floating
+# :<branch> ref is added only once the repo publishes runnable images for others, which it
+# doesn't yet; here the images exist purely for CI-internal reuse + traceability.
 #
-# No CI-only build/test scripts: every step below calls the same
-# tools/e2e/scripts/build.sh / test.sh / run.sh a developer runs locally.
+#   build-workspace ─┬─▶ colcon-test        (pull dc-workspace, colcon test + coverage)
+#                    └─▶ build-e2e-image ─▶ e2e   (pull dc-e2e, zero-loss harness)
+#
+# No CI-only build/test scripts: every step calls the same tools/e2e/scripts/build.sh /
+# test.sh / run.sh a developer runs locally. run.sh drives the harness with plain podman
+# (no compose), so nothing extra is installed on the runner.
 
 name: CI
 
@@ -30,16 +32,16 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# The registry-backed build cache (build.sh's --cache-from/--cache-to) and the published
-# image refs are computed per job in a "Compute image refs" step, since ghcr requires a
-# lowercased repository name and GitHub expressions have no lowercase function.
-
 jobs:
-  build-and-test:
+  build-workspace:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    outputs:
+      workspace_ref: ${{ steps.refs.outputs.workspace_ref }}
+      e2e_ref: ${{ steps.refs.outputs.e2e_ref }}
+      cache_ref: ${{ steps.refs.outputs.cache_ref }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,35 +52,56 @@ jobs:
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      # Immutable :<sha> + floating :<branch-slug> refs, mirroring the monorepo's
-      # image-ref action. ghcr image names must be lowercase.
+      # ghcr image names must be lowercase and GitHub expressions have no lowercase
+      # function, so the refs are computed here and shared with downstream jobs as outputs.
       - name: Compute image refs
         id: refs
         env:
-          HEAD_REF: ${{ github.head_ref }}
-          REF_NAME: ${{ github.ref_name }}
           SHA: ${{ github.sha }}
           REPO: ${{ github.repository }}
         run: |
-          IMAGE="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')/dc-workspace"
-          REF="${HEAD_REF:-$REF_NAME}"
-          SLUG="$(printf '%s' "$REF" \
-            | sed -E 's#[^A-Za-z0-9_.-]+#-#g' \
-            | sed -E 's#^[.-]+##; s#[.-]+$##' \
-            | cut -c1-128)"
+          IMAGE="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
           {
-            echo "image=$IMAGE"
-            echo "sha_ref=$IMAGE:$SHA"
-            echo "branch_ref=$IMAGE:$SLUG"
-            echo "cache_ref=$IMAGE-cache"
+            echo "workspace_ref=$IMAGE/dc-workspace:$SHA"
+            echo "e2e_ref=$IMAGE/dc-e2e:$SHA"
+            echo "cache_ref=$IMAGE/dc-workspace-cache"
           } >> "$GITHUB_OUTPUT"
 
       - name: Build the DC workspace image (coverage-instrumented)
         env:
-          IMAGE_TAG: ${{ steps.refs.outputs.sha_ref }}
+          IMAGE_TAG: ${{ steps.refs.outputs.workspace_ref }}
           CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
           CCOV: "true"
         run: ./tools/e2e/scripts/build.sh
+
+      - name: Push the workspace image
+        env:
+          REF: ${{ steps.refs.outputs.workspace_ref }}
+        run: |
+          for attempt in 1 2 3; do
+            podman push "$REF" && exit 0
+            echo "push $REF attempt $attempt failed; retrying in 10s"; sleep 10
+          done
+          exit 1
+
+  colcon-test:
+    needs: build-workspace
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Log in to ghcr.io (to pull the workspace image)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Pull the workspace image
+        run: podman pull "${{ needs.build-workspace.outputs.workspace_ref }}"
 
       - name: Start Postgres + RustFS (dc_bridge's store-backed tests hard-fail, never skip — see dc_bridge/README.md)
         run: |
@@ -99,28 +122,8 @@ jobs:
 
       - name: colcon test (C++ gtest) + coverage
         env:
-          IMAGE: ${{ steps.refs.outputs.sha_ref }}
+          IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
         run: ./tools/e2e/scripts/test.sh "$PWD/coverage"
-
-      # Only reached when the build + tests above passed, so a broken image is never
-      # published. :<sha> on every event; :<branch-slug> on non-PR (push to jazzy).
-      - name: Push the workspace image
-        env:
-          SHA_REF: ${{ steps.refs.outputs.sha_ref }}
-          BRANCH_REF: ${{ steps.refs.outputs.branch_ref }}
-        run: |
-          push() {
-            for attempt in 1 2 3; do
-              podman push "$1" && return 0
-              echo "push $1 attempt $attempt failed; retrying in 10s"; sleep 10
-            done
-            return 1
-          }
-          push "$SHA_REF"
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            podman tag "$SHA_REF" "$BRANCH_REF"
-            push "$BRANCH_REF"
-          fi
 
       - name: Stop Postgres + RustFS
         if: always()
@@ -134,8 +137,8 @@ jobs:
           files: coverage/cpp.info
           flags: cpp-jazzy
 
-  e2e:
-    needs: build-and-test
+  build-e2e-image:
+    needs: build-workspace
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -146,39 +149,56 @@ jobs:
       - name: Verify podman
         run: podman --version
 
-      # run.sh pins the socket-free podman-compose provider (see its header); the runner
-      # doesn't ship it. Pure-podman, no docker-compose plugin / Docker API socket.
-      - name: Install podman-compose
-        run: |
-          pip install --user podman-compose
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: Log in to ghcr.io (to pull the workspace image build-and-test pushed)
+      - name: Log in to ghcr.io
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      # The immutable :<sha> ref build-and-test built, tested, and pushed. This job uses
-      # that exact artifact — it does not rebuild the workspace (one job builds, one uses).
-      - name: Compute workspace image ref
-        id: refs
+      # Thin harness layer (workload generator + params + entrypoint) FROM the tested
+      # workspace image. Context is tools/e2e (not the repo root), so the repo's
+      # allowlist .dockerignore doesn't apply and there's no move-aside dance.
+      - name: Build the E2E image
         env:
-          REPO: ${{ github.repository }}
-          SHA: ${{ github.sha }}
+          BASE_IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
+          E2E_REF: ${{ needs.build-workspace.outputs.e2e_ref }}
+        run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$E2E_REF" -f tools/e2e/Containerfile.e2e tools/e2e
+
+      - name: Push the E2E image
+        env:
+          E2E_REF: ${{ needs.build-workspace.outputs.e2e_ref }}
         run: |
-          echo "sha_ref=ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')/dc-workspace:$SHA" >> "$GITHUB_OUTPUT"
+          for attempt in 1 2 3; do
+            podman push "$E2E_REF" && exit 0
+            echo "push $E2E_REF attempt $attempt failed; retrying in 10s"; sleep 10
+          done
+          exit 1
+
+  e2e:
+    needs: [build-workspace, build-e2e-image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Log in to ghcr.io (to pull the E2E image)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Run zero-loss E2E harness (CI-sized outage window)
-        # Same code paths as the full 10-minute local proof (tools/e2e/README.md); CI
-        # uses a shorter outage window so the job finishes in reasonable time. Both the
-        # startup-latency gate (<10s) and the zero-loss gate are real, hard-failing
-        # assertions here — nothing is skipped or informational except the resource-usage
-        # report and the at-least-once boundary re-sends (deduped on read).
-        # DC_WORKSPACE_IMAGE points run.sh at the tested image
-        # from build-and-test, so the harness reuses it instead of rebuilding.
+        # Same code paths as the full 10-minute local proof (tools/e2e/README.md); CI uses
+        # a shorter outage window so the job finishes in reasonable time. The startup gate
+        # (<10s) and the zero-loss gate are real, hard-failing assertions — nothing is
+        # skipped or informational except the resource-usage report and the at-least-once
+        # boundary re-sends (deduped on read). DC_E2E_IMAGE points run.sh at the image
+        # build-e2e-image pushed, so the harness runs it directly with no build.
         env:
           DC_E2E_OUTAGE_SECONDS: "60"
           DC_E2E_STEADY_STATE_SECONDS: "30"
-          DC_WORKSPACE_IMAGE: ${{ steps.refs.outputs.sha_ref }}
+          DC_E2E_IMAGE: ${{ needs.build-workspace.outputs.e2e_ref }}
         run: ./tools/e2e/scripts/run.sh
 
       - name: Upload E2E harness logs (on failure)
