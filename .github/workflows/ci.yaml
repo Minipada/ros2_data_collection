@@ -4,10 +4,13 @@
 # and isn't carried over onto this branch (it still exists on `humble`, a separate
 # branch/tree — deleting it here doesn't touch that). Deliberately not industrial_ci,
 # which is Docker-only anyway — this repo is moving off Docker in favor of Podman (see
-# CLAUDE.md "Containers: Podman, not Docker"). Builds the shared DC workspace image
-# (tools/e2e/Containerfile, also used by the zero-loss E2E harness via
-# tools/e2e/Containerfile.e2e), runs colcon test (C++ gtest across every package) with
-# coverage, then runs the harness itself.
+# CLAUDE.md "Containers: Podman, not Docker").
+#
+# Builds the shared DC workspace image (tools/e2e/Containerfile, also used by the
+# zero-loss E2E harness via tools/e2e/Containerfile.e2e), runs colcon test (C++ gtest
+# across every package) with coverage, **publishes the image to ghcr.io**, then runs the
+# harness. Image tagging follows the ~/dev/monorepo convention: an immutable `:<sha>` ref
+# (pushed on every event) plus a floating `:<branch-slug>` ref (pushed on non-PR events).
 #
 # No CI-only build/test scripts: every step below calls the same
 # tools/e2e/scripts/build.sh / test.sh / run.sh a developer runs locally.
@@ -27,18 +30,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  IMAGE_TAG: dc-workspace:${{ github.sha }}
-  # podman's build cache is local-only by default and wouldn't survive a fresh
-  # GitHub-hosted runner (a new VM every job) — this registry ref makes
-  # tools/e2e/scripts/build.sh's --cache-from/--cache-to round-trip through ghcr.io
-  # instead, so the (rarely-changing) toolchain stage stays warm across runs. Verified
-  # this actually works — podman build --cache-to/--cache-from against a real registry,
-  # cold local state in between — before wiring it up here. Shared by both jobs below:
-  # the `e2e` job rebuilds the same workspace image (to layer
-  # tools/e2e/Containerfile.e2e on top of it) and gets a cache hit off what
-  # `build-and-test` just pushed.
-  CACHE_REF: ghcr.io/${{ github.repository }}/dc-workspace-cache
+# The registry-backed build cache (build.sh's --cache-from/--cache-to) and the published
+# image refs are computed per job in a "Compute image refs" step, since ghcr requires a
+# lowercased repository name and GitHub expressions have no lowercase function.
 
 jobs:
   build-and-test:
@@ -52,12 +46,37 @@ jobs:
       - name: Verify podman
         run: podman --version
 
-      - name: Log in to ghcr.io (for the registry-backed build cache)
+      - name: Log in to ghcr.io
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      # Immutable :<sha> + floating :<branch-slug> refs, mirroring the monorepo's
+      # image-ref action. ghcr image names must be lowercase.
+      - name: Compute image refs
+        id: refs
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          IMAGE="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')/dc-workspace"
+          REF="${HEAD_REF:-$REF_NAME}"
+          SLUG="$(printf '%s' "$REF" \
+            | sed -E 's#[^A-Za-z0-9_.-]+#-#g' \
+            | sed -E 's#^[.-]+##; s#[.-]+$##' \
+            | cut -c1-128)"
+          {
+            echo "image=$IMAGE"
+            echo "sha_ref=$IMAGE:$SHA"
+            echo "branch_ref=$IMAGE:$SLUG"
+            echo "cache_ref=$IMAGE-cache"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build the DC workspace image (coverage-instrumented)
         env:
+          IMAGE_TAG: ${{ steps.refs.outputs.sha_ref }}
+          CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
           CCOV: "true"
         run: ./tools/e2e/scripts/build.sh
 
@@ -77,8 +96,28 @@ jobs:
 
       - name: colcon test (C++ gtest) + coverage
         env:
-          IMAGE: ${{ env.IMAGE_TAG }}
+          IMAGE: ${{ steps.refs.outputs.sha_ref }}
         run: ./tools/e2e/scripts/test.sh "$PWD/coverage"
+
+      # Only reached when the build + tests above passed, so a broken image is never
+      # published. :<sha> on every event; :<branch-slug> on non-PR (push to jazzy).
+      - name: Push the workspace image
+        env:
+          SHA_REF: ${{ steps.refs.outputs.sha_ref }}
+          BRANCH_REF: ${{ steps.refs.outputs.branch_ref }}
+        run: |
+          push() {
+            for attempt in 1 2 3; do
+              podman push "$1" && return 0
+              echo "push $1 attempt $attempt failed; retrying in 10s"; sleep 10
+            done
+            return 1
+          }
+          push "$SHA_REF"
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            podman tag "$SHA_REF" "$BRANCH_REF"
+            push "$BRANCH_REF"
+          fi
 
       - name: Stop Postgres + RustFS
         if: always()
@@ -108,15 +147,23 @@ jobs:
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      - name: Compute cache ref
+        id: refs
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          echo "cache_ref=ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')/dc-workspace-cache" >> "$GITHUB_OUTPUT"
+
       - name: Run zero-loss E2E harness (CI-sized outage window)
         # Same code paths as the full 10-minute local proof (tools/e2e/README.md); CI
         # uses a shorter outage window so the job finishes in reasonable time. Both the
         # startup-latency gate (<10s) and the zero-loss/exactly-once gate are real,
         # hard-failing assertions here — nothing is skipped or informational except the
-        # resource-usage report.
+        # resource-usage report. Reuses the build cache build-and-test just pushed.
         env:
           DC_E2E_OUTAGE_SECONDS: "60"
           DC_E2E_STEADY_STATE_SECONDS: "30"
+          CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
         run: ./tools/e2e/scripts/run.sh
 
       - name: Upload E2E harness logs (on failure)
