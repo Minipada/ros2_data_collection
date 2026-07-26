@@ -1,0 +1,32 @@
+# Stable test-dependency stores for the store-backed dc_bridge gtests (colcon test):
+# Postgres + an S3-compatible RustFS. Unlike the zero-loss harness (which stops and
+# restarts its stores to induce an outage, so it drives them with native podman — see
+# tools/e2e/scripts/run.sh), these just need to be *up* for the duration of the test run,
+# which is exactly what a declarative compose file is for.
+#
+# Bring them up (locally or in CI's colcon-test job) with:
+#   podman compose -f tools/e2e/compose.test.yaml up -d
+# then create the bucket the tests use and run tools/e2e/scripts/test.sh.
+#
+# network_mode: host so the stores are reachable on 127.0.0.1:5432 / :9000 — the same
+# addresses test.sh's `podman run --network host` test container connects to. Fixed
+# container_names so `podman exec dc_pg_test …` doesn't depend on the compose project name.
+services:
+  postgres:
+    image: docker.io/library/postgres:13
+    container_name: dc_pg_test
+    network_mode: host
+    environment:
+      POSTGRES_USER: dc
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dc
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dc"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  rustfs:
+    image: docker.io/rustfs/rustfs:latest
+    container_name: dc_rustfs_test
+    network_mode: host
