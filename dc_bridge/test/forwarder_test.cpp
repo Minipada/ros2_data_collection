@@ -12,6 +12,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstring>
+#include <functional>
 #include <msgpack.hpp>
 #include <mutex>
 #include <nlohmann/json.hpp>
@@ -57,6 +58,30 @@ struct MockServer
       ::close(listen_fd);
   }
 };
+
+// Polls `condition` until it returns true or `budget` of real wall-clock time elapses,
+// sleeping 20ms between checks. A wall-clock deadline rather than a fixed iteration
+// count: a fixed `for (i < N) { ...; sleep(20ms); }` loop implicitly assumes each
+// iteration costs ~20ms, but scheduler contention or a slow (e.g. coverage-instrumented)
+// build inflates the real cost per iteration, silently shrinking the test's actual
+// patience without touching the visible "N iterations" budget — the CI flake this
+// replaced (Forwarder.UnackedRecordResendsAfterReconnect intermittently failing under a
+// loaded/coverage build) was exactly that. `condition` may have side effects (e.g.
+// calling forwarder.poll()) — it's invoked once more after the deadline so a
+// just-in-time success right at the boundary still counts.
+bool poll_until(std::chrono::milliseconds budget, const std::function<bool()>& condition)
+{
+  const auto deadline = std::chrono::steady_clock::now() + budget;
+  do
+  {
+    if (condition())
+    {
+      return true;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  } while (std::chrono::steady_clock::now() < deadline);
+  return condition();
+}
 
 // Unpacks one msgpack object from `bytes`.
 msgpack::object_handle unpack(const std::string& bytes)
@@ -199,20 +224,17 @@ TEST(Forwarder, ReconnectsAfterPeerDropsConnection)
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-  bool reconnected = false;
-  for (int i = 0; i < 100; ++i)
-  {
+  bool reconnected = poll_until(std::chrono::seconds(10), [&]() {
     try
     {
       forwarder.send(make_record("dc.test", R"({"n": 2})"));
-      reconnected = true;
-      break;
+      return true;
     }
     catch (const ForwarderError&)
     {
-      std::this_thread::sleep_for(std::chrono::milliseconds(20));
+      return false;
     }
-  }
+  });
   srv.join();
   EXPECT_TRUE(reconnected) << "forwarder should reconnect after the peer resets the connection";
 }
@@ -279,17 +301,10 @@ TEST(Forwarder, AckedRecordLeavesTheUnackedWindow)
   forwarder.send(make_record("dc.test", R"({"n": 1})"));
   EXPECT_EQ(forwarder.unacked_count(), 1u);
 
-  bool drained = false;
-  for (int i = 0; i < 100; ++i)
-  {
+  bool drained = poll_until(std::chrono::seconds(10), [&]() {
     forwarder.poll();
-    if (forwarder.unacked_count() == 0)
-    {
-      drained = true;
-      break;
-    }
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-  }
+    return forwarder.unacked_count() == 0;
+  });
   EXPECT_TRUE(drained) << "an acked record should leave the unacked window";
   EXPECT_EQ(forwarder.unacked_bytes(), 0u);
 
@@ -344,18 +359,11 @@ TEST(Forwarder, UnackedRecordResendsAfterReconnect)
   // Give the mock server time to RST the first connection, then poll until the
   // Forwarder has reconnected and redelivered.
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  bool redelivered = false;
-  for (int i = 0; i < 100; ++i)
-  {
+  bool redelivered = poll_until(std::chrono::seconds(10), [&]() {
     forwarder.poll();
     std::lock_guard<std::mutex> lock(seen_mutex);
-    if (chunk_ids_seen.size() >= 2)
-    {
-      redelivered = true;
-      break;
-    }
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-  }
+    return chunk_ids_seen.size() >= 2;
+  });
   srv.join();
 
   ASSERT_TRUE(redelivered) << "the unacked record should have been resent on the new connection";
