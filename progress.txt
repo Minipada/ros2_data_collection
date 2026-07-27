@@ -1916,3 +1916,65 @@ layer invalidates on every source change
   run — needs verification in CI or a machine with more resources before being fully
   trusted. A sparse/partial top-level aws-sdk-cpp checkout (see finding above) is a
   candidate follow-up if the ~1GB clone cost itself needs to come down.
+
+### #49 - Add Measurement: diagnostics
+
+- Added a new `dc_measurements/Diagnostics` Measurement plugin (`dc_measurements/plugins/
+  measurements/diagnostics.cpp` + `include/dc_measurements/plugins/measurements/
+  diagnostics.hpp`), following the subscription-caching pattern already used by
+  `CmdVel` (`plugins/measurements/cmd_vel.cpp`): subscribes to a configurable topic
+  (default `/diagnostics`, `diagnostic_msgs/msg/DiagnosticArray`), caches the latest
+  filtered result in a callback, and `collect()` (driven by the usual `polling_interval`
+  timer) drains and resets that cache into a `StringStamped` Record — same lossy-between-
+  polls behavior `CmdVel` already has, so nothing new there.
+  - Two configurable filters, both from the issue's acceptance criteria: `level_threshold`
+    (string `"OK"`/`"WARN"`/`"ERROR"`/`"STALE"`, default `"OK"` i.e. no filtering, mapped
+    to the matching `diagnostic_msgs::msg::DiagnosticStatus` byte constant; an unrecognized
+    string logs an error and falls back to `"OK"`) and `names` (string-array allowlist on
+    `DiagnosticStatus.name`; empty = allow all).
+  - Each matching `DiagnosticStatus` becomes one entry in a top-level `"statuses"` JSON
+    array (has to be an array *inside* an object, not a bare top-level array — the base
+    `Measurement::publish()` pipeline does `data_json["tags"] = ...`-style object-keyed
+    mutation on whatever `collect()` returns, which would throw on a bare JSON array).
+    Each entry keeps `name`/`message`/`hardware_id`/`level` (as a plain int) plus
+    `values` — every `DiagnosticStatus.values` `KeyValue` copied into a `values` JSON
+    *object* (`values[key] = value`), not a stringified/flattened blob, per the issue's
+    explicit acceptance criterion. If every status in an incoming `DiagnosticArray` gets
+    filtered out, the callback leaves the previous cache alone rather than overwriting it
+    with an empty `"statuses": []` (mirrors `CmdVel`'s "nothing received yet" empty-cache
+    state, which `Measurement::publish()` already treats as "don't publish").
+  - Per the issue's explicit note, dedup of *unchanged* diagnostics is left to the
+    existing `dc_conditions/SameAsPrevious` condition plugin (wired via
+    `if_none_conditions`) rather than reimplemented here — documented with a worked
+    example in the new doc page.
+- JSON schema at `dc_measurements/plugins/measurements/json/diagnostics.json` (validates
+  the `"statuses"` array shape described above); gtest suite
+  `dc_measurements/test/test_measurement_diagnostics.cpp` following
+  `test_measurement_uptime.cpp`'s structure (a `MeasurementServer` + a subscription on
+  the output topic), extended with a `DiagnosticArray` publisher on the test node since
+  this Measurement is subscription-driven rather than polling a local system call:
+  covers level-threshold filtering (mixed OK/ERROR statuses with `level_threshold:
+  "WARN"` keeps only the ERROR one) and the name allowlist (keeps only the allow-listed
+  name) — both also assert `values` survives as a real JSON object (`values.temperature
+  == "42"`), covering the "not flattened to a message string" criterion directly.
+- Registered like every other Measurement plugin: `measurement_plugin.xml` (new
+  `dc_diagnostics_measurement` library / `dc_measurements/Diagnostics` class),
+  `CMakeLists.txt` (new `add_library`, added to `dc_measurement_plugin_libs` and the
+  `tests` list), `package.xml` (`diagnostic_msgs` depend). Docs:
+  `doc/src/dc/measurements/diagnostics.md` (parameter table, schema, a
+  `same_as_previous`-paired example config) linked from `doc/src/SUMMARY.md`, matching
+  every other Measurement's doc page.
+- **Not done / left for CI**: same constraint as every prior slice in this tree — no
+  ROS 2/`colcon`/`ament_cmake` install in this sandbox, so `colcon build`/`colcon test`
+  for `dc_measurements` (with the new plugin/test) could not be run for real here. Ran
+  `pre-commit` on every changed/new file instead (`clang-format`, `Verify json syntax`,
+  `check-xml`, `ros2_ws_same_versions`, `ros2_ws_set_metadata`, codespell, etc. all
+  passed; the usual disk-heavy/broken-tool-environment hooks — `build-doc`,
+  `poetry-requirements`, `pycln`, `flake8`, `go-fmt` — skipped, consistent with every
+  #242-#249 note above). A real `colcon build --packages-select dc_measurements` +
+  `colcon test` run (CI once #249's Jazzy matrix covers `dc_measurements`, or a machine
+  with more resources) is still needed to close the "colcon build succeeds"/"gtest
+  suite passes" acceptance criteria for real; no demo against a live Destination was
+  attempted either (the issue calls it optional — "not required, but exercising it once
+  against a real Destination is the cheapest end-to-end check" — and it needs the same
+  ROS environment this sandbox lacks).
