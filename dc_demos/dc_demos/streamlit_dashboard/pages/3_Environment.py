@@ -1,7 +1,7 @@
 import pathlib
 
 import streamlit as st
-from backend import PGSQLService, minio_client
+from backend import PGSQLService, rustfs_client
 from config import Backend, Storage, config
 from lib import Section
 from pages import Header, Sidebar
@@ -9,7 +9,7 @@ from pages import Header, Sidebar
 
 class Map(Section):
     supported_backends = [Backend.POSTGRESQL]
-    supported_storages = [Storage.MINIO]
+    supported_storages = [Storage.RUSTFS]
 
     def __init__(
         self, backend: Backend = config.BACKEND, storage: Storage = config.STORAGE
@@ -28,7 +28,7 @@ class Map(Section):
     @Section.handler_load_data_storage_not_implemented
     @Section.handler_load_data_none
     def load_data(self):
-        if self.backend == Backend.POSTGRESQL and self.storage == Storage.MINIO:
+        if self.backend == Backend.POSTGRESQL and self.storage == Storage.RUSTFS:
             self.last_map_paths = PGSQLService.get_last_map(
                 robot_name=st.session_state.robot_name,
                 run_id=st.session_state.get("run_id", ""),
@@ -37,10 +37,10 @@ class Map(Section):
                 storage=self.storage,
             )
 
-        if self.storage == Storage.MINIO:
-            self.last_map_url_png = minio_client.get_presigned_url(
+        if self.storage == Storage.RUSTFS:
+            self.last_map_url_png = rustfs_client.get_presigned_url(
                 "GET",
-                config.MINIO_BUCKET,
+                config.RUSTFS_BUCKET,
                 self.last_map_paths[0],
             )
         self.base_file_name = pathlib.Path(
@@ -48,17 +48,17 @@ class Map(Section):
             f"{pathlib.Path(self.last_map_url_png.split('/')[-1]).with_suffix('')}"
         )
 
-        if self.storage == Storage.MINIO:
-            self.last_map_png = minio_client.get_object(
-                config.MINIO_BUCKET,
+        if self.storage == Storage.RUSTFS:
+            self.last_map_png = rustfs_client.get_object(
+                config.RUSTFS_BUCKET,
                 self.last_map_paths[0],
             )
-            self.last_map_pgm = minio_client.get_object(
-                config.MINIO_BUCKET,
+            self.last_map_pgm = rustfs_client.get_object(
+                config.RUSTFS_BUCKET,
                 self.last_map_paths[1],
             )
-            self.last_map_yaml = minio_client.get_object(
-                config.MINIO_BUCKET,
+            self.last_map_yaml = rustfs_client.get_object(
+                config.RUSTFS_BUCKET,
                 self.last_map_paths[2],
             )
 

@@ -60,7 +60,6 @@ group_server:
       output: "/dc/group/memory_uptime"
       sync_delay: 5.0
       group_key: "memory_uptime"
-      tags: ["flb_stdout"]
       include_group_name: false
 ```
 
@@ -73,9 +72,19 @@ You can also notice that the group also has a "group_key". It means a group can 
 Here, we only subscribe to the `/dc/group/memory_uptime` topic
 
 ```yaml
-    flb_stdout:
-      plugin: "dc_destinations/FlbStdout"
+dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["console"]
+    console:
+      type: console
+      receives: records
       inputs: ["/dc/group/memory_uptime"]
+      time_key: "date"
+      time_format: "double"
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
 ```
 
 ## Console output

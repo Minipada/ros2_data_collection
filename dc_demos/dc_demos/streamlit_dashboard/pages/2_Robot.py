@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from backend import PGSQLService, minio_client
+from backend import PGSQLService, rustfs_client
 from config import Backend, Storage, config
 from lib import Section, resample
 from pages import Header, Sidebar
@@ -205,7 +205,7 @@ class Robot(Section):
 
 class CameraImages(Section):
     supported_backends = [Backend.POSTGRESQL]
-    supported_storages = [Storage.MINIO]
+    supported_storages = [Storage.RUSTFS]
 
     def __init__(
         self, backend: Backend = config.BACKEND, storage: Storage = config.STORAGE
@@ -246,7 +246,7 @@ class CameraImages(Section):
     def display_data(self) -> None:
         assert self.df.empty is False
         camera_names = self.df["Camera Name"].unique()
-        if self.storage == Storage.MINIO:
+        if self.storage == Storage.RUSTFS:
             camera_tabs = st.tabs(camera_names)
 
             for camera_tab_index, camera_tab in enumerate(camera_tabs):
@@ -265,14 +265,14 @@ class CameraImages(Section):
                     raw_tab, rotated_tab, inspected_tab = st.tabs(["Raw", "Rotated", "Inspected"])
 
                     with raw_tab:
-                        if self.storage == Storage.MINIO:
+                        if self.storage == Storage.RUSTFS:
                             if len(df_images_camera_raw):
                                 cols = raw_tab.columns(3)
                                 for i in range(len(df_images_camera_raw)):
                                     cols[i % 3].image(
-                                        image=minio_client.get_presigned_url(
+                                        image=rustfs_client.get_presigned_url(
                                             "GET",
-                                            config.MINIO_BUCKET,
+                                            config.RUSTFS_BUCKET,
                                             df_images_camera_raw.loc[i, "Raw remote path"],
                                         ),
                                         caption=df_images_camera_raw.loc[i, "Date"],
@@ -280,14 +280,14 @@ class CameraImages(Section):
                             else:
                                 st.info("No data")
                     with rotated_tab:
-                        if self.storage == Storage.MINIO:
+                        if self.storage == Storage.RUSTFS:
                             if len(df_images_camera_rotated):
                                 cols = rotated_tab.columns(3)
                                 for i in range(len(df_images_camera_rotated)):
                                     cols[i % 3].image(
-                                        image=minio_client.get_presigned_url(
+                                        image=rustfs_client.get_presigned_url(
                                             "GET",
-                                            config.MINIO_BUCKET,
+                                            config.RUSTFS_BUCKET,
                                             df_images_camera_rotated.loc[i, "Rotated remote path"],
                                         ),
                                         caption=df_images_camera_raw.loc[i, "Date"],
@@ -295,14 +295,14 @@ class CameraImages(Section):
                             else:
                                 st.info("No data")
                     with inspected_tab:
-                        if self.storage == Storage.MINIO:
+                        if self.storage == Storage.RUSTFS:
                             cols = inspected_tab.columns(3)
                             if len(df_images_camera_inspected):
                                 for i in range(len(df_images_camera_inspected)):
                                     cols[i % 3].image(
-                                        image=minio_client.get_presigned_url(
+                                        image=rustfs_client.get_presigned_url(
                                             "GET",
-                                            config.MINIO_BUCKET,
+                                            config.RUSTFS_BUCKET,
                                             df_images_camera_inspected.loc[
                                                 i, "Rotated remote path"
                                             ],

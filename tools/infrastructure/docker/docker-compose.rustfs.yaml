@@ -1,0 +1,30 @@
+version: '3.7'
+
+# RustFS (Apache 2.0, S3-compatible) replaces the old 4-node MinIO cluster + nginx
+# load balancer here — MinIO's community edition was archived upstream in 2026 (see
+# doc/src/dc/destinations.md). A single container is enough for a demo, and ships
+# with the "rustfsadmin"/"rustfsadmin" default credentials the dc_demos params files
+# and tools/e2e/params/e2e_params.yaml already assume — mirrors
+# tools/e2e/compose.test.yaml's `rustfs` service.
+services:
+  rustfs:
+    image: docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c
+    container_name: rustfs
+    restart: unless-stopped
+    ports:
+      - 9000:9000
+
+  # RustFS doesn't auto-create buckets on startup. This one-shot container
+  # bootstraps the "dc-files" bucket the demo params files upload into, so the
+  # whole stack comes up with a single `docker-compose up` (no manual `mc mb` step).
+  rustfs-init:
+    image: docker.io/minio/mc:latest
+    container_name: rustfs-init
+    depends_on:
+      - rustfs
+    restart: "no"
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set rustfs http://rustfs:9000 rustfsadmin rustfsadmin; do sleep 1; done;
+      mc mb --ignore-existing rustfs/dc-files;
+      "
