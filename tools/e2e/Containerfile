@@ -11,8 +11,9 @@
 # `COPY --from` a subset into), so there's nothing for a second stage to earn. CI's
 # `--cache-from`/`--cache-to` (a registry-backed build cache — see ci.yaml) still gets
 # full value: Podman caches each RUN layer independently, so the apt/toolchain layer
-# below (no DC source) is a near-permanent cache hit while only the source-dependent
-# rosdep+colcon layer invalidates on a code change.
+# below (no DC source) is a near-permanent cache hit; `aws_sdk_vendor` (its own layer,
+# #271) is a cache hit unless it or rosdep/ change; only the full-workspace
+# rosdep+colcon layer invalidates on a code change elsewhere.
 
 ARG ROS_DISTRO=jazzy
 
@@ -36,15 +37,35 @@ RUN echo "apt cache bust: ${APT_CACHEBUST}" && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /root/ws
-COPY . src/ros2_data_collection
 
+# aws_sdk_vendor built in its own layer, isolated from the rest of the workspace (#271):
+# `COPY <path>` keys Podman's layer cache on that path's own content, so copying only
+# `aws_sdk_vendor/` (plus the rosdep source it needs registered) here means this layer —
+# and its ~20-minute aws-sdk-cpp ExternalProject source build — stays a cache hit for a
+# source change anywhere *else* in the repo, instead of invalidating on every commit like
+# the old single `COPY . ` + one `RUN` layer did. The full-workspace build below reuses
+# this layer's already-built install/ via `colcon build --packages-skip aws_sdk_vendor`.
+#
 # rosdep/dc.yaml is registered as a local rosdep source so `rosdep install` resolves
 # tomlplusplus / msgpack-cxx (header-only C++ libs dc_bridge uses that upstream
-# rosdistro has no key for — see dc_bridge/package.xml).
+# rosdistro has no key for — see dc_bridge/package.xml). It's registered here, not in the
+# full-workspace layer below, so `rosdep update`'s index fetch only happens once.
+COPY rosdep src/ros2_data_collection/rosdep
+COPY aws_sdk_vendor src/ros2_data_collection/aws_sdk_vendor
 RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
       > /etc/ros/rosdep/sources.list.d/10-dc.list && \
     apt-get -q update && \
     rosdep update --include-eol-distros && \
+    DEBIAN_FRONTEND=noninteractive \
+    rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
+    # shellcheck disable=SC1091
+    . /opt/ros/jazzy/setup.sh && \
+    colcon build --packages-select aws_sdk_vendor --event-handlers desktop_notification- status- && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY . src/ros2_data_collection
+
+RUN apt-get -q update && \
     DEBIAN_FRONTEND=noninteractive \
     rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
     # shellcheck disable=SC1091
@@ -54,7 +75,7 @@ RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
     else \
       CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release"; \
     fi && \
-    eval colcon build --cmake-args "$CMAKE_ARGS" --event-handlers desktop_notification- status- && \
+    eval colcon build --packages-skip aws_sdk_vendor --cmake-args "$CMAKE_ARGS" --event-handlers desktop_notification- status- && \
     rm -rf /var/lib/apt/lists/*
 
 ENV ROS_UNDERLAY=/root/ws/install

@@ -1833,3 +1833,86 @@ first) and pasting back the console output. Two things worth recording:
   whether these two lines print. Recorded here so a future session doesn't re-diagnose
   from scratch — the fix, if one is ever wanted, is in gz-sim's `UserCommands`/GUI-attach
   path, not in `dc_simulation`'s own SDF content.
+
+### #271 - tools/e2e: aws-sdk-cpp clone pulls unneeded submodules + full workspace
+layer invalidates on every source change
+
+- **Problem 1 fix** (`aws_sdk_vendor/CMakeLists.txt`): `ExternalProject_Add`'s
+  `GIT_SUBMODULES_RECURSE ON` with no path restriction recursed into every submodule
+  nested anywhere under aws-sdk-cpp, including s2n-tls's CBMC formal-verification model
+  repo (`crt/aws-crt-cpp/crt/s2n/tests/cbmc/aws-verification-model-for-libcrypto`) —
+  needed only for `make cbmc`, unrelated to `-DBUILD_ONLY=s3`. Fixed by restricting the
+  top-level submodule checkout to `GIT_SUBMODULES "crt/aws-crt-cpp"` with
+  `GIT_SUBMODULES_RECURSE OFF` (aws-sdk-cpp's only top-level submodule, confirmed via
+  its real `.gitmodules` at the pinned tag), then doing the actual recursive submodule
+  init by hand in a new `PATCH_COMMAND`, using `git -c
+  submodule.tests/cbmc/aws-verification-model-for-libcrypto.update=none submodule
+  update --init --recursive` to skip just that one nested submodule (its name inside
+  s2n-tls's own `.gitmodules`, confirmed via a real fetch) — `ExternalProject_Add`'s
+  built-in `GIT_CONFIG` option does **not** work for this: read CMake 3.31's own
+  `ExternalProject/gitupdate.cmake.in`/`shared_internal_commands.cmake` sources
+  directly and confirmed `GIT_CONFIG`'s `-c` overrides are only threaded through to the
+  submodule-update step for the two hardcoded TLS options, never for arbitrary
+  user-supplied config — ruling out the naive approach before writing the real fix.
+  `cmake_minimum_required` bumped 3.16 → 3.17 for `GIT_SUBMODULES_RECURSE` (added in
+  3.17; ROS Jazzy's toolchain ships far newer, no compat concern on this jazzy-only
+  package).
+- **Verified for real, not just read**: resolved the exact pinned commit chain by
+  hand (aws-sdk-cpp `1.11.600` → its `crt/aws-crt-cpp` gitlink → that commit's
+  `crt/s2n` gitlink → s2n-tls's own `.gitmodules`) via real shallow clones/fetches
+  against the live GitHub repos, confirming aws-sdk-cpp has exactly one top-level
+  submodule and s2n-tls has exactly one nested submodule (the CBMC one) — none of the
+  other 12 aws-crt-cpp submodules (`aws-c-common`, `aws-c-io`, `aws-c-auth`, `aws-lc`,
+  etc.) declare any nested submodules of their own, confirmed by checking each one's
+  `.gitmodules` at its pinned commit (all 404, i.e. absent). Then ran the real fixed
+  `CMakeLists.txt` logic end-to-end in a throwaway `ExternalProject_Add` test project
+  (`CONFIGURE_COMMAND`/`BUILD_COMMAND`/`INSTALL_COMMAND` all empty, so it only
+  exercises download+update+patch — real compilation of the vendored SDK was already
+  verified working in the original #249-era Bridge Phase 2 session, not something this
+  fix touches) against the real upstream repos: all 13 needed submodules (including
+  `crt/s2n` itself) checked out normally, and the log shows exactly one line —
+  `Skipping submodule 'crt/s2n/tests/cbmc/aws-verification-model-for-libcrypto'` —
+  confirming the fix does what the issue asks, with the CBMC directory left empty on
+  disk afterward.
+- **Important finding, called out honestly rather than overclaimed**: the issue's own
+  diagnosis ("this is what actually produces the ~1GB / 1.5M-object fetch, not the
+  clone depth") doesn't hold up under measurement. `git count-objects -v` on the
+  top-level aws-sdk-cpp clone alone (before any submodule work) showed 1,513,370
+  objects / ~1.07 GB in its pack — matching the issue's numbers almost exactly — and
+  that cost is entirely aws-sdk-cpp's own shallow (`--depth 1`) clone of its single
+  commit's tree (the whole monorepo's ~300+ per-service source directories, not just
+  core+s3), independent of submodules entirely. The CBMC skip is real and correctly
+  targets the literal, unambiguous acceptance criterion ("no longer pulls CBMC/test-
+  only submodule content"), but it will not measurably move total clone size/time on
+  its own — that would need a sparse/partial top-level checkout of just
+  core+s3+cmake/, which is a materially bigger change (bypassing `ExternalProject_Add`'s
+  built-in git download entirely) not covered by this issue's "What to build" bullets.
+  Left as a candidate follow-up, not attempted here.
+- **Problem 2 fix** (`tools/e2e/Containerfile`): split the single `COPY . ` +
+  one-`RUN` layer into three: (1) the existing apt/toolchain `RUN` layer, unchanged;
+  (2) a new layer — `COPY rosdep/` + `COPY aws_sdk_vendor/` (both keyed only on their
+  own content, so unrelated changes elsewhere don't invalidate this layer), registers
+  the `rosdep/dc.yaml` local source, runs `rosdep update`, and does `colcon build
+  --packages-select aws_sdk_vendor` — the ~20-minute aws-sdk-cpp build now lives in a
+  layer that stays a cache hit unless `aws_sdk_vendor/` or `rosdep/` themselves change;
+  (3) the full-workspace `COPY .` + `RUN rosdep install` + `colcon build --packages-
+  skip aws_sdk_vendor`, which reuses layer (2)'s already-built `install/aws_sdk_vendor`
+  (colcon's standard incremental-Docker-layer pattern: a skipped package's install
+  output is still picked up for downstream `find_package`/environment setup, only its
+  own build step is skipped) instead of rebuilding it from source on every commit.
+  `rosdep update`'s index fetch now happens once (in layer 2) instead of once per
+  layer.
+- Ran `pre-commit run --files aws_sdk_vendor/CMakeLists.txt tools/e2e/Containerfile`:
+  `Lint Dockerfiles` (hadolint) and every other hook touching these files passed; the
+  only failure was `poetry-requirements` (module missing in this sandbox, unrelated to
+  this diff and already a known-broken hook per #242-#248's own notes).
+- **Not done / left for follow-up**: could not run a real `podman build`/`colcon
+  build --packages-select aws_sdk_vendor`/`colcon test` in this sandbox (no
+  ROS/ament_cmake install here, and a full aws-sdk-cpp source build takes ~20 minutes
+  — same constraint noted repeatedly in #242-#249's own verification sections). The
+  git-fetch behavior (Problem 1's actual bug) was verified for real as described above;
+  Problem 2's layer restructuring follows the standard, well-documented colcon/Docker
+  incremental-layer pattern but has not been exercised against a real `podman build`
+  run — needs verification in CI or a machine with more resources before being fully
+  trusted. A sparse/partial top-level aws-sdk-cpp checkout (see finding above) is a
+  candidate follow-up if the ~1GB clone cost itself needs to come down.
