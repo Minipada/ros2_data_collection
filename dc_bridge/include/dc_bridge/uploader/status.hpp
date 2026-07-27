@@ -34,6 +34,13 @@ nlohmann::json missing_row(const FileGroup& group, const FileRef& file, const St
 nlohmann::json deleted_row(const FileGroup& group, const FileRef& file, const Storage& storage,
                            const std::string& remote_path);
 
+/// The retention policy's audit row (#267): a File shed under disk pressure without ever
+/// having been uploaded — distinct from deleted_row's `uploaded: true` (delete_when_sent
+/// only ever deletes a File after it's fully verified). `deleted: true, uploaded: false`
+/// is the queryable "shed without upload" signature.
+nlohmann::json shed_row(const FileGroup& group, const FileRef& file, const Storage& storage,
+                        const std::string& remote_path);
+
 /// ADR-0005's group completion marker.
 nlohmann::json group_complete_row(const FileGroup& group);
 

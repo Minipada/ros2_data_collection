@@ -1,0 +1,93 @@
+measurement_server:
+  ros__parameters:
+    save_local_base_path: "$HOME/.dc/e2e/data/%Y/%M/%D/%H"
+    all_base_path: "e2e"
+    measurement_plugins: ["uptime", "camera"]
+
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      polling_interval: 1000
+      group_key: "uptime"
+
+    # A short camera_period (see tools/e2e/scripts/workload_generator.py's
+    # camera_period_s param, set by run_retention.sh) drives this Measurement's
+    # local_paths/remote_paths File references, same shape as e2e_params.yaml's own
+    # camera block.
+    camera:
+      plugin: "dc_measurements/Camera"
+      polling_interval: 15000
+      cam_name: "e2e_camera"
+      cam_topic: "/dc/e2e/camera/image_raw"
+      draw_det_barcodes: false
+      save_raw_img: true
+      save_rotated_img: false
+      save_detections_img: false
+      save_raw_base64: false
+      save_rotated_base64: false
+      save_inspected_base64: false
+      remote_keys: ["rustfs"]
+      remote_prefixes: ["camera"]
+      group_key: "camera"
+
+# Files retention scenario (#267): rustfs starts down (run_retention.sh never brings up
+# its container until told to) — every camera capture's intent stays pending in the
+# Uploader's durable queue, so the un-uploaded File pool grows every camera_period_s
+# seconds. files.retention.max_bytes is small enough that a couple of captures exceed
+# it, forcing a shed with an audit row in Postgres — before RustFS ever comes up.
+dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/e2e/buffer"
+    destinations: ["pgsql_records", "pgsql_files", "rustfs"]
+    pgsql_records:
+      type: postgres
+      receives: records
+      inputs: ["/dc/measurement/uptime"]
+      host: "127.0.0.1"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc_records"
+      time_key: "date"
+      time_format: "double"
+
+    pgsql_files:
+      type: postgres
+      receives: records
+      # No `inputs`: the Files metadata_destination, fed internally by the Uploader
+      # (see dc_params.yaml's own pgsql_files block for why `inputs: []` can't be used).
+      host: "127.0.0.1"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc_files"
+      time_key: "date"
+      time_format: "double"
+
+    rustfs:
+      type: s3
+      receives: files
+      inputs: ["/dc/measurement/camera"]
+      bucket: "dc-e2e"
+      endpoint: "http://127.0.0.1:9000"
+      region: "us-east-1"
+      access_key_id: "rustfsadmin"
+      secret_access_key: "rustfsadmin"
+      force_path_style: true
+
+    files:
+      delete_when_sent: false
+      metadata_destination: "pgsql_files"
+      retention:
+        max_bytes: 1  # any single captured File exceeds this — one capture is enough
+        # max_age_days intentionally unset — this scenario exercises the bytes limit.
+
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
+
+lifecycle_manager_dc:
+  ros__parameters:
+    node_names: ["measurement_server"]
+    transitions: [configure, activate]

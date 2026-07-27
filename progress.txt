@@ -1492,3 +1492,130 @@ than Humble's in-process FLB call.
   and could grow a similar counter-based gap/dup assertion, but that's additive scope
   beyond this issue, not required to close it); disk persistence of the resend window
   (explicitly out of scope per the issue).
+
+### #267 - DC 2.0: Files retention policy — bounded local storage for un-uploaded Files
+
+- Added `dc_bridge::uploader::sweep` (`include/dc_bridge/uploader/retention.hpp`,
+  `src/uploader/retention.cpp`), the one explicit, opt-in mechanism allowed to abandon
+  data under disk pressure (ADR-0005 follow-up, closing the gap #265's own "not done"
+  list flagged): `files.retention.max_bytes`/`files.retention.max_age_days` (both
+  absent/zero by default = unlimited, Humble parity, zero behavior change). Scope is
+  exactly the pool of Files referenced by `IntentQueue::pending()`'s entries — every
+  intent still sitting in `<shipper.data_dir>/queue/upload/`, which by construction
+  excludes anything the Uploader already finished and acked. `sweep()` walks candidates
+  oldest-first (parsing each pending intent's payload via the existing
+  `parse_file_group`, stat'ing local file sizes for the byte pool), and while either
+  configured limit is exceeded, deletes the oldest eligible intent's File(s) and its
+  queue entry together — File and intent always removed as a pair, matching #265's own
+  "an intent and its Files live and die together" contract, just inverted: here that
+  pair is deliberately abandoned instead of preserved. A candidate the new
+  `Uploader::is_verified_everywhere(FileGroup) const` (public method added to
+  `uploader.hpp`/`.cpp`, a HEAD/size check per storage reusing the existing private
+  `file_meta()`/`storage()` helpers, no upload attempt) reports as fully verified is
+  skipped rather than shed — that intent is still pending only because its own deletion
+  (`delete_when_sent`) is failing/retrying, which is `delete_when_sent`'s job, not
+  retention's, per the issue text.
+- Each shed File gets a new `status::shed_row` (`uploader/status.hpp`/`.cpp`) audit row
+  through the normal `dc.files` metadata path — `deleted: true, uploaded: false`, the
+  "shed without upload" signature distinct from a normal `delete_when_sent` deletion
+  (always `uploaded: true`). Emitting it is best-effort (a thrown exception from the
+  caller's `emit` is swallowed — the shed itself must not be held up by "the Shipper is
+  reachable right now"), but a shed always fires a warn log summarizing what was freed.
+- `IntentQueue` grew what retention needed: `Intent`/`Entry` now carry `enqueued_at`
+  (`enqueue()` sets it directly from the same wall-clock-ns value the id encodes;
+  replay parses it back from the id's own leading 20-digit field rather than adding a
+  second, redundant timestamp representation to keep in sync) and a new `pending()`
+  accessor returning every currently pending intent oldest-first regardless of backoff
+  state — unlike `next_ready()`, retention cares about disk pressure, not retry timing.
+- `bridge_node.cpp`/`.hpp`: declares `files.retention.max_bytes`/`max_age_days`
+  unconditionally (like the other `files.*` params); keeps a `files_storages_` copy of
+  the Uploader's storages (Uploader itself moves its own) so the worker thread's
+  periodic sweep has what it needs without a new Uploader accessor. `run_uploader_worker`
+  calls `uploader::sweep()` on a fixed 30s interval (not exposed as a parameter — #267
+  doesn't ask for that knob), guarded by `retention_config_.enabled()` so a disabled
+  config touches nothing every loop iteration; `retention_emit` is a single-attempt send
+  (no 60s-of-retries loop like the Uploader's own `emit`), matching "best-effort".
+- **Unit tests** (`dc_bridge/test/retention_test.cpp`, 11 gtests, no aws-sdk-cpp — a
+  `Storage` with a null `ObjectStore` is enough since `sweep()` itself never calls
+  `store`): disabled is a true no-op; oldest-first shedding down to under `max_bytes`;
+  `max_age_days` triggers a shed even under the bytes limit (and doesn't trigger while
+  still fresh) using an injectable `now` parameter on `sweep()` (mirroring
+  `next_ready()`'s own pattern) so age tests don't need to sleep real wall time;
+  verified-everywhere intents are never shed even when clearly over limit, and the loop
+  correctly terminates without shedding anything when *every* candidate is verified;
+  File+intent always removed together (both the local file and the intent's own JSON
+  gone); the audit row's exact `deleted`/`uploaded`/`on_filesystem` shape; an `emit`
+  that always throws doesn't block the shed but the warn still fires; a files-less
+  Record is never touched; and replay tolerance — a File already missing from disk
+  (simulating a crash between the file delete and the intent ack) still sheds cleanly
+  via `max_age_days`, no throw, no stranding, no hang.
+- **Verified in a real ROS 2 Jazzy environment via Podman** (built the full
+  `tools/e2e/Containerfile` workspace image via `scripts/build.sh`, then iterated with a
+  persistent, non-`--rm` container bind-mounting this worktree over the image's
+  `/root/ws/src/ros2_data_collection` for fast incremental `colcon build --packages-select
+  dc_bridge` rebuilds — `--rm` containers were tried first and silently discarded every
+  rebuild between commands, a real trap for this workflow, worth flagging for whoever
+  hits it next): `colcon build`/`colcon test --packages-select dc_bridge` both clean,
+  7/7 gtest suites (including the new `retention_test`, and unmodified-behavior checks
+  on `intent_queue_test`/`uploader_test`), zero `-Wall -Wextra` warnings. `pre-commit`
+  clean on every changed/new file (`clang-format`, `black`, `codespell`, `check-yaml`,
+  `shellcheck`, ROS package metadata checks; only the pre-existing environment-gap hooks
+  — `poetry-requirements`, `pycln`, `flake8`, `build-doc` — skipped, same as every prior
+  DC 2.0 slice).
+- **A real bug the unit tests couldn't catch, found by manually running the actual
+  `dc_bridge` binary against a live-but-unreachable S3 endpoint**: the retention sweep
+  never ran, ever. `run_uploader_worker`'s 30s sweep-interval gate compared
+  `now - last_retention_sweep >= RETENTION_SWEEP_INTERVAL`, with `last_retention_sweep`
+  initialized to `steady_clock::time_point::min()` — a fine sentinel for a *comparison*
+  (`IntentQueue`'s own `next_attempt` sentinel does exactly this safely) but not for a
+  *subtraction*: `now - min()` overflows `steady_clock::duration`'s range and wraps
+  around to a large **negative** value, so the interval check silently failed forever.
+  Confirmed by instrumenting a debug build with `RCLCPP_INFO` around the check (removed
+  before landing) and running the real `dc_bridge` binary directly (`ros2 run dc_bridge
+  dc_bridge --ros-args --params-file ...`, a hand-published `StringStamped` Record
+  referencing a real local file, an `rustfs` destination pointed at a closed port): the
+  logged `elapsed` value was a large negative number every single iteration. Fixed by
+  backdating the initializer to `steady_clock::now() - RETENTION_SWEEP_INTERVAL` instead
+  (anchored to the real clock, so the first sweep still runs immediately, no overflow).
+  Re-verified the same manual scenario after the fix: `elapsed=30` on the very first
+  check, the sweep ran, and the fake file + its intent were both gone within one sweep
+  cycle. This also incidentally confirmed a real, pre-existing environment
+  characteristic worth knowing for anyone else testing against a down S3 endpoint in
+  this codebase: a single `aws-sdk-cpp` call against a refused connection can take on
+  the order of a minute (its own internal connection-refused retry/backoff, unrelated to
+  this PR — `curl` itself reports "after 0 ms", the delay is entirely the SDK's client-
+  level retry strategy), so both `Uploader::ensure_uploaded` and
+  `Uploader::is_verified_everywhere` are each individually slow while a store is down;
+  the fixed 30s sweep interval and the e2e timeout below both account for this.
+- **e2e**: extended `tools/e2e/` (following #265's own precedent — "extended the
+  existing harness rather than adding new `dc_bridge`-level test infra") with a second,
+  narrower harness rather than folding into `run.sh`, since this scenario needs the
+  opposite starting condition (RustFS *never* comes up until told to, instead of an
+  outage induced mid-run): `tools/e2e/params/e2e_retention_params.yaml` (camera +
+  uptime Measurements, `files.retention.max_bytes: 1` so a single capture is already
+  over limit) and `tools/e2e/scripts/run_retention.sh`, which starts Postgres only
+  (RustFS deliberately absent), starts the DC stack, asserts a `deleted: true, uploaded:
+  false` audit row lands in `dc_files` and the shed File's local path is actually gone
+  from disk, then starts RustFS and asserts a later (unshed) File uploads and verifies
+  normally. `bash -n`/`shellcheck` clean. **Ran for real**, end to end, against the full
+  built stack (the same `tools/e2e/Containerfile` workspace image plus
+  `Containerfile.e2e`, run via `DC_E2E_IMAGE`): PASS — 2 shed-without-upload audit rows
+  landed in Postgres while RustFS was down, the shed File's local path was confirmed
+  gone from the container's volume, and after starting RustFS a File uploaded and
+  verified normally (`uploaded: true` row landed). This run is also what caught the
+  `steady_clock::time_point::min()` bug above in the first place (it timed out twice
+  before the fix, at 180s and again at 480s, before the manual debug session above
+  found and fixed the real cause) — not run by `ci.yaml` yet, left as a follow-up
+  alongside the existing harness's own CI wiring.
+- Docs: `doc/src/dc/destinations.md` gained a "Retention: bounded local storage for
+  un-uploaded Files" subsection (the "you are opting into data shedding" framing, the
+  accumulation-by-default note, scope, and the audit signature) under "File uploads";
+  `dc_bringup/params/dc_params.yaml`'s commented `files:` example gained a
+  `retention:` block; `tools/e2e/README.md` documents the new harness.
+- **Not done / left for follow-up**: wiring `run_retention.sh` into `ci.yaml` as its own
+  job (the existing zero-loss harness's own camera path already covers the File
+  pipeline's steady-state/outage behavior; this is additive, narrower coverage, not
+  required to close this issue); a `max_age_days`-driven e2e scenario specifically (the
+  e2e run above exercises `max_bytes`; `max_age_days`'s own logic is covered by two
+  dedicated unit tests using the same `now`-injection seam, `sweep()`'s only consumer of
+  it).

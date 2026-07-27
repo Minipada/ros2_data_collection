@@ -96,6 +96,13 @@ public:
   /// processing so the caller can retry idempotently.
   ProcessSummary process_record(const nlohmann::json& payload, const std::string& fallback_group, const EmitFn& emit);
 
+  /// True if every File `group` references is already uploaded and size-verified on
+  /// every storage it targets — a plain HEAD/size check per storage, no upload attempt,
+  /// no status Records emitted. Used by retention (#267) to recognize a pending intent
+  /// whose only remaining step is its own deletion (delete_when_sent's job), which
+  /// retention must never shed.
+  bool is_verified_everywhere(const FileGroup& group) const;
+
 private:
   enum class EnsureOutcome
   {

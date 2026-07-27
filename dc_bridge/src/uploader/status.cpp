@@ -74,6 +74,16 @@ nlohmann::json deleted_row(const FileGroup& group, const FileRef& file, const St
   return row;
 }
 
+nlohmann::json shed_row(const FileGroup& group, const FileRef& file, const Storage& storage,
+                        const std::string& remote_path)
+{
+  nlohmann::json row = base_row(group, file, storage, remote_path);
+  row["uploaded"] = false;
+  row["on_filesystem"] = false;
+  row["deleted"] = true;
+  return row;
+}
+
 nlohmann::json group_complete_row(const FileGroup& group)
 {
   nlohmann::json row;
