@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="aws_robomaker_warehouse_ShelfF_01">
+    <static>true</static>
+    <link name="link">
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>1.0 0.5 1.8</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <pose>0 0 0.9 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>1.0 0.5 1.8</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.55 0.55 0.6 1</ambient>
+          <diffuse>0.55 0.55 0.6 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

@@ -38,18 +38,10 @@ RUN echo "apt cache bust: ${APT_CACHEBUST}" && \
 WORKDIR /root/ws
 COPY . src/ros2_data_collection
 
-# dc_demos/dc_simulation (warehouse-sim demo packages) still target Gazebo Classic
-# (gazebo_ros / aws_robomaker_small_warehouse_world), which Jazzy dropped and this apt
-# mirror doesn't carry — COLCON_IGNORE excludes them from both rosdep's scan and
-# colcon's build. Porting them to gz-sim is tracked separately (#268), unrelated to the
-# zero-loss pipeline here.
-#
 # rosdep/dc.yaml is registered as a local rosdep source so `rosdep install` resolves
 # tomlplusplus / msgpack-cxx (header-only C++ libs dc_bridge uses that upstream
 # rosdistro has no key for — see dc_bridge/package.xml).
-RUN touch src/ros2_data_collection/dc_demos/COLCON_IGNORE \
-      src/ros2_data_collection/dc_simulation/COLCON_IGNORE && \
-    echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
+RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
       > /etc/ros/rosdep/sources.list.d/10-dc.list && \
     apt-get -q update && \
     rosdep update --include-eol-distros && \

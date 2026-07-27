@@ -1619,3 +1619,117 @@ than Humble's in-process FLB call.
   e2e run above exercises `max_bytes`; `max_age_days`'s own logic is covered by two
   dedicated unit tests using the same `now`-injection seam, `sweep()`'s only consumer of
   it).
+
+### #268 - DC 2.0: Migrate dc_simulation off Gazebo Classic to Gazebo Harmonic (gz-sim/ros_gz)
+
+Ported the warehouse-sim demo (`dc_simulation`, unblocking `dc_demos`) from Gazebo
+Classic (`gazebo_ros`/`aws_robomaker_small_warehouse_world`) to Gazebo Harmonic
+(`gz-sim`/`ros_gz_sim`/`ros_gz_bridge`), per the issue's numbered plan:
+
+- **`package.xml`/`CMakeLists.txt`**: dropped `gazebo_ros` and
+  `aws_robomaker_small_warehouse_world`; added `ros_gz_sim`/`ros_gz_bridge`. Dropped the
+  Classic `<gazebo_ros plugin_path=.../>` export tag. `dc_demos/package.xml` also had a
+  dangling `aws_robomaker_small_warehouse_world` exec_depend (nothing in `dc_demos`
+  actually used it directly) — removed, since leaving it would still block `dc_demos`'
+  own `rosdep install` even with `dc_simulation` itself fixed.
+- **Confirmed empirically** (via `WebFetch` of the package's real `ros2` branch
+  `package.xml`) that `aws_robomaker_small_warehouse_world` 1.0.5, despite rosdistro
+  listing a `jazzy` release, still hard-depends on `gazebo_ros`/`gazebo`/`gazebo_plugins`
+  — none released for Jazzy — so it's dead weight on this branch regardless; dropping it
+  outright (rather than trying to make it work) is correct, not just expedient.
+- **`env-hooks/dc_simulation.dsv.in`**: `GAZEBO_MODEL_PATH` → `GZ_SIM_RESOURCE_PATH`.
+- **New `dc_simulation/config/warehouse_bridge.yaml`**: a `ros_gz_bridge` config
+  re-exposing the spawned robot's gz-transport topics under the same ROS names the old
+  `gazebo_ros` plugins used to publish directly (`cmd_vel` ROS→GZ; `odom`, `tf`, `imu`,
+  `scan`, `joint_states`, both cameras' `image_raw`/`camera_info`/`depth/image_raw`,
+  `clock` GZ→ROS) — verified against `ros_gz_bridge`'s real Jazzy-branch README/source
+  (`WebFetch`) for the exact supported ROS↔GZ type pairs (`sensor_msgs/JointState` ↔
+  `gz.msgs.Model`, `tf2_msgs/TFMessage` ↔ `gz.msgs.Pose_V`, etc.) rather than guessing.
+- **`worlds/waffle.model`**: ported all six `gazebo_ros` plugins to gz-sim's per-model
+  system plugins — `libgazebo_ros_imu_sensor.so` → a plain `<topic>` on the existing
+  `type="imu"` sensor (needs the world-level `gz-sim-imu-system`); `ray` lidar →
+  `type="gpu_lidar"` with the SDF-1.9 `<lidar>` element name (was `<ray>`) plus
+  `<topic>scan</topic>`; both `type="depth"` stereo cameras → `type="rgbd_camera"` with
+  an added `<clip>` (gz-sim requires it, Classic didn't) and a `<topic>`;
+  `libgazebo_ros_diff_drive.so` → `gz-sim-diff-drive-system`
+  (`gz::sim::systems::DiffDrive`, `wheel_radius` replaces `wheel_diameter`, explicit
+  `<topic>`/`<odom_topic>`/`<tf_topic>`/`<frame_id>`/`<child_frame_id>` kept the same
+  unscoped `cmd_vel`/`odom`/`tf` names and `odom`/`base_footprint` frames Humble used);
+  `libgazebo_ros_joint_state_publisher.so` → `gz-sim-joint-state-publisher-system`.
+  Plugin filenames/params verified against gz-sim's real `gz-sim8` branch source
+  (`DiffDrive.hh`/`JointStatePublisher.hh` doc comments, `examples/worlds/diff_drive.sdf`)
+  via `WebFetch`, not assumed from memory.
+- **`worlds/qrcodes.world`**: world renamed `default`→`warehouse`; added the world-level
+  system plugins gz-sim needs (`Physics`, `Sensors` w/ ogre2, `Imu`, `UserCommands`,
+  `SceneBroadcaster`); replaced the Classic XML `<gui><camera>` block with gz-sim's
+  plugin-based GUI (`MinimalScene`/`GzSceneManager`/`InteractiveViewControl`/
+  `CameraTracking`/`WorldControl`/`WorldStats`, copied from gz-sim's own real
+  `gz-sim8` example world via `WebFetch` for exact syntax); `<physics type="ode">` →
+  the gz-sim convention (`type="ignored"`, engine selection isn't done via this
+  attribute anymore). Dropped `libgazebo_ros_2d_map.so` (no gz-sim equivalent exists —
+  confirmed via research, not just assumed) with no replacement, per the issue's own
+  suggested fallback: Nav2/SLAM already have the static
+  `dc_simulation/maps/qrcodes.{pgm,yaml}` this world was generated from.
+  `model://ground_plane`/`model://sun` (resolved against Gazebo Classic's bundled model
+  DB, which gz-sim has no equivalent of) are now defined inline instead, matching
+  gz-sim's own example-world convention.
+- **Warehouse prop dressing**: the ~12 distinct external models this world's ~319
+  `<include>`s pull in beyond what's already vendored locally (`aws_robomaker_warehouse_
+  {ShelfD_01,ShelfF_01,ClutteringC_01,ClutteringD_01,TrashCanC_01}` from the now-dropped
+  AWS package; `drc_practice_{angled_barrier_135,orange_jersey_barrier,
+  white_jersey_barrier,yellow_parking_block}`, `construction_cone`, `table`, `pickup`
+  from Gazebo Classic's online model DB, which has no gz-sim/Fuel equivalent under these
+  names) have no Jazzy-compatible source. Authored simple local placeholder SDF models
+  (primitive box/cylinder geometry, roughly real-world-sized, under
+  `dc_simulation/models/<name>/`) under the *same* `model://<name>` names the world
+  already uses, so the 2300-line world file's layout needed zero changes beyond its
+  header — only the geometry backing each name changed. Documented as a placeholder,
+  not a faithful asset port, in each model's own `model.config`.
+- **Two pre-existing (Classic-era, not gazebo_ros-specific) local-asset bugs surfaced by
+  gz-sim's stricter SDF loader** — Classic's parser only warned and skipped rendering;
+  gz-sim's aborts the whole world load: `Chair`/`MonitorAndKeyboard` referenced
+  `.obj` mesh files that were never actually committed to the repo (only their
+  textures/`.mtl` survived) — replaced with box placeholders, same treatment as the
+  external props above. `bag`'s material used the Classic-only `<uri>__default__</uri>`
+  sentinel, and `cutout_wall` carried a stray, already-broken `libMudPlugin.so` plugin
+  referencing a `drill::link` that doesn't exist in that model — both removed.
+- **`tools/e2e/Containerfile`**: removed the `dc_demos`/`dc_simulation` `COLCON_IGNORE`
+  lines and their explanatory comment (both packages now build clean via plain
+  `rosdep install` + `colcon build` on Jazzy).
+- **Verified in a real Podman container** (`ros:jazzy-ros-base` + `ros-jazzy-ros-gz-sim`/
+  `ros-jazzy-ros-gz-bridge`, this worktree's `dc_simulation`/`dc_description` bind-mounted
+  — `dc_description`'s own unrelated `realsense2_description` rosdep key isn't
+  apt-installable in this sandbox's mirror either, skipped via `--skip-keys` same as
+  earlier slices skipped their own environment gaps):
+  - `rosdep install` + `colcon build --packages-select dc_simulation` (`dc_description`
+    too): clean, no `COLCON_IGNORE`/`--skip-keys` needed for anything this issue touches.
+  - `gz sim -s -r --headless-rendering worlds/qrcodes.world` (Xvfb + software/ogre2
+    rendering, 300 iterations): **zero `[Err]` lines** — the full ~2300-line world
+    (hundreds of props) parses and loads cleanly under gz-sim's strict SDF loader.
+    (Getting to zero errors is what surfaced and fixed the two pre-existing asset bugs
+    above — the first attempt failed outright with "Failed to load a world".)
+  - `ros2 run ros_gz_sim create -file worlds/waffle.model -name turtlebot3_waffle ...`:
+    spawns successfully ("Entity creation successful"); `ros2 run ros_gz_bridge
+    parameter_bridge` against the new config then advertises exactly the expected ROS
+    topic set (`cmd_vel`, `odom`, `tf`, `imu`, `scan`, `joint_states`, both cameras'
+    `image_raw`/`camera_info`/`depth/image_raw`). A later direct `gz topic -l` check
+    (after letting the sandbox's heavily CPU-contended gz-sim process — several
+    unrelated hours-old containers were already competing for CPU on this shared host,
+    plus no GPU/software rendering — run for a couple of minutes) confirmed all the
+    matching gz-transport topics (`/cmd_vel`, `/odom`, `/imu`, `/scan`,
+    `/world/warehouse/model/turtlebot3_waffle/joint_state`, both cameras) are actually
+    advertised, confirming DiffDrive/JointStatePublisher/Sensors/Imu all load and run for
+    the dynamically-spawned model, not just the statically-defined world content.
+  - **Not fully closed**: an actual message observed on `/scan`/`/imu`/`/odom` etc.
+    (vs. just confirming the topic is advertised). Two scripted attempts (8s and then
+    15s-after-a-90s-warm-up timeouts) both came up empty — plausibly just this sandbox's
+    real-time factor being too low under CPU contention (a lidar/IMU/camera-heavy
+    ~450-model world, software-rendered, sharing a host with several other long-running
+    containers) rather than a config defect, given the topics themselves are correctly
+    named/advertised end-to-end. Re-confirming actual data flow (drive via `cmd_vel`,
+    watch `scan`/`odom` update) on a real workstation or CI runner with a GPU is the
+    natural follow-up, same caveat pattern as #242-#249's "colcon build succeeds but
+    needs a real environment to fully close the loop" entries.
+  - `tools/e2e/Containerfile`'s own full-workspace build (all `dc_*` packages together)
+    was not re-run end-to-end in this session — out of scope for this issue's own
+    acceptance criteria, which are specific to `dc_simulation`/`dc_demos`.

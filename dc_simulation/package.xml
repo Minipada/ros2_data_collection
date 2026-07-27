@@ -7,13 +7,12 @@
   <maintainer email="d.bensoussan@proton.me">David Bensoussan</maintainer>
   <license>MPL-2.0</license>
 
-  <exec_depend>aws_robomaker_small_warehouse_world</exec_depend>
   <exec_depend>dc_description</exec_depend>
-  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>ros_gz_sim</exec_depend>
   <exec_depend>rclpy</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
-    <gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}" gazebo_model_path="${prefix}/models"/>
   </export>
 </package>
