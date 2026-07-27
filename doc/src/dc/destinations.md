@@ -1,15 +1,44 @@
-# Overview
+# Destinations
 
-## DC 2.0 (Jazzy): blessed Destinations + passthrough
+A **Destination** is an external system that receives Records or Files. In the DC 2.0
+architecture (ADR-0003,
+[`docs/adr/`](https://github.com/minipada/ros2_data_collection/tree/jazzy/docs/adr)), the
+pluginlib destination-plugin layer is retired. The Bridge (`dc_bridge`) renders the
+external Vector **Shipper's** configuration from plain ROS parameters for a **blessed
+set** of Destination types — `postgres`, `s3`, `file`, `console` — and every other
+destination in Vector's sink catalog is available through the **passthrough**: raw Vector
+config snippets listed in the `custom_config_files` parameter, merged natively by Vector.
 
-In the DC 2.0 architecture (ADR-0003, `docs/adr/`), the pluginlib destination-plugin
-layer is retired. The Bridge (`dc_bridge`) renders the external Vector Shipper's
-configuration from plain ROS parameters for a **blessed set** of Destination types —
-`postgres`, `s3`, `file`, `console` — and every other destination in Vector's sink
-catalog is available through the **passthrough**: raw Vector config snippets listed in
-the `custom_config_files` parameter, merged natively by Vector.
+Coming from DC 1.x and its `flb_*` destination plugins? See the
+[migration guide](./migration.md).
 
-### Configuration contract
+```admonish abstract title="What is public API here"
+Three things on this page are a stable contract you can build against, not
+implementation detail:
+
+1. **The configuration shape** — `destinations: [...]` plus one block per Destination
+   with `type`, `receives`, `inputs`, and that type's own fields.
+2. **The `dc.<tag>` routes** — one Shipper route per Tag, named deterministically from
+   the topic. Passthrough snippets consume these.
+3. **The File status Record** — the fields the Uploader writes under the `dc.files` Tag.
+
+Everything else the renderer emits (component ids other than the reserved ones, the
+exact TOML layout, Vector's own defaults) may change.
+```
+
+## Bridge node parameters
+
+| Parameter                   | Description                                                                        | Type        | Default              |
+| --------------------------- | ---------------------------------------------------------------------------------- | ----------- | -------------------- |
+| `destinations`              | Names of the Destinations to enable                                                | list\[str\] | N/A (mandatory)      |
+| `shipper.data_dir`          | Directory for the Shipper's persistent disk buffer                                 | str         | `"$HOME/.dc/buffer"` |
+| `shipper.buffer_max_bytes`  | Disk-buffer size; Vector rejects anything below ~256 MiB                           | int         | Vector's minimum     |
+| `custom_config_files`       | Raw Vector config snippets (TOML) to merge — the passthrough                       | list\[str\] | `[]`                 |
+| `vector_forward_host`       | Host the Shipper's ingest socket listens on                                        | str         | `"127.0.0.1"`        |
+| `vector_forward_port`       | Port the Shipper's ingest socket listens on                                        | int         | `24224`              |
+| `files.*`                   | Uploader settings; see [File uploads](#file-uploads-receives-files-the-uploader-adr-0005) | —     | —                    |
+
+## Configuration contract
 
 Every Destination is declared in the `destinations` list of the `dc_bridge` node's
 parameters, with a parameter block named after it (see
@@ -71,7 +100,7 @@ Invalid parameters (unknown `type`, missing required field, half a credential pa
 out-of-range port…) are rejected with a clear error at Bridge startup — before Vector
 is ever started.
 
-### The `dc.<tag>` routing contract (public API)
+## The `dc.<tag>` routing contract (public API)
 
 The Bridge exposes one Shipper route per **Tag**. The Tag for a topic is its name with
 the leading `/` dropped and the remaining `/` turned into `.`
@@ -82,7 +111,7 @@ Tag verbatim (so `/dc/measurement/uptime`'s Records are consumable as
 wired to them internally, and custom snippets consume them the same way. A route
 exists for every topic listed in any configured Destination's `inputs`.
 
-### Passthrough: `custom_config_files`
+## Passthrough: `custom_config_files`
 
 Any Vector sink type ships Records with zero DC code by consuming `dc.<tag>` routes
 from a raw Vector config snippet (TOML):
@@ -108,7 +137,7 @@ Destination's name) or by another snippet. An invalid or colliding snippet is a 
 Bridge startup error naming the offending file; as a backstop, the merged config set is
 also checked with `vector validate` before the Shipper is started.
 
-### File uploads: `receives: files` (the Uploader, ADR-0005)
+## File uploads: `receives: files` (the Uploader, ADR-0005)
 
 A Destination with `receives: files` (only `type: s3` qualifies) is served by the
 Bridge's **Uploader**, not by a Vector sink: Records arriving on its `inputs` topics
@@ -166,3 +195,10 @@ dc_bridge:
       # multipart_part_size_bytes: 8388608   # optional; >= 5 MiB for real S3 stores
 ```
 
+A Destination named by `metadata_destination` may declare **no `inputs` at all** — being
+named there is itself what routes the `dc.files` Tag to it. That is the usual shape when
+the status log lives in its own table: one `postgres` Destination with `inputs` for the
+Records, and a second one with no `inputs` for the File status log.
+
+`inputs` is otherwise mandatory: a Destination that neither lists a topic nor receives
+`dc.files` would have nothing to deliver, and is rejected at Bridge startup.

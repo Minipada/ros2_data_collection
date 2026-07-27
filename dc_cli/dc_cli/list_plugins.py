@@ -59,12 +59,9 @@ def conditions():
     )
 
 
-@app.command()
-def destinations():
-    """List destination plugins with their descriptions."""
-    print_plugins(
-        path=pathlib.Path(get_package_share_directory("dc_destinations"), "destination_plugin.xml")
-    )
+# There is no `destinations` command: DC 2.0 has no destination pluginlib layer to list
+# (ADR-0003). Destinations are the four blessed types plus the passthrough, all
+# configuration — see doc/src/dc/destinations.md.
 
 
 if __name__ == "__main__":

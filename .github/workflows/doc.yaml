@@ -1,21 +1,39 @@
-# Humble-line only (branches: humble below) and disabled_manually; the jazzy-line docs
-# build is tracked at #252 (DC 2.0 S11: migration guide + docs overhaul), not wired up
-# here yet. `container: image:` pulls a tag `.github/workflows/docker.yaml`'s `doc` job
-# used to build from containers/doc/Containerfile — that job is gone (see
-# containers/doc/Containerfile's header), so this workflow can't currently produce a
-# fresh image even if re-enabled.
+# DC 2.0 (Jazzy) documentation build and deploy (#252). Builds the mdbook site and the
+# strictdoc requirements export, and publishes to GitHub Pages on pushes to `jazzy`.
+#
+# Like ci.yaml, this runs the same script a developer runs locally
+# (tools/ci/pre-commit/build_doc.sh, also the `build-doc` pre-commit hook) inside a Podman
+# image built from containers/doc/Containerfile — no CI-only docs script, and the pinned
+# mdbook toolchain is identical in both places. The image is tagged with the commit SHA
+# for traceability but is not pushed: nothing else consumes it (CLAUDE.md, "Containers:
+# Podman, not Docker").
+#
+# The docs build is a real gate: mdbook's linkcheck backend fails the job on a broken
+# internal link, and book.toml sets `create-missing = false` so a SUMMARY.md entry
+# pointing at a missing page fails too. External links are not followed — see the comment
+# on `follow-web-links` in doc/book.toml.
+
 name: Documentation
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - humble
+      - jazzy
     paths:
       - doc/**
+      - requirements/**
+      - containers/doc/Containerfile
+      - tools/ci/pre-commit/build_doc.sh
       - .github/workflows/doc.yaml
   pull_request:
+    branches:
+      - jazzy
     paths:
       - doc/**
+      - requirements/**
+      - containers/doc/Containerfile
+      - tools/ci/pre-commit/build_doc.sh
       - .github/workflows/doc.yaml
 
 permissions:
@@ -26,32 +44,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    runs-on: ubuntu-22.04
-    container:
-      image: minipada/ros2_data_collection:humble-doc
+  build:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v5
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Build the documentation
+        env:
+          IMAGE_TAG: dc-doc:${{ github.sha }}
+        run: ./tools/ci/pre-commit/build_doc.sh
+
+      - name: Upload the built site
+        uses: actions/upload-artifact@v4
         with:
-          path: .
-      - name: Install Python dependencies
-        uses: py-actions/py-dependency-install@v4
-        with:
-          path: "requirements.txt"
-      - name: Install Python dependencies (dev)
-        uses: py-actions/py-dependency-install@v4
-        with:
-          path: "requirements-dev.txt"
-      - name: Generate strictdoc pages
-        run: |
-          strictdoc export requirements --experimental-enable-file-traceability --enable-mathjax --format=html --output-dir doc/src/dc/requirements --project-title "ROS 2 Data Collection"
-      - name: Build documentation
-        working-directory: ./doc
-        run: mdbook build
-      - name: Deploy
-        if: github.event_name != 'pull_request'
-        uses: peaceiris/actions-gh-pages@v3
+          name: doc-site
+          path: doc/book/html
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./doc/book/html

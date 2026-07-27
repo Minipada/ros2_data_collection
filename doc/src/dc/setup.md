@@ -1,114 +1,125 @@
 # Setup
 
-## Use docker
+DC 2.0 is an ordinary ROS 2 workspace: `rosdep install`, `colcon build`, done. There is
+no forked shipper to compile, no Go toolchain, and nothing needs root.
 
-### Available images
+```admonish info
+This is the DC 2.0 (`jazzy`) install. The `humble` line still embeds a patched Fluent Bit
+and has a considerably longer setup; if you are coming from it, read the
+[migration guide](./migration.md).
+```
 
-Docker images with latest code are available on the [Docker public registry](https://hub.docker.com/repository/docker/minipada/ros2_data_collection):
+## Requirements
 
-| Image                                           | Description                                                     |
-| ----------------------------------------------- | --------------------------------------------------------------- |
-| minipada/ros2_data_collection:humble-ci         | ROS base image augmented with all DC dependencies to use for CI |
-| minipada/ros2_data_collection:humble-ci-testing | CI image using the ROS testing repository                       |
-| minipada/ros2_data_collection:humble-source     | DC source compiled                                              |
-| minipada/ros2_data_collection:humble-source-sim | DC source compiled with all simulation packages                 |
-| minipada/ros2_data_collection:humble-doc        | Documentation                                                   |
+- ROS 2 Jazzy (`ros-jazzy-ros-base` or larger), on Ubuntu 24.04 or a Debian equivalent
+- `colcon`, `rosdep`, `git`, a C++17 compiler
+- x86-64 or aarch64 — the architectures `vector_vendor` has a pinned Vector binary for
 
-Get any by running:
+## Build
 
 ```bash
-docker pull minipada/ros2_data_collection:<TAG>
-```
+# 1. Clone into a workspace
+mkdir -p ~/ws/src && cd ~/ws/src
+git clone https://github.com/minipada/ros2_data_collection.git
 
-### Docker workflow
-
-When developing, use the *source-sim* image with a docker compose file. The latest one is available on the repository:
-
-```yaml
-version: "3.9"
-
-services:
-  ros2-data-collection:
-    image: minipada/ros2_data_collection:humble-source-sim
-    privileged: true
-    container_name: ros2-data-collection
-    environment:
-      - QT_X11_NO_MITSHM=1
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,display
-      - DISPLAY=unix$DISPLAY
-      - XAUTHORITY=$XAUTHORITY
-    volumes:
-      - ${HOME}/.Xauthority:/root/.Xauthority
-      - /tmp/.X11-unix:/tmp/.X11-unix
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${PWD}:/root/ws/src/ros2_data_collection
-    network_mode: "host"
-    restart: "unless-stopped"
-    stop_grace_period: "3s"
-    runtime: nvidia
-    command: tail -F anything
-    working_dir: /root/ws
-```
-
-Then, to allow GUI (RViz, Gazebo) to work in the container, execute:
-
-```bash
-xhost +
-```
-
-Then start the container:
-
-```bash
-docker compose up -d
-```
-
-And get in the container with:
-```bash
-docker exec -it ros2-data-collection /ros_entrypoint.sh bash
-```
-
-## Build from source
-
-### Download the repository
-Given that there is no apt packages available, you will need to build from source.
-
-Download the repository in your workspace
-
-```bash
-git clone github.com/minipada/ros2_data_collection.git
-```
-
-### Install dependencies
-#### Install system and C/C++ dependencies
-```
+# 2. Register DC's local rosdep rules (two header-only C++ libraries upstream
+#    rosdistro has no key for), then resolve dependencies
+cd ~/ws
+echo "yaml file://$PWD/src/ros2_data_collection/rosdep/dc.yaml" \
+  | sudo tee /etc/ros/rosdep/sources.list.d/10-dc.list
+rosdep update
 rosdep install --from-paths src --ignore-src -r -y
-```
 
-Some packages are external C++ packages but a vendor package has been included in the repository so colcon will handle it.
-In addition, since this set of packages has no python external dependencies, you won't need anything else.
-
-#### Install python dependencies
-This project uses [poetry](https://python-poetry.org/) to manage python dependencies. It is easy to use and it is possible to set each package version like in a requirements.txt and manage multiple python environments.
-If you have poetry on your machine, you can execute:
-
-`poetry install`
-
-If not, you can install python dependencies from the provided requirements.txt:
-
-`pip3 install -r requirements.txt`
-
-### Build
-
-```bash
+# 3. Build
+source /opt/ros/jazzy/setup.bash
 colcon build
 ```
 
-### Run
-```bash
-source install/setup.bash
-ros2 launch dc_bringup bringup.launch.py
+That is the whole install. `colcon build` also runs `vector_vendor`, which downloads a
+pinned, checksummed [Vector](https://vector.dev/) binary — the external **Shipper** the
+Bridge supervises at runtime (ADR-0002).
+
+```admonish tip title="Air-gapped or distro-packaged Vector"
+Point the build at a Vector binary you already have instead of downloading one:
+
+    colcon build --cmake-args -Dvector_path=/usr/bin/vector
+
+The `VECTOR_PATH` environment variable does the same thing.
 ```
 
+```admonish warning title="Simulation demo packages"
+`dc_demos` and `dc_simulation` still target Gazebo Classic, which Jazzy dropped. Until
+they are ported (tracked in [#268](https://github.com/minipada/ros2_data_collection/issues/268)),
+exclude them if their dependencies are not resolvable on your machine:
+
+    touch src/ros2_data_collection/dc_demos/COLCON_IGNORE
+    touch src/ros2_data_collection/dc_simulation/COLCON_IGNORE
+```
+
+### Python dependencies
+
+Only some Measurement plugins (camera inspection, QR code detection) need Python
+packages beyond what ROS 2 installs. `rosdep` covers the ones with rosdistro keys; for
+the rest:
+
+```bash
+pip3 install -r requirements.txt   # or `poetry install`
+```
+
+## Run
+
+```bash
+source install/setup.bash
+ros2 launch dc_bringup dc_bringup.launch.py
+```
+
+The default parameters file (`dc_bringup/params/dc_params.yaml`) collects uptime and
+writes it to a local PostgreSQL Destination. To run your own:
+
+```bash
+ros2 launch dc_bringup dc_bringup.launch.py params_file:=/path/to/my_params.yaml
+```
+
+See [Configuration examples](./configuration_examples.md) for configurations you can
+copy, and [Destinations](./destinations.md) for the full Bridge configuration contract.
+
+### Useful launch arguments
+
+| Argument      | Default          | Description                                                |
+| ------------- | ---------------- | ---------------------------------------------------------- |
+| `params_file` | `dc_params.yaml` | Parameters file for every DC node                          |
+| `group_node`  | `False`          | Start the Group node (needed by any `group_server` config) |
+| `namespace`   | `""`             | Top-level namespace                                        |
+| `log_level`   | `info`           | Log level for the DC nodes                                 |
+| `autostart`   | `True`           | Let the lifecycle manager configure and activate the nodes |
+
+### What starts, in what order
+
+`dc_bringup.launch.py` brings the pipeline up deterministically (ADR-0006): the Bridge
+and its Shipper first, then a readiness gate, and only then the collection nodes. If the
+Shipper never becomes ready, the launch shuts down loudly instead of collecting data
+nowhere. [Data Pipeline](./data_pipeline.md) describes this in full.
+
+## Containers
+
+The repository builds a full workspace image with Podman — the same one CI uses:
+
+```bash
+IMAGE_TAG=dc-workspace:local ./tools/e2e/scripts/build.sh
+```
+
+`tools/e2e/scripts/test.sh` runs `colcon test` against that image, and
+`tools/e2e/scripts/run.sh` drives the zero-loss end-to-end harness. See
+[`tools/e2e/README.md`](https://github.com/minipada/ros2_data_collection/blob/jazzy/tools/e2e/README.md).
+
+## Infrastructure
+
+DC delivers to systems you run yourself. `tools/infrastructure/docker/` has compose
+files that bring up PostgreSQL and RustFS (S3-compatible object storage) preconfigured
+for the demos; see [Infrastructure setup](./infrastructure_setup.md).
+
 ## Issues
-If you run into any issues when building ROS 2 Data Collection, you can use the search tool in the issues tab on [GitHub](https://github.com/minipada/ros2_data_collection) and always feel free to [open a ticket](https://github.com/minipada/ros2_data_collection).
+
+If you run into problems building DC, search the issue tracker on
+[GitHub](https://github.com/minipada/ros2_data_collection/issues) and feel free to
+[open a ticket](https://github.com/minipada/ros2_data_collection/issues/new).

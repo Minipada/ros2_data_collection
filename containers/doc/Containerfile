@@ -1,24 +1,37 @@
-# ghcr.io/minipada/ros2_data_collection:${ROS_DISTRO}-doc
-# Image to build the documentation. Currently orphaned on this branch: the humble-line
-# `.github/workflows/docker.yaml` `doc` job that built and pushed this image was removed
-# (dead weight — disabled, humble-branch-scoped, same as the ci/ci-testing/source/
-# source-sim Dockerfiles it shipped alongside); `.github/workflows/doc.yaml` and
-# `tools/ci/pre-commit/build_doc.sh` still pull the tag it used to produce. Kept
-# (renamed docker/doc/Dockerfile -> containers/doc/Containerfile per the Podman
-# convention) rather than deleted because #252 (DC 2.0 S11: migration guide + docs
-# overhaul) is the tracked place to re-wire a live jazzy docs build — do that there,
-# not by reviving this file in isolation.
-FROM rust:1.68.2-bullseye AS ros2_dc_doc_builder
+# Documentation builder image: mdbook (plus the preprocessors doc/book.toml declares) and
+# strictdoc. Built and used by `tools/ci/pre-commit/build_doc.sh`, which both
+# `.github/workflows/doc.yaml` and the `build-doc` pre-commit hook call — so a local docs
+# build and the CI docs build run the exact same toolchain. The image stays local to
+# whoever builds it; nothing publishes it (see CLAUDE.md, "Containers: Podman, not
+# Docker" — this repo has no registry for runnable images yet).
+#
+# Versions are pinned because mdbook's plugin ABI is not stable across minor versions: a
+# preprocessor built against mdbook 0.4.x fails outright under 0.5.x, and mdbook-admonish
+# refuses to run unless doc/book.toml's `assets_version` matches the assets it ships.
+# Bumping any one of these means re-running `mdbook-admonish install doc` and rebuilding.
+FROM docker.io/library/rust:1.96-bookworm
 
-WORKDIR /
+# The mdbook crates move together; bump and re-test as a set.
+ARG MDBOOK_VERSION=0.4.52
+ARG MDBOOK_ADMONISH_VERSION=1.20.0
+ARG MDBOOK_MERMAID_VERSION=0.14.1
+ARG MDBOOK_OPEN_ON_GH_VERSION=2.4.3
+ARG MDBOOK_LINKCHECK_VERSION=0.7.7
+ARG STRICTDOC_VERSION=0.0.40
 
-COPY requirements.txt .
-COPY requirements-dev.txt .
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get -q update && \
-    # Python3
-    apt-get -q install --no-install-recommends -y python-is-python3 python3-pip && \
-    pip3 install --no-cache-dir -r requirements.txt -r requirements-dev.txt && \
-    cargo install mdbook mdbook-admonish mdbook-linkcheck mdbook-mermaid mdbook-open-on-gh && \
-    # Clear apt-cache to reduce image size
+    apt-get -q install --no-install-recommends -y python3-pip && \
     rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --break-system-packages --no-cache-dir "strictdoc==${STRICTDOC_VERSION}"
+
+RUN cargo install --locked mdbook --version "${MDBOOK_VERSION}" && \
+    cargo install --locked mdbook-admonish --version "${MDBOOK_ADMONISH_VERSION}" && \
+    cargo install --locked mdbook-mermaid --version "${MDBOOK_MERMAID_VERSION}" && \
+    cargo install --locked mdbook-open-on-gh --version "${MDBOOK_OPEN_ON_GH_VERSION}" && \
+    cargo install --locked mdbook-linkcheck --version "${MDBOOK_LINKCHECK_VERSION}" && \
+    rm -rf "${CARGO_HOME}/registry"
+
+WORKDIR /ws

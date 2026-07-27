@@ -4,7 +4,7 @@ repos:
     hooks:
       - id: build-doc
         name: Build documentation
-        entry: ./tools/ci/pre-commit/build_doc.sh --ros-version=humble
+        entry: ./tools/ci/pre-commit/build_doc.sh
         language: script
         pass_filenames: false
   - repo: https://github.com/pre-commit/pre-commit-hooks
