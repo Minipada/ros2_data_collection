@@ -14,6 +14,7 @@
   <depend>dc_interfaces</depend>
   <depend>dc_lifecycle_manager</depend>
   <depend>dc_util</depend>
+  <depend>diagnostic_msgs</depend>
   <depend>ffmpeg</depend>
   <depend>geometry_msgs</depend>
   <depend>lifecycle_msgs</depend>
