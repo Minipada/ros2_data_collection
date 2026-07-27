@@ -1149,3 +1149,126 @@ the cause, not a real regression.
   `pycln`, `flake8`); `mdbook` isn't installed either, so the doc site itself wasn't
   built, though a manual code-fence-balance check across every edited `.md` file found
   no unbalanced fences.
+
+### #252 - DC 2.0 S11: Migration guide + docs overhaul
+
+- **New `doc/src/dc/migration.md`** — the DC 1.x → DC 2.0 migration guide, added to
+  `SUMMARY.md` right after Setup. Covers **all 13** Humble destination plugins with
+  before/after YAML (the issue says "eleven"; the authoritative list is
+  `origin/humble:dc_destinations/destination_plugin.xml`, which registers 12 `flb_*`
+  classes plus `rcl` — every one is covered, so the superset satisfies the criterion):
+  `flb_stdout`/`flb_pgsql`/`flb_s3`/`flb_file` → the blessed `console`/`postgres`/`s3`/
+  `file` types; `rcl` → `console` (no ROS-logging equivalent exists — Records leave the
+  ROS graph at the Bridge); `flb_http`/`flb_influxdb`/`flb_kinesis_streams`/`flb_slack`/
+  `flb_tcp`/`flb_null` → passthrough Vector snippets (`http`, `influxdb_logs`,
+  `aws_kinesis_streams`, `http` + a `remap` for Slack's `{"text": …}` envelope, `socket`
+  with `mode = "tcp"`, `blackhole` — or, for `flb_null`, just deleting the destination,
+  since an unlisted topic is now routed nowhere by construction). The
+  `flb_minio` + `flb_files_metrics` case gets its own section: two Go plugins, two copies
+  of the object-store credentials and four hand-maintained `src_fields`/`upload_fields`
+  lists collapse into one `receives: files` Destination + one `files:` block, with a
+  table of what disappeared and why (`plugin_path`, `file_storage`, `db_type`,
+  `use_ssl`, `create_bucket`, the `ignored` column). Tag renaming is called out in its
+  own admonition: `remote_keys: ["minio"]` → `remote_keys: ["<destination name>"]`,
+  since the Uploader matches the Destination name against the Record's `remote_paths`
+  keys and a mismatch silently uploads nothing. Also a `flb.*` → `shipper.*` service
+  parameter table, the "five edits that cover most configurations" opener, and a
+  migration checklist.
+- **`setup.md` rewritten** to the actual DC 2.0 install: clone → register
+  `rosdep/dc.yaml` as a local rosdep source → `rosdep install` → `colcon build`. No
+  Fluent Bit fork, no Go, no root, and the whole `minipada/ros2_data_collection:humble-*`
+  Docker-image section (those images are humble-line and nothing publishes them on this
+  branch) replaced with the Podman `tools/e2e/scripts/build.sh` path. Documents
+  `-Dvector_path=` / `VECTOR_PATH` for air-gapped builds, the `dc_demos`/`dc_simulation`
+  `COLCON_IGNORE` caveat (#268), the real launch file name
+  (`dc_bringup.launch.py` — the old page said `bringup.launch.py`, which does not
+  exist) and its useful arguments.
+- **Vocabulary overhaul** across `concepts.md` (now opens with the CONTEXT.md glossary
+  table + relationships, and an explicit "shipper ingest protocol" admonition replacing
+  "Fluent Forward" as a component name), `data_pipeline.md` (rewritten from a
+  startup-ordering-only page into the full path of a Record — mermaid diagram, the
+  five stages, a where-each-piece-is-configured table, the separate File path, plus the
+  existing ADR-0006 ordering and a durability/supervision section that states the one
+  lossy window and at-least-once delivery honestly) and `destinations.md` (retitled from
+  "Overview", added a Bridge node-parameter table and an explicit "what is public API
+  here" admonition). Also `measurements.md`, `groups.md`, `configuration_examples.md`,
+  `introduction.md`/`README.md` (jazzy badges, the dead `docker.yaml` badge removed,
+  "Destination node" → "Bridge + Shipper → Destinations" in the pipeline diagram),
+  `faq.md`, `future_work.md`, `data_validation.md`, `infrastructure_setup.md` (was a
+  bare heading; now indexes the four infra pages) and the `Fluent Forward` phrasing in
+  three demo pages.
+- **`tags` documented as dead, not silently kept**: verified in source before writing —
+  `dc_measurements/.../measurement.hpp::addTags` still declares the parameter and still
+  injects a `tags` field into the Record's JSON, but `dc_bridge/src/render.cpp` routes
+  purely on `.tag` (the Forward tag derived from the topic in `topic_config.cpp`), never
+  on that JSON field. So the docs now say exactly that: the parameter is read and
+  written as *data*, has no routing effect, and should be removed. Dropped the `tags`
+  rows from the measurements/groups parameter tables and every `tags:` line from the
+  configuration examples.
+- **Public-API framing (acceptance criterion 4)**: `destinations.md` now states the three
+  stable contracts (the `destinations`/`type`/`receives`/`inputs` config shape, the
+  `dc.<tag>` route names, the File status Record fields) and what is explicitly *not*
+  stable. Documented the previously-undocumented case that a Destination named by
+  `files.metadata_destination` may legally declare no `inputs` at all (`render.cpp`'s
+  `EmptyInputs` check passes because `extra_tags` carries `dc.files`) — the shape both
+  demos actually use.
+- **Small code fix pulled in because the docs claimed it worked**: removed
+  `dc_cli`'s `list_plugins destinations` command. It called
+  `get_package_share_directory("dc_destinations")`, a package deleted in #250, so the
+  command could only ever raise; `cli.md` documented it as working.
+- **Docs build wired into CI for real (acceptance criterion 5)** — this is the "#252 is
+  the tracked place to re-wire a live jazzy docs build" note in
+  `containers/doc/Containerfile` and `tools/ci/pre-commit/build_doc.sh` coming due:
+  - `containers/doc/Containerfile` rewritten: fully-qualified base
+    (`docker.io/library/rust:1.96-bookworm`) and **pinned** mdbook toolchain
+    (mdbook 0.4.52, mdbook-admonish 1.20.0, mdbook-mermaid 0.14.1, mdbook-open-on-gh
+    2.4.3, mdbook-linkcheck 0.7.7, strictdoc 0.0.40). Pinning is not cosmetic: mdbook's
+    preprocessor ABI is not stable, and the current-latest mdbook 0.5.4 fails outright
+    against every one of those preprocessors.
+  - `tools/ci/pre-commit/build_doc.sh` rewritten from `docker run` against a
+    never-published `minipada/ros2_data_collection:<distro>-doc` tag to `podman
+    build` + `podman run` against a locally built `dc-doc:<tag>` image, doing both the
+    strictdoc export (into `doc/src/dc/requirements`, already gitignored) and
+    `mdbook build`. `.pre-commit-config.yaml`'s `build-doc` entry lost its now-meaningless
+    `--ros-version=humble` argument.
+  - `.github/workflows/doc.yaml` rewritten from the humble-branch, `container: image:`
+    workflow into a jazzy-branch Podman job that calls that same script (no CI-only docs
+    script, matching `ci.yaml`'s philosophy), uploads the site as an artifact, and
+    deploys to Pages on push. Image tagged `dc-doc:<github.sha>` for traceability, not
+    pushed (nothing consumes it).
+  - `doc/book.toml` fixes needed to make the build actually pass: dropped the
+    `multilingual` key (removed from mdbook's schema), re-ran `mdbook-admonish install`
+    to move the checked-in assets from 2.0.0 → 3.1.0 (mdbook-admonish hard-fails on a
+    mismatch) with the regenerated CSS consolidated back into `doc/css/`, pointed
+    `edit-url-template` at `jazzy` instead of `humble`, and set `follow-web-links =
+    false` — external link checking is flaky in a way that says nothing about the docs
+    (github.com 403s the checker's user-agent outright), while internal links, which are
+    what a docs change can actually break, are still checked and still fail the build.
+- **Verification — the docs build was actually run, not just wired**: `mdbook build`
+  passes with the html + linkcheck backends (zero broken internal links; `create-missing
+  = false` means a bad SUMMARY entry would also fail), and the full containerized
+  `IMAGE_TAG=dc-doc:local ./tools/ci/pre-commit/build_doc.sh` — the exact command CI
+  runs — completes strictdoc export + mdbook build + linkcheck cleanly. `pre-commit run`
+  over all 25 changed files passes everything including `build-doc`, `hadolint`,
+  `shellcheck`, `codespell`, `black`, `isort` and `check-yaml`; only the three
+  long-standing environment-gap hooks still fail here (`pycln` and `flake8` are broken
+  installs — missing `pkg_resources`/`pyproject.toml` in their pre-commit venvs — and
+  `poetry-requirements` needs a `poetry` that isn't installed), same as every prior
+  DC 2.0 slice.
+  - Caught and fixed two rendering bugs that a "does it build?" check alone would have
+    missed, by grepping the generated HTML for unprocessed `admonish` blocks:
+    mdbook-admonish silently leaves a block as literal text (no error, exit 0) if its
+    `title="…"` contains backticks or a `→`, which had broken four admonitions across
+    `migration.md`, `groups.md` and `measurements.md`; and a fenced code block nested
+    inside an admonition needs a 4-backtick outer fence — the `~~~`-inside-``` form
+    parses as CommonMark but mdbook-admonish does not handle it. Also verified the
+    cross-page anchors (`#the-dctag-routing-contract-public-api`,
+    `#passthrough-custom_config_files`,
+    `#file-uploads-receives-files-the-uploader-adr-0005`) against the ids mdbook
+    actually generated.
+- **Deliberately left alone**: `requirements/*.sdoc` still contains a requirement worded
+  around matching samples to destinations "using tags". That register describes intended
+  capability (routing a Record to a chosen Destination), which still holds — only the
+  configuration syntax changed — and rewriting requirements is not a docs overhaul.
+  `dc_bridge/README.md` keeps saying "Fluent Forward" where it describes the wire format
+  at the implementation level, which is what CONTEXT.md permits.
