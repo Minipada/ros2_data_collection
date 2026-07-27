@@ -210,6 +210,27 @@ if [ -n "$STATS_PID" ] && kill -0 "$STATS_PID" 2>/dev/null; then
 fi
 STATS_PID=""
 
+# --- durable upload intent queue (#265) ----------------------------------------------
+# The outage+restart above is this harness's stand-in for #265's own e2e acceptance
+# criterion (publish a files-Destination Record with the store down, restart the whole
+# Bridge process, bring the store back up, confirm the upload completes) — the camera
+# Measurement's File already goes through that exact path every run, and
+# verify_zero_loss.py's check_files() already asserts its file_status/group_complete
+# rows landed with no duplicate "uploaded" row. What that alone can't prove is that the
+# *queue itself* drained rather than leaving an orphaned intent behind (the pre-#265
+# in-memory queue would have silently forgotten anything pending across the
+# `podman restart` above) — so assert the on-disk queue is empty via the same named
+# volume dc_bridge writes it to, overriding the image's entrypoint for a one-off `find`.
+log "verifying the durable upload intent queue drained (no orphaned intents after the outage+restart)"
+LEFTOVER_INTENTS=$(podman run --rm --entrypoint bash \
+  -v dc_e2e_buffer:/vol:ro "$DC_IMAGE" \
+  -c 'find /vol/queue/upload -maxdepth 1 -name "*.json" 2>/dev/null | wc -l')
+if [ "${LEFTOVER_INTENTS:-0}" -ne 0 ]; then
+  log "FAIL: ${LEFTOVER_INTENTS} orphaned upload intent(s) left in the queue after the run"
+  exit 1
+fi
+log "PASS: upload intent queue empty (0 orphaned intents)"
+
 # --- verify -------------------------------------------------------------------------
 log "verifying zero-loss (duplicates from the at-least-once boundary are deduped on read)"
 python3 "$SCRIPT_DIR/verify_zero_loss.py" \

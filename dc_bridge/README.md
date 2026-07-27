@@ -9,7 +9,9 @@ snippets (`custom_config_files`) through for everything else. It also hosts the
 **Uploader** (ADR-0005): `receives: files` Destinations are served by the Bridge itself —
 Records referencing Files get their Files uploaded to S3-compatible object storage
 (multipart + resumable), verified, and reported as status/metadata Records under the
-`dc.files` Tag.
+`dc.files` Tag. Pending uploads are durable (#265): each is written to a disk-backed
+intent queue before being handed to the Uploader, so a Bridge restart replays whatever
+never got acked instead of forgetting it.
 
 `dc_bridge` is an ordinary `ament_cmake` C++ package. It builds with the same `rosdep
 install` + `colcon build` as every other `dc_*` package. See
@@ -32,9 +34,11 @@ install` + `colcon build` as every other `dc_*` package. See
   - `uploader/` — the Uploader (ADR-0005): `group` (parses the Files a Record
     references), `content_type` (magic-byte sniffing), `status` (the Humble-compatible
     status-row shapes), `multipart` (resumable multipart with a per-part JSON checkpoint
-    sidecar), and `uploader` (the verify-then-delete orchestration). All built on an
-    abstract `ObjectStore` interface, so the logic is tested against an in-memory fake
-    with no cloud dependency.
+    sidecar), `intent_queue` (#265 — the disk-backed durable queue of pending uploads:
+    crash-atomic tmp+rename enqueue, ack-by-unlink, oldest-first sweep with per-entry
+    exponential backoff, replayed on startup), and `uploader` (the verify-then-delete
+    orchestration). All built on an abstract `ObjectStore` interface, so the logic is
+    tested against an in-memory fake with no cloud dependency.
 - **`src/uploader/s3_object_store.cpp`** — the aws-sdk-cpp implementation of
   `ObjectStore` (the only Uploader piece that links the SDK, via `aws_sdk_vendor`).
   Verified against RustFS (PutObject + multipart) before adoption.
@@ -44,8 +48,8 @@ install` + `colcon build` as every other `dc_*` package. See
   every Destination's `inputs` topics, forwards Records, runs the Uploader worker thread,
   and exposes a `~/ready` (`std_srvs/Trigger`) service. `rclcpp` handles SIGINT/SIGTERM
   and `on_shutdown` stops Vector, so it's never orphaned.
-- **`test/`** — gtest suites (`forwarder`, `supervisor`, `render`, `misc`, `uploader`),
-  all linking only the aws-free core.
+- **`test/`** — gtest suites (`forwarder`, `supervisor`, `render`, `misc`, `uploader`,
+  `intent_queue`), all linking only the aws-free core.
 
 ## Config renderer (ADR-0003)
 
@@ -106,7 +110,7 @@ colcon test --packages-select dc_bridge
 
 The ROS-independent core also builds and tests without a ROS install, via a standalone
 CMake project (`test/local/`) — handy for fast iteration on the Forwarder / Supervisor /
-renderer / Uploader logic:
+renderer / Uploader / intent queue logic:
 
 ```bash
 cmake -S dc_bridge/test/local -B build && cmake --build build && ctest --test-dir build
