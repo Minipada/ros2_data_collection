@@ -2,28 +2,37 @@
 
 <sdf version="1.6">
   <model name='Chair'>
+    <!--
+      The Chair.obj mesh this model referenced was never checked into the
+      repo (only its textures/.mtl survived) -- gz-sim's SDF loader
+      hard-fails on an unresolvable mesh uri (Gazebo Classic only warned and
+      skipped rendering it), so #268 replaces the geometry with a box
+      placeholder sized to a chair's rough footprint.
+    -->
+    <static>true</static>
     <link name="body">
-      <pose>0 0 0 0 0 1.5708</pose>
+      <pose>0 0 0.45 0 0 1.5708</pose>
 
       <visual name="visual">
         <geometry>
-          <mesh>
-            <uri>model://Chair/meshes/Chair.obj</uri>
-            <scale>0.00817 0.00817 0.00817</scale>
-          </mesh>
+          <box>
+            <size>0.5 0.5 0.9</size>
+          </box>
         </geometry>
+        <material>
+          <ambient>0.4 0.25 0.15 1</ambient>
+          <diffuse>0.4 0.25 0.15 1</diffuse>
+        </material>
       </visual>
 
       <collision name="collision">
         <geometry>
-          <mesh>
-            <uri>model://Chair/meshes/Chair.obj</uri>
-            <scale>0.00817 0.00817 0.00817</scale>
-          </mesh>
+          <box>
+            <size>0.5 0.5 0.9</size>
+          </box>
         </geometry>
       </collision>
 
     </link>
   </model>
 </sdf>
-

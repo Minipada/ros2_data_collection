@@ -1,66 +1,110 @@
 import os
-import re
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess
-from launch.conditions import IfCondition
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    # Get the launch directory
-    warehouse_dir = get_package_share_directory("dc_simulation")
-
-    # I didn't find a function that returns the install folder
-    # This line returns where the dc_simulation package is stored
-    install_dir = re.match(r"(^.+)/dc_simulation/share/.+", warehouse_dir).group(1)
+    sim_dir = get_package_share_directory("dc_simulation")
+    ros_gz_sim_dir = get_package_share_directory("ros_gz_sim")
 
     # Launch configuration variables specific to simulation
     headless = LaunchConfiguration("headless")
     world = LaunchConfiguration("world")
+    robot_name = LaunchConfiguration("robot_name")
+    robot_sdf = LaunchConfiguration("robot_sdf")
+    x_pose = LaunchConfiguration("x_pose")
+    y_pose = LaunchConfiguration("y_pose")
+    z_pose = LaunchConfiguration("z_pose")
 
     declare_simulator_cmd = DeclareLaunchArgument(
-        "headless", default_value="False", description="Whether to execute gzclient)"
+        "headless",
+        default_value="False",
+        description="Whether to run gz-sim server-only (no GUI)",
     )
 
     declare_world_cmd = DeclareLaunchArgument(
         "world",
-        default_value=os.path.join(warehouse_dir, "worlds", "warehouse.world"),
-        description="Full path to world model file to load",
+        # There is no "warehouse.world" -- the actual warehouse (with its
+        # shelf/prop dressing and QR-coded pallets) is qrcodes.world.
+        default_value=os.path.join(sim_dir, "worlds", "qrcodes.world"),
+        description="Full path to world sdf file to load",
     )
 
-    # Specify the actions
-    start_gazebo_server_cmd = ExecuteProcess(
-        cmd=[
-            "gzserver",
-            "--verbose",
-            "-s",
-            "libgazebo_ros_init.so",
-            "-s",
-            "libgazebo_ros_factory.so",
-            world,
+    declare_robot_name_cmd = DeclareLaunchArgument(
+        "robot_name", default_value="turtlebot3_waffle", description="name of the robot"
+    )
+
+    declare_robot_sdf_cmd = DeclareLaunchArgument(
+        "robot_sdf",
+        default_value=os.path.join(sim_dir, "worlds", "waffle.model"),
+        description="Full path to robot sdf file to spawn the robot in gz-sim",
+    )
+
+    declare_x_pose_cmd = DeclareLaunchArgument(
+        "x_pose", default_value="-7.3", description="Initial robot x pose"
+    )
+    declare_y_pose_cmd = DeclareLaunchArgument(
+        "y_pose", default_value="1.37", description="Initial robot y pose"
+    )
+    declare_z_pose_cmd = DeclareLaunchArgument(
+        "z_pose", default_value="0.01", description="Initial robot z pose"
+    )
+
+    # gz-sim itself (server, with GUI unless headless)
+    gz_sim_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(ros_gz_sim_dir, "launch", "gz_sim.launch.py")),
+        launch_arguments={
+            "gz_args": PythonExpression(
+                ["'", world, "' + (' -s' if '", headless, "' == 'True' else '') + ' -r'"]
+            ),
+        }.items(),
+    )
+
+    # Spawn the TurtleBot3-Waffle into the running world
+    spawn_robot_cmd = Node(
+        package="ros_gz_sim",
+        executable="create",
+        output="screen",
+        arguments=[
+            "-file",
+            robot_sdf,
+            "-name",
+            robot_name,
+            "-x",
+            x_pose,
+            "-y",
+            y_pose,
+            "-z",
+            z_pose,
         ],
-        cwd=[install_dir],
-        output="screen",
     )
 
-    start_gazebo_client_cmd = ExecuteProcess(
-        condition=IfCondition(PythonExpression(["not ", headless])),
-        cmd=["gzclient"],
-        cwd=[install_dir],
+    # Bridge the robot's gz-transport topics (cmd_vel, odom, tf, imu, scan,
+    # joint_states, cameras) to ROS -- see config/warehouse_bridge.yaml.
+    bridge_cmd = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
         output="screen",
+        parameters=[{"config_file": os.path.join(sim_dir, "config", "warehouse_bridge.yaml")}],
     )
 
-    # Create the launch description and populate
     ld = LaunchDescription()
 
-    # Declare the launch options
     ld.add_action(declare_simulator_cmd)
     ld.add_action(declare_world_cmd)
+    ld.add_action(declare_robot_name_cmd)
+    ld.add_action(declare_robot_sdf_cmd)
+    ld.add_action(declare_x_pose_cmd)
+    ld.add_action(declare_y_pose_cmd)
+    ld.add_action(declare_z_pose_cmd)
 
-    # Add any conditioned actions
-    ld.add_action(start_gazebo_server_cmd)
-    ld.add_action(start_gazebo_client_cmd)
+    ld.add_action(gz_sim_cmd)
+    ld.add_action(spawn_robot_cmd)
+    ld.add_action(bridge_cmd)
 
     return ld
