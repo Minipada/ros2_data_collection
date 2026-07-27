@@ -1798,3 +1798,38 @@ latent gaps in `dc_demos`'s own CMake dependency declarations that this issue's
   been built and verified for real. CI (real, dedicated runner) or a machine with more
   headroom is the natural place to close the very last "whole workspace, one image"
   loop, same caveat pattern as #242-#244's own environment-constrained entries.
+
+### #268 follow-up — real-run diagnostics: qrcode texture bug fixed; GUI-only
+### collision log noise characterized (not blocking)
+
+Prompted by the user actually running `warehouse.launch.py` from a built image (GPU
+passthrough via `--device /dev/dri`, confirmed working with a `glxgears` smoke test
+first) and pasting back the console output. Two things worth recording:
+
+- **Real bug, fixed**: `[GUI] [Err] [SystemPaths.cc:526] Could not resolve file
+  [qrcode_0001.png]` (×8, one per QR code prop). Root cause: each `qrcode_00NN.dae`'s
+  embedded COLLADA `<library_images><init_from>qrcode_00NN.png</init_from>` references
+  its texture as a bare filename, which resolves relative to the `.dae`'s own directory
+  (`meshes/`) — but the actual texture file lives one level over, in
+  `materials/textures/qrcode_00NN.png` (the classic Gazebo/OGRE `<script>` material
+  convention, not a COLLADA-native lookup path). gz-sim's mesh loader doesn't search
+  `materials/textures/` for a bare COLLADA image reference the way Gazebo Classic's
+  combined OGRE+model resolver apparently did. Fixed by copying each
+  `qrcode_00NN.png` into its own `meshes/` directory alongside the `.dae` (all 11
+  variants, not just the 8 used in `qrcodes.world`, for consistency) — same treatment
+  as the placeholder-model fixes above: a missing/misplaced asset the migration's
+  stricter loader surfaced, not a gazebo_ros-specific issue.
+- **Investigated, not a bug in our content**: `[Err] [UserCommands.cc:928] Error Code
+  2: Msg: collision with name[collision] already exists` (×2, un-tagged — i.e. from the
+  server's own log stream, not the `[GUI]`-tagged one). Reproduced this deliberately
+  across four fresh container runs to isolate the trigger: **server-only** (`gz sim -s
+  -r`) loads of the exact same `qrcodes.world` — both in the original #268 verification
+  pass and again here — are consistently clean, zero `[Err]` lines. Runs **with the GUI**
+  attached (`gz sim -r`, which is what `warehouse.launch.py` uses by default and what
+  the user's own run used) consistently reproduce the same two errors, matching what the
+  user saw. Not chased further into gz-sim's own C++ (would need instrumenting
+  gz-sim itself, not this repo) — but confirmed non-fatal either way: the world loads,
+  physics runs, the robot spawns, and topics/bridge all work identically regardless of
+  whether these two lines print. Recorded here so a future session doesn't re-diagnose
+  from scratch — the fix, if one is ever wanted, is in gz-sim's `UserCommands`/GUI-attach
+  path, not in `dc_simulation`'s own SDF content.
