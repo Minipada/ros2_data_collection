@@ -114,7 +114,7 @@ dc_bridge:
 
 #### Destinations
 
-Let's analyze piece by piece. `dc_bridge` is the single C++ node that owns every Destination; each entry in the `destinations` list names a section, defined below it, that describes where data goes. We need the topic list on each Destination because the Bridge subscribes to those topics itself and forwards what it receives to an external [Vector](https://vector.dev) process over the Fluent Forward protocol.
+Let's analyze piece by piece. `dc_bridge` is the single C++ node that owns every Destination; each entry in the `destinations` list names a section, defined below it, that describes where data goes. We need the topic list on each Destination because the Bridge subscribes to those topics itself and forwards what it receives to an external [Vector](https://vector.dev) process over the shipper ingest protocol.
 
 **destinations (Mandatory)**: List all the Destinations to enable. Each name must have a matching section at the same level.
 
@@ -163,6 +163,6 @@ So...what happened?
 
 1. The measurement plugin starts publishing data to /dc/measurement/uptime, which contains the JSON and timestamp of the message
 2. Run ID and robot_name is appended in the JSON
-3. `dc_bridge`, which subscribes to this topic directly, receives the data and forwards it to Vector over the Fluent Forward protocol
+3. `dc_bridge`, which subscribes to this topic directly, receives the data and forwards it to Vector over the shipper ingest protocol
 4. Vector's generated config applies a `remap` transform that writes the configured `time_key` in the requested `time_format`
 5. Vector's `console` sink, the only one matching the `console` Destination we configured, prints the JSON to stdout
