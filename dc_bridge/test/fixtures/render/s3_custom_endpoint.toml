@@ -1,5 +1,8 @@
 data_dir = "/home/dc/.dc/buffer"
 
+[acknowledgements]
+enabled = true
+
 [sinks.rustfs]
 bucket = "dc-records"
 endpoint = "http://127.0.0.1:9000"

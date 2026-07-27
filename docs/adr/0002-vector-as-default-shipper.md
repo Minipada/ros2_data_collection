@@ -35,3 +35,26 @@ this boundary the **shipper ingest protocol**; the name "fluent" appears only in
 generated Vector config (`type = "fluent"`) and interop documentation. A side effect,
 not a goal: any forward-speaking receiver (including stock upstream Fluent Bit, ~5MB
 RSS vs Vector's ~100MB) can be swapped in behind the boundary without Bridge changes.
+
+## Amendment: confirmed delivery closes the acks half of the promise (#266)
+
+The "sender-visible acks" requirement above was satisfied by *choosing* an ack-capable
+protocol, but until #266 the Bridge's Forwarder never actually used the chunk/ack option
+— every frame was sent bare. Spiked directly against the pinned Vector 0.57.0 binary
+before writing any C++: a hand-rolled msgpack client sending `[tag, entries, {"chunk":
+id}]` got back `{"ack": id}` even with the sink completely unreachable (connection
+refused) and only a disk buffer engaged — confirming acks fire on durable-buffer-write,
+not on final delivery to the Destination, which is the guarantee actually wanted here.
+Also found: Vector 0.57 deprecates enabling `acknowledgements` on the source itself
+in favor of the global `[acknowledgements] enabled = true` form (identical ack
+behavior, no deprecation warning) — the renderer uses the global form.
+
+A second on-disk queue for this window (mirroring the Uploader's intent queue, #265)
+was considered and rejected in review: Vector's own disk buffer
+(`shipper.buffer_max_bytes`) already covers sink/Destination outages, and the
+`bridge_ready_gate` (ADR-0006) already covers "Vector isn't listening yet" at startup.
+What was missing was purely the **in-flight** window — a Record already handed to a
+`send()` call whose ack never arrives (Vector respawning, a TCP hiccup) — which an
+in-memory (not disk-backed) bounded window closes cheaply. The double failure of "Bridge
+crashes while this in-memory window is non-empty" is accepted as out of scope, same as
+this ADR's original ready-gate/disk-buffer split assumed no double failures either.

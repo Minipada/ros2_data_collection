@@ -1,6 +1,7 @@
 // Config renderer (ADR-0003): a pure, I/O-free mapping from Bridge/Destination
 // parameters to a complete Vector configuration. `render()` produces Vector TOML with:
-// the Fluent Forward source, one VRL transform normalizing each blessed destination's
+// the shipper ingest protocol source (global acknowledgements enabled — #266, delivery
+// is confirmed end-to-end), one VRL transform normalizing each blessed destination's
 // timestamp, one `route` transform exposing the public per-Tag `dc.<tag>` routes (the
 // passthrough contract — see route_output_for_tag), disk-buffer settings, and the
 // blessed sinks (postgres, s3, file, console).
@@ -92,11 +93,11 @@ struct Destination
 {
   std::string name;
   Receives receives;
-  /// ROS topic names feeding this Destination; the Fluent Forward tag each is routed
-  /// under is derived the same way TopicConfig derives it for subscriptions.
+  /// ROS topic names feeding this Destination; the Tag each is routed under is derived
+  /// the same way TopicConfig derives it for subscriptions.
   std::vector<std::string> inputs;
-  /// Extra Fluent Forward Tags routed here that don't come from a topic (Bridge-internal
-  /// producers — today just the Uploader's dc.files Tag).
+  /// Extra Tags routed here that don't come from a topic (Bridge-internal producers —
+  /// today just the Uploader's dc.files Tag).
   std::vector<std::string> extra_tags;
   std::string time_key;
   TimeFormat time_format;

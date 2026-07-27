@@ -2,10 +2,15 @@
 
 The Bridge (ADRs 0001/0003/0005/0006/0007): a C++ (`rclcpp`) node that subscribes to
 `dc_interfaces/msg/StringStamped` Record topics and
-forwards every Record to the [Vector](https://vector.dev) shipper over the Fluent Forward
-protocol. It renders Vector's configuration from ROS parameters for the blessed
-Destination set (`postgres`, `s3`, `file`, `console` — ADR-0003) and passes raw Vector
-snippets (`custom_config_files`) through for everything else. It also hosts the
+forwards every Record to the [Vector](https://vector.dev) shipper over the shipper
+ingest protocol (the open Fluentd "Forward" wire format — no Fluentd/Fluent Bit software
+runs anywhere in the pipeline; see CONTEXT.md). Delivery is confirmed end-to-end (#266):
+every frame carries a `chunk` id and Vector's `ack` response for it clears that Record
+from an in-memory unacked window, so a Record is only forgotten once the Shipper has
+actually durably buffered it — see "Delivery guarantees" below. It renders Vector's
+configuration from ROS parameters for the blessed Destination set (`postgres`, `s3`,
+`file`, `console` — ADR-0003) and passes raw Vector snippets (`custom_config_files`)
+through for everything else. It also hosts the
 **Uploader** (ADR-0005): `receives: files` Destinations are served by the Bridge itself —
 Records referencing Files get their Files uploaded to S3-compatible object storage
 (multipart + resumable), verified, and reported as status/metadata Records under the
@@ -21,13 +26,15 @@ install` + `colcon build` as every other `dc_*` package. See
 
 - **`include/dc_bridge/` + `src/`** — the ROS-independent core, built as `dc_bridge_core`
   and unit-tested with plain gtest (no ROS or cloud needed):
-  - `forwarder` — Fluent Forward msgpack framing (msgpack-cxx), socket lifecycle, lazy
-    reconnection, and backpressure, behind one `send(record)` call.
+  - `forwarder` — shipper ingest protocol msgpack framing (msgpack-cxx), socket
+    lifecycle, lazy reconnection, backpressure, and confirmed delivery (#266: `chunk`/
+    `ack`, an in-memory unacked window, resend on reconnect/ack-timeout), behind one
+    `send(record)` call plus a `poll()` for idle draining.
   - `supervisor` — spawns and restarts the vendored Vector binary; sets
     `PR_SET_PDEATHSIG(SIGKILL)` so Vector can never outlive the Bridge, even on a
     SIGKILL/crash.
-  - `readiness` — a TCP-connect probe against Vector's Forward port + a shared ready flag.
-  - `topic_config` — derives a Fluent Forward tag from a ROS topic name.
+  - `readiness` — a TCP-connect probe against Vector's ingest port + a shared ready flag.
+  - `topic_config` — derives a shipper ingest protocol Tag from a ROS topic name.
   - `render` — the ADR-0003 config renderer: ROS parameters → a complete Vector TOML
     config (toml++). Pure, gold-file tested.
   - `vector_binary` — locates the vendored Vector binary on `AMENT_PREFIX_PATH`.
@@ -75,13 +82,49 @@ dc_bridge:
       time_format: "double"      # double | iso8601
 ```
 
-It renders: the Fluent Forward source; one `remap` (VRL) transform normalizing each
-destination's timestamp into its `time_key`; one `route` transform whose branches expose
-every distinct Tag at the public `dc.<tag>` output (ADR-0003's passthrough contract, see
-`doc/src/dc/destinations.md`); a disk buffer per persistent sink; and the blessed sinks.
+It renders: the shipper ingest protocol source (with global acknowledgements enabled,
+#266); one `remap` (VRL) transform normalizing each destination's timestamp into its
+`time_key`; one `route` transform whose branches expose every distinct Tag at the public
+`dc.<tag>` output (ADR-0003's passthrough contract, see `doc/src/dc/destinations.md`); a
+disk buffer per persistent sink; and the blessed sinks.
 `validate_custom_config_files` collision-checks passthrough snippets, and `main.cpp` runs
 `vector validate --no-environment` over the merged config before starting Vector, so a
 bad config fails loudly at startup rather than crash-looping.
+
+## Delivery guarantees (#266)
+
+The Bridge→Shipper hop is **at-least-once**, not exactly-once. Every frame the Forwarder
+sends carries a unique `chunk` id (the shipper ingest protocol's built-in
+acknowledgement option); Vector's `fluent` source is configured with global
+`acknowledgements.enabled = true` and replies with an `ack` for each chunk once the
+Record has been durably buffered (confirmed against the real pinned Vector binary with
+its sink completely unreachable: the `ack` still comes back immediately, because
+acknowledgement happens at the disk buffer, not at final delivery to the Destination).
+The Forwarder keeps every sent-but-unacked Record in an in-memory window and resends it:
+
+- unconditionally, after any reconnect (the peer may never have seen it), and
+- after `ack_timeout` (default 5s) with no response (the ack itself may have been lost).
+
+Duplicates can result from either path — a Record acked right as the Forwarder decided to
+resend it lands twice — so consumers that care about exact counts (dashboards, joins)
+should dedupe downstream on their own key, same as Humble/Fluent Bit's chunk-retry
+semantics. What this **does** guarantee: a Record is never silently forgotten just
+because Vector was mid-restart or the TCP link blipped.
+
+Two independent bounds protect the Bridge itself:
+
+- **The unacked window** (`ForwarderConfig::max_unacked_records` /
+  `max_unacked_bytes`, default 10 000 records / 16 MiB): if Vector is unreachable *and*
+  its own disk buffer is also full for long enough that acks stop arriving at all, the
+  window drops the oldest unacked record to make room, with a rate-limited
+  `RCLCPP_WARN`. Reaching this means the outage has outlasted what
+  `shipper.buffer_max_bytes` (below) can absorb — the window is a bounded safety net for
+  *in-flight* data, not a substitute for sizing the real buffer.
+- **Vector's own disk buffer** (`shipper.buffer_max_bytes`, ADR-0002): sized for how long
+  a Destination can be down before the Bridge's window above starts shedding data. A
+  Bridge crash *concurrent with* a Vector/Destination outage still loses the in-memory
+  window (out of scope here, tracked as a known double-failure — see ADR-0002 and #265's
+  durable Uploader intent queue for how the File-upload side handles the analogous case).
 
 ## Dependencies
 

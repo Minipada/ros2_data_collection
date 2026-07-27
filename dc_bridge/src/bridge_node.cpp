@@ -336,6 +336,7 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
   ForwarderConfig fcfg;
   fcfg.host = vector_host;
   fcfg.port = forward_port;
+  fcfg.on_warning = [this](const std::string& msg) { RCLCPP_WARN(this->get_logger(), "%s", msg.c_str()); };
   forwarder_ = std::make_shared<Forwarder>(fcfg);
 
   // Background prober: respawns Vector if it dies and keeps the readiness flag current.
@@ -442,6 +443,7 @@ void BridgeNode::run_uploader_worker(std::string forward_host, std::uint16_t for
   ForwarderConfig fcfg;
   fcfg.host = forward_host;
   fcfg.port = forward_port;
+  fcfg.on_warning = [this](const std::string& msg) { RCLCPP_WARN(this->get_logger(), "%s", msg.c_str()); };
   Forwarder forwarder(fcfg);
 
   auto emit = [&forwarder](const nlohmann::json& row) {
@@ -488,6 +490,10 @@ void BridgeNode::run_uploader_worker(std::string forward_host, std::uint16_t for
       }
     }
 
+    // Keeps this Forwarder's own unacked window (#266) converging between status-Record
+    // emissions, same reason the main prober thread polls the subscription Forwarder.
+    forwarder.poll();
+
     auto item = intent_queue_->next_ready();
     if (!item)
     {
@@ -526,6 +532,13 @@ void BridgeNode::run_prober(std::string forward_host, std::uint16_t forward_port
     }
     const bool ready = probe(forward_host, forward_port, std::chrono::milliseconds(200));
     readiness_.set_ready(ready);
+    {
+      // Keeps the unacked window (#266) converging — draining fresh acks, resending
+      // anything past ack_timeout, and redelivering after a reconnect — even while no
+      // new Record is being published to trigger it via send().
+      std::lock_guard<std::mutex> lock(forwarder_mutex_);
+      forwarder_->poll();
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(250));
   }
 }
