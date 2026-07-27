@@ -60,8 +60,16 @@ not just a local tool.
    synthetic workload) keep running throughout, so Records keep being produced and
    buffered to disk while the destinations are down.
 4. **Full stack restart** while destinations are still down (`podman restart` on the
-   `dc` container), then destinations are restored and the stack drains.
-5. **Verification** (`tools/e2e/scripts/verify_zero_loss.py`): queries Postgres via
+   `dc` container), then destinations are restored and the stack drains. This is this
+   harness's stand-in for #265's own acceptance criterion (a files-Destination Record
+   published with the store down, the Bridge process restarted, the store then
+   restored) — the camera Measurement's File goes through exactly that path every run.
+5. **Durable upload intent queue check** (#265): asserts the on-disk intent queue
+   (`dc_bridge`'s `<shipper.data_dir>/queue/upload/`, on the `dc_e2e_buffer` named
+   volume) is empty once the run stops — proof the queue actually drained rather than
+   silently orphaning a pending upload across the restart above (the pre-#265 in-memory
+   queue would have forgotten it).
+6. **Verification** (`tools/e2e/scripts/verify_zero_loss.py`): queries Postgres via
    `podman exec` on the Postgres container (no host psycopg2/psql needed). The shipper is
    at-least-once (ADR-0002), so it **hard-fails on loss** — a gap in a synth topic's
    counter (checked against the *distinct* values, so a re-send can't hide a gap), or
@@ -69,7 +77,7 @@ not just a local tool.
    record re-sent on recovery) is reported as a note and deduplicated on read
    (exactly-once on read), not failed. Nothing here is a skip-on-missing check — a table
    that doesn't exist or a query that fails is a FAIL, not silence.
-6. **Resource usage** (`tools/e2e/scripts/measure_resources.sh`): samples the `dc`
+7. **Resource usage** (`tools/e2e/scripts/measure_resources.sh`): samples the `dc`
    container's CPU/RSS throughout the run into `tools/e2e/.run/resource_usage.csv`.
    Informational only, per the PRD — it does not gate the run.
 

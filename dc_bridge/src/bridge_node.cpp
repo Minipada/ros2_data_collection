@@ -253,6 +253,10 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
     }
     uploader_ = std::make_unique<uploader::Uploader>(std::move(ucfg), std::move(storages),
                                                      uploader::ffprobe_duration_prober(files_ffprobe));
+    // The durable intent queue (#265): sibling to the Uploader's own
+    // <data_dir>/uploader multipart-resume state, replayed on every startup so a Bridge
+    // restart never forgets a pending upload.
+    intent_queue_ = std::make_unique<uploader::IntentQueue>(data_dir + "/queue/upload");
   }
 
   RenderConfig render_config;
@@ -386,11 +390,12 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
 
           if (feeds_uploader)
           {
-            {
-              std::lock_guard<std::mutex> lock(upload_queue_mutex_);
-              upload_queue_.emplace_back(tag, payload);
-            }
-            upload_queue_cv_.notify_one();
+            // Durable enqueue (#265): the intent lands on disk before this callback
+            // returns, so it survives a Bridge crash/restart even if the worker never
+            // gets to it. The condition variable is only a cheap in-process wake-up
+            // signal, not the source of truth.
+            intent_queue_->enqueue(tag, payload);
+            uploader_wake_cv_.notify_one();
           }
 
           if (forward_to_vector)
@@ -418,6 +423,12 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
                         std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
         response->success = readiness_.is_ready();
         response->message = response->success ? "vector is accepting connections" : "vector is not ready";
+        if (intent_queue_)
+        {
+          // Cheap observability hook (#265): lets an operator see the upload backlog
+          // without a separate metrics path.
+          response->message += " | upload queue depth: " + std::to_string(intent_queue_->size());
+        }
       });
 
   RCLCPP_INFO(this->get_logger(), "dc_bridge up: %zu subscribed topic(s), supervising %s", subscriptions_.size(),
@@ -460,39 +471,47 @@ void BridgeNode::run_uploader_worker(std::string forward_host, std::uint16_t for
 
   for (;;)
   {
-    std::pair<std::string, nlohmann::json> item;
     {
-      std::unique_lock<std::mutex> lock(upload_queue_mutex_);
-      upload_queue_cv_.wait(lock, [this] { return upload_stop_ || !upload_queue_.empty(); });
-      if (upload_stop_ && upload_queue_.empty())
+      std::unique_lock<std::mutex> lock(uploader_wake_mutex_);
+      if (upload_stop_)
       {
         return;
       }
-      item = std::move(upload_queue_.front());
-      upload_queue_.pop_front();
+      // The condition_variable is only a cheap wake-up signal for a fresh enqueue; the
+      // bounded wait also re-checks periodically so a backed-off intent's retry time
+      // elapsing gets noticed even without a new Record arriving (#265 — the queue
+      // itself has no timer, only next_ready()'s point-in-time check).
+      uploader_wake_cv_.wait_for(lock, std::chrono::milliseconds(500));
+      if (upload_stop_)
+      {
+        return;
+      }
     }
 
-    auto backoff = std::chrono::milliseconds(1000);
-    while (!upload_stop_)
+    auto item = intent_queue_->next_ready();
+    if (!item)
     {
-      try
+      continue;  // empty, or every pending intent is still backing off.
+    }
+
+    try
+    {
+      const auto summary = uploader_->process_record(item->payload, item->tag, emit);
+      intent_queue_->ack(item->id);
+      if (summary.files > 0)
       {
-        const auto summary = uploader_->process_record(item.second, item.first, emit);
-        if (summary.files > 0)
-        {
-          RCLCPP_INFO(this->get_logger(),
-                      "uploader: group '%s': %zu file(s), %zu verified, %zu missing, %zu deleted, complete=%d",
-                      item.first.c_str(), summary.files, summary.verified, summary.missing, summary.deleted,
-                      static_cast<int>(summary.group_complete));
-        }
-        break;
+        RCLCPP_INFO(this->get_logger(),
+                    "uploader: group '%s': %zu file(s), %zu verified, %zu missing, %zu deleted, complete=%d",
+                    item->tag.c_str(), summary.files, summary.verified, summary.missing, summary.deleted,
+                    static_cast<int>(summary.group_complete));
       }
-      catch (const std::exception& e)
-      {
-        RCLCPP_WARN(this->get_logger(), "uploader: %s; retrying", e.what());
-        std::this_thread::sleep_for(backoff);
-        backoff = std::min(backoff * 2, std::chrono::milliseconds(60000));
-      }
+    }
+    catch (const std::exception& e)
+    {
+      // Retryable: the intent stays on disk (ack() never ran), so even a Bridge
+      // crash/restart right after this replays it — processing is idempotent (#248).
+      intent_queue_->record_failure(item->id);
+      RCLCPP_WARN(this->get_logger(), "uploader: %s; will retry intent %s with backoff", e.what(), item->id.c_str());
     }
   }
 }
@@ -523,10 +542,10 @@ void BridgeNode::stop()
     prober_thread_.join();
   }
   {
-    std::lock_guard<std::mutex> lock(upload_queue_mutex_);
+    std::lock_guard<std::mutex> lock(uploader_wake_mutex_);
     upload_stop_ = true;
   }
-  upload_queue_cv_.notify_all();
+  uploader_wake_cv_.notify_all();
   if (uploader_thread_.joinable())
   {
     uploader_thread_.join();

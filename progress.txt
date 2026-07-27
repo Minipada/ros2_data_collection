@@ -1272,3 +1272,111 @@ the cause, not a real regression.
   configuration syntax changed — and rewriting requirements is not a docs overhaul.
   `dc_bridge/README.md` keeps saying "Fluent Forward" where it describes the wire format
   at the implementation level, which is what CONTEXT.md permits.
+
+### #265 - DC 2.0: durable Uploader intent queue — File uploads survive Bridge restarts
+
+- Added `dc_bridge::uploader::IntentQueue` (`include/dc_bridge/uploader/intent_queue.hpp`,
+  `src/uploader/intent_queue.cpp`), restoring the FLB-filesystem-parity durability the
+  Bridge/Shipper split broke for the File pipeline (#248's in-memory `upload_queue_` —
+  a `std::deque` — forgot every pending upload on a Bridge restart, silently orphaning
+  Files whose deletion only happens after verified upload). Each files-Destination
+  Record is now written to disk as one intent — `{version: 1, tag, timestamp, payload}`
+  — at `<shipper.data_dir>/queue/upload/<20-digit-wall-clock-nanos>-<6-digit-seq>.json`
+  via tmp-write-then-`rename` (crash-atomic; no `fsync`, matching Humble FLB's
+  `storage.sync normal`); the zero-padded filename sorts lexicographically in enqueue
+  order both within one run and across a restart. An intent leaves the queue **only**
+  via `ack()` (unlink) after the caller's own `process_record` succeeds — no cap, no
+  drop-oldest, no dead-letter, matching the issue's "an upload intent and its Files live
+  and die together." `next_ready()` sweeps oldest-first, skipping any entry still
+  backing off (`record_failure()` doubles a per-entry backoff from 5s, capped at
+  2000s — Humble's own FLB scheduler defaults), so one permanently-failing intent can't
+  starve the rest of the backlog. On construction every `*.json` left over from a
+  previous run is loaded immediately (ready right away — replay needs no ordering
+  guarantee beyond oldest-first, since processing is idempotent per #248); a stray
+  `.json.tmp` from a crash mid tmp+rename is simply not `.json` and is left untouched,
+  never loaded as a pending intent.
+- Wired into `BridgeNode` (`bridge_node.hpp`/`.cpp`): replaced the in-memory
+  `upload_queue_`/`upload_queue_mutex_`/`upload_queue_cv_` deque with
+  `intent_queue_` (constructed at `<data_dir>/queue/upload`, sibling to the Uploader's
+  own `<data_dir>/uploader` multipart-resume state) plus a renamed
+  `uploader_wake_mutex_`/`uploader_wake_cv_` pair that's now purely a cheap in-process
+  wake-up signal, not the queue itself — the subscription callback's `enqueue()` call
+  durably persists the intent before the callback even returns. `run_uploader_worker`
+  now: wakes on notify or a bounded 500ms timeout (so a backed-off intent's elapsed
+  retry time is noticed even with no new traffic, since the queue itself has no timer),
+  calls `next_ready()`, and on success `ack()`s the intent or on failure
+  `record_failure()`s it — replacing the old single-item infinite-retry-in-place loop.
+  `~/ready`'s response message gains a cheap observability hook: `intent_queue_->size()`
+  appended as "upload queue depth: N".
+- **Unit tests** (`dc_bridge/test/intent_queue_test.cpp`, 9 gtests, TDD — written and
+  confirmed to fail to compile before `intent_queue.hpp` existed, then implemented to
+  green on the first pass): enqueue writes one immediately-ready `.json` file; ack
+  removes the file and drops it from scheduling; ack is idempotent for an unknown id;
+  a fresh `IntentQueue` instance over the same directory (simulating a crash) replays
+  every unacked intent oldest-first; replaying and re-acking both of two intents drops
+  neither; a stray `.tmp` file from a crash mid tmp+rename is ignored on replay and
+  doesn't count toward `size()`; round-robin-with-backoff is proven to make progress
+  past a permanently-failing entry (a "bad" and a "good" intent enqueued, the bad one
+  fails and enters backoff, the next `next_ready()` call returns the good one instead of
+  blocking behind the bad one — then, once the backoff window elapses, the bad entry is
+  still there and still retryable, never dropped); backoff doubles and caps correctly;
+  a Record with no Files is enqueued-then-acked in one immediate pass, matching "never
+  touches the queue's steady-state." Wired into both `CMakeLists.txt`'s `foreach(t
+  forwarder supervisor render misc uploader intent_queue)` gtest loop and
+  `test/local/CMakeLists.txt`'s mirrored standalone-CMake list.
+- **Verified in a real ROS 2 Jazzy environment** (reused the cached `dc-workspace:latest`
+  Podman image from prior DC 2.0 sessions — bind-mounted this worktree over its
+  `/root/ws/src/ros2_data_collection`, so `aws_sdk_vendor` and every other already-built
+  package didn't need rebuilding): `colcon build --packages-select dc_bridge` and
+  `colcon test --packages-select dc_bridge` both clean (6/6 gtest suites, including the
+  new 9-test `intent_queue_test`), both before and after a `clang-format`/pre-commit
+  pass (only the environment-gap hooks skipped, same as every DC 2.0 slice:
+  `build-doc`, `poetry-requirements`, `pycln`, `flake8`; `shellcheck` and `clang-format`
+  ran for real and passed/auto-fixed cleanly).
+- **Did the actual demo end-to-end, by hand, against a live RustFS** (sharing the
+  workspace container's network namespace): started `dc_bridge` with a `receives: files`
+  RustFS Destination while RustFS was **stopped**, published a camera-shaped Record via
+  `ros2 topic pub` — the `~/ready` service immediately showed "upload queue depth: 1"
+  and the intent JSON landed on disk with the exact `{version, tag, timestamp, payload}`
+  shape. Sent a real `SIGTERM` to the running `dc_bridge` process (confirmed it and its
+  supervised Vector child both exit cleanly, no orphans — the ~30s it took is
+  aws-sdk-cpp's own connection-refused retry/backoff against the down store inside
+  `process_record`, pre-existing and unchanged by this PR, not a new deadlock). The
+  intent file and the local `img.jpg` both survived the restart on disk. Restarted
+  `dc_bridge` against the same `data_dir`, confirmed `~/ready` showed the replayed
+  "upload queue depth: 1", then started RustFS back up: the replayed intent uploaded,
+  verified, and completed automatically — `file_status`/`group_complete` rows appeared
+  on the console sink, the object landed in the RustFS bucket with the right bytes, the
+  local file was deleted (`delete_when_sent: true`), the intent file was unlinked, and
+  `~/ready` went back to "upload queue depth: 0". This is the acceptance criterion's
+  exact scenario (SIGTERM + restart with the store down, then recovery), proven live.
+- **e2e acceptance criterion — extended `tools/e2e/` rather than adding new
+  `dc_bridge`-level test infra** (the issue left this as an explicit either/or): the
+  existing zero-loss harness (#249) already does a full `podman restart` on the whole
+  `dc` container while Postgres+RustFS are down, with a camera Measurement driving the
+  real File-upload pipeline every run, and `verify_zero_loss.py`'s `check_files()`
+  already asserts the post-restart `file_status`/`group_complete` rows landed with no
+  duplicate "uploaded" rows — i.e. it already exercises this issue's scenario at the
+  container level, just without previously being able to prove the *queue itself*
+  drained (the old in-memory queue could have silently orphaned an in-flight intent
+  across that exact restart and nothing would have caught it). Added a new step to
+  `tools/e2e/scripts/run.sh` between the restart/drain sequence and
+  `verify_zero_loss.py`: asserts zero leftover `*.json` files under
+  `dc_e2e_buffer:/vol/queue/upload` (a throwaway container on the same named volume,
+  overriding the `dc-e2e` image's entrypoint for a one-off `find`) — hard-failing if
+  any intent was left orphaned. `bash -n` and `shellcheck` clean on the edited
+  `run.sh`. Documented the new step in `tools/e2e/README.md`'s numbered "What it does"
+  list (renumbered 5-7) and the restart step's cross-reference to #265.
+- **Docs**: `doc/src/dc/destinations.md`'s "File uploads" section gained a new
+  "Durability: the disk-backed intent queue" subsection (queue location and JSON shape,
+  ack-only-on-success lifecycle, replay-on-startup, round-robin+backoff scheduling,
+  the at-least-once caveat, the no-Files-noop and `base64`-Records-eat-queue-bytes-faster
+  notes) ahead of the existing `files:` params block. `dc_bridge/README.md`'s layout
+  section and package summary mention the new `intent_queue` module and gtest suite.
+- **Not done / left for follow-up** (explicitly out of scope per the issue): retention
+  policy for un-uploaded Files under disk pressure (#267); Records-path acks (#266);
+  parallel upload workers / a chunked queue-file format (only relevant if #227 raises
+  Record rates). Also not done: a committed reusable dev container for this
+  toolchain — still the same ad hoc pattern (a cached `dc-workspace:latest` image,
+  rebuilt from scratch by whichever session needs it fresh) every DC 2.0 C++ slice
+  since ADR-0007 has noted as a follow-up.
