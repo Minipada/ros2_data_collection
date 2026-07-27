@@ -181,6 +181,38 @@ Two guarantees consumers can rely on:
   Retries are idempotent — already-verified objects are not re-uploaded and status rows
   are never duplicated.
 
+### Durability: the disk-backed intent queue
+
+A Bridge restart never forgets a pending upload. Before a files-Destination's Record is
+ever handed to the Uploader, it is written to disk as one **intent** — a JSON file
+(`{version: 1, tag, timestamp, payload}`) at
+`<shipper.data_dir>/queue/upload/<monotonic_ts>-<seq>.json`, via tmp-write-then-rename
+(crash-atomic; no `fsync`, matching Humble Fluent Bit's own `storage.sync normal`). The
+intent leaves the queue **only** when its Record has been fully processed — every File
+verified everywhere, or reported missing — never on a timer, a cap, or a drop-oldest
+policy: an upload intent and its Files live and die together. On startup every intent
+left over from a previous run is replayed, oldest-first, alongside live traffic; because
+processing is idempotent (an already-verified object short-circuits, multipart resumes
+from its checkpointed sidecar), a replayed intent can never re-upload or duplicate a
+status row.
+
+A permanently-failing intent cannot starve the rest of the backlog: each intent gets its
+own exponential backoff (5 s, doubling, capped at 2000 s — Humble Fluent Bit's own
+scheduler defaults) and the worker sweeps oldest-first, skipping whatever is still
+backing off rather than retrying the same head-of-line entry forever. The queue's depth
+is surfaced as a cheap observability hook in the `~/ready` service's message text.
+
+This is **at-least-once**, not exactly-once: a crash between a status Record being
+forwarded and its intent being acked can replay that status Record after restart (the
+Uploader's own dedup set is in-memory, so a fresh process may re-emit one it already
+sent). Consumers should key on the latest row per `(local_path, storage_type)`, same as
+the Records path.
+
+A Record referencing no Files is enqueued and acked in the same pass with no retries, so
+it never lingers in the queue's steady state. Note that `base64`-heavy Records (e.g. a
+map's `save_base64: on`) inline file content directly into the payload and so consume
+queue-directory bytes proportionally faster than a plain File reference.
+
 The `files` block:
 
 ```yaml
