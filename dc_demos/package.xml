@@ -12,6 +12,7 @@
   <depend>nlohmann-json-dev</depend>
   <depend>nlohmann_json_schema_validator_vendor</depend>
   <depend>pluginlib</depend>
+  <depend>simulation_interfaces</depend>
 
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>dc_bringup</exec_depend>
