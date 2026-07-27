@@ -6,6 +6,7 @@ set(dependencies
   dc_core
   dc_interfaces
   dc_util
+  diagnostic_msgs
   geometry_msgs
   lifecycle_msgs
   nav2_util
@@ -102,6 +103,9 @@ add_library(dc_cpu_measurement SHARED
   plugins/measurements/system/system.cpp
 )
 list(APPEND dc_measurement_plugin_libs dc_cpu_measurement)
+
+add_library(dc_diagnostics_measurement SHARED plugins/measurements/diagnostics.cpp)
+list(APPEND dc_measurement_plugin_libs dc_diagnostics_measurement)
 
 add_library(dc_dummy_measurement SHARED plugins/measurements/dummy.cpp)
 list(APPEND dc_measurement_plugin_libs dc_dummy_measurement)
@@ -246,6 +250,7 @@ install(DIRECTORY plugins/measurements/json
 )
 
 set(tests
+  test_measurement_diagnostics
   test_measurement_dummy
   test_measurement_os
   test_measurement_parameters
