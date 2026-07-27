@@ -1,6 +1,13 @@
-# Turtlebot3
+# Turtlebot3 AWS Warehouse InfluxDB
 
-In this example, we add a robot and start collecting robot data to Stdout.
+`dc_bridge` blesses exactly four Destination types — `postgres`, `s3`, `file`, `console`
+(see [Destinations](../destinations.md)) — and InfluxDB is not one of them. This demo is
+not a peer of the [PostgreSQL/RustFS demos](./tb3_aws_minio_pgsql.md): it exists to show
+how to reach a destination `dc_bridge` doesn't bless directly, via the ADR-0003
+**passthrough** escape hatch — a raw [Vector](https://vector.dev) sink config loaded
+through `custom_config_files`, consuming the same public `dc.<tag>` routes a blessed
+Destination would. Read [Destinations](../destinations.md)'s "Passthrough" section first
+if you haven't already; this page only covers what's specific to InfluxDB.
 
 You will also need 3 terminal windows, to:
 
@@ -22,6 +29,7 @@ colcon build
 ```
 
 ## Setup the environment
+
 ### Python dependencies
 
 For this tutorial, we will need to install all dependencies:
@@ -31,11 +39,24 @@ pip3 install -r requirements.txt -r requirements-dev.txt
 ```
 
 ### Setup the infrastructure
-#### InfluxDB
-[InfluxDB](https://www.influxdata.com/) will be used to store our data and timestamps. Later on, backend engineers can make requests on those JSON based on measurement requested and time range. To start it, [follow the steps](../infrastructure_setup/influxdb.md)
 
-#### Grafana
-[Grafana](https://grafana.com/) will be used to display the data as timeseries or statistics.
+#### InfluxDB
+
+[InfluxDB](https://www.influxdata.com/) will be used to store our data and timestamps. To start it, [follow the steps](../infrastructure_setup/influxdb.md) (`tools/infrastructure/docker/docker-compose.influxdb.yaml`, unchanged by the DC 2.0 rework — this demo still needs a real InfluxDB instance to point the passthrough sink at).
+
+#### One-time: install the passthrough sink config
+
+`dc_bridge` has no InfluxDB Destination to configure through ROS parameters, so the
+Vector sink itself ships as a plain file in this package,
+`dc_demos/config/tb3_simulation_influxdb_sink.toml`, installed to the package's share
+directory. Copy it into place once before the first launch:
+
+```bash
+mkdir -p ~/.dc
+cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/tb3_simulation_influxdb_sink.toml" ~/.dc/
+```
+
+`dc_params_file`'s `custom_config_files` (see below) points at this path.
 
 ### Setup simulation environment
 In the terminal 1, source your environment, setup turtlebot configuration:
@@ -110,16 +131,21 @@ The robot will start moving and you will be able to see all visualizations activ
 
 ## Visualize the data
 
-### With Grafana Dashboard
-Open your browser at [http://localhost:3000](http://localhost:3000) and login with admin/admin
+Grafana's own datasource is PostgreSQL now (see [PostgreSQL/RustFS demo](./tb3_aws_minio_pgsql.md)), and only the **Home** and **Robot** dashboards ship with the DC 2.0 infrastructure — there is no Grafana dashboard for this demo's data, since it never touches PostgreSQL. To look at what landed in InfluxDB, use InfluxDB's own tooling instead:
 
-![Grafana-1](../../images/grafana-1.png)
+```bash
+influx -database dc -execute "SELECT * FROM dc ORDER BY time DESC LIMIT 20"
+```
 
-<video src="../../images/demos-tb3_aws_minio_pgsql-streamlit.webm" controls="controls"></video>
+or query its HTTP API directly:
+
+```bash
+curl -G 'http://127.0.0.1:8086/query' --data-urlencode "db=dc" --data-urlencode "q=SELECT * FROM dc ORDER BY time DESC LIMIT 20"
+```
 
 ## Understanding the configuration
 ```admonish info
-The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/humble/dc_demos/params/tb3_simulation_influxdb.yaml).
+The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/tb3_simulation_influxdb.yaml), and the passthrough sink config [here](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/config/tb3_simulation_influxdb_sink.toml).
 ```
 
 ### Measurement server
@@ -147,13 +173,45 @@ Environment measurements:
 
 Infrastructure measurements:
 
-1. [InfluxDB health](../measurements/tcp_health.md)
+1. [InfluxDB health](../measurements/tcp_health.md), a `TCPHealth` check against InfluxDB's own port (8086) — unrelated to the passthrough mechanism, this is the same kind of infrastructure health-check measurement the PostgreSQL/RustFS demo uses for its own destinations.
 
-Each has their own configuration: polling interval, source topic, destination paths, topics used as input etc. Going through each of them would be too long here but you can check for each measurement its documentation and the general [documentation of measurements](../measurements.md)
+None of this changed from the destination-agnostic measurement configuration used elsewhere in DC 2.0 — `nested`/`flatten` still shape the JSON for InfluxDB's line-protocol-oriented storage, and images (map, camera) are still stored as base64 strings since that's the only field type Grafana (or any consumer reading straight out of InfluxDB) can render from a database column. What changed is only how the Records reach InfluxDB in the first place — see the Destination section below.
 
-Note that all measurements have the `nested` and `flattened` parameter set to True, this will transform each measurement to conform to how InfluxDB stores data. See nested and flattened in the measurements page.
+```yaml
+measurement_server:
+  ros__parameters:
+    ...
+    camera:
+      plugin: "dc_measurements/Camera"
+      topic_output: "/dc/measurement/camera"
+      save_raw_base64: true
+      nested: true
+      flatten: true
+      ...
+    influxdb_health:
+      plugin: "dc_measurements/TCPHealth"
+      topic_output: "/dc/measurement/influxdb_health"
+      polling_interval: 5000
+      host: "127.0.0.1"
+      port: 8086
+      name: "InfluxDB"
+      include_measurement_plugin: true
+      nested: true
+      flatten: true
+```
 
-Note also that all images (map and camera images) are stored as base64 strings because Grafana, the frontend at the end will only be able to access strings from the database.
+An example `camera` Record, now without a `tags` field (that mechanism no longer exists — a Destination's `inputs` decides routing, not a per-measurement list):
+
+```json
+{
+  "date": 1677668926.700422,
+  "id": "be781e5ffb1e7ee4f817fe7b63e92c32",
+  "robot_name": "Turtlebot",
+  "run_id": "218",
+  "camera_name": "Intel Realsense",
+  "base64.raw": "iVBORw0KGgoAAAANSUhEUgAA..."
+}
+```
 
 #### Conditions
 We also initialize conditions:
@@ -163,13 +221,50 @@ We also initialize conditions:
 
 They are used in the distance traveled measurement to only take values in a certain range.
 
-### Destination server
+### Destination: the passthrough
 
-Here we only enable the InfluxDB plugins since it is where we send the data.
+`dc_bridge`'s own `destinations` list is empty — there is nothing to bless here:
 
-At the end, we want to display the data on Grafana. Grafana can only display content stored on the connected database. This also includes images, which is why they are stored as base64 strings.
+```yaml
+dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: []
+    custom_config_files: ["$HOME/.dc/tb3_simulation_influxdb_sink.toml"]
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
+```
 
-#### InfluxDB destination
-We pass all topics generated by measurements. The node will subscribe to it and transfer the data to InfluxDB.
+`custom_config_files` lists raw Vector config snippets that are merged as-is alongside whatever `dc_bridge` itself renders (here, nothing) — see [Destinations](../destinations.md)'s passthrough section for the full contract (naming collisions, `vector validate` as a startup backstop, etc.). The snippet installed above:
 
-Along with the inputs, we pass the server credentials.
+```toml
+# ~/.dc/tb3_simulation_influxdb_sink.toml
+[sinks.influxdb]
+type = "influxdb_logs"
+inputs = [
+  "dc.dc.measurement.cpu",
+  "dc.dc.measurement.memory",
+  "dc.dc.measurement.os",
+  "dc.dc.measurement.uptime",
+  "dc.dc.measurement.camera",
+  "dc.dc.measurement.cmd_vel",
+  "dc.dc.measurement.distance_traveled",
+  "dc.dc.measurement.position",
+  "dc.dc.measurement.speed",
+  "dc.dc.measurement.map",
+  "dc.dc.measurement.influxdb_health",
+]
+endpoint = "http://127.0.0.1:8086"
+measurement = "dc"
+
+[sinks.influxdb.influxdb1_settings]
+database = "dc"
+username = "dc"
+```
+
+Each `inputs` entry is one of the stable `dc.<tag>` routes `dc_bridge` exposes for every topic that appears in *any* Destination's `inputs` or, as here, any `custom_config_files` snippet's `inputs` — the Tag is the topic name with the leading `/` dropped and the rest of the `/`s turned into `.` (`/dc/measurement/cpu` → `dc.measurement.cpu`), and the route is `dc.<tag>` (so `dc.dc.measurement.cpu`). Vector's `influxdb_logs` sink type is what actually understands InfluxDB 1.x's write API; nothing in this snippet is DC-specific beyond the `dc.<tag>` inputs.
+
+```admonish warning
+Set real InfluxDB credentials (or an auth token, depending on your InfluxDB version) in the snippet before pointing this at anything but the demo's own local, unauthenticated-by-default instance.
+```

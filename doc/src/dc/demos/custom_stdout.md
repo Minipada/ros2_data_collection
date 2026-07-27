@@ -154,7 +154,7 @@ It creates the library, installs and exports it.
 In the measurement server log, the plugin is detected properly
 
 ```
-[component_container_isolated-1] [INFO] [1677715629.547448938] [measurement_server]: Creating measurement plugin uptime_custom: Type dc_demos/UptimeCustom, Group key: uptime, Polling interval: 5000, Debug: 0, Validator enabled: 1, Schema path: , Tags: [flb_stdout], Init collect: 1, Init Max measurement: 0, Include measurement name: 0, Include measurement plugin name: 0, Remote keys: , Remote prefixes: , Include measurement plugin name: 0, Max measurement on condition: 0, If all condition: , If any condition: , If none condition:
+[component_container_isolated-1] [INFO] [1677715629.547448938] [measurement_server]: Creating measurement plugin uptime_custom: Type dc_demos/UptimeCustom, Group key: uptime, Polling interval: 5000, Debug: 0, Validator enabled: 1, Schema path: , Init collect: 1, Init Max measurement: 0, Include measurement name: 0, Include measurement plugin name: 0, Remote keys: , Remote prefixes: , Include measurement plugin name: 0, Max measurement on condition: 0, If all condition: , If any condition: , If none condition:
 ...
 [component_container_isolated-1] [INFO] [1677715629.550523128] [measurement_server]: schema: {"$schema":"http://json-schema.org/draft-07/schema#","description":"Time the system has been up. Intentionally failing to demonstrate customization and callback","properties":{"time":{"description":"Time the system has been up","maximum":0,"type":"integer"}},"title":"Uptime Custom","type":"object"}
 ```
@@ -163,9 +163,9 @@ Then, it fails as expected:
 
 ```
 [component_container_isolated-1] [ERROR] [1677715634.550778659] [measurement_server]: Validation failed: At /time of 139123 - instance exceeds maximum of 0
-[component_container_isolated-1] data={"tags":["flb_stdout"],"time":139123}
+[component_container_isolated-1] data={"time":139123}
 [component_container_isolated-1] [INFO] [1677715634.550911115] [measurement_server]: Callback! Validation failed for uptime custom
 [component_container_isolated-1] [ERROR] [1677715639.550754853] [measurement_server]: Validation failed: At /time of 139128 - instance exceeds maximum of 0
-[component_container_isolated-1] data={"tags":["flb_stdout"],"time":139128}
+[component_container_isolated-1] data={"time":139128}
 [component_container_isolated-1] [INFO] [1677715639.550867662] [measurement_server]: Callback! Validation failed for uptime custom
 ```

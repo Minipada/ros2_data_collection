@@ -1,6 +1,6 @@
 # QRCodes
 
-In this example, we add a robot and start collecting robot data to PostgreSQL and maps and scanned QRcodes to MinIO as image files.
+In this example, we add a robot and start collecting robot data to PostgreSQL, and maps and scanned QR codes to RustFS as image files.
 
 You will also need 2 terminal windows, to:
 
@@ -15,15 +15,19 @@ Since RViz is pretty verbose, using 3 terminal windows will help reading the JSO
 | Nav2     | Localization and navigation                     |
 | DC       | Data collection                                 |
 
-## Setup MinIO and PostgreSQL
+## Setup RustFS and PostgreSQL
 
-### MinIO
+### RustFS
 
-MinIO will be used as storage for images and other files. To start it, [follow the steps](../infrastructure_setup/minio.md)
+RustFS will be used as storage for the map and camera image Files. To start it, [follow the steps](../infrastructure_setup/rustfs.md) — a single RustFS container plus a one-shot container that bootstraps the `dc-files` bucket the Destinations below upload into, using the default `rustfsadmin`/`rustfsadmin` credentials this demo's params file already assumes.
 
 ### PostgreSQL
 
 PostgreSQL will be used as database storage for our JSON. Later on, backend engineers can make requests on those JSON based on measurement requested and time range. To start it, [follow the steps](../infrastructure_setup/postgresql.md)
+
+```admonish info
+Vector's `postgres` sink maps each top-level key of a Record's JSON payload onto an existing column of the same name — it does not create tables or columns itself. `tools/infrastructure/docker/config/postgresql/init.sql` pre-creates the `dc` and `dc_files` tables this demo writes into; see its header comment for the full column reference if you add a measurement whose fields aren't already columns.
+```
 
 ## Setup the ROS environment
 
@@ -82,7 +86,7 @@ With this, all data will be transmitted
 ## Understanding the configuration
 
 ```admonish info
-The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/humble/dc_demos/params/qrcodes_minio_pgsql.yaml).
+The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/qrcodes_minio_pgsql.yaml).
 ```
 
 For this demo, we will reconstruct the yaml configuration element by element, given how large it is. Go through the explanation to understand how it works.
@@ -92,37 +96,29 @@ For this demo, we will reconstruct the yaml configuration element by element, gi
 Similarly to the previous tutorial:
 
 ```yaml
-destination_server:
+dc_bridge:
   ros__parameters:
-    flb:
-      flush: 1
-      flb_grace: 1
-      log_level: "info"
-      storage_path: "/var/log/flb-storage/"
-      storage_sync: "full"
-      storage_checksum: "off"
-      storage_backlog_mem_limit: "1M"
-      scheduler_cap: 200
-      scheduler_base: 5
-      http_server: true
-      http_listen: "0.0.0.0"
-      http_port: 2020
-      in_storage_type: "filesystem"
-      in_storage_pause_on_chunks_overlimit: "off"
-    destination_plugins: ["flb_pgsql"]
-    flb_pgsql:
-      plugin: "dc_destinations/FlbPgSQL"
-      inputs: ["/dc/group/robot"]
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["pgsql", "pgsql_files", "rustfs"]
+    pgsql:
+      type: postgres
+      receives: records
+      inputs:
+        [
+          "/dc/measurement/map",
+          "/dc/measurement/right_camera",
+          "/dc/measurement/left_camera",
+          "/dc/group/robot",
+        ]
       host: "127.0.0.1"
       port: 5432
-      user: fluentbit
-      password: password
-      database: "fluentbit"
+      user: "dc"
+      password: "password"
+      database: "dc"
       table: "dc"
-      timestamp_key: "date"
-      async: false
-      time_format: "double"
       time_key: "date"
+      time_format: "double"
 
 group_server:
   ros__parameters:
@@ -137,7 +133,6 @@ group_server:
       output: "/dc/group/robot"
       sync_delay: 5.0
       group_key: "robot"
-      tags: ["flb_pgsql"]
 
 measurement_server:
   ros__parameters:
@@ -187,14 +182,14 @@ In the measurement server, we set 3 measurements: cmd_vel, position and speed be
 
 Note the `include_measurement_name` which include measurement name in the JSON, which is used when grouping. The group collects the data from those 3 measurement and republishes it on the group topic `/dc/group/robot`.
 
-In the destination server, we enable the PostgreSQL plugin and configure its credentials.
+`dc_bridge` owns every Destination this demo uses. `pgsql` is a `postgres` Destination — its `inputs` list already names every topic this demo produces (`/dc/group/robot` for this section, plus `/dc/measurement/map`, `/dc/measurement/right_camera` and `/dc/measurement/left_camera` for the sections below): unlike the retired per-measurement `tags: [...]` mechanism, a Destination's `inputs` is the single place that decides what reaches it, so we declare it once and simply grow the measurements that feed those topics as we go.
 
 ```admonish warning
 
 Be sure to change the login and password to your current infrastructure configuration. Do it in production setup!
 ```
 
-You can find more about the PostgreSQL plugin [here](../destinations/flb_files_metrics.md)
+You can find more about the `postgres` Destination type [here](../destinations.md)
 
 To take a look at records, go to Adminer. It is by default started at [http://localhost:8080](http://localhost:8080), it is a database GUI.:
 
@@ -204,9 +199,9 @@ You can then click on a record, to take a look, edit or delete it:
 
 ![Adminer](../../images/qrcodes_pgsql_adminer_record.png)
 
-### Send the map image and YAML from nav2_map_server to MinIO
+### Send the map image and YAML from nav2_map_server to RustFS
 
-First, we add the map measurement. We use 3 plugins here: flb_pgsql to send the data to PostgreSQL on the dc database, then flb_minio to send some files to MinIO and flb_files_metrics which will be used to autodelete the files once they reach their destination.
+First, we add the map measurement. Its `remote_keys` names the `rustfs` Destination, which is what actually uploads the pgm/yaml Files — the map measurement only records where they are, locally and (once uploaded) remotely:
 
 ```yaml
 measurement_server:
@@ -221,91 +216,70 @@ measurement_server:
     topic_output: "/dc/measurement/map"
     save_map_timeout: 4.0
     remote_prefixes: [""]
-    remote_keys: ["minio"]
+    remote_keys: ["rustfs"]
     enable_validator: true
-    tags: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
     include_measurement_name: true
   ...
 ```
 
-Then we add the destinations:
+Then, the Destinations that make this work:
 
 ```yaml
-destination_server:
+dc_bridge:
   ros__parameters:
     ...
-    destination_plugins: ["flb_files_metrics", "flb_pgsql", "flb_minio"]
-    flb_files_metrics:
-      plugin: "dc_destinations/FlbFilesMetrics"
-      inputs: ["/dc/measurement/map"]
-      file_storage: ["minio"]
-      db_type: "pgsql"
-      delete_when_sent: true
-      minio:
-        endpoint: 127.0.0.1:9000
-        access_key_id: rQXPf1f730Yuu2yW # Change it
-        secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb # Change it
-        use_ssl: false
-        bucket: "mybucket"
-        src_fields: ["local_paths.pgm", "local_paths.yaml"]
-        upload_fields: ["remote_paths.minio.pgm", "remote_paths.minio.yaml"]
-        input_names: ["map", "map"]
-      pgsql:
-        host: "127.0.0.1"
-        port: "5432"
-        user: fluentbit # Change it
-        password: password # Change it
-        database: "fluentbit"
-        table: "files_metrics"
-        timestamp_key: "date"
-        time_format: "double"
-        time_key: "date"
-        ssl: false
-    flb_minio:
-      verbose_plugin: false
-      time_format: "iso8601"
-      plugin: "dc_destinations/FlbMinIO"
-      inputs: ["/dc/measurement/map"]
-      endpoint: 127.0.0.1:9000
-      access_key_id: rQXPf1f730Yuu2yW # Change it
-      secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb # Change it
-      use_ssl: false
-      create_bucket: true
-      bucket: "mybucket" # Change it
-      src_fields: ["local_paths.pgm", "local_paths.yaml"]
-      upload_fields: ["remote_paths.minio.pgm", "remote_paths.minio.yaml"]
-    flb_pgsql:
-      plugin: "dc_destinations/FlbPgSQL"
-      inputs: ["/dc/group/map"]
+    destinations: ["pgsql", "pgsql_files", "rustfs"]
+    pgsql_files:
+      type: postgres
+      receives: records
       host: "127.0.0.1"
       port: 5432
-      user: fluentbit
-      password: password
-      database: "fluentbit"
-      table: "dc"
-      timestamp_key: "date"
-      async: false
-      time_format: "double"
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc_files"
       time_key: "date"
+      time_format: "double"
+    rustfs:
+      type: s3
+      receives: files
+      inputs:
+        [
+          "/dc/measurement/map",
+          "/dc/measurement/right_camera",
+          "/dc/measurement/left_camera",
+        ]
+      bucket: "dc-files"
+      endpoint: "http://127.0.0.1:9000"
+      region: "us-east-1"
+      access_key_id: "rustfsadmin"
+      secret_access_key: "rustfsadmin"
+      force_path_style: true
+    files:
+      delete_when_sent: true
+      metadata_destination: "pgsql_files"
 ```
 
-This will save the map pgm and yaml every 5 seconds to MinIO. Head to the MinIO GUI, which is by default located at [http://localhost:9001](http://localhost:9001). Default user/password are **minioadmin**/**minioadmin**.
+This introduces the two-way PostgreSQL split this demo relies on:
 
-![MapMinIO](../../images/qrcodes_map_minio.png)
+- **`pgsql`** (already declared above) is a plain `receives: records` Destination — it carries the map's own metadata Record (dimensions, resolution, local/remote paths) like any other measurement.
+- **`pgsql_files`** is a *second* `postgres` Destination, dedicated to the Uploader's own bookkeeping. It has no `inputs` of its own — it is never subscribed to directly, and is fed internally whenever `files.metadata_destination` names it, which is how every `receives: files` Destination in this file (here, `rustfs`) reports upload status.
+- **`rustfs`** is the `s3` Destination that actually uploads the pgm/yaml bytes. `receives: files` marks it as owned by the Bridge's **Uploader** (ADR-0005) rather than a Vector sink: the Uploader scans Records arriving on `rustfs`'s `inputs` for `remote_paths` entries whose key matches a Destination name — here `rustfs`, matching the map measurement's `remote_keys` above — uploads the referenced Files, verifies they landed, and emits a status Record under `dc.files`, routed to whatever `pgsql_files` names.
 
-It will also save the map metadata on PostgreSQL, which you can later use to know the map location on MinIO and its dimensions for example:
+See [Destinations](../destinations.md) for the full `files:`/Uploader contract, and [ADR-0005](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0005-file-uploads-are-bridge-responsibility.md) for why file uploads are a Bridge responsibility rather than a Vector sink.
 
-![MapPostgreSQL](../../images/qrcodes_map_pgsql.png)
+`files.delete_when_sent: true` means the local pgm/yaml are removed only once RustFS confirms the upload — never before.
 
-We also transmit the metadata, to be fetched later on by the backend (map dimension and path). It is set in the flb_pgsql measurement plugin.
+You can check upload status and completion in Grafana's **Robot** dashboard, whose "Uploaded inspection files" and "Group completion status" panels query the `dc_files` table `pgsql_files` writes into:
 
-The flb_metrics plugin is also enabled. We use it to track if the file is on the filesystem and also delete it once it reaches its destination, here MinIO. This plugins deletes file when they are sent with the `delete_when_sent` parameter. More about the plugin [here](../destinations/flb_files_metrics.md)
+```sql
+SELECT to_timestamp(updated_at) AS "time", group_name, robot_name, storage_type, remote_path, content_type, size, uploaded
+FROM dc_files WHERE kind = 'file_status' ORDER BY updated_at DESC LIMIT 100
+```
 
-Then, similarly, on Adminer, you can check the data is uploaded and deleted:
+Then, similarly, on Adminer, you can browse the `dc` table's map rows.
 
-![MapAdminerFilesMetrics](../../images/qrcodes_pgsql_adminer_files_metrics.png)
-
-### Send QR code images to MinIO
+### Send QR code images to RustFS
 
 We want to collect pictures taken by the cameras
 
@@ -313,7 +287,7 @@ We want to collect pictures taken by the cameras
 measurement_server:
   ros__parameters:
   ...
-  measurement_plugins: ["right_camera", "left_camera"]
+  measurement_plugins: ["cmd_vel", "position", "speed", "map", "right_camera", "left_camera"]
   condition_plugins: ["moving", "inspected_exists"]
   custom_str_params_list: ["robot_name", "id"]
   custom_str_params:
@@ -329,9 +303,6 @@ measurement_server:
     counter: true
     counter_path: "$HOME/run_id"
     uuid: false
-  destinations:
-    minio:
-      bucket: mybucket
   moving:
     plugin: "dc_conditions/Moving"
   inspected_exists:
@@ -358,8 +329,7 @@ measurement_server:
     rotation_angle: 0
     detection_modules: ["barcode"]
     remote_prefixes: [""]
-    remote_keys: ["minio"]
-    tags: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
+    remote_keys: ["rustfs"]
     include_measurement_name: true
   left_camera:
     plugin: "dc_measurements/Camera"
@@ -382,8 +352,7 @@ measurement_server:
     rotation_angle: 0
     detection_modules: ["barcode"]
     remote_prefixes: [""]
-    remote_keys: ["minio"]
-    tags: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
+    remote_keys: ["rustfs"]
     include_measurement_name: true
   ...
 ```
@@ -399,91 +368,40 @@ Taking a look at the cameras, we can understand that:
    3. `save_detections_img: true`
 6. Barcodes are scanned in each image: `detection_modules: ["barcode"]`
 
-For the files-metrics, it is very important to have `include_measurement_name` since it relies on it to know in which field needs the paths are.
+`include_measurement_name` matters here too: the Uploader relies on it to know which top-level field of the Record holds the `local_paths`/`remote_paths` it should act on.
 
-Then we add the destination:
+No new Destination block is needed for the cameras: `pgsql` and `rustfs` already list `/dc/measurement/right_camera` and `/dc/measurement/left_camera` in their `inputs` (see the first section above) — a Destination's `inputs` is a single, global list of topics rather than something declared per measurement, so adding a measurement that feeds an already-configured Destination requires no `dc_bridge` change at all.
 
-```yaml
-destination_server:
-  ros__parameters:
-  ...
-    destination_plugins: ["flb_minio", "flb_pgsql", "flb_files_metrics"]
-    flb_files_metrics:
-      plugin: "dc_destinations/FlbFilesMetrics"
-      inputs:
-        [
-          "/dc/measurement/right_camera",
-          "/dc/measurement/left_camera",
-        ]
-      file_storage: ["minio"]
-      db_type: "pgsql"
-      delete_when_sent: true
-      minio:
-        endpoint: 127.0.0.1:9000
-        access_key_id: rQXPf1f730Yuu2yW
-        secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb
-        use_ssl: false
-        bucket: "mybucket"
-        src_fields:
-          [
-            "local_paths.inspected",
-            "local_paths.inspected"
-          ]
-        upload_fields:
-          [
-            "remote_paths.minio.inspected",
-            "remote_paths.minio.inspected"
-          ]
-      pgsql:
-        host: "127.0.0.1"
-        port: "5432"
-        user: fluentbit
-        password: password
-        database: "fluentbit"
-        table: "files_metrics"
-        timestamp_key: "date"
-        time_format: "double"
-        time_key: "date"
-        ssl: false
-    flb_minio:
-      verbose_plugin: false
-      time_format: "iso8601"
-      plugin: "dc_destinations/FlbMinIO"
-      inputs: ["/dc/measurement/right_camera", "/dc/measurement/left_camera"]
-      endpoint: 127.0.0.1:9000
-      access_key_id: rQXPf1f730Yuu2yW
-      secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb
-      use_ssl: false
-      bucket: "mybucket"
-      src_fields:
-        [
-          "local_paths.inspected",
-          "local_paths.inspected"
-        ]
-      upload_fields:
-        [
-          "remote_paths.minio.inspected",
-          "remote_paths.minio.inspected"
-        ]
-    flb_pgsql:
-      plugin: "dc_destinations/FlbPgSQL"
-      inputs:
-        [
-          "/dc/measurement/right_camera",
-          "/dc/measurement/left_camera",
-        ]
-      host: "127.0.0.1"
-      port: 5432
-      user: fluentbit
-      password: password
-      database: "fluentbit"
-      table: "dc"
-      timestamp_key: "date"
-      async: false
-      time_format: "double"
-      time_key: "date"
+Here, we collect images with the `rustfs` Destination, and their metadata (which record they belong to, remote path once uploaded, image dimensions where relevant) through `pgsql`. `pgsql_files`, fed by the Uploader, tracks when each image is sent to RustFS and — with `files.delete_when_sent: true` — is deleted locally once confirmed. Note that a Record's `remote_paths` can name several Destinations at once; the Uploader sends to every one whose name appears there.
+
+An example Record for `right_camera`, once the image is inspected:
+
+```json
+{
+  "camera_name": "right_camera",
+  "date": 1677668926.700422,
+  "id": "be781e5ffb1e7ee4f817fe7b63e92c32",
+  "robot_name": "C3PO",
+  "run_id": "218",
+  "local_img_paths": {
+    "inspected": "/root/dc_data/C3PO/2023/03/01/17/right_camera/inspected/2023-03-01T17-12-57.jpg"
+  },
+  "remote_paths": {
+    "rustfs": {
+      "inspected": "C3PO/2023/03/01/17/right_camera/inspected/2023-03-01T17-12-57.jpg"
+    }
+  },
+  "inspected": {
+    "barcode": [
+      {
+        "data": [81, 82, 99, 111, 100, 101, 45, 49],
+        "height": 40,
+        "width": 40,
+        "top": 120,
+        "left": 200,
+        "type": "QRCODE"
+      }
+    ]
+  }
+}
 ```
-
-Here, we collect images with the MinIO plugin, also send metadata to PostreSQL.
-
-In addition, flb_files_metrics tracks when the files are sent to MinIO and deletes them when it is done. Note that multiple destinations can be configured for each field. Check the plugin documentation to see which remote destinations are supported.

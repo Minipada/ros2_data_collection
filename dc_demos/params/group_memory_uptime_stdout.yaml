@@ -1,27 +1,16 @@
-destination_server:
+dc_bridge:
   ros__parameters:
-    flb:
-      flush: 1
-      flb_grace: 1
-      log_level: "info"
-      storage_path: "/var/log/flb-storage/"
-      storage_sync: "full"
-      storage_checksum: "off"
-      storage_backlog_mem_limit: "1M"
-      scheduler_cap: 200
-      scheduler_base: 5
-      http_server: true
-      http_listen: "0.0.0.0"
-      http_port: 2020
-      in_storage_type: "filesystem"
-      in_storage_pause_on_chunks_overlimit: "off"
-    destination_plugins: ["flb_stdout"]
-    flb_stdout:
-      plugin: "dc_destinations/FlbStdout"
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["console"]
+    console:
+      type: console
+      receives: records
       inputs: ["/dc/group/memory_uptime"]
-      time_format: "double"
       time_key: "date"
-      debug: false
+      time_format: "double"
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
 
 group_server:
   ros__parameters:
@@ -31,7 +20,6 @@ group_server:
       output: "/dc/group/memory_uptime"
       sync_delay: 5.0
       group_key: "memory_uptime"
-      tags: ["flb_stdout"]
 
 measurement_server:
   ros__parameters:

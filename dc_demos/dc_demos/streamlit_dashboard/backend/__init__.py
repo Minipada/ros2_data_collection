@@ -1,4 +1,4 @@
-from .minio import minio_client
 from .pgsql import PGSQLService
+from .rustfs import rustfs_client
 
-__all__ = ["minio_client", "PGSQLService"]
+__all__ = ["rustfs_client", "PGSQLService"]

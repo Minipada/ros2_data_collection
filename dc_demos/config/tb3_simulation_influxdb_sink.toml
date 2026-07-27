@@ -1,0 +1,29 @@
+# Illustrative ADR-0003 passthrough sink for the tb3_simulation_influxdb demo.
+#
+# dc_bridge's blessed destinations are postgres/s3/file/console only — there is no
+# blessed InfluxDB type — so this demo reaches InfluxDB via a raw Vector config
+# consuming the public `dc.<tag>` routes (see doc/src/dc/destinations.md) instead of
+# a `destinations:` entry in the params YAML. Field names below match Vector's
+# `influxdb_logs` sink for InfluxDB 1.x; check your installed Vector version's own
+# sink reference if you're pointing this at a different InfluxDB release.
+[sinks.influxdb]
+type = "influxdb_logs"
+inputs = [
+  "dc.dc.measurement.cpu",
+  "dc.dc.measurement.memory",
+  "dc.dc.measurement.os",
+  "dc.dc.measurement.uptime",
+  "dc.dc.measurement.camera",
+  "dc.dc.measurement.cmd_vel",
+  "dc.dc.measurement.distance_traveled",
+  "dc.dc.measurement.position",
+  "dc.dc.measurement.speed",
+  "dc.dc.measurement.map",
+  "dc.dc.measurement.influxdb_health",
+]
+endpoint = "http://127.0.0.1:8086"
+measurement = "dc"
+
+[sinks.influxdb.influxdb1_settings]
+database = "dc"
+username = "dc"

@@ -1,11 +1,15 @@
 apiVersion: 1
 
 datasources:
-  - name: InfluxDB
-    type: influxdb
+  - name: PostgreSQL
+    type: postgres
+    url: db:5432
     database: dc
-    user: admin
-    password: admin
-    url: http://influxdb:8086
+    user: dc
+    secureJsonData:
+      password: password
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1300
     isDefault: true
-    uid: flb_influxdb
+    uid: dc_postgres

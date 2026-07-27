@@ -8,5 +8,8 @@ services:
     environment:
       POSTGRES_USER: dc
       POSTGRES_PASSWORD: password
+      POSTGRES_DB: dc
     ports:
       - 5432:5432
+    volumes:
+      - ./config/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro

@@ -1,89 +1,11 @@
-destination_server:
+dc_bridge:
   ros__parameters:
-    flb:
-      flush: 1
-      flb_grace: 1
-      log_level: "info"
-      storage_path: "/var/log/flb-storage/"
-      storage_sync: "full"
-      storage_checksum: "off"
-      storage_backlog_mem_limit: "1M"
-      scheduler_cap: 200
-      scheduler_base: 5
-      http_server: true
-      http_listen: "0.0.0.0"
-      http_port: 2020
-      in_storage_type: "filesystem"
-      in_storage_pause_on_chunks_overlimit: "off"
-    destination_plugins: ["flb_minio", "flb_pgsql", "flb_files_metrics"]
-    flb_files_metrics:
-      plugin: "dc_destinations/FlbFilesMetrics"
-      inputs:
-        [
-          "/dc/measurement/map",
-          "/dc/measurement/right_camera",
-          "/dc/measurement/left_camera",
-        ]
-      file_storage: ["minio"]
-      db_type: "pgsql"
-      delete_when_sent: true
-      minio:
-        endpoint: 127.0.0.1:9000
-        access_key_id: rQXPf1f730Yuu2yW
-        secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb
-        use_ssl: false
-        bucket: "mybucket"
-        src_fields:
-          [
-            "local_paths.pgm",
-            "local_paths.yaml",
-            "local_paths.inspected",
-            "local_paths.inspected",
-          ]
-        upload_fields:
-          [
-            "remote_paths.minio.pgm",
-            "remote_paths.minio.yaml",
-            "remote_paths.minio.inspected",
-            "remote_paths.minio.inspected",
-          ]
-      pgsql:
-        host: "127.0.0.1"
-        port: "5432"
-        user: fluentbit
-        password: password
-        database: "fluentbit"
-        table: "files_metrics"
-        timestamp_key: "date"
-        time_format: "double"
-        time_key: "date"
-        ssl: false
-    flb_minio:
-      verbose_plugin: false
-      time_format: "iso8601"
-      plugin: "dc_destinations/FlbMinIO"
-      inputs: ["/dc/measurement/right_camera", "/dc/measurement/left_camera"]
-      endpoint: 127.0.0.1:9000
-      access_key_id: rQXPf1f730Yuu2yW
-      secret_access_key: TYYkjN5L4gqDgCGLzQahHDcvqL4WNTcb
-      use_ssl: false
-      bucket: "mybucket"
-      src_fields:
-        [
-          "local_paths.pgm",
-          "local_paths.yaml",
-          "local_paths.inspected",
-          "local_paths.inspected",
-        ]
-      upload_fields:
-        [
-          "remote_paths.minio.pgm",
-          "remote_paths.minio.yaml",
-          "remote_paths.minio.inspected",
-          "remote_paths.minio.inspected",
-        ]
-    flb_pgsql:
-      plugin: "dc_destinations/FlbPgSQL"
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["pgsql", "pgsql_files", "rustfs"]
+    pgsql:
+      type: postgres
+      receives: records
       inputs:
         [
           "/dc/measurement/map",
@@ -93,14 +15,43 @@ destination_server:
         ]
       host: "127.0.0.1"
       port: 5432
-      user: fluentbit
-      password: password
-      database: "fluentbit"
+      user: "dc"
+      password: "password"
+      database: "dc"
       table: "dc"
-      timestamp_key: "date"
-      async: false
-      time_format: "double"
       time_key: "date"
+      time_format: "double"
+    pgsql_files:
+      type: postgres
+      receives: records
+      host: "127.0.0.1"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc_files"
+      time_key: "date"
+      time_format: "double"
+    rustfs:
+      type: s3
+      receives: files
+      inputs:
+        [
+          "/dc/measurement/map",
+          "/dc/measurement/right_camera",
+          "/dc/measurement/left_camera",
+        ]
+      bucket: "dc-files"
+      endpoint: "http://127.0.0.1:9000"
+      region: "us-east-1"
+      access_key_id: "rustfsadmin"
+      secret_access_key: "rustfsadmin"
+      force_path_style: true
+    files:
+      delete_when_sent: true
+      metadata_destination: "pgsql_files"
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
 
 group_server:
   ros__parameters:
@@ -115,12 +66,12 @@ group_server:
       output: "/dc/group/robot"
       sync_delay: 5.0
       group_key: "robot"
-      tags: ["flb_pgsql"]
 
 measurement_server:
   ros__parameters:
     robot_name: "C3PO"
-    measurement_plugins: ["cmd_vel", "position", "speed", "map", "right_camera"]
+    measurement_plugins:
+      ["cmd_vel", "position", "speed", "map", "right_camera", "left_camera"]
     custom_str_params_list: ["robot_name", "id"]
     custom_str_params:
       robot_name:
@@ -138,9 +89,6 @@ measurement_server:
     save_local_base_path: "$HOME/dc_data/"
     all_base_path: "=robot_name/%Y/%m/%d/%H"
     condition_plugins: ["moving", "inspected_exists"]
-    destinations:
-      minio:
-        bucket: mybucket
     moving:
       plugin: "dc_conditions/Moving"
     inspected_exists:
@@ -177,9 +125,8 @@ measurement_server:
       save_map_timeout: 4.0
       init_collect: true
       remote_prefixes: [""]
-      remote_keys: ["minio"]
+      remote_keys: ["rustfs"]
       enable_validator: true
-      tags: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
       include_measurement_name: true
       quiet: true
     right_camera:
@@ -203,8 +150,7 @@ measurement_server:
       rotation_angle: 0
       detection_modules: ["barcode"]
       remote_prefixes: [""]
-      remote_keys: ["minio"]
-      tags: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
+      remote_keys: ["rustfs"]
       include_measurement_name: true
     left_camera:
       plugin: "dc_measurements/Camera"
@@ -227,6 +173,5 @@ measurement_server:
       rotation_angle: 0
       detection_modules: ["barcode"]
       remote_prefixes: [""]
-      remote_keys: ["minio"]
-      tags: ["flb_pgsql", "flb_minio", "flb_files_metrics"]
+      remote_keys: ["rustfs"]
       include_measurement_name: true

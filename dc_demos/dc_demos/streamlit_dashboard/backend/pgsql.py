@@ -289,7 +289,7 @@ class PGSQLService:
         run_id: str | None = "",
         start_date: datetime.datetime | None = None,
         end_date: datetime.datetime | None = None,
-        storage: Storage = Storage.MINIO,
+        storage: Storage = Storage.RUSTFS,
     ):
         # Find last time with map present
         subquery_last = (
@@ -361,7 +361,7 @@ class PGSQLService:
         run_id: str | None = "",
         start_date: datetime.datetime | None = None,
         end_date: datetime.datetime | None = None,
-        storage: Storage = Storage.MINIO,
+        storage: Storage = Storage.RUSTFS,
     ):
         query = (
             select(
