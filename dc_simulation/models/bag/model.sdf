@@ -19,7 +19,6 @@
       <kinematic>0</kinematic>
       <pose>-0 0 0.144 0 -0 0</pose>
       <gravity>1</gravity>
-      <origin xyz='0 0 0' rpy='0 0 0'/>
       <visual name='bag_visual_one'>
         <geometry>
           <mesh>
@@ -28,13 +27,6 @@
           </mesh>
         </geometry>
         <material>
-          <shader type='pixel'>
-            <normal_map>__default__</normal_map>
-          </shader>
-          <script>
-            <name>ModelPreview_10::link::visual_MATERIAL_</name>
-            <uri>__default__</uri>
-          </script>
           <ambient>1 1 1 1</ambient>
           <diffuse>1 1 1 1</diffuse>
           <specular>0 0 0 1</specular>
