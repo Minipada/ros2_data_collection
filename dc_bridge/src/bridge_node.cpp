@@ -209,6 +209,18 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
   const auto files_multipart_part_size = declare_optional_int(this, "files.multipart_part_size_bytes");
   const std::string metadata_destination = this->declare_parameter<std::string>("files.metadata_destination", "");
 
+  // files.retention.* (#267): default off (0/absent = unlimited, Humble parity) —
+  // declared unconditionally like the files.* params above, whether or not a
+  // `receives: files` destination even exists.
+  if (const auto v = declare_optional_int(this, "files.retention.max_bytes"))
+  {
+    retention_config_.max_bytes = static_cast<std::uint64_t>(std::max<std::int64_t>(0, *v));
+  }
+  if (const auto v = declare_optional_int(this, "files.retention.max_age_days"))
+  {
+    retention_config_.max_age_days = static_cast<std::uint32_t>(std::max<std::int64_t>(0, *v));
+  }
+
   if (!files_destinations.empty())
   {
     if (metadata_destination.empty())
@@ -240,6 +252,10 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
       }
       storages.push_back(make_s3_storage(dest.name, *s3));
     }
+    // Retention (#267) needs its own copy — the Uploader below moves its own — for the
+    // worker thread's periodic sweep. Cheap: Storage is name/prefix strings plus a
+    // shared_ptr<ObjectStore>.
+    files_storages_ = storages;
     uploader::UploaderConfig ucfg(data_dir + "/uploader", files_delete_when_sent);
     if (files_multipart_threshold)
     {
@@ -471,6 +487,36 @@ void BridgeNode::run_uploader_worker(std::string forward_host, std::uint16_t for
     throw std::runtime_error(last_err);
   };
 
+  // Retention's own audit rows (#267) are strictly best-effort: a single send, no
+  // 60s-of-retries loop like `emit` above — the shed itself (relieving disk pressure)
+  // must never be held up by "the Shipper is reachable right now".
+  auto retention_emit = [&forwarder](const nlohmann::json& row) {
+    Record record;
+    record.tag = uploader::FILE_STATUS_TAG;
+    record.timestamp_secs = static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    record.payload = row;
+    forwarder.send(record);
+  };
+  auto is_verified_everywhere = [this](const uploader::FileGroup& group) {
+    return uploader_->is_verified_everywhere(group);
+  };
+  auto retention_warn = [this](const std::string& msg) { RCLCPP_WARN(this->get_logger(), "%s", msg.c_str()); };
+  // Sweeping on every wake (every ~500ms) would hammer the storage backend with
+  // is_verified_everywhere's HEAD checks for no benefit — retention is an occasional,
+  // opt-in safety valve, not a hot path. A fixed, generous interval is enough; it isn't
+  // exposed as a parameter since #267 doesn't ask for that knob.
+  constexpr std::chrono::seconds RETENTION_SWEEP_INTERVAL{ 30 };
+  // `steady_clock::time_point::min()` would look like the natural "run immediately"
+  // sentinel here, but `now - last_retention_sweep` below is a *subtraction*, not a
+  // comparison (unlike IntentQueue's own next_attempt sentinel) — min() so vastly
+  // predates any real `now` that the difference overflows steady_clock::duration's
+  // range, wrapping around to a large *negative* value that then never legitimately
+  // reaches the interval again. Backdating by the interval itself keeps the value
+  // anchored to the real clock (so the first sweep still runs immediately) without the
+  // overflow.
+  auto last_retention_sweep = std::chrono::steady_clock::now() - RETENTION_SWEEP_INTERVAL;
+
   for (;;)
   {
     {
@@ -493,6 +539,17 @@ void BridgeNode::run_uploader_worker(std::string forward_host, std::uint16_t for
     // Keeps this Forwarder's own unacked window (#266) converging between status-Record
     // emissions, same reason the main prober thread polls the subscription Forwarder.
     forwarder.poll();
+
+    if (retention_config_.enabled())
+    {
+      const auto now = std::chrono::steady_clock::now();
+      if (now - last_retention_sweep >= RETENTION_SWEEP_INTERVAL)
+      {
+        last_retention_sweep = now;
+        uploader::sweep(*intent_queue_, files_storages_, retention_config_, is_verified_everywhere, retention_emit,
+                        retention_warn);
+      }
+    }
 
     auto item = intent_queue_->next_ready();
     if (!item)

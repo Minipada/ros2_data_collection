@@ -81,6 +81,29 @@ not just a local tool.
    container's CPU/RSS throughout the run into `tools/e2e/.run/resource_usage.csv`.
    Informational only, per the PRD — it does not gate the run.
 
+## Files retention scenario (#267)
+
+A second, narrower harness for the retention policy — separate from `run.sh` above
+because it needs the opposite starting condition (RustFS *never* comes up until told
+to, rather than an outage induced mid-run) and a dedicated small
+`files.retention.max_bytes`:
+
+```sh
+./tools/e2e/scripts/run_retention.sh
+```
+
+Reuses the same `dc-e2e` image (same `DC_E2E_IMAGE`/`DC_WORKSPACE_IMAGE` env vars as
+`run.sh`) but overrides the mounted params file with
+`params/e2e_retention_params.yaml` — RustFS starts down and stays down while the camera
+Measurement's captures pile up in the durable upload intent queue, past a deliberately
+small `max_bytes`. Asserts: (1) with RustFS still down, a `deleted: true, uploaded:
+false` audit row lands in `dc_files` for the oldest capture, and its local File is
+actually gone from disk (File+intent atomicity); (2) once RustFS comes up, a later
+(unshed) capture uploads and verifies normally. Not run by `ci.yaml` yet — `run.sh`'s
+own camera path already covers the File pipeline's steady-state/outage behavior; wiring
+this scenario into CI as its own job is left as a follow-up, same as the "not done" list
+below.
+
 ## Layout
 
 - `Containerfile` — builds the full DC workspace (every `dc_*` package, all C++ since
@@ -115,6 +138,9 @@ not just a local tool.
   via `DC_E2E_IMAGE` (as CI's `e2e` job does).
 - `scripts/verify_zero_loss.py` — the hard-failing Postgres verification.
 - `scripts/measure_resources.sh` — the informational resource sampler.
+- `params/e2e_retention_params.yaml` / `scripts/run_retention.sh` — the files retention
+  scenario (#267) described above; a separate, narrower harness reusing the same
+  `dc-e2e` image.
 
 ## `.dockerignore`
 
