@@ -6,7 +6,7 @@ ADR-0004 made the new `dc_bridge` node Rust (`rclrs`) as a deliberately containe
 — its own words: *"We want first-party Rust in the project."* The bet was explicitly
 reversible: *"if not, the loss is one small package."* We are exercising that exit
 clause. The Bridge is now plain C++ (`ament_cmake`, `rclcpp`); everything else about the
-DC 2.0 architecture (external Vector shipper, Fluent Forward boundary, blessed
+DC 2.0 architecture (external Vector shipper, shipper ingest protocol boundary, blessed
 Destinations + passthrough, the Uploader's verify-then-delete semantics) is unchanged.
 
 ## Why
@@ -33,7 +33,7 @@ Bridge's own logic:
   *does*.
 
 Against that, none of the Bridge's actual responsibilities need Rust. Talking to Vector
-is Fluent Forward (msgpack over a TCP socket); process supervision is
+is the shipper ingest protocol (msgpack over a TCP socket); process supervision is
 `fork`/`exec`/`waitpid` + `PR_SET_PDEATHSIG`; config rendering is string/TOML
 generation; the File uploads (ADR-0005) are S3 multipart, which the AWS SDK for C++
 provides directly. The Humble line did S3 uploads with a single `minio-go` call and no

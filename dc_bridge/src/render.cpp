@@ -95,9 +95,9 @@ std::string trim(const std::string& s)
   return s.substr(begin, end - begin + 1);
 }
 
-// The distinct Fluent Forward tags a Destination's inputs topics derive to, plus its
-// Bridge-internal extra_tags — sorted+unique (std::set) so rendered arrays/VRL are
-// deterministic.
+// The distinct shipper ingest protocol Tags a Destination's inputs topics derive to,
+// plus its Bridge-internal extra_tags — sorted+unique (std::set) so rendered arrays/VRL
+// are deterministic.
 std::set<std::string> destination_tags(const Destination& dest)
 {
   std::set<std::string> tags;
@@ -604,6 +604,16 @@ std::string render(const RenderConfig& config)
 
   toml::table root;
   root.insert("data_dir", config.data_dir);
+
+  // Global acknowledgements (#266): the Bridge's Forwarder tags every frame with a
+  // `chunk` id and expects an `ack` in return, so the fluent source's chunk/ack support
+  // must actually be switched on. Enabled globally rather than per-source: Vector 0.57
+  // deprecates enabling acknowledgements on the source itself in favor of this form
+  // (verified against the pinned binary — the source-level knob logs a deprecation
+  // warning where this one doesn't, with identical ack behavior either way).
+  toml::table acknowledgements;
+  acknowledgements.insert("enabled", true);
+  root.insert("acknowledgements", std::move(acknowledgements));
 
   // sources
   toml::table source;

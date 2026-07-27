@@ -1,6 +1,7 @@
-// Readiness: tracks whether Vector is currently accepting Fluent Forward connections,
-// shared between a background prober and the ROS readiness service (ADR-0006 — the
-// Bridge has no lifecycle state beyond "process up + ready service answers").
+// Readiness: tracks whether Vector is currently accepting shipper ingest protocol
+// connections, shared between a background prober and the ROS readiness service
+// (ADR-0006 — the Bridge has no lifecycle state beyond "process up + ready service
+// answers").
 #ifndef DC_BRIDGE__READINESS_HPP_
 #define DC_BRIDGE__READINESS_HPP_
 
@@ -35,8 +36,8 @@ private:
   std::shared_ptr<std::atomic<bool>> ready_;
 };
 
-/// A plain TCP connect probe against Vector's Fluent Forward listen address: true means
-/// "accepting connections", false means it doesn't (yet, or anymore).
+/// A plain TCP connect probe against Vector's shipper ingest protocol listen address:
+/// true means "accepting connections", false means it doesn't (yet, or anymore).
 bool probe(const std::string& host, std::uint16_t port, std::chrono::milliseconds timeout);
 
 }  // namespace dc_bridge

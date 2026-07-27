@@ -1,5 +1,8 @@
 data_dir = "/home/dc/.dc/buffer"
 
+[acknowledgements]
+enabled = true
+
 [sinks.pgsql]
 endpoint = "postgres://dc:hunter2@127.0.0.1:5432/dc"
 inputs = ["dc.dc.group.robot"]
