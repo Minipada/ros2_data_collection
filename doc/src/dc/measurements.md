@@ -1,6 +1,9 @@
 # Measurements
+
 ## Description
-Measurements are a single data unit presented in JSON format, that can contain different fields. For example, Memory measurement:
+
+A **Measurement** is a source of sampled data that emits **Records** — timestamped JSON
+documents — on its own ROS topic. For example, a Record from the Memory Measurement:
 
 ```json
 {
@@ -16,8 +19,20 @@ Measurements are a single data unit presented in JSON format, that can contain d
 
 ## Node parameters
 
-This node enables data collection from ROS 2 topics. Each topic is configured in a measurement, which is loaded in this node with pluginlib; the Bridge (`dc_bridge`) subscribes to the same topics and forwards Records to the destinations enabled there (see [Destinations](./destinations.md)).
-In addition, conditions are pluginlibs plugin also loaded dynamically. They are optional plugins that allow to collect on some conditions, e.g robot is moving.
+This node collects data and publishes it as Records. Each Measurement is a pluginlib
+plugin loaded into this node and publishes on its own `topic_output`; the Bridge
+(`dc_bridge`) subscribes to those topics and forwards the Records to the Destinations
+that list them in `inputs` (see [Destinations](./destinations.md)). **Conditions** are
+pluginlib plugins loaded here too — optional predicates that gate whether a Measurement
+collects, e.g. only when the robot is not moving.
+
+```admonish warning title="tags no longer selects a Destination"
+In DC 1.x, a Measurement's `tags` parameter named the destination plugins that should
+receive its Records. In DC 2.0, a Destination declares the topics it receives in its own
+`inputs` list. The parameter is still read, and a non-empty value is still written into
+the Record as a `tags` field, but it has no routing effect — remove it. See the
+[migration guide](./migration.md#tags-what-changed).
+```
 
 | Parameter name                                 | Description                                                                                                                                                 | Type(s)     | Default                       |
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ----------------------------- |
@@ -53,9 +68,8 @@ Each measurement is collected through a node and has these configuration paramet
 | **condition_max_measurements** | Collect a maximum of n measurements when conditions are activated (-1 = never, 0 = infinite) | int         | 0                                    |
 | **enable_validator**           | Will validate the data against a JSON schema                                                 | bool        | true                                 |
 | **json_schema_path**           | Path to the JSON schema, ignored if empty string                                             | str         | N/A (optional)                       |
-| **tags**                       | Destination names, used by the Bridge to match Records to destinations                       | list\[str\] | N/A (mandatory)                      |
-| **remote_prefixes**            | Prefixes to apply to the paths when sending files to a destination                           | str         | N/A (optional)                       |
-| **remote_keys**                | Used by some plugins to generate remote paths                                                | list\[str\] | N/A (optional)                       |
+| **remote_prefixes**            | Prefixes to apply to the remote paths of the Files this Measurement produces                 | str         | N/A (optional)                       |
+| **remote_keys**                | Destination names the Files this Measurement produces are uploaded to; each becomes a key under the Record's `remote_paths` | list\[str\] | N/A (optional) |
 | **if_all_conditions**          | Collect only if all conditions are activated                                                 | list\[str\] | N/A (optional)                       |
 | **if_any_conditions**          | Collect if any conditions is activated                                                       | list\[str\] | N/A (optional)                       |
 | **if_none_conditions**         | Collect only if all conditions are not activated                                             | list\[str\] | N/A (optional)                       |

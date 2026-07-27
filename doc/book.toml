@@ -1,7 +1,6 @@
 [book]
 authors = ["The Contributors"]
 language = "en"
-multilingual = false
 src = "src"
 title = "Data Collection for ROS 2"
 
@@ -17,13 +16,13 @@ command = "mdbook-mermaid"
 
 [preprocessor.admonish]
 command = "mdbook-admonish"
-assets_version = "2.0.0" # do not edit: managed by `mdbook-admonish install`
+assets_version = "3.1.0" # do not edit: managed by `mdbook-admonish install`
 
 [output.html]
 mathjax-support = true
 default-theme = "navy"
 git-repository-url = "https://github.com/minipada/ros2_data_collection"
-edit-url-template = "https://github.com/minipada/ros2_data_collection/edit/humble/doc/{path}"
+edit-url-template = "https://github.com/minipada/ros2_data_collection/edit/jazzy/doc/{path}"
 additional-css = ["open-in.css", "./css/mdbook-admonish.css", "css/logo.css", "css/lineicon.css", "css/theme.css"]
 additional-js = ["js/mermaid.js", "js/mermaid-init.js", "js/theme.js"]
 
@@ -44,9 +43,11 @@ expand = true
 heading-split-level = 2
 
 [output.linkcheck]
-# Should we check links on the internet? Enabling this option adds a
-# non-negligible performance impact
-follow-web-links = true
+# Should we check links on the internet? Off: the docs build runs in CI on every doc
+# change, and third-party hosts (github.com in particular, which 403s the checker's
+# user-agent) make external checking flaky in a way that says nothing about the docs.
+# Internal links — the ones a docs change can actually break — are still checked.
+follow-web-links = false
 
 # Are we allowed to link to files outside of the book's root directory? This
 # may help prevent linking to sensitive files (e.g. "../../../../etc/shadow")

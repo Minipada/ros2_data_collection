@@ -263,6 +263,6 @@ So...what happened?
 3. In parallel, each time the map plugin sends a ROS message, it also saves the files on the filesystem. Open a file browser to the path you set in the configuration to a path mentioned in the map JSON
 4. The "robot" group node subscribes to /dc/measurement/cmd_vel, /dc/measurement/position and /dc/measurement/speed and publish on /dc/group/robot when it collects data from all 3 topics
 5. Run ID and robot_name is appended in the JSON of each
-6. `dc_bridge`, which subscribes to `/dc/group/robot` and `/dc/measurement/map` directly, receives the data and forwards it to the external Vector process over the Fluent Forward protocol
+6. `dc_bridge`, which subscribes to `/dc/group/robot` and `/dc/measurement/map` directly, receives the data and forwards it to the external Vector process over the shipper ingest protocol
 7. Vector's generated config applies a `remap` transform that writes the configured `time_key` in the requested `time_format`
 8. Vector's `console` sink, the only one matching the `console` Destination we configured, prints the JSON to stdout

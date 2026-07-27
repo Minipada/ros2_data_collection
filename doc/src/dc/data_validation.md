@@ -2,7 +2,7 @@
 
 ## Model
 
-Each measurement cam validate its data with a model.
+Each Measurement can validate the Records it emits against a model.
 
 We use use [JSON schema validator for JSON for Modern C++](https://github.com/pboettch/json-schema-validator).
 

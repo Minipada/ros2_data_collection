@@ -2,6 +2,7 @@
 
 - [Introduction](./dc/introduction.md)
 - [Setup](./dc/setup.md)
+- [Migrating from DC 1.x to DC 2.0](./dc/migration.md)
 - [Demos](./dc/demos.md)
   - [Uptime](./dc/demos/uptime_stdout.md)
   - [Group memory and uptime](./dc/demos/memory_uptime_stdout.md)

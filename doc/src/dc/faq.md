@@ -1,10 +1,23 @@
 # FAQ
 
-## I can't find a measurement and/or destination I need
+## I can't find a Measurement I need
 
-Even though measurements and destinations will constantly be added in the future, the current focus is on getting feedback, fixing bugs, documentation and reach a minimum test coverage.
+Measurements will keep being added, but the current focus is on getting feedback, fixing
+bugs, documentation and reaching a minimum test coverage.
 
-Create a feature request in [Github Discussions](https://github.com/Minipada/ros2_data_collection/discussions/categories/ideas-and-feature-requests)...or better, write your plugin and do a Pull Request.
+Create a feature request in [Github Discussions](https://github.com/Minipada/ros2_data_collection/discussions/categories/ideas-and-feature-requests)...or better, write your plugin and open a Pull Request.
+
+## I can't find the Destination I need
+
+You do not need one to exist. The four **blessed** Destination types are the ones DC
+configures natively from ROS parameters; everything else in Vector's catalog works today
+through the [passthrough](./destinations.md#passthrough-custom_config_files) — see the
+question below.
+
+## I'm coming from DC 1.x and my `flb_*` destinations are gone
+
+They were replaced, not dropped. The [migration guide](./migration.md) maps every
+DC 1.x Destination to its DC 2.0 equivalent with before/after configuration.
 
 ## How can I send data to a Destination that isn't blessed?
 

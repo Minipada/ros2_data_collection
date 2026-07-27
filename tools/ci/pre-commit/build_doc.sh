@@ -1,70 +1,47 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
-# Build the documentation.
+# Build the documentation site (mdbook) and the strictdoc requirements export.
 #
-# Pulls a published minipada/ros2_data_collection:<ROS_VERSION>-doc image; nothing
-# currently builds/pushes a fresh one (the workflow job that did, docker.yaml's `doc`
-# job, was removed as humble-line dead weight — see containers/doc/Containerfile's
-# header). A live jazzy docs build is tracked at #252 (DC 2.0 S11), not this script.
+# Called by both the `build-doc` pre-commit hook and .github/workflows/doc.yaml, so a
+# local docs build and the CI docs build run the same toolchain — there is no CI-only
+# docs script. The toolchain lives in a Podman image built from
+# containers/doc/Containerfile with pinned mdbook/strictdoc versions (mdbook's
+# preprocessor ABI is not stable across minor versions).
+#
+# Output: doc/book/html (site) and doc/src/dc/requirements/html (requirements export,
+# generated before mdbook runs so mdbook copies it into the site).
+#
+# Environment:
+#   IMAGE_TAG   Tag for the builder image (default dc-doc:local; CI passes dc-doc:<sha>)
+#   ENGINE      Container engine (default podman)
 
-# Arguments parsing
-# Example:
-# ./build_doc.sh -ros-version="humble"
-help() {
-usage="$(basename "$0") --ros-version=<ROS_VERSION> [ --help ]
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+IMAGE_TAG="${IMAGE_TAG:-dc-doc:local}"
+ENGINE="${ENGINE:-podman}"
 
-Build documentation
+echo "==> Building the docs toolchain image ${IMAGE_TAG}"
+"${ENGINE}" build -t "${IMAGE_TAG}" -f "${REPO_ROOT}/containers/doc/Containerfile" \
+    "${REPO_ROOT}/containers/doc"
 
-Arguments:
---help          Show this help text
---ros-version   ROS version to use, will use different containers (mandatory)
-"
-    echo "${usage}"
+run_in_image() {
+    "${ENGINE}" run --rm \
+        -v "${REPO_ROOT}:/ws:z" \
+        --workdir "/ws${1}" \
+        "${IMAGE_TAG}" \
+        "${@:2}"
 }
 
-for i in "$@"
-do
-case $i in
-    --ros-version=*)
-    ROS_VERSION="${i#*=}"
-    shift # past argument=value
-    ;;
-    --help)
-    HELP=YES
-    shift # past argument with no value
-    ;;
-    *)
-    # unknown option
-    ;;
-esac
-done
-
-# Arguments check
-if [ -n "${HELP}" ]; then
-    help
-    exit 0
-fi
-
-if [ -z "${ROS_VERSION}" ]; then
-    help
-    exit 1
-fi
-
-docker run \
-    --rm \
-    -v "${PWD}:/ws" \
-    --workdir /ws/doc "minipada/ros2_data_collection:${ROS_VERSION}-doc" \
-    mdbook build
-
-docker run \
-    --rm \
-    -v "${PWD}:/ws" \
-    --workdir /ws "minipada/ros2_data_collection:${ROS_VERSION}-doc" \
-   strictdoc export requirements \
+echo "==> Exporting the strictdoc requirements"
+run_in_image "" strictdoc export requirements \
     --experimental-enable-file-traceability \
     --enable-mathjax \
     --format=html \
-    --output-dir /ws/doc/book/html/dc/requirements \
+    --output-dir doc/src/dc/requirements \
     --project-title "ROS 2 Data Collection"
+
+echo "==> Building the book"
+run_in_image "/doc" mdbook build
+
+echo "==> Documentation built in doc/book/html"

@@ -17,7 +17,12 @@ ros2 run dc_cli list_plugins --help
 │ by-package       List plugins of a pluginlib file with their descriptions, by package name and filename.                  │
 │ by-path          List plugins of a pluginlib file with their descriptions, by their path.                                 │
 │ conditions       List condition plugins with their descriptions.                                                          │
-│ destinations     List destination plugins with their descriptions.                                                        │
 │ measurements     List measurement plugins with their descriptions.                                                        │
 ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+```admonish info
+There is no `destinations` command. Destinations are not pluginlib plugins in DC 2.0
+(ADR-0003): the four blessed types are listed in [Destinations](./destinations.md), and
+everything else is reached through the passthrough.
 ```
