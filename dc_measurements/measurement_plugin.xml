@@ -23,6 +23,14 @@
         </class>
     </library>
 
+    <library path="dc_diagnostics_measurement">
+        <class name="dc_measurements/Diagnostics" type="dc_measurements::Diagnostics" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_diagnostics
+            </description>
+        </class>
+    </library>
+
     <library path="dc_dummy_measurement">
         <class name="dc_measurements/Dummy" type="dc_measurements::Dummy" base_class_type="dc_core::Measurement">
             <description>

@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Diagnostics",
+  "description": "Diagnostic statuses collected from /diagnostics",
+  "properties": {
+    "statuses": {
+      "description": "Diagnostic statuses matching the configured level threshold and name allowlist",
+      "type": "array",
+      "items": {
+        "title": "DiagnosticStatus",
+        "description": "A single diagnostic_msgs/DiagnosticStatus entry",
+        "properties": {
+          "name": {
+            "description": "Reporting component name",
+            "type": "string"
+          },
+          "message": {
+            "description": "Human-readable status summary",
+            "type": "string"
+          },
+          "hardware_id": {
+            "description": "Hardware identifier",
+            "type": "string"
+          },
+          "level": {
+            "description": "Status level: 0=OK, 1=WARN, 2=ERROR, 3=STALE",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "values": {
+            "description": "Key/value pairs reported by the status, preserved as-is",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "message",
+          "level",
+          "values"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "required": [
+    "statuses"
+  ],
+  "type": "object"
+}
