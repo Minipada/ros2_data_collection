@@ -13,6 +13,7 @@ set(dependencies
   nlohmann_json_schema_validator
   nav2_bringup
   rclpy
+  simulation_interfaces
   xacro
 )
 

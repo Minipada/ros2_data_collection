@@ -1733,3 +1733,68 @@ Classic (`gazebo_ros`/`aws_robomaker_small_warehouse_world`) to Gazebo Harmonic
   - `tools/e2e/Containerfile`'s own full-workspace build (all `dc_*` packages together)
     was not re-run end-to-end in this session — out of scope for this issue's own
     acceptance criteria, which are specific to `dc_simulation`/`dc_demos`.
+
+### #268 follow-up — the full-workspace build (`tools/e2e/Containerfile`) actually
+### surfaced two more real bugs; `dc_demos` now builds clean too
+
+Prompted by "how do I run this locally" — walking through it revealed the local
+reproduction command matters: a plain `podman build -f tools/e2e/Containerfile .` fails
+outright, unrelated to this issue, because the repo's `.dockerignore` is an
+ignore-everything allowlist (meant for a deps-only image) that excludes
+`rosdep/dc.yaml`, which the Containerfile's own `RUN` step requires — already a known,
+documented gotcha `tools/e2e/scripts/build.sh` works around (moves `.dockerignore`
+aside for the build); using that script instead is the correct way to build locally.
+
+Running the *real* full-workspace build this way (not attempted in the original #268
+verification pass, which only exercised `dc_simulation`/`dc_description` in isolation)
+surfaced that `dc_demos` — never actually compiled on Jazzy before, since it was
+`COLCON_IGNORE`d since #242 — does not, in fact, build clean. Two real bugs, both
+latent gaps in `dc_demos`'s own CMake dependency declarations that this issue's
+`COLCON_IGNORE` removal was the first thing to ever exercise:
+
+1. `dc_uptime_custom_measurement` (dc_demos' C++ measurement plugin) failed CMake
+   configure linking to `simulation_interfaces::simulation_interfaces__rosidl_generator_c`
+   — a transitive dependency pulled in via `nav2_bringup` on Jazzy (Nav2 dropped Gazebo
+   Classic, and some of its packages now depend on `simulation_interfaces` for
+   simulator-agnostic entity control) that `dc_demos/CMakeLists.txt` never explicitly
+   `find_package()`d. Fixed by adding `simulation_interfaces` to `dc_demos/package.xml`'s
+   `<depend>` and to `CMakeLists.txt`'s `dependencies` list (which auto-`find_package`s
+   everything in it via the existing `foreach` loop).
+2. After that, the same plugin then failed linking to `gz-sim8::gz-sim8` instead — a
+   self-inflicted regression from this issue's own first pass: `dc_simulation`'s
+   `CMakeLists.txt` had `ament_export_dependencies(ros_gz_sim)` /
+   `ament_export_dependencies(ros_gz_bridge)`, mirroring the original code's
+   `ament_export_dependencies(gazebo_ros)` — but `dc_simulation` has no C++ library of
+   its own (only installs launch/world/model files + a Python module), so there was
+   nothing legitimate to export; the effect was purely to leak `ros_gz_sim`'s own
+   `gz-sim8` CMake target as a spurious transitive link requirement onto `dc_demos`' C++
+   plugin (which lists `dc_simulation` in its own `dependencies` for build-ordering, not
+   because it links against gz-sim). The original `gazebo_ros` export was presumably the
+   same kind of unnecessary boilerplate, just never caught because `dc_demos` was never
+   built on Jazzy to exercise it, and may have coincidentally "worked" on Humble if
+   `nav2_bringup` there separately exported `gazebo_ros` itself. Fixed by removing both
+   export lines (the `find_package(ros_gz_sim REQUIRED)`/`find_package(ros_gz_bridge
+   REQUIRED)` calls stay — those correctly verify `dc_simulation`'s own build-time deps,
+   just without re-exporting them to unrelated downstream consumers).
+- **Verified for real**, twice (once per bug found): the first full-workspace attempt
+  (via `tools/e2e/scripts/build.sh`, matching CI's own recipe exactly) got OOM-killed
+  partway through `colcon build` on this sandbox — swap was fully saturated (23-24/24
+  GiB) from other long-running containers already sharing the host, silently killing the
+  build with no error logged (confirmed via `free -h`/process inspection, not assumed).
+  Re-verification therefore used a scoped, single-worker build instead
+  (`colcon build --packages-up-to dc_demos --parallel-workers 1` against a lean
+  container with just the packages dc_demos actually needs, skipping the unrelated
+  Rust `dc_bridge`/`aws_sdk_vendor` chain) — lower peak memory, same real rosdep+CMake+
+  compiler toolchain, same two errors reproduced and then fixed one at a time. Final
+  state: `colcon build --packages-up-to dc_demos` succeeds, 12/12 packages, `dc_demos`
+  itself `Finished <<< dc_demos [20.1s]`; `ros2 pkg prefix dc_demos` and `ros2 pkg prefix
+  dc_simulation` both resolve inside the built image.
+- **Not done**: a full, unscoped `tools/e2e/Containerfile` build (all `dc_*` packages,
+  including `dc_bridge`'s Rust/ros2_rust toolchain and `aws_sdk_vendor`) still hasn't
+  completed end-to-end in this sandbox specifically because of its memory ceiling under
+  contention from other long-running containers on this shared host, not because of
+  anything in this diff — every package this issue's own dependency chain touches
+  (`dc_simulation`, `dc_demos`, and everything `dc_demos` itself depends on) has now
+  been built and verified for real. CI (real, dedicated runner) or a machine with more
+  headroom is the natural place to close the very last "whole workspace, one image"
+  loop, same caveat pattern as #242-#244's own environment-constrained entries.
