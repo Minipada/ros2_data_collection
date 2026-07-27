@@ -134,6 +134,19 @@ TEST(Render, ConsoleSinkHasNoDiskBuffer)
   EXPECT_FALSE(parsed["sinks"]["debug_console"].as_table()->contains("buffer"));
 }
 
+// #266: the Forwarder tags every frame with a chunk id and depends on Vector actually
+// acking it, so acknowledgements must be switched on in the rendered config — global,
+// not per-source, since the source-level knob is deprecated in the pinned Vector version
+// (verified against the real binary; see the destinations.md delivery-guarantees note).
+TEST(Render, EnablesGlobalAcknowledgements)
+{
+  auto config = basic_config(TimeFormat::Double);
+  toml::table parsed = toml::parse(render(config));
+  auto* acks = parsed["acknowledgements"].as_table();
+  ASSERT_NE(acks, nullptr);
+  EXPECT_EQ(acks->at("enabled").as_boolean()->get(), true);
+}
+
 TEST(Render, RoutesArePerTagAndSinksConsumeDcDotTag)
 {
   auto config = config_with({

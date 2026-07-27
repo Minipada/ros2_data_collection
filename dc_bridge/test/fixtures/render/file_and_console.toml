@@ -1,5 +1,8 @@
 data_dir = "/home/dc/.dc/buffer"
 
+[acknowledgements]
+enabled = true
+
 [sinks.debug_console]
 inputs = ["dc.dc.group.robot"]
 target = "stdout"

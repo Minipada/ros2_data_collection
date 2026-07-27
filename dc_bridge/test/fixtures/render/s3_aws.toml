@@ -1,5 +1,8 @@
 data_dir = "/home/dc/.dc/buffer"
 
+[acknowledgements]
+enabled = true
+
 [sinks.s3_archive]
 bucket = "dc-records"
 inputs = ["dc.dc.group.robot"]

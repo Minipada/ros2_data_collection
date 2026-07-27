@@ -1380,3 +1380,115 @@ the cause, not a real regression.
   toolchain — still the same ad hoc pattern (a cached `dc-workspace:latest` image,
   rebuilt from scratch by whichever session needs it fresh) every DC 2.0 C++ slice
   since ADR-0007 has noted as a follow-up.
+
+### #266 - DC 2.0: shipper ingest acks — confirmed delivery from Bridge to Vector
+
+Closes the one remaining durability gap flagged in ADR-0002/#249: a Record handed to
+the Forwarder while Vector is mid-respawn or its socket is backpressured was previously
+dropped with only an `eprintln`/warn, no retry — the only seam in DC 2.0 less durable
+than Humble's in-process FLB call.
+
+- **Spike first, against the real pinned Vector 0.57.0 binary** (downloaded, SHA-256
+  verified against `vector_vendor/CMakeLists.txt`'s own pin — no guessing): wrote a
+  from-scratch hand-rolled msgpack client (no `msgpack` Python package available in this
+  sandbox, so encoded/decoded the small frames by hand) against a `fluent` source with
+  an unreachable sink and only a disk buffer engaged. Confirmed: (1) the source honors
+  the `chunk` option and returns `{"ack": chunk}`; (2) the ack fires on
+  durable-buffer-write, not final delivery to the Destination — exactly the guarantee
+  wanted, proven by getting the ack back instantly with the sink returning connection-
+  refused; (3) Vector 0.57 **deprecates** enabling `acknowledgements` on the source
+  itself (logs a warning) in favor of the global `[acknowledgements] enabled = true`
+  form, which gives identical ack behavior with no warning — used the global form in
+  the renderer. Spike scripts + configs kept in the session scratchpad, not committed
+  (throwaway verification, not product code).
+- **`dc_bridge_core::Forwarder` (`forwarder.hpp`/`.cpp`) grew confirmed delivery**:
+  - Every frame now carries a `chunk` id (16 random bytes, base64) as the Forward Mode
+    option element (`[tag, entries, {"chunk": id}]`); `frame()`'s signature changed to
+    take the chunk id explicitly (existing wire-format tests updated accordingly).
+  - A non-blocking (`MSG_DONTWAIT`) `drain_acks()` reads any `{"ack": id}` responses off
+    the socket through a per-connection `msgpack::unpacker` (reset on every reconnect,
+    since a fresh TCP connection is a fresh byte stream) and removes the matching
+    Record from an in-memory **unacked window** (`std::deque`, tracked by count and
+    byte size).
+  - Anything still in the window is resent: unconditionally after a reconnect (the peer
+    may never have seen it), or after `ack_timeout` (default 5s) with no response (the
+    ack itself may have been lost). Both paths reuse one `resend(force_all)` helper that
+    never throws — a resend failure just leaves the remainder for the next
+    `poll()`/`send()`.
+  - The window is bounded (`max_unacked_records`=10000 / `max_unacked_bytes`=16MiB,
+    both configurable): past the bound, the oldest unacked record is dropped to make
+    room, with a rate-limited (`warn_interval`, default 5s) callback
+    (`ForwarderConfig::on_warning`) — kept ROS-independent by taking a
+    `std::function<void(const std::string&)>` rather than calling RCLCPP directly, wired
+    to `RCLCPP_WARN` in `bridge_node.cpp`.
+  - New public `poll()`: drains acks / resends timed-out entries / opportunistically
+    reconnects without needing a new Record to send, so the window keeps converging
+    even when publishing goes quiet. Wired into both the existing prober thread (every
+    ~250ms) and the Uploader's own status-Record Forwarder's worker loop (every ~500ms
+    via its existing wait), each under its own existing lock — no new threads.
+  - Delivery is now **at-least-once**, documented as such: a record acked right as a
+    resend was triggered can land twice; duplicates are permitted (matches Humble/FLB
+    chunk-retry semantics) but Records are never silently forgotten just because Vector
+    blipped.
+- **`dc_bridge_core::render`**: rendered config now emits a root-level
+  `[acknowledgements]\nenabled = true` table (global form, per the spike finding) ahead
+  of the `fluent` source. New `Render.EnablesGlobalAcknowledgements` test; all 6
+  existing gold-file fixtures got the same 3-line block hand-inserted (not
+  auto-dumped/reformatted — kept the diff to exactly the new lines rather than letting
+  a different toml++ build reformat quote style/indentation across every fixture) and
+  re-`vector validate`d clean against the real pinned binary.
+- **Unit tests** (`forwarder_test.cpp`): existing frame tests updated for the new
+  3-element `[tag, entries, option]` shape; four new tests against a mock ack-capable
+  TCP server covering every scriptable acceptance criterion — `FrameCarriesTheChunkOption`,
+  `AckedRecordLeavesTheUnackedWindow`, `UnackedRecordResendsAfterReconnect` (asserts the
+  *same* chunk id is retransmitted, not just that the connection recovers), and
+  `WindowBoundDropsOldestRecordsWithWarning`.
+- **Vocabulary cleanup** (agreed in the issue): purged "Fluent Forward" as a
+  component-sounding name from every code comment/error message it remained in
+  (`forwarder.*`, `readiness.hpp`, `topic_config.hpp`, `render.hpp`, `bridge_node.hpp`,
+  `dc_bridge/README.md`, and ADRs 0001/0007 — CONTEXT.md's glossary already flagged this
+  as the target term) in favor of "shipper ingest protocol" / "Tag"; "fluent" now only
+  appears in the generated config's `type = "fluent"` and interop notes, as intended.
+- **Docs**: `dc_bridge/README.md` gained a full "Delivery guarantees" section (mechanism,
+  duplicates, the two independent bounds — the Forwarder's in-memory window vs. Vector's
+  own `shipper.buffer_max_bytes` disk buffer — and what a Bridge-crash-during-outage
+  double failure still loses). `docs/adr/0002-vector-as-default-shipper.md` amended with
+  the spike outcome and the rejected-alternative rationale (a second on-disk queue,
+  mirroring #265's Uploader intent queue, was considered and rejected in review: Vector's
+  own disk buffer already covers sink outages and the ready-gate already covers startup,
+  so only the in-flight window needed closing). **`doc/src/dc/data_pipeline.md` (the
+  published mdbook site) was deliberately left untouched** on user instruction: that
+  site's `doc.yaml` workflow deploys to GitHub Pages on every push to `jazzy`, and jazzy
+  isn't considered ready to be the live-published docs yet — publishing them stays a
+  separate decision from landing this feature. `dc_bridge/README.md` and the ADRs are
+  fine to update (plain repo files, not part of the published site).
+- **Verified for real, no `colcon`/ROS available in this sandbox** (same constraint
+  noted throughout this epic): built `dc_bridge_core` + all six gtest suites against
+  real (not mocked/stubbed) `gtest`/`nlohmann_json`/`tomlplusplus`/`msgpack-cxx` fetched
+  via a scratch CMake `FetchContent` project mirroring `dc_bridge/test/local/`'s own
+  standalone build (`msgpack-cxx`'s bundled CMake needed `MSGPACK_NO_BOOST` to avoid a
+  Boost dependency it doesn't actually need for this). All 41 render tests / 9 forwarder
+  tests / full suite green across repeated runs (no flakiness). Beyond unit tests, ran a
+  real end-to-end zero-loss smoke test: a small client publishing a strictly-
+  incrementing counter through the real `Forwarder` code at ~50/s to the real pinned
+  Vector binary (file sink + disk buffer + global acks), with an orchestration script
+  that `kill -9`s Vector mid-stream and restarts it as a fresh process. Result, 3
+  consecutive runs: **zero missing sequence values** every time (300/300 delivered,
+  duplicates permitted and counted — 0 seen in these particular runs, since the ack
+  round-trip on loopback is fast enough that nothing was usually still in-flight at the
+  exact kill instant; the deterministic mock-server unit test above is what pins down
+  the exact-same-chunk-id resend behavior directly). `pre-commit` clean on every changed
+  file (`clang-format`, `black`, `codespell`, `check-toml`, ROS package metadata checks,
+  and the mdbook `build-doc` hook all passed); only the pre-existing, environment-only
+  `poetry-requirements` failure recurred (no `poetry` binary in this sandbox, unrelated
+  to this diff, same skip as every prior DC 2.0 slice in this file).
+- **Not done / left for follow-up**: an actual `colcon build`/`colcon test` run in a
+  real ROS 2 Jazzy + `aws_sdk_vendor` environment (this sandbox still has no ROS
+  install — every verification above used the ROS-independent core directly, same
+  caveat as prior slices before a Docker/Podman session was available); wiring a
+  `dc_bridge`-level `colcon test`-integrated e2e test for the kill-mid-stream scenario
+  specifically (the zero-loss smoke test above lived in the session scratchpad; the
+  existing `tools/e2e/` harness (#249) already does a full container restart under load
+  and could grow a similar counter-based gap/dup assertion, but that's additive scope
+  beyond this issue, not required to close it); disk persistence of the resend window
+  (explicitly out of scope per the issue).

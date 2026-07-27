@@ -6,9 +6,10 @@
 // `shipper`/`destinations` parameters; this node declares those parameters, expands the
 // $HOME/$DC_PG_PASSWORD-style env references the config contract uses, hands the result
 // to the Supervisor, subscribes to the union of every Records-Destination's `inputs`
-// topics, and forwards each Record to Vector over Fluent Forward. Raw Vector snippets in
-// `custom_config_files` (ADR-0003 passthrough) are collision-checked and `vector
-// validate`d together with the rendered config so a bad snippet fails loudly at startup.
+// topics, and forwards each Record to Vector over the shipper ingest protocol. Raw
+// Vector snippets in `custom_config_files` (ADR-0003 passthrough) are collision-checked
+// and `vector validate`d together with the rendered config so a bad snippet fails loudly
+// at startup.
 //
 // `receives: files` Destinations (ADR-0005, the Uploader) are handled in Phase 2.
 #ifndef DC_BRIDGE__BRIDGE_NODE_HPP_
