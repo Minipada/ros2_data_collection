@@ -32,7 +32,6 @@ measurement_server:
       polling_interval: 5000
       enable_validator: true
       debug: true
-      tags: ["flb_stdout"]
       init_collect: true
     custom_str_params_list: ["robot_name", "id"]
     custom_str_params:
@@ -53,8 +52,6 @@ measurement_server:
 
 **uptime.plugin (Mandatory)**: Name of the plugin, if you are not sure which plugin is available, [use the CLI tool](../cli.md) to list them
 
-**uptime.tags (Mandatory)**: This is used by Fluent Bit, to match inputs and outputs. More [here](../concepts.md#tags)
-
 **uptime.polling_interval (Optional)**: Interval to which data is collected in milliseconds
 
 **uptime.enable_validator (Optional)**: Will validate the data against a JSON schema. This file is located in the [dc_measurements package](https://github.com/Minipada/ros2_data_collection/tree/humble/dc_measurements/plugins/measurements/json). You can provide your own using the `json_schema_path` parameter, which we will explore later on
@@ -71,7 +68,7 @@ measurement_server:
 
 **run_id.uuid (Optional)**: Generate a new run ID by using a random UUID
 
-This will collect the uptime every 5 seconds (including when the node starts), will forward it to the *flb_stdout* destination.
+This will collect the uptime every 5 seconds (including when the node starts), will forward it to the *console* destination.
 
 #### Inject custom data for each record
 
@@ -92,7 +89,7 @@ Here, we want to append some content in every record: the robot name and its ID.
 
 ```admonish info
 
-Note that this configuration alone, sent to Fluent Bit will not display the JSON on stdout since it requires the destination_server configuration
+Note that this configuration alone will not display the JSON on stdout since it requires the dc_bridge configuration below
 ```
 
 Find the complete measurements documentation [here](../measurements.md)
@@ -100,79 +97,38 @@ Find the complete measurements documentation [here](../measurements.md)
 ### Destination
 
 ```yaml
-destination_server:
+dc_bridge:
   ros__parameters:
-    flb:
-      flush: 1
-      flb_grace: 1
-      log_level: "info"
-      storage_path: "/var/log/flb-storage/"
-      storage_sync: "full"
-      storage_checksum: "off"
-      storage_backlog_mem_limit: "1M"
-      scheduler_cap: 200
-      scheduler_base: 5
-      http_server: true
-      http_listen: "0.0.0.0"
-      http_port: 2020
-      in_storage_type: "filesystem"
-      in_storage_pause_on_chunks_overlimit: "off"
-    destination_plugins: ["flb_stdout"]
-    flb_stdout:
-      plugin: "dc_destinations/FlbStdout"
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["console"]
+    console:
+      type: console
+      receives: records
       inputs: ["/dc/measurement/uptime"]
-      time_format: "double"
       time_key: "date"
-      debug: false
+      time_format: "double"
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
 ```
 
 #### Destinations
 
-Let's analyze piece by piece. First, we select the plugin to enable, create its section containing the plugin name and the topic to subscribe to. We need the topic list because in the background, the ROS 2 Fluent Bit plugin subscribes to each topic.
+Let's analyze piece by piece. `dc_bridge` is the single C++ node that owns every Destination; each entry in the `destinations` list names a section, defined below it, that describes where data goes. We need the topic list on each Destination because the Bridge subscribes to those topics itself and forwards what it receives to an external [Vector](https://vector.dev) process over the Fluent Forward protocol.
 
-**destination_plugins (Mandatory)**: List all the plugins to enable. This is a custom string that is equal to the destination plugin dictionary present in the same level. If not listed, will not be loaded.
+**destinations (Mandatory)**: List all the Destinations to enable. Each name must have a matching section at the same level.
 
-**flb_stdout.plugin (Mandatory)**: Plugin to load
+**console.type (Mandatory)**: One of the four blessed Destination types (`postgres`, `s3`, `file`, `console`). `console` prints JSON to `dc_bridge`'s own stdout — handy for demos and debugging.
 
-**flb_stdout.inputs (Mandatory)**: Topics to which to listen to get the data
+**console.receives (Optional)**: `records` (default) or `files`.
 
-**flb_stdout.time_format (Optional)**: Format the data will be printed
+**console.inputs (Mandatory)**: Topics to which to listen to get the data.
 
-**flb_stdout.time_key (Optional)**: Dictionary key from which date will be taken from
+**console.time_format (Optional)**: Format the data's timestamp will be printed as (`double` or `iso8601`).
 
-**flb_stdout.debug (Optional)**: Verbose output
+**console.time_key (Optional)**: Dictionary key the timestamp is written under.
 
-#### Fluent Bit
-
-Then, we configure Fluent Bit. This is not necessary but it is easy to do by using the ros parameters provided by the node.
-
-**flb.flush (Optional)**: Interval to flush output (seconds)
-
-**flb.flb_grace (Optional)**: Wait time (seconds) on exit
-
-**flb.log_level (Optional)**: Diagnostic level (error/warning/info/debug/trace)
-
-**flb.storage_path (Optional)**: Set an optional location in the file system to store streams and chunks of data. If this parameter is not set, Input plugins can only use in-memory buffering.
-
-**flb.storage_sync (Optional)**: Configure the synchronization mode used to store the data into the file system. It can take the values normal or full.
-
-**flb.storage_checksum (Optional)**: Enable the data integrity check when writing and reading data from the filesystem. The storage layer uses the CRC32 algorithm.
-
-**flb.storage_backlog_mem_limit (Optional)**: If storage.path is set, Fluent Bit will look for data chunks that were not delivered and are still in the storage layer, these are called backlog data. This option configure a hint of maximum value of memory to use when processing these records.
-
-**flb.scheduler_cap (Optional)**: Set a maximum retry time in seconds. The property is supported from v1.8.7.
-
-**flb.scheduler_base (Optional)**: Set a base of exponential backoff. The property is supported from v1.8.7.
-
-**flb.http_server (Optional)**: If true enable statistics HTTP server
-
-**flb.http_listen (Optional)**: Address to listen (e.g. 0.0.0.0)
-
-**flb.http_port (Optional)**: Port to listen (e.g. 8888)
-
-**flb.in_storage_type (Optional)**: Specifies the buffering mechanism to use. It can be memory or filesystem.
-
-**flb.in_storage_pause_on_chunks_overlimit (Optional)**: Specifies if file storage is to be paused when reaching the chunk limit.
+`dc_bridge` itself needs no engine tuning of the kind the old embedded Fluent Bit shipper required (buffering, scheduler backoff, HTTP stats server, …) — Vector, the external shipper process it forwards to, owns its own on-disk buffering and is configured from the `dc_bridge`/`destinations` block above; see [ADR-0002](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0002-vector-as-default-shipper.md) for why that split exists.
 
 #### Inject run id at each record
 
@@ -182,120 +138,31 @@ Find the complete destinations documentation [here](../destinations.md)
 
 ## Console output
 
-Now that the node started, let us see what's displayed in the console
+Now that the node started, let us see what's displayed in the console.
+
+Measurement server and `dc_bridge` are started in the Lifecycle, you can read more about it [here](../concepts.md#lifecycle-nodes-and-bond). Per [ADR-0006](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0006-bridge-outside-lifecycle-manager.md), the lifecycle manager waits on a `bridge_ready_gate` before activating the collection nodes:
 
 ```
-[component_container_isolated-1] [INFO] [1677668906.621492168] [dc_container]: Load Library: /root/ws/install/dc_measurements/lib/libmeasurement_server_core.so
-[component_container_isolated-1] [INFO] [1677668906.634130562] [dc_container]: Found class: rclcpp_components::NodeFactoryTemplate<measurement_server::MeasurementServer>
-[component_container_isolated-1] [INFO] [1677668906.634246977] [dc_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<measurement_server::MeasurementServer>
-[component_container_isolated-1] [INFO] [1677668906.655803692] [measurement_server]:
-	measurement_server lifecycle node launched.
-	Waiting on external lifecycle transitions to activate
-	See https://design.ros2.org/articles/node_lifecycle.html for more information.
-[component_container_isolated-1] [INFO] [1677668906.670233932] [dc_container]: Load Library: /root/ws/install/dc_destinations/lib/libdestination_server_core.so
-[component_container_isolated-1] [INFO] [1677668906.675826543] [dc_container]: Found class: rclcpp_components::NodeFactoryTemplate<destination_server::DestinationServer>
-[component_container_isolated-1] [INFO] [1677668906.675864319] [dc_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<destination_server::DestinationServer>
-[component_container_isolated-1] [INFO] [1677668906.680499515] [destination_server]:
-[component_container_isolated-1] 	destination_server lifecycle node launched.
-[component_container_isolated-1] 	Waiting on external lifecycle transitions to activate
-[component_container_isolated-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
-[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/destination_server' in container 'dc_container'
-[component_container_isolated-1] [INFO] [1677668906.684802172] [dc_container]: Load Library: /opt/ros/humble/lib/libnav2_lifecycle_manager_core.so
-[component_container_isolated-1] [INFO] [1677668906.685487672] [dc_container]: Found class: rclcpp_components::NodeFactoryTemplate<nav2_lifecycle_manager::LifecycleManager>
-[component_container_isolated-1] [INFO] [1677668906.685510016] [dc_container]: Instantiate class: rclcpp_components::NodeFactoryTemplate<nav2_lifecycle_manager::LifecycleManager>
-[component_container_isolated-1] [INFO] [1677668906.691075881] [lifecycle_manager_navigation]: Creating
-[INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/lifecycle_manager_navigation' in container 'dc_container'
-[component_container_isolated-1] [INFO] [1677668906.692954854] [lifecycle_manager_navigation]: Creating and initializing lifecycle service clients
-[component_container_isolated-1] [INFO] [1677668906.695025050] [lifecycle_manager_navigation]: Starting managed nodes bringup...
+[bridge_ready_gate-1] dc_bridge reports ready; activating collection nodes.
+[dc_bridge-1] [INFO] [dc_bridge]: Rendered Vector config to /tmp/dc_bridge/vector.toml, destinations: [console]
+[dc_bridge-1] [INFO] [dc_bridge]: Bridge ready
 ```
 
-Measurement server and destination server are starting in the Lifecycle, you can read more about it [here](../concepts.md#lifecycle-nodes-and-bond)
+`dc_bridge` renders the `destinations` block above into a Vector config, launches (or reloads) the external Vector process pointed at it, and only then reports ready — see [ADR-0002](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0002-vector-as-default-shipper.md) for why Vector runs as its own process rather than embedded in the Bridge.
 
-Afterward, the measurement_server starts:
-
+Finally, we see the data, now printed by Vector's own `console` sink rather than by the Bridge itself:
 ```
-[component_container_isolated-1] [INFO] [1677668906.695056624] [lifecycle_manager_navigation]: Configuring measurement_server
-[component_container_isolated-1] [INFO] [1677668906.695181755] [measurement_server]: Configuring
-[component_container_isolated-1] [INFO] [1677668906.698019687] [measurement_server]: Creating measurement plugin uptime: Type dc_measurements/Uptime, Group key: uptime, Polling interval: 5000, Debug: 1, Validator enabled: 1, Schema path: , Tags: [flb_stdout], Init collect: 1, Init Max measurement: 0, Include measurement name: 0, Include measurement plugin name: 0, Remote keys: , Remote prefixes: , Include measurement plugin name: 0, Max measurement on condition: 0, If all condition: , If any condition: , If none condition:
-[component_container_isolated-1] [INFO] [1677668906.698932685] [measurement_server]: Configuring uptime
-[component_container_isolated-1] [INFO] [1677668906.699937310] [measurement_server]: Done configuring uptime
-[component_container_isolated-1] [INFO] [1677668906.700162355] [measurement_server]: Looking for schema at /root/ws/install/dc_measurements/share/dc_measurements/plugins/measurements/json/uptime.json
-[component_container_isolated-1] [INFO] [1677668906.700192161] [measurement_server]: schema: {"$schema":"http://json-schema.org/draft-07/schema#","description":"Time the system has been up","properties":{"time":{"description":"Time the system has been up","minimum":0,"type":"integer"}},"title":"Uptime","type":"object"}
-```
-
-Plugins are loaded one by one (here only one is, the uptime one) and configured. The configuration for each is displayed and the validation schema is also loaded and its path printed.
-
-Then, the destination_server starts:
-
-```
-[component_container_isolated-1] [INFO] [1677668906.700528260] [lifecycle_manager_navigation]: Configuring destination_server
-[component_container_isolated-1] [INFO] [1677668906.700620104] [destination_server]: Configuring
-[component_container_isolated-1] [INFO] [1677668906.701246047] [destination_server]: Fluent Bit service initialized
-[component_container_isolated-1] [INFO] [1677668906.701470896] [destination_server]: Creating destination plugin flb_stdout: Type dc_destinations/FlbStdout, Debug: 0, Time format: double. Time key: date
-[component_container_isolated-1] [INFO] [1677668906.702670279] [destination_server]: Configuring Flb plugin flb_stdout
-[component_container_isolated-1] [INFO] [1677668906.702871127] [destination_server]: Loaded lua filter. Match=ros2, code=function concatenate(tag, timestamp, record) if (type(record["tags"]) == "table") then record["tags"] = table.concat(record["tags"], ",") end  return 2, timestamp, record end
-[component_container_isolated-1] [INFO] [1677668906.702912686] [destination_server]: Loaded rewrite_tag filter. Match=ros2, Rule=$tags .*(flb_stdout).* flb_stdout true
-[component_container_isolated-1] [INFO] [1677668906.703021628] [destination_server]: Done configuring Flb plugin flb_stdout
-[component_container_isolated-1] [INFO] [1677668906.703049312] [destination_server]: Loading input ros2 shared library /root/ws/install/fluent_bit_plugins/lib/flb-in_ros2.so...
-[component_container_isolated-1] [INFO] [1677668906.703818806] [destination_server]: Loaded input ros2 shared library /root/ws/install/fluent_bit_plugins/lib/flb-in_ros2.so
-[component_container_isolated-1] [INFO] [1677668906.703899346] [destination_server]: Flb ros2 plugin initialized. ret=0
-[component_container_isolated-1] [INFO] [1677668906.703908977] [destination_server]: Starting Flb engine...
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [fluent bit] version=2.0.7, commit=1ab360f79c, pid=31126
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [storage] ver=1.3.0, type=memory+filesystem, sync=full, checksum=off, max_chunks_up=128
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [storage] backlog input plugin: storage_backlog.1
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [cmetrics] version=0.5.7
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [ctraces ] version=0.2.5
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [input:ros2:ros2.0] initializing
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [input:ros2:ros2.0] storage_strategy='filesystem' (memory + filesystem)
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] Started node fluentbit_rclc
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] Created subscriber /dc/measurement/uptime
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [input:storage_backlog:storage_backlog.1] initializing
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [input:storage_backlog:storage_backlog.1] storage_strategy='memory' (memory only)
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [input:storage_backlog:storage_backlog.1] queue memory limit: 976.6K
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [input:emitter:emitter_for_rewrite_tag.2] initializing
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [input:emitter:emitter_for_rewrite_tag.2] storage_strategy='filesystem' (memory + filesystem)
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [output:stdout:stdout.0] worker #0 started
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [http_server] listen iface=0.0.0.0 tcp_port=2020
-[component_container_isolated-1] [2023/03/01 11:08:26] [ info] [sp] stream processor started
-[component_container_isolated-1] [INFO] [1677668906.744577163] [destination_server]: Started Flb engine
-```
-
-It starts the [FlbStdout destination plugin](../destinations/flb_stdout.md), filters used internally by Fluent to edit Timestamps and tags. It then loads the ROS 2 Fluent Bit shared library and initialize it with the topics we provided as parameter.
-
-Afterward, Fluent Bit starts, it prints its version, storage strategy and buffer configuration and lists which plugins are loaded.
-
-Then, the measurement and destination server nodes are activated:
-
-```
-[component_container_isolated-1] [INFO] [1677668906.745180268] [lifecycle_manager_navigation]: Activating measurement_server
-[component_container_isolated-1] [INFO] [1677668906.745462265] [measurement_server]: Activating
-[component_container_isolated-1] [INFO] [1677668906.745558665] [measurement_server]: Activating uptime
-[component_container_isolated-1] [INFO] [1677668906.746014639] [measurement_server]: Creating bond (measurement_server) to lifecycle manager.
-[component_container_isolated-1] [INFO] [1677668906.853199899] [lifecycle_manager_navigation]: Server measurement_server connected with bond.
-[component_container_isolated-1] [INFO] [1677668906.853316226] [lifecycle_manager_navigation]: Activating destination_server
-[component_container_isolated-1] [INFO] [1677668906.853620571] [destination_server]: Activating
-[component_container_isolated-1] [INFO] [1677668906.853722659] [destination_server]: Activating flb_stdout
-[component_container_isolated-1] [INFO] [1677668906.853796078] [destination_server]: Creating bond (destination_server) to lifecycle manager.
-[component_container_isolated-1] [INFO] [1677668906.961666207] [lifecycle_manager_navigation]: Server destination_server connected with bond.
-[component_container_isolated-1] [INFO] [1677668906.961777773] [lifecycle_manager_navigation]: Managed nodes are active
-[component_container_isolated-1] [INFO] [1677668906.961820078] [lifecycle_manager_navigation]: Creating bond timer...
-```
-
-Finally, we see the data:
-```
-[component_container_isolated-1] [{"date":1677668906.745817,"time":92395,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}]
-[component_container_isolated-1] [{"date":1677668911.700309,"time":92400,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}]
-[component_container_isolated-1] [{"date":1677668916.70031,"time":92405,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}]
-[component_container_isolated-1] [{"date":1677668921.700388,"time":92410,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}]
-[component_container_isolated-1] [{"date":1677668926.700422,"time":92415,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}]
+{"date":1677668906.745817,"time":92395,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}
+{"date":1677668911.700309,"time":92400,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}
+{"date":1677668916.70031,"time":92405,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}
+{"date":1677668921.700388,"time":92410,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}
+{"date":1677668926.700422,"time":92415,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}
 ```
 
 So...what happened?
 
-1. The measurement plugin starts publishing data to /dc/measurement/uptime, which contains the JSON, tags and timestamp of the message
+1. The measurement plugin starts publishing data to /dc/measurement/uptime, which contains the JSON and timestamp of the message
 2. Run ID and robot_name is appended in the JSON
-3. The ROS 2 Fluent Bit plugin, which subscribes to this topic, receive the data and pass it on to Fluent Bit
-4. Fluent Bit receives it, applies the timestamp filter (which modifies the timestamp to the desired format)
-5. Fluent Bit applies changes the tag with another filter. This tag is used to match to the destination afterward.
-6. Data is flushed
-7. The Fluent Bit stdout output plugin receives the data because tags match (the flb_stdout tag is used) and forwards it to Stdout
+3. `dc_bridge`, which subscribes to this topic directly, receives the data and forwards it to Vector over the Fluent Forward protocol
+4. Vector's generated config applies a `remap` transform that writes the configured `time_key` in the requested `time_format`
+5. Vector's `console` sink, the only one matching the `console` Destination we configured, prints the JSON to stdout

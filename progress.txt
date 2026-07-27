@@ -1047,3 +1047,105 @@ the cause, not a real regression.
   carry it either (not part of the C++ toolchain it installs) — not run; the added code
   was hand-matched to the file's existing style (2-space indent, brace-on-its-own-line,
   same `namespace { … }` shape) instead.
+
+### #251 - DC 2.0 S10: Demos rework on the new pipeline
+
+- Ported every `dc_demos/params/*.yaml` file off `destination_server`/`flb_*` onto
+  `dc_bridge`'s blessed-Destination format: the four `flb_stdout`-only demos
+  (`uptime_stdout`, `uptime_custom_stdout`, `group_memory_uptime_stdout`,
+  `tb3_simulation_stdout`, `qrcodes_stdout`) now use a single `console` Destination;
+  the two PostgreSQL+MinIO demos (`qrcodes_minio_pgsql`, `tb3_simulation_pgsql_minio`)
+  now use a three-Destination split (`pgsql` for measurement/group Records, a second
+  `pgsql_files` Postgres Destination with no `inputs` — fed only via
+  `files.metadata_destination` — for the Uploader's per-file status/group-completion
+  Records per ADR-0005, and `rustfs` — an `s3` Destination — for the actual image/map
+  file bytes); `qrcodes_nav.yaml` (pure Nav2 params, no DC content) was left untouched.
+  Every `tags: [...]` field was dropped throughout (that mechanism no longer exists —
+  a Destination's `inputs` list is what routes data to it now, Tags are derived
+  automatically from topic names). Also fixed a real, pre-existing bug found while
+  rewriting `qrcodes_minio_pgsql.yaml`: `measurement_plugins` omitted `left_camera`
+  even though its full config block and both `pgsql`/`rustfs` Destinations' `inputs`
+  already wired it in — only `right_camera` actually ran; added it to the list.
+- **InfluxDB demo → passthrough example, not dropped** (per explicit decision this
+  session): `dc_bridge` has exactly four blessed Destination types (`postgres`, `s3`,
+  `file`, `console` — confirmed in `dc_bridge/src/render.cpp`), no InfluxDB. Rather
+  than delete `tb3_simulation_influxdb`, reworked it into a worked example of
+  ADR-0003's passthrough escape hatch: `dc_bridge.destinations: []` +
+  `custom_config_files: ["$HOME/.dc/tb3_simulation_influxdb_sink.toml"]`, with the
+  actual raw Vector `influxdb_logs` sink TOML shipped at
+  `dc_demos/config/tb3_simulation_influxdb_sink.toml` (installed via a `config`
+  directory added to `dc_demos/CMakeLists.txt`'s install rule) and a one-time manual
+  copy-into-`~/.dc/` step documented in the params file's own header comment (passthrough
+  is intentionally not auto-wired, matching the ADR).
+- **Demo infrastructure — MinIO → RustFS, Postgres bootstrap SQL, minimal Grafana**:
+  replaced `tools/infrastructure/docker/docker-compose.minio.yaml` (a 4-node MinIO
+  cluster + nginx load balancer, `config/minio/nginx.conf`) with
+  `docker-compose.rustfs.yaml` (single RustFS container using its built-in default
+  `rustfsadmin`/`rustfsadmin` credentials, plus a one-shot `rustfs-init` container that
+  runs `mc mb` to bootstrap the `dc-files` bucket — RustFS doesn't auto-create buckets,
+  and this makes the whole stack come up with one `docker compose up`, satisfying the
+  acceptance criterion's "documented one-command startup"). Added
+  `tools/infrastructure/docker/config/postgresql/init.sql`, pre-creating the `dc`
+  (superset of every demo's Record fields — verified field-by-field against the actual
+  `dc_measurements`/`dc_group`/`dc_bridge` JSON-building source, not guessed) and
+  `dc_files` (Uploader status/group-completion Records) tables Vector's `postgres` sink
+  writes into (it maps top-level JSON keys onto existing columns 1:1, doesn't create
+  tables/columns itself). Removed the native (non-Docker) `debian_native_minio` install
+  path from `tools/infrastructure/scripts/install_infrastructure.bash` (and its
+  `scripts/minio/minio.{conf,service}` files) rather than ship an unverified guess at
+  RustFS's native packaging; updated the script's `--tool` help text and renamed the
+  standalone infra-setup doc `doc/src/dc/infrastructure_setup/minio.md` →
+  `rustfs.md`. **Verified all of this for real**, not just by inspection: spun up the
+  actual `docker-compose.postgresql.yaml` container and confirmed `init.sql` runs
+  clean (`CREATE TABLE` x2), inserted sample rows and ran the exact SQL each new
+  Grafana panel uses — all three queries returned correct results; spun up
+  `docker-compose.rustfs.yaml`'s `rustfs` + `rustfs-init` and confirmed the bucket
+  bootstrap succeeds end-to-end (`Bucket created successfully rustfs/dc-files`) against
+  the real default credentials.
+- **Grafana — minimal viable dashboard (explicit scope decision this session, not full
+  1:1 port)**: the old 5 dashboards (Home/System/Robot/Environment/Infrastructure,
+  ~2000 lines of JSON) were 100% wired to InfluxDB/InfluxQL. Rather than port every
+  panel, replaced the datasource (`grafana-datasource.yml`) with Postgres and kept only
+  two dashboards: Home (landing page/links) and a rewritten Robot dashboard covering
+  the QR demo's own data — speed/cmd_vel timeseries from the "robot" group's merged
+  JSONB columns, an uploaded-files status table, and a group-completion status table,
+  all backed by real SQL verified against the live schema above. Deleted
+  System/Environment/Infrastructure dashboards as out of scope for this pass.
+- **Streamlit dashboard**: renamed `Storage.MINIO` → `Storage.RUSTFS` (and the
+  matching `remote_paths` JSON key demos now use), `backend/minio.py` →
+  `backend/rustfs.py` (`minio_client` → `rustfs_client`, still using the `minio` PyPI
+  S3-client library — it's S3-compatible, RustFS just isn't MinIO), and all
+  `config.MINIO_*` params → `RUSTFS_*` across `config.py`, `backend/pgsql.py`,
+  `pages/2_Robot.py`, `pages/3_Environment.py`, `static/html/welcome.html`. **Found but
+  deliberately did NOT fix** a deeper, separate problem while doing this: the
+  dashboard's `RobotData` ORM model (`models/robot_data.py`) assumes a single `data
+  JSON` blob column (the old Fluent Bit `out_pgsql` plugin's behavior), but
+  `dc_bridge`'s actual Vector `postgres` sink maps top-level JSON keys onto real flat
+  columns instead (confirmed in `render.cpp` — no per-blob-column config exists). The
+  Streamlit dashboard's SQL queries are therefore not actually compatible with the new
+  pipeline's real schema beyond the naming fix made here. This is out of issue #251's
+  scope (the issue's acceptance criteria name Grafana, not Streamlit) and a
+  materially bigger fix (rewriting the ORM + every query to flat columns) — flagging
+  for a follow-up issue rather than pulling it into this PR.
+- **Docs**: rewrote all 7 `doc/src/dc/demos/*.md` pages plus `doc/src/dc/demos.md` and
+  `doc/src/SUMMARY.md` off `flb_*`/`destination_server`/MinIO terminology onto
+  `dc_bridge`/Vector/RustFS, replacing fabricated Fluent-Bit-engine-startup log
+  transcripts with real `bridge_ready_gate`/ADR-0006 behavior and Vector-sink output
+  instead. Fixed two real ADR filename/link errors introduced along the way
+  (`0002-external-vector-shipper.md` and `0006-startup-ordering.md` don't exist; the
+  real files are `0002-vector-as-default-shipper.md` and
+  `0006-bridge-outside-lifecycle-manager.md`) after a review pass caught them.
+- **Verification**: all 9 `dc_demos/params/*.yaml` files and all `docker-compose*.yaml`
+  files parse as valid YAML (`/usr/bin/python3`'s `yaml.safe_load`, since the default
+  `python3` in this sandbox is a newer interpreter without `pyyaml` installed); the new
+  `tb3_simulation_influxdb_sink.toml` parses as valid TOML; every modified/created
+  Streamlit `.py` file byte-compiles clean; both new Grafana dashboard JSON files
+  parse. `colcon`/a sourced ROS 2 workspace aren't available in this sandbox, and
+  `dc_demos` is `COLCON_IGNORE`d in the CI/E2E Podman image regardless (Gazebo Classic,
+  tracked separately at #268) — no C++ was touched in this issue's scope, so this
+  wasn't a blocker; the live Postgres/RustFS container tests above are the real
+  functional verification for the infra changes. `pre-commit` was not re-run (same
+  environment-gap skips as every prior DC 2.0 slice: `build-doc`, `poetry-requirements`,
+  `pycln`, `flake8`); `mdbook` isn't installed either, so the doc site itself wasn't
+  built, though a manual code-fence-balance check across every edited `.md` file found
+  no unbalanced fences.

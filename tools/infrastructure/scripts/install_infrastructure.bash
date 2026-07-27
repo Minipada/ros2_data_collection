@@ -9,7 +9,7 @@ Install infrastructure tool on the system.
 
 Arguments:
 --help/-h           Show this help text
---tool              Set the tool to install [chromium, influxdb, grafana, minio, postgresql] (mandatory)
+--tool              Set the tool to install [chromium, influxdb, grafana, rustfs, postgresql] (mandatory)
 --install-type      Set the type of installation [docker, native] (mandatory)
 "
     echo "${usage}"
@@ -199,30 +199,9 @@ function debian_native_influxdb(){
     echo "Database: dc"
 }
 
-function debian_native_minio(){
-    sudo apt install wget -y
-    wget -O minio https://dl.minio.io/server/minio/release/linux-amd64/minio
-    chmod +x minio
-    sudo mv minio /usr/local/bin/
-    sudo groupadd -f -r minio-user
-    sudo useradd -M -r -g minio-user minio-user || true
-    sudo cp "${SCRIPTDIR}/scripts/minio/minio.conf" /etc/default/minio
-    sudo cp "${SCRIPTDIR}/scripts/minio/minio.service" /etc/systemd/system/
-
-    if [[ $(ps -p 1 -o comm=) == "systemd" ]]; then
-        sudo systemctl daemon-reload
-        sudo systemctl enable minio.service
-        sudo systemctl start minio.service
-    else
-        sudo service minio enable
-        sudo service minio start
-    fi
-
-    echo "MinIO installed."
-    echo "Open your browser at http://localhost:9001"
-    echo "User: minioadmin"
-    echo "Password: minioadmin"
-}
+# No native (non-container) RustFS install here: unlike MinIO, RustFS has no
+# apt/systemd packaging convention to mirror yet — use `--install-type=docker
+# --tool=rustfs` instead (docker-compose.rustfs.yaml).
 
 function start_container() {
     cd "${SCRIPTDIR}/"

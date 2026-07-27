@@ -16,8 +16,9 @@ class GetDataMode(str, Enum):
 
 
 class Storage(str, Enum):
-    # Follows JSON model structure
-    MINIO = "minio"
+    # Follows JSON model structure: must match the dc_bridge `destinations` name
+    # the demo's Measurements write under `remote_paths` (see qrcodes_minio_pgsql.yaml).
+    RUSTFS = "rustfs"
 
 
 class Backend(str, Enum):
@@ -29,13 +30,13 @@ class Config(BaseSettings):
     APP_PORT: int = 80
     DEBUG: bool = True
     ENV: str = "dev"
-    MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "fyTGdQUk1nTOu3VO")
-    MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "fRIS95M8Qmn5Uwqgi1aeUIIOvGejK4qa")
-    MINIO_URL: str = "localhost:9000"
-    MINIO_BUCKET: str = "mybucket"
+    RUSTFS_ACCESS_KEY: str = os.getenv("RUSTFS_ACCESS_KEY", "rustfsadmin")
+    RUSTFS_SECRET_KEY: str = os.getenv("RUSTFS_SECRET_KEY", "rustfsadmin")
+    RUSTFS_URL: str = "localhost:9000"
+    RUSTFS_BUCKET: str = "dc-files"
     PGSQL_TABLE: str = "dc"
     READER_DB_URL_DATA: str = "postgresql+psycopg2://dc:password@localhost:5432/dc"
-    STORAGE: Storage = Storage.MINIO
+    STORAGE: Storage = Storage.RUSTFS
     BACKEND: Backend = Backend.POSTGRESQL
 
 
