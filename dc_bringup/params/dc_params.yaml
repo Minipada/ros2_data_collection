@@ -73,6 +73,14 @@ dc_bridge:
     #   delete_when_sent: true         # delete local Files after verified upload everywhere
     #   metadata_destination: "pgsql"  # receives the dc.files status/metadata Records
     #   ffprobe_binary: "ffprobe"      # video duration probe (optional)
+    #   # Retention (#267): the un-uploaded intent queue never abandons an intent on its
+    #   # own — a robot (or store) offline for weeks accumulates Files without bound.
+    #   # Absent/zero = unlimited, matching Humble. Configuring this is an explicit,
+    #   # audited opt-in to shedding the oldest un-uploaded Files under disk pressure —
+    #   # see doc/src/dc/destinations.md's "Retention" section before enabling it.
+    #   retention:
+    #     max_bytes: 10737418240  # 10 GiB cap on the un-uploaded Files pool
+    #     max_age_days: 30        # optional; whichever limit is hit first
     #
     # Any other Vector sink type via the ADR-0003 passthrough: raw Vector config
     # snippets consuming the public per-Tag `dc.<tag>` routes (see

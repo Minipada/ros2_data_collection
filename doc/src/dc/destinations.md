@@ -213,19 +213,45 @@ it never lingers in the queue's steady state. Note that `base64`-heavy Records (
 map's `save_base64: on`) inline file content directly into the payload and so consume
 queue-directory bytes proportionally faster than a plain File reference.
 
-The `files` block:
+### Retention: bounded local storage for un-uploaded Files
+
+The intent queue above never abandons an intent by design — an intent and its Files
+live and die together, and deleting the only copy of data as a side effect of queue
+management is forbidden. That means a robot offline for weeks, or pointed at a store
+that's unreachable for weeks, accumulates un-uploaded Files on disk **without bound**,
+same as Humble did. A full disk takes down more than DC, so `files.retention` is the
+**one, explicit, opt-in, audited** mechanism allowed to abandon data under disk
+pressure — nothing else in the system deletes a File it hasn't verified was uploaded.
+
+**Default is off**: with `files.retention` absent (or both limits at their defaults),
+behavior is unchanged — accumulation, matching Humble. Configuring it is a deliberate
+choice to shed data rather than run out of disk:
 
 ```yaml
 dc_bridge:
   ros__parameters:
     files:
-      delete_when_sent: true         # default false
-      metadata_destination: "pgsql"  # required with any receives: files destination;
-                                     # must name a receives: records destination
-      ffprobe_binary: "ffprobe"      # optional; video duration probe
-      # multipart_threshold_bytes: 16777216  # optional; multipart above this size
-      # multipart_part_size_bytes: 8388608   # optional; >= 5 MiB for real S3 stores
+      retention:
+        max_bytes: 10737418240   # cap on the un-uploaded Files pool; 0/absent = unlimited (default)
+        max_age_days: 30         # optional; whichever limit is hit first
 ```
+
+Scope is exactly the pool of Files referenced by intents still pending in
+`<shipper.data_dir>/queue/upload/` — the same disk-backed queue the durability section
+above describes. A File the Uploader has already verified everywhere but is still
+waiting to physically delete (`files.delete_when_sent`, e.g. after a filesystem error)
+is **never** retention's victim; that's `delete_when_sent`'s own retry loop to resolve,
+not retention's.
+
+When either limit is exceeded, the Bridge sheds the **oldest** eligible intent — its
+File(s) and its queue entry, always together, never one without the other — and repeats
+until back under both limits. Each shed File gets its own audit row through the normal
+`dc.files` metadata path: `deleted: true, uploaded: false` is the queryable "shed
+without upload" signature, distinct from a normal `delete_when_sent` deletion (which is
+always `uploaded: true`, since that path only ever deletes a File already confirmed on
+every Destination). Emitting the audit row is best-effort — a Shipper outage doesn't
+block the shed itself — but every shed always logs a rate-limited warning, since data
+was just abandoned without ever leaving the robot.
 
 A Destination named by `metadata_destination` may declare **no `inputs` at all** — being
 named there is itself what routes the `dc.files` Tag to it. That is the usual shape when

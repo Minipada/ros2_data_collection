@@ -44,6 +44,28 @@ std::string iso8601_now()
   return ss.str();
 }
 
+// The intent id's own leading field is a 20-digit zero-padded wall-clock-nanoseconds
+// timestamp (make_id() above) — parsing it back on replay avoids a second, redundant
+// timestamp representation to keep in sync with the ISO8601 string in the JSON body.
+// Falls back to the epoch (treated as "infinitely old" by retention's max_age_days,
+// which is the safer default for a name that doesn't match our own generated format).
+std::chrono::system_clock::time_point enqueued_at_from_id(const std::string& id)
+{
+  if (id.size() < 20)
+  {
+    return std::chrono::system_clock::time_point{};
+  }
+  try
+  {
+    const std::uint64_t ns = std::stoull(id.substr(0, 20));
+    return std::chrono::system_clock::time_point(std::chrono::nanoseconds(static_cast<std::int64_t>(ns)));
+  }
+  catch (const std::exception&)
+  {
+    return std::chrono::system_clock::time_point{};
+  }
+}
+
 }  // namespace
 
 IntentQueue::IntentQueue(std::string dir, std::chrono::milliseconds base_backoff, std::chrono::milliseconds max_backoff)
@@ -87,6 +109,7 @@ IntentQueue::IntentQueue(std::string dir, std::chrono::milliseconds base_backoff
     Entry entry;
     entry.tag = doc.value("tag", "");
     entry.payload = doc.value("payload", nlohmann::json::object());
+    entry.enqueued_at = enqueued_at_from_id(name);
     entries_.emplace(name, std::move(entry));
     order_.push_back(name);
   }
@@ -127,6 +150,8 @@ std::string IntentQueue::enqueue(const std::string& tag, const nlohmann::json& p
   Entry entry;
   entry.tag = tag;
   entry.payload = payload;
+  entry.enqueued_at =
+      std::chrono::system_clock::time_point(std::chrono::nanoseconds(static_cast<std::int64_t>(now_ns)));
   entries_.emplace(id, std::move(entry));
   order_.push_back(id);
   return id;
@@ -170,10 +195,23 @@ std::optional<Intent> IntentQueue::next_ready(std::chrono::steady_clock::time_po
     const Entry& e = entries_.at(id);
     if (e.next_attempt <= now)
     {
-      return Intent{ id, e.tag, e.payload };
+      return Intent{ id, e.tag, e.payload, e.enqueued_at };
     }
   }
   return std::nullopt;
+}
+
+std::vector<Intent> IntentQueue::pending() const
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  std::vector<Intent> out;
+  out.reserve(order_.size());
+  for (const auto& id : order_)
+  {
+    const Entry& e = entries_.at(id);
+    out.push_back(Intent{ id, e.tag, e.payload, e.enqueued_at });
+  }
+  return out;
 }
 
 std::size_t IntentQueue::size() const

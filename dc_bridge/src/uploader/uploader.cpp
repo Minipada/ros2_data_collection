@@ -311,6 +311,36 @@ bool Uploader::delete_verified_file(const FileGroup& group, const FileRef& file,
   return true;
 }
 
+bool Uploader::is_verified_everywhere(const FileGroup& group) const
+{
+  for (const auto& file : group.files)
+  {
+    const std::optional<FileMeta> meta = file_meta(file.local_path);
+    if (!meta)
+    {
+      return false;
+    }
+    for (const auto& [storage_name, remote_path] : file.remote_paths)
+    {
+      const Storage& st = storage(storage_name);
+      std::optional<std::uint64_t> remote_size;
+      try
+      {
+        remote_size = st.store->head(st.object_key(remote_path));
+      }
+      catch (const std::exception&)
+      {
+        return false;
+      }
+      if (!remote_size || *remote_size != meta->size)
+      {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 ProcessSummary Uploader::process_record(const nlohmann::json& payload, const std::string& fallback_group,
                                         const EmitFn& emit)
 {

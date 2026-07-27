@@ -34,6 +34,10 @@ struct Intent
   std::string id;  ///< the intent's filename — the key ack()/record_failure() take.
   std::string tag;
   nlohmann::json payload;
+  /// Wall-clock time the intent was enqueued — survives a restart (parsed back from the
+  /// filename's own timestamp prefix on replay). Retention (#267) uses this for its
+  /// `max_age_days` limit.
+  std::chrono::system_clock::time_point enqueued_at;
 };
 
 /// FLB's own scheduler defaults (`destination_server.cpp`'s pre-#265 Fluent Bit config):
@@ -76,6 +80,12 @@ public:
   /// success) or record_failure() (on failure) does that once the caller knows which.
   std::optional<Intent> next_ready(std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now()) const;
 
+  /// Every currently pending intent, oldest-first, regardless of backoff state. Unlike
+  /// next_ready() (which only ever surfaces one entry not currently backing off, for the
+  /// normal upload-retry path), retention (#267) cares about disk pressure, not retry
+  /// timing — a backed-off intent's File still occupies space and still counts.
+  std::vector<Intent> pending() const;
+
   /// Number of intents currently pending on disk (ready or backing off).
   std::size_t size() const;
   bool empty() const;
@@ -85,6 +95,7 @@ private:
   {
     std::string tag;
     nlohmann::json payload;
+    std::chrono::system_clock::time_point enqueued_at;
     // steady_clock::time_point::min() = ready immediately (never failed yet).
     std::chrono::steady_clock::time_point next_attempt{ std::chrono::steady_clock::time_point::min() };
     std::chrono::milliseconds backoff{ 0 };

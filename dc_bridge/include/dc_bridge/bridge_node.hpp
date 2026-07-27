@@ -31,6 +31,8 @@
 #include "dc_bridge/render.hpp"
 #include "dc_bridge/supervisor.hpp"
 #include "dc_bridge/uploader/intent_queue.hpp"
+#include "dc_bridge/uploader/object_store.hpp"
+#include "dc_bridge/uploader/retention.hpp"
 #include "dc_bridge/uploader/uploader.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
 
@@ -80,6 +82,13 @@ private:
   std::mutex uploader_wake_mutex_;
   std::condition_variable uploader_wake_cv_;
   bool upload_stop_{ false };
+
+  // Files retention (#267) — a copy of the storages the Uploader was built with (kept
+  // alongside it since the Uploader moves its own copy) so the worker thread can build
+  // shed audit rows without needing an Uploader accessor; a no-op sweep when disabled
+  // (the default) either way.
+  uploader::RetentionConfig retention_config_;
+  std::vector<Storage> files_storages_;
 };
 
 }  // namespace dc_bridge
