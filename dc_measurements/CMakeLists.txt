@@ -164,6 +164,9 @@ list(APPEND dc_measurement_plugin_libs dc_string_stamped_measurement)
 add_library(dc_tcp_health_measurement SHARED plugins/measurements/tcp_health.cpp)
 list(APPEND dc_measurement_plugin_libs dc_tcp_health_measurement)
 
+add_library(dc_thermal_measurement SHARED plugins/measurements/thermal.cpp)
+list(APPEND dc_measurement_plugin_libs dc_thermal_measurement)
+
 add_library(dc_uptime_measurement SHARED
   plugins/measurements/uptime.cpp
   plugins/measurements/system/linux_parser.cpp
@@ -262,6 +265,7 @@ set(tests
   test_measurement_parameters
   test_measurement_random
   test_measurement_serial_interface
+  test_measurement_thermal
   test_measurement_uptime
 )
 
