@@ -120,6 +120,7 @@ protected:
   std::vector<std::vector<std::string>> measurement_if_all_conditions_;
   std::vector<std::vector<std::string>> measurement_if_any_conditions_;
   std::vector<std::vector<std::string>> measurement_if_none_conditions_;
+  std::vector<std::string> measurement_gate_condition_;
   std::vector<std::vector<std::string>> measurement_remote_keys_;
   std::vector<std::vector<std::string>> measurement_remote_prefixes_;
   std::vector<bool> measurement_nested_;

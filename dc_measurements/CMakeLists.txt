@@ -271,6 +271,7 @@ set(tests
   test_measurement_diagnostics
   test_measurement_driving_type
   test_measurement_dummy
+  test_measurement_gate_condition
   test_measurement_os
   test_measurement_parameters
   test_measurement_random

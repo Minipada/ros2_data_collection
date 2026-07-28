@@ -228,6 +228,36 @@ public:
     return (!if_all_conditions_.empty() || !if_any_conditions_.empty() || !if_none_conditions_.empty());
   }
 
+  // Whether every collection should currently be held back by the gate condition.
+  //
+  // Semantics (distinct from if_all/if_any/if_none, which are re-evaluated on every collection):
+  // gate_condition_ names a Condition that must become true once; from then on the gate latches
+  // open permanently for the lifetime of this Measurement instance and the condition is never
+  // consulted again, even if it later becomes false again.
+  bool isGateArmed(const dc_interfaces::msg::StringStamped& msg)
+  {
+    if (gate_condition_.empty() || gate_armed_)
+    {
+      return true;
+    }
+
+    auto condition_it = conditions_.find(gate_condition_);
+    if (condition_it == conditions_.end())
+    {
+      RCLCPP_ERROR_STREAM(logger_, "Measurement " << measurement_name_ << ": gate_condition '" << gate_condition_
+                                                  << "' is not a configured condition; holding all collection back.");
+      return false;
+    }
+
+    gate_armed_ = condition_it->second->getState(msg);
+    if (gate_armed_)
+    {
+      RCLCPP_INFO_STREAM(logger_, "Measurement " << measurement_name_ << ": gate_condition '" << gate_condition_
+                                                 << "' became true, collection will proceed normally from now on.");
+    }
+    return gate_armed_;
+  }
+
   void addTags(dc_interfaces::msg::StringStamped& msg)
   {
     // Only put the tags in if the conditions are ok. This way, we still publish the data
@@ -397,6 +427,13 @@ public:
     }
     if (!msg.data.empty() && msg.data != "null")
     {
+      if (!isGateArmed(msg_copy))
+      {
+        RCLCPP_DEBUG_STREAM(logger_, "Measurement " << measurement_name_ << ": gate_condition '" << gate_condition_
+                                                    << "' not yet true, dropping collection.");
+        return;
+      }
+
       // Init publish
       if (init_max_measurements_ != -1 &&
           (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_))
@@ -494,11 +531,11 @@ public:
                  const bool& include_measurement_name, const bool& include_measurement_plugin,
                  const int& condition_max_measurements, const std::vector<std::string>& if_all_conditions,
                  const std::vector<std::string>& if_any_conditions, const std::vector<std::string>& if_none_conditions,
-                 const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
-                 const bool& nested, const bool& flatten, const std::string& save_local_base_path,
-                 const std::string& all_base_path, const std::string& all_base_path_expanded,
-                 const std::string& save_local_base_path_expanded, const std::string& run_id,
-                 const bool& run_id_enabled, const std::vector<json>& custom_params) override
+                 const std::string& gate_condition, const std::vector<std::string>& remote_keys,
+                 const std::vector<std::string>& remote_prefixes, const bool& nested, const bool& flatten,
+                 const std::string& save_local_base_path, const std::string& all_base_path,
+                 const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
+                 const std::string& run_id, const bool& run_id_enabled, const std::vector<json>& custom_params) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -538,6 +575,10 @@ public:
     if_all_conditions_ = if_all_conditions;
     if_any_conditions_ = if_any_conditions;
     if_none_conditions_ = if_none_conditions;
+
+    gate_condition_ = gate_condition;
+    // No gate configured means collection is never held back.
+    gate_armed_ = gate_condition_.empty();
 
     if (topic_output_.empty())
     {
@@ -651,6 +692,10 @@ protected:
   std::vector<std::string> if_none_conditions_;
   int condition_max_measurements_;
   int condition_counter_published_ = 0;
+
+  // Gate: one-shot arming latch, distinct from if_all/if_any/if_none above.
+  std::string gate_condition_;
+  bool gate_armed_{ true };
 
   // Logger
   rclcpp::Logger logger_{ rclcpp::get_logger("dc_measurements") };
