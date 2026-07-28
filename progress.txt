@@ -2279,3 +2279,116 @@ layer invalidates on every source change
   argument alignment); committed as formatted. Pushed for CI to re-confirm; still unverified
   end-to-end in this sandbox (no colcon here, same recurring constraint as every other slice
   in this log).
+
+### #100 - Add Measurement: Thermal
+
+- Added a new `Thermal` Measurement plugin (`dc_measurements/plugins/measurements/thermal.cpp`
+  + `include/dc_measurements/plugins/measurements/thermal.hpp`), reading
+  `/sys/class/thermal/thermal_zone*/` (`type` + `temp`) per the issue's pointer at
+  `cpu.cpp`/`memory.cpp` as prior art for `/sys` parsing in this repo, though structurally it
+  mirrors the simpler `Storage`/`SerialInterface` plugins (no shared `System`/`LinuxParser`
+  state needed).
+  - Parameters (both optional, `nav2_util::declare_parameter_if_not_declared` in
+    `onConfigure()`): `base_path` (default `/sys/class/thermal`, override for testing or a
+    non-standard sysfs mount) and `zones` (list of str, default empty = auto-discover).
+  - Zone auto-discovery (acceptance criterion): `discoverZones()` scans `base_path` for
+    entries named `thermal_zone*` via `std::filesystem::directory_iterator` with an
+    `std::error_code` overload (never throws on a missing/unreadable directory — returns an
+    empty list instead). The explicit `zones` parameter, when non-empty, is used verbatim
+    instead of auto-discovering, satisfying the "explicit zone list as an override" criterion.
+  - Zone `type` string as the Record key (acceptance criterion, so dashboards get named zones
+    like `x86_pkg_temp`/`cpu-thermal` instead of a `thermal_zone0` index that's meaningless
+    across reboots/platforms): each zone's `type` file content becomes the JSON key, `temp`
+    (millidegrees Celsius) is converted to degrees Celsius. Works identically on x86_64 and
+    ARM (acceptance criterion) since nothing hardcodes a zone index or count -- only the
+    `thermal_zone` directory-name prefix is assumed, which is the kernel's own stable naming
+    convention on both architectures.
+  - Missing/unreadable `/sys/class/thermal` degrades gracefully (acceptance criterion):
+    `onConfigure()` never touches the filesystem or throws, so activation always succeeds
+    (mirrors `SerialInterface::onConfigure()`'s "never fail activation for an unavailable
+    hardware source" contract). `collect()` re-discovers zones fresh on every poll rather than
+    caching a possibly-stale list; a zone whose `type`/`temp` file can't be opened or parsed
+    is skipped (`RCLCPP_DEBUG`, not fatal) rather than aborting the whole collection. If zero
+    zones could be read this cycle, `collect()` returns a default (empty-`data`) Record --
+    the same "nothing to report, will retry next poll" contract `SerialInterface::collect()`
+    uses for a not-yet-connected device -- rather than publishing a content-free `{}` Record
+    every second.
+  - JSON schema (`plugins/measurements/json/thermal.json`): `additionalProperties: {type:
+    number}` rather than fixed `properties`, since zone names are dynamic/platform-specific
+    and unknown ahead of time.
+  - Registered in `dc_measurements/measurement_plugin.xml` (alphabetically between
+    `TCPHealth` and `Uptime`) and `dc_measurements/CMakeLists.txt` (new
+    `dc_thermal_measurement` library appended to `dc_measurement_plugin_libs`, picked up
+    automatically by the existing install/export/`ament_target_dependencies` loops).
+  - Test: `dc_measurements/test/test_measurement_thermal.cpp` (registered in `CMakeLists.txt`'s
+    `tests` list), following the `MeasurementServer`-in-process harness pattern from
+    `test_measurement_random.cpp`/`test_measurement_serial_interface.cpp`. A `FakeThermalTree`
+    helper builds a throwaway `/sys/class/thermal`-shaped directory tree under `/tmp` (no
+    dependency on whatever real thermal zones, if any, the test host/container exposes).
+    Three cases: auto-discovery across non-sequential zone directory names (`thermal_zone0`,
+    `thermal_zone2` -- deliberately skipping `thermal_zone1` to catch any accidental
+    index-based assumption) with values keyed by `type` and converted to Celsius correctly;
+    an explicit `zones` list restricting collection to one zone even though others exist;
+    and a missing-`base_path` case asserting activation doesn't throw and (per the
+    silent-when-unavailable design above) no Record is ever published.
+  - Docs: `doc/src/dc/measurements/thermal.md` (new, parameter table + schema + example
+    config/output, following `random.md`'s layout) and linked from `doc/src/SUMMARY.md`
+    alphabetically between TCP Health and Uptime.
+- **Verified in the real ROS 2 Jazzy environment**: this sandbox still has no
+  colcon/ROS 2 install (same recurring constraint as every other slice in this log), but a
+  cached `localhost/dc-workspace:latest` Podman image from an earlier session's Jazzy build
+  was still present with a full pre-built workspace at `/root/ws`. Bind-mounted this
+  worktree's `dc_measurements/` and `doc/` over the image's copies and ran a real
+  `colcon build --packages-select dc_measurements` + `colcon test` there (not just
+  `pre-commit`), rather than leaving it as an unverified caveat.
+  - First `colcon test` pass caught a real bug the sandbox couldn't: the
+    `ActivatesSuccessfullyWithMissingBasePath` test initially expected `data_json_.empty()`
+    after activation with a missing `base_path`, but `Measurement::publish()` decorates every
+    non-empty-`data` Record with `name`/`nested`/`flattened`/`run_id` regardless of whether
+    the plugin itself measured anything -- so a `collect()` that returned `{}` (valid,
+    zone-less JSON) was still published as a decorated, non-empty Record, failing the test.
+    Fixed by changing `collect()` to return a fully empty `StringStamped` (empty `data`) when
+    no zone could be read at all, which `publish()` already treats as "nothing to send" and
+    skips -- the same behavior `SerialInterface` already relies on for "device not connected"
+    -- rather than loosening the test assertion. Updated the test and `thermal.md` to describe
+    this silent-when-unavailable contract.
+  - After that fix, `colcon test --packages-select dc_measurements --ctest-args -R thermal`:
+    3/3 tests pass (`AutoDiscoversZonesKeyedByType`, `ExplicitZoneListOverridesAutoDiscovery`,
+    `ActivatesSuccessfullyWithMissingBasePath`), confirmed via the full gtest log (zone values
+    correctly keyed by `type` and converted to Celsius, the override list excluding
+    non-listed zones, and the missing-path case producing zero Records with no thrown
+    exception).
+  - `pre-commit` (`clang-format`, `codespell`, JSON/XML lint, ROS package metadata checks,
+    etc., same `build-doc`/`poetry-requirements`/`pycln`/`flake8`/`go-fmt` skips as every
+    other entry in this log for pre-existing, unrelated tool-environment gaps) clean on every
+    changed/new file.
+
+### Repo housekeeping (same session, not issue #100 itself) - GitHub Pages taken down, doc.yaml no longer deploys
+
+Prompted by a direct request to bundle this into the same PR: this repo's public docs site
+(`https://minipada.github.io/ros2_data_collection/`, legacy branch-based GitHub Pages sourced
+from `gh-pages`) is being retired.
+
+- `DELETE /repos/{owner}/{repo}/pages` (the documented way to disable Pages via the GitHub
+  API) was tried first and refused outright: `422 Deactivating GitHub Pages for this
+  repository is not allowed` -- a known API restriction for some legacy branch-sourced Pages
+  configurations, confirmed with a valid `repo`-scoped token (not a permissions gap on this
+  end). No browser tool is available in this environment to use the Settings UI instead.
+- Deleted the `gh-pages` branch itself instead (`git push origin --delete gh-pages`) --
+  removes the content the legacy Pages source serves from, so the site starts 404ing shortly
+  even though the repository's Pages "enabled" flag can't be flipped off via API. This is a
+  direct, irreversible-ish action on a shared/remote branch, so it was confirmed with the
+  user before running (two explicit confirmations: unpublish-now vs. leave-it, then
+  API-blocked vs. delete-the-branch).
+- `.github/workflows/doc.yaml`: removed the "Deploy to GitHub Pages" step
+  (`peaceiris/actions-gh-pages@v4`) so CI no longer pushes anything to `gh-pages` going
+  forward; downgraded the job's `permissions` from `contents: write` (only ever needed for
+  that push) to `contents: read`. The build + `actions/upload-artifact` steps are left in
+  place -- the docs build stays a real CI gate (broken links / missing `SUMMARY.md` pages
+  still fail the job per `doc/book.toml`'s settings), it just no longer publishes anywhere.
+  Header comment updated to describe the new state instead of the stale "(#252) ... publishes
+  to GitHub Pages" description.
+- Not done: actually flipping the repository's Settings > Pages "Build and deployment" source
+  away from `gh-pages`/off (the flag GitHub's UI shows) -- blocked by the same API restriction
+  and no browser tool; deleting the source branch achieves the same practical outcome (no live
+  site) without it.
