@@ -110,20 +110,40 @@ TEST_F(MeasurementRandomTest, SameSeedProducesSameSequence)
   }
   double first_run_value = value_;
 
-  // Cycle the same node back through configure/activate (parameters stay declared across
-  // lifecycle transitions): the plugin is re-instantiated and re-seeded from the same
-  // `seed` parameter, so its first emitted value must reproduce exactly.
-  ms_node_->deactivate();
-  ms_node_->cleanup();
-  random_callback_ = false;
-  startLifecycleNode();
+  // A second, independently-configured node with the same `seed` (remapped to its own node
+  // name/topic so it can't collide with ms_node_'s rosout publisher, lifecycle services, or
+  // Record subscription) must reproduce the exact same first emitted value.
+  rclcpp::NodeOptions second_node_options;
+  second_node_options.arguments({ "--ros-args", "-r", "__node:=measurement_server_2" });
+  auto ms_node_2 = std::make_shared<measurement_server::MeasurementServer>(second_node_options,
+                                                                           std::vector<std::string>{ "random" });
+  bool second_callback = false;
+  double second_run_value = 0;
+  auto sub_data_2 = ms_node_2->create_subscription<dc_interfaces::msg::StringStamped>(
+      "/dc/measurement/random_2", rclcpp::SystemDefaultsQoS(), [&](const dc_interfaces::msg::StringStamped& msg) {
+        std::string data_str = msg.data.c_str();
+        boost::replace_all(data_str, "'", "\"");
+        nlohmann::json data_json = nlohmann::json::parse(data_str);
+        second_run_value = data_json["value"].get<double>();
+        second_callback = true;
+      });
+  ms_node_2->declare_parameter("random.plugin", std::string("dc_measurements/Random"));
+  ms_node_2->declare_parameter("random.group_key", std::string("random"));
+  ms_node_2->declare_parameter("random.topic_output", std::string("/dc/measurement/random_2"));
+  ms_node_2->declare_parameter("random.min", 0.0);
+  ms_node_2->declare_parameter("random.max", 1000000.0);
+  ms_node_2->declare_parameter("random.seed", 42);
+  ms_node_2->configure();
+  ms_node_2->activate();
 
-  while (!random_callback_)
+  while (!second_callback)
   {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
+    rclcpp::spin_some(ms_node_2->get_node_base_interface());
   }
+  ms_node_2->deactivate();
+  ms_node_2->cleanup();
 
-  EXPECT_EQ(first_run_value, value_);
+  EXPECT_EQ(first_run_value, second_run_value);
 }
 
 int main(int argc, char** argv)
