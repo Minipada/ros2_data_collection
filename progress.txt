@@ -2122,3 +2122,45 @@ layer invalidates on every source change
 - Still unverified end-to-end in this sandbox (no ROS/colcon install, same recurring
   constraint); pushed for CI to confirm. `pre-commit` (`clang-format` etc.) clean on the
   changed file.
+
+### #60 follow-up — third CI round: replaced the second-socat reconnect test with a direct pty
+
+- The `posix_spawn` fix above worked precisely as intended: no more hang. CI's `colcon-test`
+  now completes in ~2m45s (down from timing out around 4-4.5 min) and reports a real,
+  bounded failure instead of `missing_result`: `ActivatesSuccessfullyWithMissingPort`,
+  `DelimiterParsingProducesNamedFields`, `RegexParsingProducesNamedFields` all pass;
+  `ReconnectsAfterDisconnect` now fails cleanly at the new bounded `spinUntilCallback`
+  assertion ("No Record received ... within the timeout") after ~11s instead of hanging for
+  minutes — exactly the fast, diagnosable failure the bounding was added for.
+  - The log confirms the second `socat` subprocess *did* spawn successfully this time
+    (`socat[281]`, reaped normally in `TearDown()`) — so the fork/posix_spawn class of bug is
+    fully resolved. But no "Opened serial port" log ever appears for it: `SerialInterface`'s
+    `openPort()` kept failing (silently, at `RCLCPP_DEBUG` level) to open the freshly
+    recreated `/tmp/dc_test_serial_dev_<pid>` for the full ~11s budget, even though the
+    symlink existed (the test's own `access()`-based readiness poll had already passed,
+    or `ASSERT_TRUE(pty.start())` would have failed loudly instead).
+  - Diagnosis: `SocatPtyPair::start()`'s readiness check only confirms the `link=` symlink
+    file *exists* (`access(path, F_OK)`), not that the underlying pty slave is actually
+    unlocked and openable yet — `socat`'s own internal `grantpt()`/`unlockpt()` sequence for
+    the newly (re)allocated pty pair can still be in flight at that instant, and coordinating
+    "wait until a *second*, independently-scheduled OS process has finished its internal pty
+    setup" from the test process has no clean synchronization point short of guessing/polling
+    open() itself in a retry loop with an arbitrary bound.
+  - Fix (`dc_measurements/test/test_measurement_serial_interface.cpp`): replaced the second
+    `socat` instance in `ReconnectsAfterDisconnect` with a new `DirectPty` helper that
+    allocates the pty pair itself, in-process, via `posix_openpt()`/`grantpt()`/`unlockpt()`/
+    `ptsname()`, then symlinks the slave to the fixed test path. This removes the
+    external-process synchronization gap entirely: `grantpt()`/`unlockpt()` complete
+    synchronously in the test's own thread before `DirectPty::open()` returns, so by the time
+    the plugin's `port` parameter points at a valid, guaranteed-openable path there is no
+    remaining timing ambiguity. `SocatPtyPair`/`socat` are kept for the other two tests
+    (parsing correctness doesn't need this precision, and it's still the "read a real serial
+    device end-to-end" exercise the issue's suggested testing approach calls for);
+    `DirectPty::teardown()` (close + unlink) simulates the unplug (the plugin's still-open fd
+    now reads a real error once the master closes, the same condition a real hangup produces)
+    and a fresh `DirectPty::open()` at the identical path simulates the replug.
+    `spinUntilCallback` was generalized to take an arbitrary write callable (a
+    `std::function<void()>`) so both the file-path-based `socat` writer and the direct-fd
+    `DirectPty` writer share the same bounded polling/assertion logic.
+- Still unverified end-to-end in this sandbox (same recurring constraint); pushed for CI to
+  confirm. `pre-commit` (`clang-format`, `codespell`, etc.) clean on the changed file.

@@ -2,11 +2,13 @@
 #include <gtest/gtest.h>
 #include <signal.h>
 #include <spawn.h>
+#include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include <chrono>
 #include <cstdio>
+#include <functional>
 #include <string>
 #include <thread>
 
@@ -127,6 +129,80 @@ static void writeLine(const std::string& path, const std::string& line)
   ::close(fd);
 }
 
+// Directly allocates a POSIX pty pair (no subprocess) and symlinks its slave device to a
+// fixed path, so a SerialInterface Measurement can be pointed at a stable path while the
+// underlying pty is torn down and recreated to simulate an unplug/replug cycle. Used by the
+// reconnect test in place of a second `socat` subprocess: this needs synchronous control over
+// exactly when the slave device becomes openable (grantpt()/unlockpt() complete before
+// open() returns), which coordinating with a second external process could not reliably
+// guarantee. Closing the master here reproduces the same read()-error-on-unplug condition a
+// real USB-serial adapter hangup produces on the slave side.
+class DirectPty
+{
+public:
+  explicit DirectPty(std::string link_path) : link_path_(std::move(link_path))
+  {
+  }
+
+  ~DirectPty()
+  {
+    teardown();
+  }
+
+  bool open()
+  {
+    teardown();
+    master_fd_ = ::posix_openpt(O_RDWR | O_NOCTTY);
+    if (master_fd_ < 0)
+    {
+      return false;
+    }
+    if (::grantpt(master_fd_) != 0 || ::unlockpt(master_fd_) != 0)
+    {
+      teardown();
+      return false;
+    }
+    const char* slave_name = ::ptsname(master_fd_);
+    if (slave_name == nullptr)
+    {
+      teardown();
+      return false;
+    }
+    ::unlink(link_path_.c_str());
+    if (::symlink(slave_name, link_path_.c_str()) != 0)
+    {
+      teardown();
+      return false;
+    }
+    return true;
+  }
+
+  void teardown()
+  {
+    if (master_fd_ >= 0)
+    {
+      ::close(master_fd_);
+      master_fd_ = -1;
+    }
+    ::unlink(link_path_.c_str());
+  }
+
+  void writeLine(const std::string& line) const
+  {
+    if (master_fd_ < 0)
+    {
+      return;
+    }
+    std::string data = line + "\n";
+    ssize_t written = ::write(master_fd_, data.c_str(), data.size());
+    (void)written;
+  }
+
+private:
+  std::string link_path_;
+  int master_fd_{ -1 };
+};
+
 class MeasurementSerialInterfaceTest : public ::testing::Test
 {
 protected:
@@ -175,16 +251,20 @@ protected:
 
   void spinUntilCallback(const std::string& path_to_write, const std::string& line)
   {
+    spinUntilCallback([&] { writeLine(path_to_write, line); });
+  }
+
+  void spinUntilCallback(const std::function<void()>& write_fn)
+  {
     // Bounded, not a plain `while (!callback_active_)`: fail fast with a clear message
     // instead of running until the test binary's own external timeout.
     for (int i = 0; i < 500 && !callback_active_; ++i)
     {
-      writeLine(path_to_write, line);
+      write_fn();
       rclcpp::spin_some(ms_node_->get_node_base_interface());
       std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
-    ASSERT_TRUE(callback_active_) << "No Record received for '" << path_to_write << "' <- \"" << line
-                                  << "\" within the timeout";
+    ASSERT_TRUE(callback_active_) << "No Record received within the timeout";
   }
 
   std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
@@ -267,13 +347,16 @@ TEST_F(MeasurementSerialInterfaceTest, RegexParsingProducesNamedFields)
 
 TEST_F(MeasurementSerialInterfaceTest, ReconnectsAfterDisconnect)
 {
-  SocatPtyPair pty(dev_path_, peer_path_);
-  ASSERT_TRUE(pty.start()) << "socat is required to run this test (virtual pty pair)";
+  // Direct POSIX pty allocation, not socat, for this test specifically: it needs precise,
+  // synchronous control over exactly when the device is torn down and re-created (see
+  // DirectPty's comment above).
+  DirectPty pty(dev_path_);
+  ASSERT_TRUE(pty.open()) << "failed to allocate a virtual pty";
 
   ms_node_->declare_parameter("serial.plugin", std::string("dc_measurements/SerialInterface"));
   ms_node_->declare_parameter("serial.group_key", std::string("serial"));
   ms_node_->declare_parameter("serial.topic_output", std::string("/dc/measurement/serial"));
-  ms_node_->declare_parameter("serial.port", pty.devPath());
+  ms_node_->declare_parameter("serial.port", dev_path_);
   ms_node_->declare_parameter("serial.polling_interval", 30);
   ms_node_->declare_parameter("serial.init_collect", false);
   ms_node_->declare_parameter("serial.parsing_type", std::string("delimiter"));
@@ -282,11 +365,13 @@ TEST_F(MeasurementSerialInterfaceTest, ReconnectsAfterDisconnect)
 
   startLifecycleNode();
 
-  spinUntilCallback(pty.peerPath(), "1");
+  spinUntilCallback([&] { pty.writeLine("1"); });
   ASSERT_EQ(data_json_["fields"]["value"], "1");
 
-  // Simulate an unplug: tear down the virtual pty pair out from under the open port.
-  pty.stop();
+  // Simulate an unplug: tear down the pty out from under the already-open port. The
+  // plugin's next read() on its still-open fd gets a real error (EIO/hangup), the same
+  // condition a real USB-serial adapter unplug produces.
+  pty.teardown();
 
   for (int i = 0; i < 20; ++i)
   {
@@ -294,11 +379,11 @@ TEST_F(MeasurementSerialInterfaceTest, ReconnectsAfterDisconnect)
     std::this_thread::sleep_for(std::chrono::milliseconds(30));
   }
 
-  // Simulate a replug: a fresh socat pair at the exact same link paths.
-  ASSERT_TRUE(pty.start()) << "failed to restart the virtual pty pair";
+  // Simulate a replug: a fresh pty allocated and symlinked at the exact same path.
+  ASSERT_TRUE(pty.open()) << "failed to reallocate the virtual pty";
 
   callback_active_ = false;
-  spinUntilCallback(pty.peerPath(), "2");
+  spinUntilCallback([&] { pty.writeLine("2"); });
 
   EXPECT_EQ(data_json_["fields"]["value"], "2");
 }
