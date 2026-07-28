@@ -1,6 +1,7 @@
 #include "dc_measurements/plugins/measurements/serial_interface.hpp"
 
 #include <fcntl.h>
+#include <poll.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -275,9 +276,25 @@ dc_interfaces::msg::StringStamped SerialInterface::collect()
       // No more data available right now.
       break;
     }
-    // A real I/O error (e.g. EIO/ENXIO when the device is unplugged, or the peer hangs up).
+    // A real I/O error (e.g. EIO/ENXIO when the device is unplugged).
     disconnected = true;
     break;
+  }
+
+  // read() alone can't distinguish "no data yet" from "the peer hung up" under VMIN=0/
+  // VTIME=0 -- both return 0 on this kernel/tty implementation. poll()'s POLLHUP/POLLERR is
+  // the reliable, distinct signal for an actual hangup (e.g. the other end of a pty closing,
+  // or certain USB-serial removal paths), independent of what read() itself reported.
+  if (!disconnected)
+  {
+    pollfd pfd;
+    pfd.fd = fd_;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+    if (::poll(&pfd, 1, 0) > 0 && (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)))
+    {
+      disconnected = true;
+    }
   }
 
   if (disconnected)

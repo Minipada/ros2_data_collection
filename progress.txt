@@ -2164,3 +2164,35 @@ layer invalidates on every source change
     `DirectPty` writer share the same bounded polling/assertion logic.
 - Still unverified end-to-end in this sandbox (same recurring constraint); pushed for CI to
   confirm. `pre-commit` (`clang-format`, `codespell`, etc.) clean on the changed file.
+
+### #60 follow-up — fourth CI round: found the real product bug — read()==0 hangup is ambiguous
+
+- The `DirectPty` redesign didn't help either, but it *did* prove something important: even
+  with the external-process timing gap fully eliminated (the plugin's `port` parameter now
+  points at a guaranteed-openable, freshly reallocated pty the instant `pty.open()` returns),
+  `ReconnectsAfterDisconnect` failed the exact same way — no second "Opened serial port" log,
+  ever, for the full ~11s budget. Crucially, this run's log also has **zero** occurrences of
+  "disconnected; will attempt to reconnect" anywhere — meaning the disconnect branch itself
+  was never entered at all. That ruled out every test-infrastructure theory (fork safety,
+  external-process pty-setup timing) and pointed at a real bug in the plugin's own read loop.
+- Root cause, now confirmed for real: on this kernel/tty implementation, `read()` on a
+  raw-mode, `VMIN=0`/`VTIME=0`, non-blocking serial fd returns `0` for **both** "no data
+  available right now" *and* "the peer has hung up" (master closed) — they are genuinely
+  indistinguishable via `read()`'s return value alone. The #60-follow-up-1 fix above was
+  correct to stop treating a bare `0` as disconnect (that was needed to fix the "opens then
+  immediately flaps closed" bug), but it had the side effect of making a *real* hangup
+  permanently silent too: `fd_` never gets reset to `-1`, so `openPort()` is never retried,
+  and the Measurement is stuck polling a dead, already-open fd forever. `EIO`-on-read (what
+  the very first version of this code assumed) does happen on some USB-serial removal paths,
+  but is not the reliable, general signal for "the other end is gone."
+- Fix (`dc_measurements/plugins/measurements/serial_interface.cpp`): after the existing read
+  loop (which now only ever sets `disconnected` on a genuine read() error, e.g. `EIO`), added
+  a zero-timeout `poll()` on `fd_` and check `revents` for `POLLHUP`/`POLLERR`/`POLLNVAL` —
+  the kernel-level signal for "hung up," set independently of what `read()` itself returned.
+  Either signal (a hard read error, or `poll()` reporting hangup) now closes the port and lets
+  the existing lazy-reopen-on-next-poll logic take over, same as before. Updated
+  `doc/src/dc/measurements/serial_interface.md`'s disconnect-detection paragraph to describe
+  both paths instead of just the (empirically now-secondary) read-error one.
+- Still unverified end-to-end in this sandbox (same recurring constraint, no ROS/colcon
+  install here); pushed for CI to confirm. `pre-commit` (`clang-format`, `codespell`, etc.)
+  clean on both changed files.
