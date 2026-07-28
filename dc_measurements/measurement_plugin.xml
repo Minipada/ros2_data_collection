@@ -103,6 +103,14 @@
         </class>
     </library>
 
+    <library path="dc_serial_interface_measurement">
+        <class name="dc_measurements/SerialInterface" type="dc_measurements::SerialInterface" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_serial_interface
+            </description>
+        </class>
+    </library>
+
     <library path="dc_speed_measurement">
         <class name="dc_measurements/Speed" type="dc_measurements::Speed" base_class_type="dc_core::Measurement">
             <description>

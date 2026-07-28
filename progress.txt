@@ -1978,3 +1978,83 @@ layer invalidates on every source change
   attempted either (the issue calls it optional — "not required, but exercising it once
   against a real Destination is the cheapest end-to-end check" — and it needs the same
   ROS environment this sandbox lacks).
+
+### #60 - Add Measurement: Serial Interface
+
+- Added a new `dc_measurements/SerialInterface` Measurement plugin
+  (`dc_measurements/plugins/measurements/serial_interface.cpp` + `include/dc_measurements/
+  plugins/measurements/serial_interface.hpp`), following the poll-driven `collect()` pattern
+  (no ROS subscription involved here, unlike `CmdVel`/`Diagnostics`): opens a configurable
+  serial device with raw-mode `termios` (baud rate one of the standard 1200-230400 values,
+  unrecognized values log an error and fall back to 9600), non-blocking `read()`s whatever is
+  available each `polling_interval` tick, and reassembles line-delimited (`\n`, optional `\r`
+  stripped) frames. `framing` is a configurable parameter but only `"line"` is implemented
+  today (an unrecognized value logs an error and falls back to `"line"`), matching the issue's
+  "at minimum" framing requirement.
+  - Two parsing modes, both driven by an ordered `fields` name list: `delimiter` (default)
+    splits the line on a configurable `delimiter` string and zips tokens to `fields` by
+    position; `regex` matches a configurable ECMAScript `regex` against the line and zips
+    capture groups to `fields` by position — since `std::regex`/ECMAScript has no native
+    named-capture-group syntax, "regex with named groups" is implemented as positional
+    captures paired with names from `fields`, documented as such. A token/capture-count
+    mismatch against `fields` logs a warning but still publishes whatever lined up rather
+    than dropping the line.
+  - Output shape is `{"raw": "<line>", "fields": {<name>: <token>, ...}}` — `raw` is always
+    the full line (parseable even if parsing config is wrong/absent), `fields` the named
+    values, mirroring how Diagnostics (#49) wraps its per-status `values` as a JSON object
+    rather than flattening into a string.
+  - **Graceful disconnect/reconnect (the issue's key acceptance criterion)**: `onConfigure()`
+    deliberately never opens the port or throws — an unplugged/not-yet-connected device does
+    not fail activation, since the base `Measurement::configure()` permanently disables a
+    Measurement (`enabled_ = false`, timer reset) on any `std::runtime_error` from
+    `onConfigure()`, which would defeat reconnection entirely. Instead `collect()` lazily
+    opens the port on demand; a closed/never-opened port makes `collect()` a no-op return
+    (nothing published that cycle, retried next poll — no busy loop, since it's already rate
+    -limited by `polling_interval`). A read returning `0` (EOF) or any error other than
+    `EAGAIN`/`EWOULDBLOCK` (e.g. `EIO` when a USB-serial adapter is unplugged) closes the fd
+    and is retried the same lazy way, so replugging the device is picked up automatically on
+    a later poll with no operator action.
+- JSON schema at `dc_measurements/plugins/measurements/json/serial_interface.json`; gtest
+  suite `dc_measurements/test/test_measurement_serial_interface.cpp` verifies entirely
+  against a virtual serial pair (`socat -d -d pty,raw,echo=0,link=<a> pty,raw,echo=0,link=<b>`,
+  spawned via `fork`/`execlp` from the test itself, `link=` giving fixed, well-known paths so
+  the test doesn't need to parse socat's stderr for dynamically-allocated pty paths), per the
+  issue's own suggested verification approach — no hardware, and this is exactly how CI runs
+  it too:
+  - `ActivatesSuccessfullyWithMissingPort` — `port` pointed at a path that never exists;
+    asserts `configure()`/`activate()` don't throw and the node keeps spinning normally,
+    directly covering "an unplugged device must not fail activation".
+  - `DelimiterParsingProducesNamedFields` / `RegexParsingProducesNamedFields` — the two
+    required parsing modes, each asserting the resulting Record's `fields` object has the
+    correctly-named, correctly-valued entries (and `raw` for the delimiter case).
+  - `ReconnectsAfterDisconnect` — gets one Record through, kills the `socat` process (its
+    master fds closing turns the plugin's next `read()` into `EIO`/EOF, the standard trick for
+    simulating an unplugged serial device against a pty pair), spins the node for a bit
+    (asserting no crash/hang while "disconnected"), starts a **new** `socat` pair at the exact
+    same `link=` paths (simulating replug), and asserts a freshly written line is received and
+    parsed — proving the reconnect path for real, not just "didn't crash".
+- Registered like every other Measurement plugin: `measurement_plugin.xml` (new
+  `dc_serial_interface_measurement` library / `dc_measurements/SerialInterface` class),
+  `CMakeLists.txt` (new `add_library`, added to `dc_measurement_plugin_libs` and the `tests`
+  list). No new `package.xml` runtime `<depend>` was needed — `termios`/`fcntl`/`unistd` are
+  plain POSIX headers already available via the C library, not a rosdep key; added
+  `<test_depend>socat</test_depend>` for the gtest suite's virtual serial pair (resolved by
+  the existing `rosdep install --from-paths src` step in `tools/e2e/Containerfile`, same
+  mechanism as every other test-only system tool in this tree — no separate `apt-get`
+  addition needed). Docs: `doc/src/dc/measurements/serial_interface.md` (parameter table,
+  schema, both parsing-mode example configs, and a "Testing without hardware" section
+  documenting the exact `socat` invocation) linked from `doc/src/SUMMARY.md`, matching every
+  other Measurement's doc page.
+- **Not done / left for CI**: same constraint as every prior C++ slice in this tree — no ROS
+  2/`colcon`/`ament_cmake` install in this sandbox, so `colcon build --packages-select
+  dc_measurements` + `colcon test` (with the new plugin/test/`socat` test-dependency) could
+  not be run for real here. Ran `pre-commit` on every changed/new file instead
+  (`clang-format`, `Verify json syntax`, `check-xml`, `ros2_ws_same_versions`,
+  `ros2_ws_set_metadata`, `codespell`, `Build documentation` all passed; only
+  `poetry-requirements` failed, the same known-broken-in-this-sandbox hook noted in every
+  #242-#49 entry above, unrelated to this diff). A real `colcon build`/`colcon test` run (CI
+  once #249's Jazzy matrix covers `dc_measurements`, or a machine with more resources) is
+  still needed to close the "colcon build succeeds"/"gtest suite passes" acceptance criteria
+  for real, including confirming `socat` actually resolves via rosdep in that environment; no
+  demo against a live Destination was attempted either (optional per the issue, and needs the
+  same ROS environment this sandbox lacks).
