@@ -146,6 +146,9 @@ list(APPEND dc_measurement_plugin_libs dc_permissions_measurement)
 add_library(dc_position_measurement SHARED plugins/measurements/position.cpp)
 list(APPEND dc_measurement_plugin_libs dc_position_measurement)
 
+add_library(dc_random_measurement SHARED plugins/measurements/random.cpp)
+list(APPEND dc_measurement_plugin_libs dc_random_measurement)
+
 add_library(dc_serial_interface_measurement SHARED plugins/measurements/serial_interface.cpp)
 list(APPEND dc_measurement_plugin_libs dc_serial_interface_measurement)
 
@@ -257,6 +260,7 @@ set(tests
   test_measurement_dummy
   test_measurement_os
   test_measurement_parameters
+  test_measurement_random
   test_measurement_serial_interface
   test_measurement_uptime
 )
