@@ -2652,3 +2652,57 @@ from `gh-pages`) is being retired.
   matching #123's last reported count) plus this change's 1 new test binary + 2 new gtest
   cases (+3 = 34), confirming no regression from the `configure()` signature change across
   every other measurement plugin's test.
+
+### #125 - Detail the data pipeline with C4 diagrams (context/container/component)
+
+- `doc/src/dc/data_pipeline.md` already had a `flowchart LR` (added by #252) showing the
+  right DC 2.0 shape but only one level, no external actors/systems, and nothing inside
+  the Bridge. Added a new "C4 model" section above it with the three levels the issue
+  asked for, keeping the flowchart as the at-a-glance view per the issue's explicit
+  instruction not to replace it:
+  - **Context (C1)** (`C4Context`): DC as one system, its two actors (robot operator,
+    analytics/dashboard consumer), and the external systems it writes to (PostgreSQL,
+    S3-compatible object storage, other passthrough sinks per ADR-0003).
+  - **Container (C2)** (`C4Container`): the running processes -- `measurement_server` and
+    `group_server` (lifecycle-managed), `dc_lifecycle_manager`, `bridge_ready_gate`,
+    `dc_bridge`, and the Vector Shipper -- with a nested `Boundary(...)` explicitly
+    showing the lifecycle-manager boundary from ADR-0006 (the Bridge and its Shipper
+    child are outside it, matching the "Bridge has no lifecycle state" decision) that the
+    existing flowchart omits entirely.
+  - **Component (C3), Bridge only** (`C4Component`): read the actual current `dc_bridge`
+    source tree first (it's plain C++/`rclcpp` post-ADR-0007, not the Rust `dc_bridge_core`
+    layout described in this file's own #244-#248 entries) -- `bridge_node.hpp`,
+    `forwarder.hpp`, `supervisor.hpp`, `readiness.hpp`, `render.hpp`, `topic_config.hpp`,
+    and everything under `uploader/` (`uploader.hpp`, `intent_queue.hpp`,
+    `object_store.hpp`, `retention.hpp`) -- so the component boxes and their relationships
+    (BridgeNode owns Forwarder/Supervisor/Readiness/Config-renderer; Files-Destination
+    Records go through the disk-backed IntentQueue into the Uploader, which verifies
+    against an S3 ObjectStore and reports status Records back through the Forwarder under
+    `dc.files`) match the real #244-#267 code, not a stale mental model.
+  - Also read all 7 ADRs (`docs/adr/0001`-`0007`) and `CONTEXT.md` before writing labels,
+    so terminology (Record/Destination/Shipper/Tag/shipper ingest protocol, never
+    "Fluent Forward" as a component name) matches the glossary throughout.
+- **Verified the vendored mermaid actually supports C4 diagrams before writing any**:
+  grepped `doc/js/mermaid.min.js` for `C4_CONTEXT`/`C4_CONTAINER` grammar tokens -- present,
+  so `C4Context`/`C4Container`/`C4Component` render with the pinned mermaid build DC ships
+  (`additional-js` in `book.toml`), no version bump needed.
+- **Validated the actual mdbook build locally**, since `tools/ci/pre-commit/build_doc.sh`'s
+  own Podman path failed in this sandbox on `no space left on device` (the same pre-existing,
+  unrelated-to-this-diff full root partition noted repeatedly elsewhere in this file, e.g.
+  #123/#124): `mdbook`, `mdbook-mermaid`, `mdbook-admonish`, and `mdbook-open-on-gh` were all
+  already installed locally (matching the versions `book.toml` configures), so ran `mdbook
+  build` directly from `doc/` instead of through the container. Exit code 0; the only
+  linkcheck warnings are two pre-existing "Potential incomplete link" false positives on
+  `list[str]` markdown in `diagnostics.md`/`serial_interface.md`, unrelated to this change.
+  Confirmed all three new `C4Context`/`C4Container`/`C4Component` code blocks made it into
+  the rendered `book/html/dc/data_pipeline.html` (`doc/book` is gitignored, nothing from the
+  build was staged).
+- `pre-commit run --files doc/src/dc/data_pipeline.md` with `build-doc`/`poetry-requirements`/
+  `pycln` skipped (same known-broken-in-this-sandbox set as #242-#249: `build-doc` needs the
+  disk space just described, `poetry-requirements` needs a `poetry` module not installed
+  here) -- everything else that touched the file passed, including `codespell` and the
+  "empty line at end of file" / trailing-whitespace hooks.
+- **Not done / left for follow-up**: a real Podman-backed `build_doc.sh` run (the acceptance
+  criterion literally names it as the hard gate) once host disk space is available or in CI --
+  the local `mdbook build` above exercises the identical toolchain/preprocessor versions and
+  is believed equivalent, but wasn't run through the container itself.
