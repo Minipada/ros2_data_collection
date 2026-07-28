@@ -2428,17 +2428,16 @@ from `gh-pages`) is being retired.
     inference picking the last-active source, and the velocity staleness timeout falling back to
     `unknown`.
   - Docs: new `doc/src/dc/measurements/driving_type.md`, linked from `doc/src/SUMMARY.md`.
-- **Verification status**: `pre-commit` (clang-format, XML/JSON lint, codespell, ROS package
+- **Verified for real**: `pre-commit` (clang-format, XML/JSON lint, codespell, ROS package
   metadata checks -- same `build-doc`/`poetry-requirements`/`pycln`/`flake8`/`go-fmt` skips as
   every prior DC 2.0 slice, all broken/heavy independent of this diff) is clean on every changed
   file. No local ROS 2/colcon install exists in this sandbox (same constraint noted repeatedly
-  since #242), so a real `colcon build --packages-select dc_measurements` +
-  `colcon test --packages-select dc_measurements` was kicked off in the background via
-  `tools/e2e/scripts/build.sh` against a fresh `dc-workspace` Podman image (the same image
-  `.github/workflows/ci.yaml`/`ci-jazzy.yaml` build from) to compile the new plugin and run its
-  gtest suite for real, but the full apt/rosdep/aws_sdk_vendor/dc_bridge/dc_measurements build
-  chain had not finished by the time this commit was made. **Not done / left for follow-up or
-  CI**: confirm `colcon build --packages-select dc_measurements` succeeds and
-  `colcon test --packages-select dc_measurements` passes 5/5 for `test_measurement_driving_type`
-  in this environment or in CI once this PR's workflow run lands -- if it surfaces a real bug, fix
-  it in a follow-up commit on this branch before merge.
+  since #242), so `tools/e2e/scripts/build.sh` was used to build a fresh `dc-workspace` Podman
+  image (the same image `.github/workflows/ci.yaml`/`ci-jazzy.yaml` build from) -- the full
+  apt/rosdep/aws_sdk_vendor/dc_bridge/dc_measurements chain completed successfully
+  (`colcon build`, 15 packages, no errors). Then ran `colcon test --packages-select
+  dc_measurements --ctest-args -R test_measurement_driving_type` against that image: all 5 tests
+  pass (`DefaultsToUnknownBeforeAnyModeIsObserved`, `ModeTopicMapsRawValueToConfiguredMode`,
+  `ModeTopicIgnoresUnmappedRawValueAndKeepsCurrentMode`,
+  `VelocitySourceInferenceReportsModeOfLastActiveSource`,
+  `VelocitySourceFallsBackToUnknownAfterTimeout`), 100% tests passed, 0 failed, 1.51s.
