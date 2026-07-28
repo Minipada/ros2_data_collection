@@ -2517,6 +2517,31 @@ from `gh-pages`) is being retired.
   lighting, downscale+blur, and mild (20%) perspective skew. This is genuinely mixed evidence,
   reported as such rather than cherry-picked; see the PR description for the full per-variant
   table.
+- **Follow-up: confirmed the rot30/rot45 gap against the real apt-shipped library, not just the
+  PyPI stand-in, and root-caused it.** Prompted by "shouldn't we test with what's used in the
+  apt?" -- wrote a small standalone C++ program (`ZXing::ReadBarcodes` called exactly as
+  `camera.cpp` does) and compiled it against the real `libzxing-dev` 2.2.1 installed via
+  `apt-get install libzxing-dev` in a real `ros:jazzy-ros-base` container (the same package
+  `rosdep`/CI resolve). **Reproduces identically**: `qrcode_0001.png` rotated 30/45 degrees
+  reports a spurious `MicroQRCode`/`ChecksumError` instead of the real `QRCode`, so this is a
+  real production gap, not a version-mismatch artifact of testing with the newer PyPI binding.
+  Then root-caused rather than just re-confirmed: tried every `ZXing::Binarizer` option
+  (`LocalAverage`/`GlobalHistogram`/`FixedThreshold`), `setTryDownscale(false)`,
+  nearest-neighbor rotation instead of bilinear (rules out interpolation blur softening module
+  edges), and 3x upsampling before rotating (rules out small module size/resolution) -- **every
+  variant reproduces the exact same `ChecksumError`**, so this isn't a tunable
+  `ReaderOptions` setting. Also tested with the `"0001"` text label cropped out of the image
+  (isolating just the QR matrix): the spurious `MicroQRCode` false-positive disappears (0
+  results, no wrong-format misdetection), confirming the text label was a contributing red
+  herring for *that* specific symptom, but the real QR still isn't found at 30/45 degrees even
+  in isolation -- the underlying miss is a genuine finder-pattern-search limitation of this
+  ZXing-C++ version at these angles for this code geometry, not fixable by adjusting decode
+  options. Documented as a known, permanent (not "needs more tuning") limitation in
+  `doc/src/dc/measurements/camera.md` (a new admonish-warning block) rather than attempting a
+  rotation-retry mitigation in `camera.cpp` -- retrying decode at several pre-rotated angles per
+  frame would reintroduce the per-frame cost this migration exists to remove, for a narrow,
+  synthetic-rotation case not yet shown to matter in practice; tracked as follow-up issue #297
+  instead of scope-creeping into this PR.
 - **Verified for real**: `pre-commit` (clang-format -- reformatted `camera.cpp`/`camera.hpp`,
   re-ran clean after; XML/YAML/TOML lint, codespell, ROS package metadata checks -- same
   `build-doc`/`poetry-requirements`/`pycln`/`flake8` environment-gap skips as every prior DC 2.0
