@@ -2244,3 +2244,38 @@ layer invalidates on every source change
   `colcon test` here. `pre-commit` (`clang-format`, `codespell`, JSON/XML lint, etc.) is clean
   on every changed/new file; the `poetry-requirements` hook failure is the same pre-existing,
   unrelated tool-environment gap noted throughout this log (no `poetry` module installed).
+
+### #88 follow-up — real CI round: found and fixed a genuine bug in the seed-reproducibility test
+
+- Real `colcon test` (CI, since no ROS 2/colcon toolchain exists in this sandbox) caught what
+  the sandboxed `pre-commit`-only pass couldn't: `MeasurementRandomTest.SameSeedProducesSameSequence`
+  never produced a result — `[FATAL] Lifecycle node measurement_server does not have error
+  state implemented` after the second `configure()` call threw.
+- Root cause: the test (as originally written) cycled a *single* `MeasurementServer` node
+  through deactivate→cleanup→configure→activate twice to check that the same `seed` parameter
+  reproduces the same first value, on the assumption that ROS parameters stay declared across
+  lifecycle transitions on one node instance. They do, but `MeasurementServer::setBaseSavePath()`
+  (called from `on_configure()`) declares `save_local_base_path`/`all_base_path` with the
+  bare, non-idempotent `declare_parameter` (unlike most of its other parameters, which go
+  through `nav2_util::declare_parameter_if_not_declared`) — so the *second* `configure()` call
+  on the same node threw `rclcpp::exceptions::ParameterAlreadyDeclaredException` ("parameter
+  'save_local_base_path' has already been declared"), which `nav2_util::LifecycleNode` has no
+  error-state transition for, so the node got stuck and the test hung to the CI timeout instead
+  of failing fast.
+- This is a real, narrow pre-existing gap in `MeasurementServer` (repeat configure cycles on
+  one instance aren't supported), not something to route around by "fixing" `setBaseSavePath()`
+  in this PR's scope — production usage never reconfigures a live `MeasurementServer` process,
+  and no other test in this repo has ever exercised that path. Fixed the test instead: it now
+  stands up a *second* `MeasurementServer` node (remapped via `NodeOptions` to
+  `measurement_server_2`, subscribed on a distinct `/dc/measurement/random_2` topic) configured
+  once with the same `seed`, sidestepping repeat-configure entirely while still proving
+  cross-instance reproducibility (the actual acceptance criterion). The two nodes sharing the
+  base name only ever produced a benign "Publisher already registered for node name" rosout
+  warning in the CI log (already visible, harmless, in the other two passing test cases too,
+  from this same test file's constructor-calls-`SetUp()`-explicitly pattern inherited from
+  `test_measurement_uptime.cpp` — gtest also calls `SetUp()` itself, so two node instances
+  transiently exist even in the single-node tests).
+- `pre-commit`'s `clang-format` reformatted the new second-node block on this pass (multi-line
+  argument alignment); committed as formatted. Pushed for CI to re-confirm; still unverified
+  end-to-end in this sandbox (no colcon here, same recurring constraint as every other slice
+  in this log).
