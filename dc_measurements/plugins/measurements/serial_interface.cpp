@@ -265,8 +265,9 @@ dc_interfaces::msg::StringStamped SerialInterface::collect()
     }
     if (n == 0)
     {
-      // Peer/device gone.
-      disconnected = true;
+      // With VMIN=0/VTIME=0 raw-mode termios (set in openPort()), a serial/tty read()
+      // returns 0 -- not -1/EAGAIN -- when no data is currently available; this is the
+      // normal "nothing to read this cycle" case, not EOF/disconnect.
       break;
     }
     if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -274,7 +275,7 @@ dc_interfaces::msg::StringStamped SerialInterface::collect()
       // No more data available right now.
       break;
     }
-    // A real I/O error (e.g. EIO/ENXIO when the device is unplugged).
+    // A real I/O error (e.g. EIO/ENXIO when the device is unplugged, or the peer hangs up).
     disconnected = true;
     break;
   }
