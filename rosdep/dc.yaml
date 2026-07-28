@@ -5,10 +5,15 @@
 #   echo "yaml file://$(pwd)/rosdep/dc.yaml" | sudo tee /etc/ros/rosdep/sources.list.d/10-dc.list
 #   rosdep update
 #
-# Both are header-only C++ libraries the C++ dc_bridge (ADR-0007) uses.
+# tomlplusplus/msgpack-cxx are header-only C++ libraries the C++ dc_bridge (ADR-0007) uses.
 tomlplusplus:
   ubuntu: [libtomlplusplus-dev]
   debian: [libtomlplusplus-dev]
 msgpack-cxx:
   ubuntu: [libmsgpack-cxx-dev]
   debian: [libmsgpack-cxx-dev]
+# zxing-cpp: the ZXing-C++ barcode/QR reader dc_measurements' camera plugin uses in-process
+# (#123, replacing the old Python zbar service). Ships a real CMake config (ZXing::ZXing).
+zxing-cpp:
+  ubuntu: [libzxing-dev]
+  debian: [libzxing-dev]

@@ -2,7 +2,8 @@
 
 ## Description
 
-Save camera image files: raw, rotated and/or inspected. Images can be inspected using different services (e.g barcode detection)
+Save camera image files: raw, rotated and/or inspected. Images can be inspected using different
+detection modules (e.g. barcode/QR detection, in-process via [ZXing-C++](https://github.com/zxing-cpp/zxing-cpp))
 
 ## Parameters
 

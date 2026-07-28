@@ -6,7 +6,6 @@
 #include <string>
 
 #include "dc_core/measurement.hpp"
-#include "dc_interfaces/srv/detect_barcode.hpp"
 #include "dc_interfaces/srv/draw_image.hpp"
 #include "dc_interfaces/srv/save_image.hpp"
 #include "dc_measurements/measurement.hpp"

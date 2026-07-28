@@ -73,21 +73,6 @@ void Camera::onConfigure()
     node->set_parameter(rclcpp::Parameter(measurement_name_ + ".rotation_angle", rotation_angle_));
   }
 
-  if (std::find(detection_modules_.begin(), detection_modules_.end(), "barcode") != detection_modules_.end())
-  {
-    cli_barcodes_ = node->create_client<dc_interfaces::srv::DetectBarcode>("/dc/service/detect_barcodes",
-                                                                           rclcpp::ServicesQoS(), client_cb_group_);
-    while (!cli_barcodes_->wait_for_service(std::chrono::seconds(1)))
-    {
-      if (!rclcpp::ok())
-      {
-        throw std::runtime_error{ "Barcode client interrupted while waiting for service to appear." };
-      }
-      RCLCPP_INFO(logger_, "Waiting for barcode service to appear...");
-    }
-    RCLCPP_INFO(logger_, "Barcode detection service initialized");
-  }
-
   if (draw_det_barcodes_)
   {
     cli_draw_image_ = node->create_client<dc_interfaces::srv::DrawImage>("/dc/service/draw_image",
@@ -262,16 +247,20 @@ dc_interfaces::msg::StringStamped Camera::collect()
     // Barcode
     if (std::find(detection_modules_.begin(), detection_modules_.end(), "barcode") != detection_modules_.end())
     {
-      auto barcode_req = std::make_shared<dc_interfaces::srv::DetectBarcode::Request>();
-      barcode_req->frame = dc_util::cvToImage(cv_ptr);
-      auto result_future = cli_barcodes_->async_send_request(barcode_req);
-      std::future_status status = result_future.wait_for(500ms);
-
-      if (status != std::future_status::ready)
+      // In-process detection via ZXing-C++ (#123): replaces the old per-frame round trip to
+      // the Python /dc/service/detect_barcodes service (pyzbar/zbar).
+      ZXing::ImageView image_view(cv_ptr->image.data, cv_ptr->image.cols, cv_ptr->image.rows, ZXing::ImageFormat::BGR,
+                                  static_cast<int>(cv_ptr->image.step));
+      auto results = ZXing::ReadBarcodes(image_view);
+      std::vector<ZXing::Result> result_barcodes;
+      for (auto& result : results)
       {
-        RCLCPP_ERROR(logger_, "Did not receive response from detecting barcode in image request: %d", (int)status);
+        if (result.isValid())
+        {
+          result_barcodes.push_back(result);
+        }
       }
-      auto result_barcodes = result_future.get()->barcodes;
+
       if (!result_barcodes.empty())
       {
         data_json["inspected"]["barcode"] = json::array();
@@ -286,13 +275,21 @@ dc_interfaces::msg::StringStamped Camera::collect()
       {
         for (auto& barcode : result_barcodes)
         {
+          auto bbox = ZXing::BoundingBox(barcode.position());
+          uint16_t top = static_cast<uint16_t>(std::max(0, bbox.topLeft().y));
+          uint16_t left = static_cast<uint16_t>(std::max(0, bbox.topLeft().x));
+          uint16_t width = static_cast<uint16_t>(bbox.bottomRight().x - bbox.topLeft().x);
+          uint16_t height = static_cast<uint16_t>(bbox.bottomRight().y - bbox.topLeft().y);
+          std::string type = ZXing::ToString(barcode.format());
+          std::string data = barcode.text();
+
           auto draw_req = std::make_shared<dc_interfaces::srv::DrawImage::Request>();
           draw_req->frame = dc_util::cvToImage(cv_ptr);
           draw_req->shape = "rectangle";
-          draw_req->box_top = barcode.top;
-          draw_req->box_left = barcode.left;
-          draw_req->box_width = barcode.width;
-          draw_req->box_height = barcode.height;
+          draw_req->box_top = top;
+          draw_req->box_left = left;
+          draw_req->box_width = width;
+          draw_req->box_height = height;
           draw_req->box_thickness = 5;
           uint16_t colors[3] = { 255, 0, 0 };
           // https://answers.ros.org/question/363764/how-does-one-assign-values-to-messages-with-arrays-in-c/
@@ -300,22 +297,23 @@ dc_interfaces::msg::StringStamped Camera::collect()
           draw_req->font_txt = cv::FONT_HERSHEY_SIMPLEX;
           draw_req->font_thickness = 2;
           draw_req->font_scale = 0.8;
-          draw_req->text = std::string(barcode.type) + "-" + barcode.data;
+          draw_req->text = type + "-" + data;
           auto result_future_draw = cli_draw_image_->async_send_request(draw_req);
           auto status_draw = result_future_draw.wait_for(500ms);
           if (status_draw != std::future_status::ready)
           {
-            RCLCPP_ERROR(logger_, "Did not receive response from drawing barcode in image request: %d", (int)status);
+            RCLCPP_ERROR(logger_, "Did not receive response from drawing barcode in image request: %d",
+                         (int)status_draw);
           }
           auto image_det = result_future_draw.get()->frame;
           cv_ptr = cv_bridge::toCvCopy(image_det, image_det.encoding);
           json barcode_json;
-          barcode_json["data"] = barcode.data;
-          barcode_json["type"] = barcode.type;
-          barcode_json["top"] = barcode.top;
-          barcode_json["left"] = barcode.left;
-          barcode_json["width"] = barcode.width;
-          barcode_json["height"] = barcode.height;
+          barcode_json["data"] = data;
+          barcode_json["type"] = type;
+          barcode_json["top"] = top;
+          barcode_json["left"] = left;
+          barcode_json["width"] = width;
+          barcode_json["height"] = height;
           data_json["inspected"]["barcode"].push_back(barcode_json);
         }
       }
