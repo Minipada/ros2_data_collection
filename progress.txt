@@ -2196,3 +2196,51 @@ layer invalidates on every source change
 - Still unverified end-to-end in this sandbox (same recurring constraint, no ROS/colcon
   install here); pushed for CI to confirm. `pre-commit` (`clang-format`, `codespell`, etc.)
   clean on both changed files.
+
+### #88 - Add Measurement: Random
+
+- Added a new `Random` Measurement plugin (`dc_measurements/plugins/measurements/random.cpp`
+  + `include/dc_measurements/plugins/measurements/random.hpp`), the good-first-issue "good
+  first issue" example: mirrors `uptime.cpp`'s minimal structure (no state beyond the RNG
+  itself) rather than any of the heavier system-info plugins.
+  - Parameters (all optional, declared via `nav2_util::declare_parameter_if_not_declared` in
+    `onConfigure()`, same pattern as `tcp_health.cpp`): `type` (`"integer"` or `"double"`,
+    default `"integer"`), `min`/`max` (doubles, defaulting to `0.0`/`100.0`), `seed` (int,
+    default `-1`). Emits `{"value": <n>}`.
+  - `min >= max` or an unrecognized `type` throws `std::runtime_error` from `onConfigure()` —
+    the base `Measurement::configure()` catches that and disables the plugin
+    (`enabled_ = false`, timer reset) rather than crashing the server, same contract every
+    other plugin's `onConfigure()` relies on.
+  - Seeding (acceptance criterion: "optional seed parameter so runs are reproducible"): a
+    negative `seed` (the default) seeds a `std::mt19937_64` from `std::random_device`; a
+    non-negative `seed` seeds it directly, so two runs with the same `seed` (and same
+    `type`/`min`/`max`) produce the identical value sequence.
+  - Value generation (acceptance criterion: "configurable value range and type, at minimum
+    integer and double"): `std::uniform_int_distribution<int64_t>` for `type: integer`
+    (inclusive `[min, max]`), `std::uniform_real_distribution<double>` for `type: double`
+    (`[min, max)` per the standard). The JSON schema (`plugins/measurements/json/random.json`)
+    declares `value` as `type: "number"`, which validates both an emitted JSON integer and a
+    JSON float under the same schema — no need for two schemas or a type-conditional one.
+  - Registered in `dc_measurements/measurement_plugin.xml` (alphabetically between `Position`
+    and `SerialInterface`) and `dc_measurements/CMakeLists.txt` (new
+    `dc_random_measurement` library, appended to `dc_measurement_plugin_libs` — picked up
+    automatically by the existing install/export/`ament_target_dependencies` loops, no other
+    CMake changes needed since it has no extra source files or deps beyond what the shared
+    `dependencies` list and `nav2_util` header-only include already cover).
+  - Test: `dc_measurements/test/test_measurement_random.cpp` (registered in `CMakeLists.txt`'s
+    `tests` list as `test_measurement_random`), mirroring `test_measurement_uptime.cpp`'s
+    `MeasurementServer`-in-process harness. Three cases: default params produce an integer
+    `value` in `[0, 100]`; an explicit `type: double`/`min: 5.0`/`max: 6.0` config produces a
+    value in `[5.0, 6.0]`; and a same-`seed` reproducibility check that cycles one
+    `MeasurementServer` node through deactivate→cleanup→configure→activate twice (rather than
+    standing up a second node instance with the same default lifecycle-node name in the same
+    process/context, which risked colliding lifecycle-service names) and asserts the first
+    emitted value is bit-identical across both configure cycles.
+  - Docs: `doc/src/dc/measurements/random.md` (new, parameter table + schema + example config,
+    following `tcp_health.md`'s layout since Random has multiple parameters like TCPHealth
+    does) and linked from `doc/src/SUMMARY.md` alphabetically next to the other Measurements.
+- **Not done / left for CI**: no ROS 2/colcon toolchain in this sandbox (same recurring
+  constraint as every other slice in this log) — could not run an actual `colcon build`/
+  `colcon test` here. `pre-commit` (`clang-format`, `codespell`, JSON/XML lint, etc.) is clean
+  on every changed/new file; the `poetry-requirements` hook failure is the same pre-existing,
+  unrelated tool-environment gap noted throughout this log (no `poetry` module installed).
