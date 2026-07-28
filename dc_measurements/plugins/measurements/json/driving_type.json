@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DrivingType",
+  "description": "Current driving/operating mode of the robot, so every other metric can be segmented by mode",
+  "properties": {
+    "mode": {
+      "description":
+          "Driving mode: 'unknown' until a mode has been observed (dedicated mode topic) or a configured velocity source has published within 'velocity_timeout_s' (velocity-source inference)",
+      "type": "string",
+      "enum": [
+        "autonomous",
+        "manual",
+        "teleop",
+        "unknown"
+      ]
+    }
+  },
+  "required": [
+    "mode"
+  ],
+  "type": "object"
+}

@@ -31,6 +31,14 @@
         </class>
     </library>
 
+    <library path="dc_driving_type_measurement">
+        <class name="dc_measurements/DrivingType" type="dc_measurements::DrivingType" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_driving_type
+            </description>
+        </class>
+    </library>
+
     <library path="dc_dummy_measurement">
         <class name="dc_measurements/Dummy" type="dc_measurements::Dummy" base_class_type="dc_core::Measurement">
             <description>

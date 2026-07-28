@@ -113,6 +113,9 @@ list(APPEND dc_measurement_plugin_libs dc_dummy_measurement)
 add_library(dc_distance_traveled_measurement SHARED plugins/measurements/distance_traveled.cpp)
 list(APPEND dc_measurement_plugin_libs dc_distance_traveled_measurement)
 
+add_library(dc_driving_type_measurement SHARED plugins/measurements/driving_type.cpp)
+list(APPEND dc_measurement_plugin_libs dc_driving_type_measurement)
+
 add_library(dc_ip_camera_measurement SHARED plugins/measurements/ip_camera.cpp)
 list(APPEND dc_measurement_plugin_libs dc_ip_camera_measurement)
 
@@ -260,6 +263,7 @@ install(DIRECTORY plugins/measurements/json
 
 set(tests
   test_measurement_diagnostics
+  test_measurement_driving_type
   test_measurement_dummy
   test_measurement_os
   test_measurement_parameters
