@@ -175,6 +175,7 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   measurement_if_all_conditions_.resize(measurement_ids_.size());
   measurement_if_any_conditions_.resize(measurement_ids_.size());
   measurement_if_none_conditions_.resize(measurement_ids_.size());
+  measurement_gate_condition_.resize(measurement_ids_.size());
   measurement_condition_max_measurements_.resize(measurement_ids_.size());
 
   condition_types_.resize(condition_ids_.size());
@@ -259,6 +260,7 @@ bool MeasurementServer::loadMeasurementPlugins()
         dc_util::get_str_array_type_param(node, measurement_ids_[i], "if_any_conditions", std::vector<std::string>());
     measurement_if_none_conditions_[i] =
         dc_util::get_str_array_type_param(node, measurement_ids_[i], "if_none_conditions", std::vector<std::string>());
+    measurement_gate_condition_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "gate_condition", "");
     measurement_condition_max_measurements_[i] =
         dc_util::get_int_type_param(node, measurement_ids_[i], "condition_max_measurements", 0);
 
@@ -283,7 +285,8 @@ bool MeasurementServer::loadMeasurementPlugins()
                              << ", Max measurement on condition: " << measurement_condition_max_measurements_[i]
                              << ", If all condition: " << dc_util::join(measurement_if_all_conditions_[i], ",")
                              << ", If any condition: " << dc_util::join(measurement_if_any_conditions_[i], ",")
-                             << ", If none condition: " << dc_util::join(measurement_if_none_conditions_[i], ","));
+                             << ", If none condition: " << dc_util::join(measurement_if_none_conditions_[i], ",")
+                             << ", Gate condition: " << measurement_gate_condition_[i]);
 
       measurements_.push_back(measurement_plugin_loader_.createUniqueInstance(measurement_types_[i]));
       measurements_.back()->configure(
@@ -293,9 +296,9 @@ bool MeasurementServer::loadMeasurementPlugins()
           measurement_init_collect_[i], measurement_init_max_measurements_[i], measurement_include_measurement_name_[i],
           measurement_include_measurement_plugin_[i], measurement_condition_max_measurements_[i],
           measurement_if_all_conditions_[i], measurement_if_any_conditions_[i], measurement_if_none_conditions_[i],
-          measurement_remote_keys_[i], measurement_remote_prefixes_[i], measurement_nested_[i], measurement_flatten_[i],
-          save_local_base_path_, all_base_path_, all_base_path_expanded_, save_local_base_path_expanded_, run_id_,
-          run_id_enabled_, custom_params_);
+          measurement_gate_condition_[i], measurement_remote_keys_[i], measurement_remote_prefixes_[i],
+          measurement_nested_[i], measurement_flatten_[i], save_local_base_path_, all_base_path_,
+          all_base_path_expanded_, save_local_base_path_expanded_, run_id_, run_id_enabled_, custom_params_);
     }
     catch (const pluginlib::PluginlibException& ex)
     {

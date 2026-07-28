@@ -73,8 +73,22 @@ Each measurement is collected through a node and has these configuration paramet
 | **if_all_conditions**          | Collect only if all conditions are activated                                                 | list\[str\] | N/A (optional)                       |
 | **if_any_conditions**          | Collect if any conditions is activated                                                       | list\[str\] | N/A (optional)                       |
 | **if_none_conditions**         | Collect only if all conditions are not activated                                             | list\[str\] | N/A (optional)                       |
+| **gate_condition**             | Name of a Condition that must become true once before any collection is published; then latches open permanently and is never consulted again | str | N/A (optional) |
 | **include_measurement_name**   | Include measurement name in the JSON data                                                    | bool        | false                                |
 | **include_measurement_plugin** | Include measurement plugin name in the JSON data                                             | bool        | false                                |
+
+```admonish info title="gate_condition vs. if_all/if_any/if_none_conditions"
+`gate_condition` is a one-shot arming latch, not a per-collection gate: it names a single
+Condition plugin (any type under `dc_measurements/plugins/conditions/`) that suppresses
+**every** collection — including the `init_collect` Record normally published on
+activation — until that Condition becomes true for the first time. Once armed, the
+Condition is never consulted again for the lifetime of the node, even if it later becomes
+false again; re-arming does not happen. This is unlike `if_all_conditions`/
+`if_any_conditions`/`if_none_conditions`, which are re-evaluated on every collection and can
+suppress publishing again once their Conditions change. If the named Condition doesn't
+exist among `condition_plugins`, collection is held back permanently and an error is
+logged.
+```
 
 ## Available plugins:
 
