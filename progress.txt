@@ -2087,3 +2087,38 @@ layer invalidates on every source change
   `EIO`, not `0`) holds on the actual CI container's kernel/pty implementation, since that
   was inferred from documented Linux tty behavior and the log evidence above, not from a
   direct local repro (no ROS environment here to run it in).
+
+### #60 follow-up — fixed a second CI hang: raw fork() in a multithreaded rclcpp test binary
+
+- CI's `colcon-test` still failed after the VMIN=0 fix above, this time in a way that made
+  real progress: `ActivatesSuccessfullyWithMissingPort`, `DelimiterParsingProducesNamedFields`,
+  and `RegexParsingProducesNamedFields` all now pass. `ReconnectsAfterDisconnect` hung
+  indefinitely (`missing_result`, same as the previous failure's symptom) partway through —
+  after the initial Record and the simulated unplug (killing the first `socat`), the log shows
+  the test's own poll/write loop running continuously for 59+ seconds with no further progress
+  and no "Opened serial port" log ever appearing again, well past every one of the test's own
+  internal bounds at the time (a 20-iteration post-kill spin loop, `SocatPtyPair::start()`'s own
+  10 s symlink-wait budget) — the CI job's own outer timeout was the only thing that ever ended
+  it.
+- Root cause: `SocatPtyPair::start()` used raw `fork()` + `execlp()` to spawn each `socat`
+  instance. This test binary links `rclcpp`/DDS, which run their own internal threads; calling
+  `fork()` from a multithreaded process is a well-documented hazard — if another thread holds a
+  lock (e.g. glibc's malloc arena lock) at the exact instant of the fork, the child (or even the
+  parent, inside libc's own fork() wrapper, before any of `start()`'s own bounded loops even
+  begin executing) can deadlock waiting on a lock nothing will ever release, since only the
+  calling thread is cloned. The first four `fork()` calls across tests 1-3 happened to land on
+  safe timing; the fifth (the mid-test respawn inside `ReconnectsAfterDisconnect`, its second
+  `fork()`) didn't.
+- Fix (`dc_measurements/test/test_measurement_serial_interface.cpp`): replaced `fork()`+
+  `execlp()` with `posix_spawnp()`, which POSIX guarantees is safe to call from a multithreaded
+  program — this is the standard remedy for exactly this class of hazard, not specific to this
+  test. Also hardened `SocatPtyPair::stop()` (bounded `WNOHANG` poll with a `SIGKILL` fallback
+  instead of a plain blocking `waitpid()`, so a stuck child can never hang the harness either)
+  and `spinUntilCallback()` (bounded to 500 iterations with an `ASSERT_TRUE` failure message
+  instead of an unbounded `while` loop), so any *future* regression in this suite fails fast
+  with a clear message instead of running until the CI job's own external timeout — the same
+  "missing_result, no diagnostic" symptom made both of these failures slower to diagnose than
+  they needed to be.
+- Still unverified end-to-end in this sandbox (no ROS/colcon install, same recurring
+  constraint); pushed for CI to confirm. `pre-commit` (`clang-format` etc.) clean on the
+  changed file.
