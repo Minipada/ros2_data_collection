@@ -27,6 +27,7 @@
   - [OS](./dc/measurements/os.md)
   - [Permissions](./dc/measurements/permissions.md)
   - [Position](./dc/measurements/position.md)
+  - [Serial interface](./dc/measurements/serial_interface.md)
   - [Speed](./dc/measurements/speed.md)
   - [Storage](./dc/measurements/storage.md)
   - [String stamped](./dc/measurements/string_stamped.md)

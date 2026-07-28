@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SerialInterface",
+  "description": "A line parsed off a configured serial port",
+  "properties": {
+    "raw": {
+      "description": "The raw line read from the serial port, with any trailing CR/LF stripped",
+      "type": "string"
+    },
+    "fields": {
+      "description":
+          "Named fields extracted from 'raw' per the configured parsing (delimiter split or regex capture groups)",
+      "type": "object"
+    }
+  },
+  "required": [
+    "raw",
+    "fields"
+  ],
+  "type": "object"
+}
