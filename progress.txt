@@ -2392,3 +2392,53 @@ from `gh-pages`) is being retired.
   away from `gh-pages`/off (the flag GitHub's UI shows) -- blocked by the same API restriction
   and no browser tool; deleting the source branch achieves the same practical outcome (no live
   site) without it.
+
+### #101 - Add Measurement: Driving type (autonomous, manual, teleop, ...)
+
+- Added `dc_measurements/DrivingType` (`dc_measurements/plugins/measurements/driving_type.{hpp,cpp}`,
+  JSON schema, gtest suite, docs page), following the existing plugin pattern (Diagnostics/CmdVel:
+  subscription-backed, `onConfigure`/`setValidationSchema` overrides, registered in
+  `measurement_plugin.xml` + `CMakeLists.txt`). There is no standard ROS message for "current
+  driving mode", so the plugin is entirely configuration-driven and supports the two shapes the
+  issue asked for, chosen by which parameters are set (configuring both throws at `onConfigure`,
+  a config error the base class turns into "measurement disabled" per the existing
+  `configure()`/`onConfigure()` contract):
+  - **Dedicated mode topic**: `mode_topic` (`std_msgs/String`) + parallel `value_mapping_from`/
+    `value_mapping_to` arrays map a raw value to a mode. An unmapped raw value is ignored (keeps
+    the previous mode) rather than treated as "unknown", since an unrecognized value read more
+    like an upstream hiccup than an actual mode change.
+  - **Velocity source inference**: parallel `velocity_topics`/`velocity_modes` arrays subscribe to
+    `geometry_msgs/Twist` sources (e.g. a Nav2 output and a joystick teleop node); the mode of
+    whichever source last published wins, and a source untouched for `velocity_timeout_s` (default
+    1.0s) stops counting, falling back to `unknown`.
+  - **Closed set of emitted strings** (the third acceptance criterion): `autonomous`, `manual`,
+    `teleop`, `unknown` -- enforced both in the JSON schema (`enum`) and at `onConfigure` (a
+    mapped/velocity-source value outside the set is rejected with an `RCLCPP_ERROR` and that one
+    entry is dropped, matching the existing lenient style used by e.g. Diagnostics's
+    `level_threshold` parsing, rather than failing the whole Measurement).
+  - **No-mode-observed-yet behavior** (the fourth acceptance criterion): defined as "always emit a
+    Record with `mode: "unknown"`", not "suppress the Record" -- `collect()` runs on every poll
+    tick and always returns a valid, schema-passing message, so a gap in `driving_type` data means
+    the plugin/measurement_server itself stopped, not "mode currently unknown". This differs from
+    Diagnostics/CmdVel's "cache last message, return empty StringStamped if nothing new" pattern
+    on purpose, since driving mode is continuous state to segment other metrics by, not a discrete
+    event stream.
+  - Test suite (`test_measurement_driving_type.cpp`, 5 tests) covers: default `unknown` before any
+    observation, mode-topic mapping, mode-topic ignoring an unmapped raw value, velocity-source
+    inference picking the last-active source, and the velocity staleness timeout falling back to
+    `unknown`.
+  - Docs: new `doc/src/dc/measurements/driving_type.md`, linked from `doc/src/SUMMARY.md`.
+- **Verification status**: `pre-commit` (clang-format, XML/JSON lint, codespell, ROS package
+  metadata checks -- same `build-doc`/`poetry-requirements`/`pycln`/`flake8`/`go-fmt` skips as
+  every prior DC 2.0 slice, all broken/heavy independent of this diff) is clean on every changed
+  file. No local ROS 2/colcon install exists in this sandbox (same constraint noted repeatedly
+  since #242), so a real `colcon build --packages-select dc_measurements` +
+  `colcon test --packages-select dc_measurements` was kicked off in the background via
+  `tools/e2e/scripts/build.sh` against a fresh `dc-workspace` Podman image (the same image
+  `.github/workflows/ci.yaml`/`ci-jazzy.yaml` build from) to compile the new plugin and run its
+  gtest suite for real, but the full apt/rosdep/aws_sdk_vendor/dc_bridge/dc_measurements build
+  chain had not finished by the time this commit was made. **Not done / left for follow-up or
+  CI**: confirm `colcon build --packages-select dc_measurements` succeeds and
+  `colcon test --packages-select dc_measurements` passes 5/5 for `test_measurement_driving_type`
+  in this environment or in CI once this PR's workflow run lands -- if it surfaces a real bug, fix
+  it in a follow-up commit on this branch before merge.
