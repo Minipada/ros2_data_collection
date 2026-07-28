@@ -2058,3 +2058,32 @@ layer invalidates on every source change
   for real, including confirming `socat` actually resolves via rosdep in that environment; no
   demo against a live Destination was attempted either (optional per the issue, and needs the
   same ROS environment this sandbox lacks).
+
+### #60 follow-up — fixed a real CI-caught bug: VMIN=0 termios reads misidentified as disconnect
+
+- CI's `colcon-test` job (this sandbox has no ROS/colcon install, so this was the first real
+  execution of the new suite) failed: `dc_measurements_test_measurement_serial_interface`
+  hung until the job's own timeout, logging an endless `Opened serial port ... / disconnected;
+  will attempt to reconnect / Message empty` flap starting on the very first test that
+  actually wrote data to the virtual pty (`DelimiterParsingProducesNamedFields`).
+- Root cause: `collect()`'s read loop treated `read()` returning `0` as EOF/disconnect. But
+  `openPort()` sets raw-mode termios with `VMIN=0`/`VTIME=0`, and per POSIX termios semantics
+  that combination makes a terminal/pty `read()` return `0` (not `-1`/`EAGAIN`) whenever no
+  data is currently available — the normal "nothing to read this poll" case, not a hangup.
+  The port was being closed and reopened on essentially every single poll, so it could never
+  stay open long enough to actually receive the bytes the test wrote to the peer pty.
+- Fix (`dc_measurements/plugins/measurements/serial_interface.cpp`): `n == 0` now just
+  `break`s the read loop (treated like "no more data right now"), matching `EAGAIN`/
+  `EWOULDBLOCK`. `disconnected` is now set only by a real `read()` error other than those two
+  — on Linux this is how an actual unplug manifests on a tty/pty (`EIO` once the peer/master
+  side is gone), which is also how the real hangup was already being detected in the intended
+  `ReconnectsAfterDisconnect` test path (kill `socat` -> next `read()` returns `-1`/`EIO`, not
+  `0`) — verified by re-reading the exact log sequence CI produced. Updated
+  `doc/src/dc/measurements/serial_interface.md`'s disconnect-detection description to match
+  ("a read error, e.g. `EIO`" instead of "read error or EOF").
+- Still not able to re-run `colcon test` for real in this sandbox (same recurring constraint);
+  pushed the fix for CI to re-verify. If CI still fails, the next thing to check is whether
+  `ReconnectsAfterDisconnect`'s own disconnect-detection assumption (killed `socat` ->
+  `EIO`, not `0`) holds on the actual CI container's kernel/pty implementation, since that
+  was inferred from documented Linux tty behavior and the log evidence above, not from a
+  direct local repro (no ROS environment here to run it in).
