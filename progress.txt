@@ -2578,3 +2578,77 @@ from `gh-pages`) is being retired.
   than scope-creeping into this detection-library swap. `poetry.lock`'s `content-hash` is stale
   relative to `pyproject.toml` until a real `poetry lock` can run (poetry itself is broken in
   this sandbox, same gap noted above).
+
+### #124 - Measurement: gate all collection until a condition first becomes true
+
+- Added a new `gate_condition` Measurement parameter (`dc_measurements/include/
+  dc_measurements/measurement.hpp`): a one-shot arming latch, deliberately distinct from the
+  existing `if_all_conditions`/`if_any_conditions`/`if_none_conditions` (which are
+  re-evaluated on every collection and can suppress publishing again once their Conditions
+  change). `gate_condition` names a single Condition plugin (any type under
+  `dc_measurements/plugins/conditions/`, since it's just looked up in the same
+  `conditions_` map the existing condition params already use); once that Condition's
+  `getState()` returns true one time, a new `gate_armed_` bool latches permanently for the
+  lifetime of the Measurement instance and the Condition is never consulted again -- covers
+  the "latching semantics explicit: re-arming never happens once triggered" acceptance
+  criterion. Empty string (the default) disables gating entirely, so this is fully
+  backwards compatible.
+- **`init_collect` interaction (the issue's flagged open question), resolved by construction
+  rather than a special case**: the gate check (`isGateArmed()`) lives inside `publish()`,
+  not before `collect()` -- the same place the existing `if_all`/`if_any`/`if_none` gating
+  already lives, and for the same reason: several Condition plugins (`Exist`, `IntegerEqual`,
+  etc.) evaluate the Measurement's own just-collected data, so the msg has to exist before any
+  condition, gate included, can be checked against it. Since `activate()`'s `init_collect_`
+  path already just calls `collectAndPublish()` -- the same function every polling tick calls
+  -- routing the gate through `publish()` means `init_collect`'s fire is held back by an unarmed
+  gate for free, with no separate code path to keep in sync. Documented explicitly in
+  `doc/src/dc/measurements.md` (new `gate_condition` table row + an admonish-info block
+  contrasting it with `if_all/if_any/if_none_conditions`) per the "documented alongside the
+  existing condition parameters" and "interaction with init_collect defined and documented"
+  acceptance criteria.
+- If `gate_condition` names a Condition not present in `condition_plugins`, `isGateArmed()`
+  logs an `RCLCPP_ERROR` and returns false forever (fails closed, not open) -- collection stays
+  permanently suppressed rather than silently behaving as if ungated.
+- **Blast radius of the `dc_core::Measurement::configure()` signature change** (adding
+  `gate_condition` as a new parameter): the pure virtual declaration
+  (`dc_core/include/dc_core/measurement.hpp`), its one concrete override
+  (`dc_measurements/include/dc_measurements/measurement.hpp`), the one call site
+  (`dc_measurements/src/measurement_server.cpp`'s `loadMeasurementPlugins()`), and a new
+  parallel `measurement_gate_condition_` member vector in `measurement_server.hpp`/`.cpp`
+  (mirroring `measurement_if_all_conditions_` etc.) were the full set -- confirmed via a
+  targeted codebase search that none of the 23 concrete measurement plugins or any test file
+  override `configure()` themselves (they all inherit it through
+  `dc_measurements::Measurement`), so no other file needed touching.
+- New test `dc_measurements/test/test_measurement_gate_condition.cpp` (registered in
+  `CMakeLists.txt`), covering the two acceptance criteria a single collect/publish trace can't:
+  using the real `Moving` condition plugin (state-based, driven by publishing
+  `nav_msgs/Odometry` independently of the Dummy measurement's own data, with
+  `count_hysteresis: 1` for determinism) against a `dummy` Measurement with
+  `gate_condition: moving`:
+  - `ConditionNeverBecomingTrueNeverPublishesAnything` -- with `init_collect: true` and no
+    Odometry ever published, zero Records are received over several polling intervals,
+    proving both the periodic gate and the `init_collect` interaction hold indefinitely (the
+    "condition never becomes true" acceptance criterion).
+  - `ArmsOnceThenLatchesOpenEvenAfterConditionBecomesFalseAgain` -- with `init_collect: false`,
+    confirms zero Records before the robot moves, one Record after a single above-threshold
+    Odometry message arms the gate, then publishes two below-threshold Odometry messages to
+    flip the real `Moving` Condition back to inactive and asserts the callback count keeps
+    increasing anyway -- the gate does not re-close.
+- **Verified for real**, same methodology as prior DC 2.0 slices: `pre-commit` clean on every
+  changed file (`SKIP=poetry-requirements,build-doc` -- both known environment gaps unrelated
+  to this diff, poetry itself broken in this sandbox and `build-doc`'s image copy hit `no space
+  left on device` on the host's separately-tracked, unrelated-to-this-diff nearly-full root
+  partition; `graphRoot` for the workspace image build below lives on `/home`, which has
+  headroom, so that build was unaffected); `clang-format` auto-reformatted the two touched
+  header files, re-ran clean after. Built a fresh `dc-workspace` Podman image via
+  `tools/e2e/scripts/build.sh` (all 15 packages, ~15.5 min, zero errors -- `dc_measurements`
+  compiled clean against the new `configure()` signature, confirming the blast-radius analysis
+  above was complete). Ran `colcon test --packages-select dc_measurements --ctest-args -R
+  test_measurement_gate_condition` against that image: both new tests pass (`ctest -V` output
+  shows the real `"gate_condition 'moving' became true, collection will proceed normally from
+  now on"` log line firing exactly once, at the arm point, never again). Then ran the full
+  `colcon test --packages-select dc_measurements`: 34/34 tests pass, 0 failures --
+  `colcon test-result --all` shows this as the pre-existing 9 test binaries/22 gtest cases (31,
+  matching #123's last reported count) plus this change's 1 new test binary + 2 new gtest
+  cases (+3 = 34), confirming no regression from the `configure()` signature change across
+  every other measurement plugin's test.
