@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Random",
+  "description": "Randomly generated value",
+  "properties": {
+    "value": {
+      "description": "Randomly generated value within the configured range",
+      "type": "number"
+    }
+  },
+  "type": "object"
+}
