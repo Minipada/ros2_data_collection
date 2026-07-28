@@ -6,11 +6,14 @@ each line into named fields, publishing them as a Record — for custom robot se
 talk over a UART/USB-serial link and never reach a ROS topic on their own.
 
 The port is opened lazily, on the first poll after activation, and never on `onConfigure()` — an
-unplugged or not-yet-connected device does not fail activation. If the port disconnects (a read
-error, e.g. `EIO` when a USB adapter is unplugged or its peer hangs up), the Measurement logs a
-warning, closes the file descriptor, and keeps polling; the next poll after the device reappears
-reopens and resumes normally, with no operator action needed and no busy-looping in between
-(opening only happens once per `polling_interval` tick).
+unplugged or not-yet-connected device does not fail activation. Disconnection is detected two
+ways: a hard read error (e.g. `EIO` on some USB-serial removal paths) closes the port
+immediately; a hangup with no error (the more common case on a raw-mode, non-blocking read,
+where `read()` returning `0` alone can't be told apart from "no data yet") is caught via
+`poll()`'s `POLLHUP`/`POLLERR`. Either way the Measurement logs a warning, closes the file
+descriptor, and keeps polling; the next poll after the device reappears reopens and resumes
+normally, with no operator action needed and no busy-looping in between (opening only happens
+once per `polling_interval` tick).
 
 Only line-delimited framing (`\n`, with an optional trailing `\r` stripped) is implemented today;
 `framing` is still a configuration knob for future framing modes. Only the most recently completed
