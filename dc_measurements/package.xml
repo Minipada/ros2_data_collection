@@ -28,6 +28,7 @@
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
   <depend>yaml_cpp_vendor</depend>
+  <depend>zxing-cpp</depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>socat</test_depend>

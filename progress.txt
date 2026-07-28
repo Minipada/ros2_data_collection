@@ -2441,3 +2441,115 @@ from `gh-pages`) is being retired.
   `ModeTopicIgnoresUnmappedRawValueAndKeepsCurrentMode`,
   `VelocitySourceInferenceReportsModeOfLastActiveSource`,
   `VelocitySourceFallsBackToUnknownAfterTimeout`), 100% tests passed, 0 failed, 1.51s.
+
+### #123 - Move QR/barcode detection to a more reliable C++ library (ZXing-C++)
+
+- **Decision (the issue asked to pick one and say why): moved detection in-process into
+  `dc_measurements`' `Camera` plugin**, rather than keeping it behind a service boundary with a
+  drop-in C++ replacement node. In-process was the option that actually satisfies the issue's
+  stated goal ("the last Python runtime dependency in the detection path" and "costs a Python
+  node, a service round-trip per frame") -- keeping a service (even a C++ one) would still pay the
+  per-frame round-trip the issue flags as part of the problem, for no offsetting benefit, since
+  `draw_image`/`save_image` stay exactly as they were (unrelated to detection) so the "service
+  symmetry" argument for keeping it doesn't actually apply once only barcode detection moves.
+- Swapped the implementation behind the existing `detection_modules: ["barcode"]` config
+  interface (unchanged for users, per acceptance criteria) in `camera.cpp`/`camera.hpp`:
+  `Camera::collect()` now calls `ZXing::ReadBarcodes()` directly on the already-decoded `cv::Mat`
+  (`ZXing::ImageView` over the BGR buffer, using the Mat's real `step` as row stride so a
+  non-contiguous OpenCV image is still read correctly) instead of building a
+  `dc_interfaces::srv::DetectBarcode::Request` and round-tripping to `/dc/service/detect_barcodes`.
+  Per-result bounding box comes from `ZXing::BoundingBox(result.position())`; `type`/`data` come
+  from `ZXing::ToString(result.format())`/`result.text()`. `draw_image` client/service and the
+  JSON schema (`camera.json`) are untouched -- same `data`/`type`/`top`/`left`/`width`/`height`
+  shape as before, same "only populated inside the `save_detections_img_ && draw_det_barcodes_`
+  branch" behavior as the pre-existing code (a latent quirk of the original implementation,
+  left as-is; not this issue's scope to change).
+- **Removed rather than left dead** (the issue's fourth acceptance criterion): deleted
+  `dc_services/dc_services/barcode_detection.py`, its `dc_detection_barcodes.launch.py`, its
+  `barcode_detection` console-script entry point, and the `<exec_depend>zbar</exec_depend>` from
+  `dc_services/package.xml`. Deleted `dc_interfaces/msg/Barcode.msg` and
+  `srv/DetectBarcode.srv` (both fully orphaned once the service path is gone -- nothing else in
+  the tree referenced them beyond camera.cpp/hpp and the stale `#include` in
+  `dc_util/include/dc_util/service_utils.hpp`, which is also cleaned up) and their
+  `rosidl_generate_interfaces()` entries. Removed the `detection_barcodes_service` launch
+  arg/`IncludeLaunchDescription` plumbing from `dc_bringup/launch/dc_bringup.launch.py` (both
+  composition branches) and from the two `dc_demos` all-in-one launch files
+  (`tb3_qrcodes.launch.py`, `tb3_qrcodes_minio_pgsql.launch.py`) that forwarded it. Removed
+  `pyzbar` from `pyproject.toml`/`requirements.txt`/`requirements-dev.txt`/`poetry.lock` (the
+  `poetry` binary itself is broken in this sandbox -- `ModuleNotFoundError: No module named
+  'poetry'`, same environment gap noted for the `poetry-requirements` pre-commit hook since
+  earlier slices -- so the lock file's package/hash blocks for `pyzbar` were removed by hand;
+  its `content-hash` line will need a real `poetry lock` once poetry is available to fully
+  re-sync, flagged as a known gap rather than silently left inconsistent).
+- **New C++ dependency, vendored the same way `dc_bridge`'s `tomlplusplus`/`msgpack-cxx` are**:
+  added a `zxing-cpp` rosdep key to `rosdep/dc.yaml` (`ubuntu`/`debian`: `libzxing-dev`) --
+  confirmed via a real `ros:jazzy-ros-base` container that Ubuntu Noble's `universe` repo ships
+  `libzxing-dev` 2.2.1 (Debian trixie, this sandbox's own host distro, ships 2.3.0 from the exact
+  same upstream project, `github.com/zxing-cpp/zxing-cpp` -- confirmed by reading the installed
+  package's `Homepage` field directly, not assumed) with a real CMake config
+  (`ZXingConfig.cmake`, target `ZXing::ZXing`) and a `.pc` file. `dc_measurements/package.xml`
+  gained `<depend>zxing-cpp</depend>`; `dc_measurements/CMakeLists.txt` calls
+  `find_package(ZXing REQUIRED)` and links `ZXing::ZXing` directly to `dc_camera_measurement`
+  only (kept out of the shared `dependencies` list/`ament_target_dependencies()` loop used by
+  every other plugin, since ZXing is a plain CMake package, not an ament one, and no other
+  plugin needs it).
+- **Before/after detection-rate comparison** (the issue's first acceptance criterion: "report
+  before/after detection rates, don't assert it"): rather than assert ZXing-C++ is better, ran a
+  real head-to-head of `pyzbar` (the exact Humble-era preprocessing from the now-deleted
+  `barcode_detection.py`: grayscale + a no-op sharpen kernel) vs. `zxing-cpp` (PyPI bindings,
+  3.1.0 -- newer than Noble's apt-shipped 2.2.1 the C++ side actually links against, since
+  building the exact apt version's Python bindings from source wasn't practical here; noted as a
+  caveat, not hidden) against the real `dc_simulation/models/qrcode_00*/materials/textures/*.png`
+  demo assets (11 images), each run through a battery of camera-realistic degradations (the raw
+  textures are flat, clean renders, so a straight decode of them isn't the flaky case the issue
+  is about): in-plane rotation (5/10/20/30/45 degrees), dimmed lighting (40%), downscale+blur
+  (4x + Gaussian), and simulated off-axis camera tilt via perspective warp (20%/35% skew).
+  Result (121 image x variant pairs total): **pyzbar 110/121 (91%) vs. zxing-cpp 99/121 (82%)
+  overall** -- ZXing-C++ does not uniformly win. The two libraries fail in different, opposite
+  ways: zxing-cpp is dramatically more robust to **perspective/tilt distortion**, the more
+  physically realistic failure mode for a robot camera viewing a QR code off-axis (100% vs. 0%
+  at the strongest tested 35% perspective skew -- pyzbar failed every single one of those,
+  zxing-cpp passed every single one); pyzbar is more robust to **pure in-plane rotation** beyond
+  30 degrees (100% vs. 0% at 30 and 45 degrees -- inspected the raw ZXing results with
+  `return_errors=True` to confirm this isn't a harness bug: it genuinely detects a spuriously
+  cropped/misaligned symbol and rejects it on `FormatError`/`ChecksumError`, not a silent miss).
+  Both libraries are identical (100%) on: straight-on, rotation up to 20 degrees, dimmed
+  lighting, downscale+blur, and mild (20%) perspective skew. This is genuinely mixed evidence,
+  reported as such rather than cherry-picked; see the PR description for the full per-variant
+  table.
+- **Verified for real**: `pre-commit` (clang-format -- reformatted `camera.cpp`/`camera.hpp`,
+  re-ran clean after; XML/YAML/TOML lint, codespell, ROS package metadata checks -- same
+  `build-doc`/`poetry-requirements`/`pycln`/`flake8` environment-gap skips as every prior DC 2.0
+  slice) is clean on every changed file. Built a fresh `dc-workspace` Podman image via
+  `tools/e2e/scripts/build.sh` (same image CI builds from): first attempt caught a real compile
+  error (`'status' was not declared in this scope`) -- a stray reference to the old
+  barcode-detection future's `status` variable, removed along with the async service call, left
+  behind in an `RCLCPP_ERROR` log line that meant to reference the (still-async) draw-image
+  future's `status_draw` instead; fixed and rebuilt. Second build succeeded: all 15 packages,
+  `dc_measurements` linking against `ZXing::ZXing` cleanly. `colcon test --packages-select
+  dc_measurements` against that image: **31/31 tests pass, 0 failures** (no camera-specific
+  gtest exists -- a pre-existing gap predating this issue, not something this change's scope
+  requires adding -- so this confirms the rest of the suite, and the package's build/link
+  correctness, aren't regressed). Then ran a real end-to-end smoke test in a fresh container:
+  launched the real `dc_services draw_image` service and a real `measurement_server` (camera
+  plugin, `detection_modules: ["barcode"]`, `draw_det_barcodes: true`,
+  `save_detections_img: true`) via `ros2 run` + `ros2 lifecycle set configure`/`activate`
+  (mirroring `dc_bringup`'s own startup sequence, without the full gate/lifecycle-manager
+  machinery), published one of the real `dc_simulation` QR textures (`qrcode_0001.png`) on the
+  camera's `cam_topic` via a small `rclpy`/`cv_bridge` publisher, and subscribed to
+  `topic_output`. Received a real, schema-valid Record within seconds:
+  `{"data": "0001", "height": 210, "left": 45, "top": 100, "type": "QRCode", "width": 210}` --
+  `"0001"` is the actual payload encoded in that texture's QR code, correctly decoded end-to-end
+  through the new in-process ZXing-C++ path, drawn via the real (unmodified) `draw_image`
+  service, and saved to disk, closing the "no regression in the QR-code demo" acceptance
+  criterion for real rather than by inspection. (Aside: the smoke test's `draw_image` dependency
+  first failed on `ModuleNotFoundError: No module named 'pydantic'` -- the CI/e2e image only
+  rosdep-installs apt packages, not this repo's `requirements.txt`, and `draw_image.py`
+  pre-dates and is unrelated to this change; worked around for the test with a one-off
+  `pip install pydantic` inside the container, not a code change.)
+- **Not done / left for follow-up**: no dedicated gtest for the `Camera` plugin exists (true
+  before this change too); adding one would need a `DrawImage` service test double similar to
+  the pattern other measurement tests use for their dependencies, worth its own follow-up rather
+  than scope-creeping into this detection-library swap. `poetry.lock`'s `content-hash` is stale
+  relative to `pyproject.toml` until a real `poetry lock` can run (poetry itself is broken in
+  this sandbox, same gap noted above).
