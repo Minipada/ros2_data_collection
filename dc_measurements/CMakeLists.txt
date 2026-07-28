@@ -30,6 +30,11 @@ endforeach()
 find_package(PkgConfig REQUIRED)
 pkg_search_module(UUID REQUIRED uuid)
 
+# ZXing-C++ (#123): only the camera plugin's barcode/QR detection needs it, and it
+# exports a plain CMake config (ZXing::ZXing), not an ament package, so it's kept out of
+# the shared `dependencies` list/foreach below and linked directly to dc_camera_measurement.
+find_package(ZXing REQUIRED)
+
 dc_package()
 
 set(library_name measurement_server_core)
@@ -189,6 +194,7 @@ foreach(measurement_plugin ${dc_measurement_plugin_libs})
   )
   target_compile_definitions(${measurement_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
+target_link_libraries(dc_camera_measurement ZXing::ZXing)
 foreach(condition_plugin ${dc_condition_plugin_libs})
   ament_target_dependencies(${condition_plugin} ${dependencies})
   target_compile_definitions(${condition_plugin} PRIVATE BT_PLUGIN_EXPORT)

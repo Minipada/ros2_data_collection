@@ -58,7 +58,6 @@ def generate_launch_description():
     container_name = LaunchConfiguration("container_name")
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
-    detection_barcodes_service = LaunchConfiguration("detection_barcodes_service")
     draw_img_service = LaunchConfiguration("draw_img_service")
     save_img_service = LaunchConfiguration("save_img_service")
     group_node = LaunchConfiguration("group_node")
@@ -119,11 +118,6 @@ def generate_launch_description():
         "log_level", default_value="info", description="log level"
     )
 
-    declare_detection_barcodes_service = DeclareLaunchArgument(
-        "detection_barcodes_service",
-        default_value="False",
-        description="Start barcode detection service",
-    )
     declare_draw_img_service = DeclareLaunchArgument(
         "draw_img_service", default_value="False", description="Start draw image service"
     )
@@ -223,16 +217,6 @@ def generate_launch_description():
                 ),
                 condition=IfCondition(draw_img_service),
             ),
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    os.path.join(
-                        get_package_share_directory("dc_services"),
-                        "launch",
-                        "dc_detection_barcodes.launch.py",
-                    )
-                ),
-                condition=IfCondition(detection_barcodes_service),
-            ),
             Node(
                 package="dc_measurements",
                 executable="measurement_server",
@@ -307,16 +291,6 @@ def generate_launch_description():
                 ),
                 condition=IfCondition(draw_img_service),
             ),
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    os.path.join(
-                        get_package_share_directory("dc_services"),
-                        "launch",
-                        "dc_detection_barcodes.launch.py",
-                    )
-                ),
-                condition=IfCondition(detection_barcodes_service),
-            ),
             Node(
                 condition=IfCondition(use_composition),
                 name=container_name,
@@ -388,7 +362,6 @@ def generate_launch_description():
     ld.add_action(declare_container_name_cmd)
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
-    ld.add_action(declare_detection_barcodes_service)
     ld.add_action(declare_draw_img_service)
     ld.add_action(declare_save_img_service)
     ld.add_action(declare_group_node)

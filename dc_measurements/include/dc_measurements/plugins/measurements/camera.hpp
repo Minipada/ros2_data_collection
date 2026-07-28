@@ -2,13 +2,14 @@
 #ifndef DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__CAMERA_HPP_
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__CAMERA_HPP_
 
+#include <ZXing/ReadBarcode.h>
+
 #include <boost/algorithm/string/replace.hpp>
 #include <cv_bridge/cv_bridge.hpp>
 #include <filesystem>
 #include <opencv2/highgui.hpp>
 
 #include "dc_core/measurement.hpp"
-#include "dc_interfaces/srv/detect_barcode.hpp"
 #include "dc_interfaces/srv/draw_image.hpp"
 #include "dc_measurements/measurement.hpp"
 #include "dc_util/base64.hpp"
@@ -61,7 +62,6 @@ protected:
   std::string minio_bucket_;
   std::vector<std::string> detection_modules_;
   rclcpp::Client<dc_interfaces::srv::DrawImage>::SharedPtr cli_draw_image_;
-  rclcpp::Client<dc_interfaces::srv::DetectBarcode>::SharedPtr cli_barcodes_;
 
   rclcpp::CallbackGroup::SharedPtr client_cb_group_;
 };
