@@ -151,6 +151,14 @@
         </class>
     </library>
 
+    <library path="dc_thermal_measurement">
+        <class name="dc_measurements/Thermal" type="dc_measurements::Thermal" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_thermal
+            </description>
+        </class>
+    </library>
+
     <library path="dc_uptime_measurement">
         <class name="dc_measurements/Uptime" type="dc_measurements::Uptime" base_class_type="dc_core::Measurement">
             <description>
