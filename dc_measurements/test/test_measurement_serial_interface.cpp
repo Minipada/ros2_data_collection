@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <gtest/gtest.h>
 #include <signal.h>
+#include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -12,6 +13,8 @@
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement_server.hpp"
 #include "dc_util/json_utils.hpp"
+
+extern char** environ;
 
 // Spawns `socat` to bridge two virtual pty devices at fixed, well-known paths (the `link=`
 // address option), so the test can point a SerialInterface Measurement at one end and write
@@ -35,15 +38,19 @@ public:
     ::unlink(dev_path_.c_str());
     ::unlink(peer_path_.c_str());
 
-    pid_t pid = fork();
-    if (pid == 0)
-    {
-      std::string dev_arg = "pty,raw,echo=0,link=" + dev_path_;
-      std::string peer_arg = "pty,raw,echo=0,link=" + peer_path_;
-      ::execlp("socat", "socat", dev_arg.c_str(), peer_arg.c_str(), static_cast<char*>(nullptr));
-      _exit(127);
-    }
-    if (pid < 0)
+    // posix_spawn(p), not fork()+exec(): this test binary links rclcpp/DDS, which run their
+    // own internal threads, and calling raw fork() from a multithreaded process can deadlock
+    // the child (or even the parent, inside libc's fork()) if another thread holds a lock
+    // (e.g. malloc's arena lock) at the instant of the fork. posix_spawn is specified to be
+    // safe to call from a multithreaded program, which fork() is not.
+    std::string dev_arg = "pty,raw,echo=0,link=" + dev_path_;
+    std::string peer_arg = "pty,raw,echo=0,link=" + peer_path_;
+    char* argv[] = { const_cast<char*>("socat"), const_cast<char*>(dev_arg.c_str()),
+                     const_cast<char*>(peer_arg.c_str()), nullptr };
+
+    pid_t pid = -1;
+    int rc = ::posix_spawnp(&pid, "socat", nullptr, nullptr, argv, environ);
+    if (rc != 0)
     {
       return false;
     }
@@ -66,8 +73,26 @@ public:
     if (pid_ > 0)
     {
       ::kill(pid_, SIGTERM);
-      int status;
-      ::waitpid(pid_, &status, 0);
+      // Bounded wait (SIGKILL fallback) rather than a plain blocking waitpid(): this must
+      // never be able to hang the test harness, no matter how socat behaves.
+      bool reaped = false;
+      for (int i = 0; i < 100; ++i)
+      {
+        int status;
+        pid_t result = ::waitpid(pid_, &status, WNOHANG);
+        if (result == pid_ || result < 0)
+        {
+          reaped = true;
+          break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+      }
+      if (!reaped)
+      {
+        ::kill(pid_, SIGKILL);
+        int status;
+        ::waitpid(pid_, &status, 0);
+      }
       pid_ = -1;
     }
     ::unlink(dev_path_.c_str());
@@ -150,12 +175,16 @@ protected:
 
   void spinUntilCallback(const std::string& path_to_write, const std::string& line)
   {
-    while (!callback_active_)
+    // Bounded, not a plain `while (!callback_active_)`: fail fast with a clear message
+    // instead of running until the test binary's own external timeout.
+    for (int i = 0; i < 500 && !callback_active_; ++i)
     {
       writeLine(path_to_write, line);
       rclcpp::spin_some(ms_node_->get_node_base_interface());
       std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
+    ASSERT_TRUE(callback_active_) << "No Record received for '" << path_to_write << "' <- \"" << line
+                                  << "\" within the timeout";
   }
 
   std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
