@@ -3017,3 +3017,74 @@ free dedup key until the timestamps turned out not to be unique.
   gates it. (Superseded by the #312 entry above: the harness *can* be run locally by
   giving the containers a private netns via an anchor container, which is how #312 was
   verified. This entry is left as written for the record.)
+### #131 - Tutorial: sending data to Elasticsearch (the canonical passthrough example)
+
+- New tutorial `doc/src/dc/demos/elasticsearch.md` plus the runnable demo behind it:
+  `dc_demos/params/elasticsearch.yaml`, `dc_demos/config/elasticsearch_sink.toml`,
+  `dc_demos/launch/elasticsearch.launch.py`. Deliberately **hardware-free** (cpu, memory,
+  os, uptime — no Gazebo, no nav2, one terminal) rather than a peer of
+  `tb3_aws_influxdb.md`: the issue calls it "the canonical worked example for passthrough
+  Destinations", and a canonical example that needs a simulator is one nobody runs. It is
+  also what made a real end-to-end verification possible in a session, which was the
+  issue's first acceptance criterion.
+- Infrastructure: `tools/infrastructure/docker/docker-compose.elasticsearch.yaml`
+  (Elasticsearch 8.19.5 + Kibana, single-node, `xpack.security` off, 512 MiB heap, ES
+  healthcheck that Kibana waits on) and `doc/src/dc/infrastructure_setup/elasticsearch.md`.
+  Fully-qualified `docker.elastic.co/...` images per CLAUDE.md; no `version:` key (compose
+  warns it is obsolete on every invocation, and this file is one a doc page tells readers
+  to run). `install_infrastructure.bash`'s generic `docker-compose.${TOOL}.yaml` lookup
+  means `--tool=elasticsearch` works with only the help-text list updated.
+- Linked from `destinations.md` (passthrough section), `SUMMARY.md`, `demos.md`,
+  `infrastructure_setup.md`, and `migration.md` (whose "Elasticsearch ... reachable the
+  same way" name-drop was the thing this issue existed to make real).
+
+**Verified against real runs**, not written from the Vector docs — everything below was
+observed, and several of the findings contradict what I would have written otherwise:
+
+- Full stack in the `dc-workspace` Podman image against a live Elasticsearch: all four
+  Measurements land (`cpu`/`memory`/`uptime` 8 docs each at 5s polling, `os` exactly 1 —
+  its `init_max_measurements: 1`). Final pass ran the *shipped* artifacts the exact way
+  the tutorial tells a reader to: `colcon build --packages-select dc_demos`, copy the sink
+  out of the package share into `~/.dc/`, `ros2 launch dc_demos elasticsearch.launch.py`.
+- **A passthrough cannot route a topic on its own.** `render()` builds the `dc.<tag>` route
+  branches (and the Bridge its ROS subscriptions) purely from `destinations`; a snippet's
+  `inputs` are never read by dc_bridge. So every topic the snippet consumes must also
+  appear in some blessed Destination's `inputs` — the demo pairs the sink with a `console`
+  Destination over the same four topics, which doubles as a local view. Documented in
+  `destinations.md` too, since the passthrough section did not say it.
+- **`destinations: []` is fatal**, so the passthrough is never "no blessed Destinations".
+  rclcpp cannot type an empty YAML sequence: `parameter_value_from failed for parameter
+  'destinations': No parameter value set`, dc_bridge dies before it reads
+  `custom_config_files`, the ready-gate times out at 120s and the launch tears down.
+  Verified by running it. **This means `dc_demos/params/tb3_simulation_influxdb.yaml` and
+  `doc/src/dc/demos/tb3_aws_influxdb.md` are broken as written** — both use
+  `destinations: []` — a pre-existing bug left alone here (one task per run); worth its own
+  issue.
+- `nested: true` + **`flatten: false`** for Elasticsearch, unlike every other demo.
+  Flattening yields literal field names like `/cpu/average` that every KQL query has to
+  escape; left nested, Elasticsearch maps the object itself and Kibana gets `cpu.average`
+  as an aggregatable numeric field.
+- **Outage behaviour, measured twice.** `uptime.time` steps by exactly 5, so gaps and
+  duplicates are countable. Stopped Elasticsearch for 2 minutes with DC running:
+  - With Vector's *default* sink buffer (in-memory, 500 events) and auto-generated `_id`:
+    **zero loss** — the Shipper's end-to-end acks mean a full buffer makes the Bridge retry
+    rather than drop — but each Record indexed **up to 12 times**, because backpressure
+    hits within seconds and every re-send lands as a new document.
+  - With a disk buffer plus a deterministic `_id` (`sha2(tag|date|run_id)` via `id_key`,
+    making the write an upsert): **110 Records across the outage, none missing, none
+    duplicated.** That is why both are in the shipped snippet rather than a footnote — a
+    blessed sink gets its disk buffer from dc_bridge, a passthrough sink gets neither that
+    nor idempotence for free.
+  - Recovery is not instant: Vector's retry backoff grows to ~64s, so the backlog starts
+    draining up to a minute after the store returns.
+- Snippets may define **transforms**, not only sinks — `validate_custom_config_files`
+  rejects *defining* a reserved component id, not consuming one. The demo's
+  `elasticsearch_prepare` remap relies on that; `destinations.md` now says so.
+- `."@timestamp" = .timestamp` is a **copy, not a move**: `bulk.index` is a strftime
+  template rendered from the event's own `timestamp`, and deleting that field makes every
+  document fail to render an index name and get dropped.
+- `tools/ci/pre-commit/build_doc.sh` passes (only the two pre-existing `list[str]`
+  linkcheck warnings in unrelated measurement pages). `pre-commit` clean on all changed
+  files except `pycln` (same broken hook env as earlier entries) and the two
+  `poetry-requirements` hooks — both reproduce on an untouched `README.md`, so neither is
+  this diff.

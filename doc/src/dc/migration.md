@@ -546,7 +546,10 @@ Any sink in [Vector's catalog](https://vector.dev/docs/reference/configuration/s
 way, with no DC code and no new language toolchain. See
 [Destinations](./destinations.md#passthrough-custom_config_files) for the rules
 (snippets must not redefine component ids the generated config owns, and the merged set
-is checked with `vector validate` before the Shipper starts).
+is checked with `vector validate` before the Shipper starts), and the
+[Elasticsearch tutorial](./demos/elasticsearch.md) for a worked end-to-end example —
+including the two things a snippet has to do for itself that a blessed Destination does
+for you (its own disk buffer, and idempotent re-delivery).
 
 ## Service-level parameters
 

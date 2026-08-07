@@ -1,0 +1,48 @@
+# Elasticsearch + Kibana, the store behind the passthrough Destination tutorial
+# (doc/src/dc/demos/elasticsearch.md). Elasticsearch is NOT a blessed Destination type —
+# dc_bridge blesses postgres/s3/file/console only (ADR-0003) — so nothing in dc_bridge
+# talks to this stack directly; a raw Vector `elasticsearch` sink loaded through
+# `custom_config_files` consumes the public `dc.<tag>` routes instead.
+#
+# Demo-grade settings, not production ones:
+#   - security disabled, so the tutorial's sink needs no auth block and Kibana needs no
+#     enrollment token. Anything beyond a local demo must re-enable xpack.security and
+#     put credentials (or an API key) in the Vector sink.
+#   - single-node discovery, so a one-container cluster reaches `green` instead of
+#     sitting `yellow` waiting for replicas that will never be allocated.
+#   - a small fixed heap (512 MiB), so this fits alongside a simulator on a laptop.
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.5
+    container_name: elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - 9200:9200
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  # Optional: only there to look at what landed. The tutorial's verification step uses
+  # the `_search` API directly, so Kibana can be commented out on a constrained machine.
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.19.5
+    container_name: kibana
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - 5601:5601
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
