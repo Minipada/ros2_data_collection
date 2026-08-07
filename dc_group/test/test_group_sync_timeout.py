@@ -11,9 +11,11 @@ import time
 
 import pytest
 import rclpy
+from rcl_interfaces.msg import Log
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.parameter import Parameter
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 
 from dc_group.group_server import GroupServer
 from dc_interfaces.msg import StringStamped
@@ -29,6 +31,17 @@ SYNC_TIMEOUT = 0.5
 # Generous upper bounds: every wait below is `spin_until`, so a passing test returns as
 # soon as the condition holds and only a genuine failure burns the whole budget.
 SETTLE = 3.0
+
+# `rcl_qos_profile_rosout_default`. A plain (volatile) subscription would silently miss any
+# log published before discovery matched it, which is exactly the first warning the throttle
+# tests are counting; matching rosout's transient-local durability delivers the backlog on
+# match instead of racing it.
+ROSOUT_QOS = QoSProfile(
+    depth=1000,
+    history=HistoryPolicy.KEEP_LAST,
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+)
 
 
 @pytest.fixture
@@ -58,6 +71,10 @@ class GroupHarness:
         ]
         self.records = []
         self.client.create_subscription(StringStamped, OUTPUT, self.records.append, 10)
+        # The Group node's own logs, read back off /rosout: the only way to assert on what
+        # an operator actually sees, throttle included.
+        self.logs = []
+        self.client.create_subscription(Log, "/rosout", self.logs.append, ROSOUT_QOS)
 
         self.executor = SingleThreadedExecutor()
         self.executor.add_node(self.server)
@@ -84,7 +101,8 @@ class GroupHarness:
     def wait_for_discovery(self):
         matched = self.spin_until(
             lambda: all(pub.get_subscription_count() > 0 for pub in self.input_publishers)
-            and self.client.count_publishers(OUTPUT) > 0,
+            and self.client.count_publishers(OUTPUT) > 0
+            and self.client.count_publishers("/rosout") > 0,
             timeout=10.0,
         )
         assert matched, "the Group node's subscriptions/publisher never matched the test node"
@@ -99,8 +117,36 @@ class GroupHarness:
     def wait_for_records(self, count, timeout=SETTLE):
         return self.spin_until(lambda: len(self.records) >= count, timeout=timeout)
 
+    def spin_publishing(self, index, duration, interval=0.1):
+        """Publish on one input every `interval` seconds while spinning for `duration`.
+
+        Keeps the group permanently one-input-short, so it times out over and over — which
+        is the only situation in which throttling is observable.
+
+        Args:
+            index (int): Index into `inputs` of the input to keep publishing
+            duration (float): Seconds to keep publishing and spinning for
+            interval (float): Seconds between two publishes
+        """
+        deadline = time.monotonic() + duration
+        next_publish = 0.0
+        counter = 0
+        while time.monotonic() < deadline:
+            if time.monotonic() >= next_publish:
+                self.publish(index, {"used": float(counter)})
+                counter += 1
+                next_publish = time.monotonic() + interval
+            self.executor.spin_once(timeout_sec=0.02)
+
     def payloads(self):
         return [json.loads(record.data) for record in self.records]
+
+    def sync_timeout_warnings(self):
+        return [
+            log
+            for log in self.logs
+            if log.level == Log.WARN and "no complete set after" in log.msg.lower()
+        ]
 
 
 @pytest.fixture
@@ -232,6 +278,57 @@ def test_emit_partial_without_a_positive_timeout_falls_back_to_drop(harness):
     group.publish(0, {"used": 12.0})
     group.spin_for(4 * SYNC_TIMEOUT)
     assert group.records == []
+
+
+def test_drop_warns_about_the_set_it_discarded(harness):
+    """`drop` publishes nothing, so the warning is the only trace an operator gets."""
+    group = harness(sync_timeout=SYNC_TIMEOUT, on_sync_timeout="drop")
+    group.publish(0, {"used": 12.0})
+
+    assert group.spin_until(lambda: group.sync_timeout_warnings()), "no warning logged"
+    warning = group.sync_timeout_warnings()[0]
+    assert "dropping the incomplete set" in warning.msg
+    # Both the group and the topic that went silent are named.
+    assert f"Group '{GROUP}'" in warning.msg
+    assert INPUT_B in warning.msg
+
+
+def test_repeated_timeouts_are_logged_once_per_throttle_window(harness):
+    """A dead Measurement must not turn into one warning per `sync_timeout`, forever."""
+    group = harness(
+        sync_timeout=0.3,
+        on_sync_timeout="emit_partial",
+        # Comfortably longer than the run below, so the window never reopens.
+        sync_timeout_log_throttle=30.0,
+    )
+    group.logs.clear()
+    group.spin_publishing(0, duration=1.6)
+
+    # The Records are not throttled, only the log line is: every timeout still emits.
+    assert len(group.records) >= 3, f"expected repeated partial Records, got {len(group.records)}"
+    assert len(group.sync_timeout_warnings()) == 1
+
+
+def test_throttled_warning_reports_what_it_suppressed(harness):
+    """A rate-limited warning still has to convey how often the group is timing out."""
+    group = harness(sync_timeout=0.3, on_sync_timeout="emit_partial", sync_timeout_log_throttle=1.0)
+    group.logs.clear()
+    group.spin_publishing(0, duration=2.5)
+
+    warnings = group.sync_timeout_warnings()
+    assert len(warnings) >= 2, "the throttle window never reopened"
+    # The first warning has nothing to report yet; a later one accounts for the gap.
+    assert "[+" not in warnings[0].msg
+    assert any("more in the last 1.0s" in warning.msg for warning in warnings[1:])
+
+
+def test_throttle_of_zero_logs_every_timeout(harness):
+    group = harness(sync_timeout=0.3, on_sync_timeout="emit_partial", sync_timeout_log_throttle=0.0)
+    group.logs.clear()
+    group.spin_publishing(0, duration=1.6)
+
+    assert len(group.records) >= 3
+    assert len(group.sync_timeout_warnings()) == len(group.records)
 
 
 def test_unknown_policy_falls_back_to_drop(harness):

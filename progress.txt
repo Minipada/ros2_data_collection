@@ -2843,3 +2843,64 @@ from `gh-pages`) is being retired.
   `doc/src/dc/faq.md`'s "My group data is not published on the group topic" entry said
   "there is no way to ignore that ... Help is welcome here :)" -- now false, so it points at
   the new option and the groups doc instead.
+
+### #126 follow-up - throttle the sync-timeout warnings
+
+- Both timeout paths already logged a `warning` naming the group, the missed deadline and
+  the silent input topics (`drop` especially needs it -- the warning is the *only* trace,
+  since nothing is published). The gap was rate: a Measurement that dies stays dead, so the
+  group keeps timing out and the warning repeated every `sync_timeout` for as long as the
+  robot runs -- with `sync_timeout: 10.0` that is 6 lines/min/group, forever.
+- New per-group `sync_timeout_log_throttle` (double, default `60.0`; `0.0` logs every
+  timeout, negatives rejected at startup with an error and clamped to `0.0`). The first
+  timeout after a quiet window always logs immediately, and reports what the throttle
+  swallowed since the previous one: `... [+5 more in the last 60.0s]`, so a rate-limited
+  warning still conveys how *often* the group is failing. Only the log line is throttled --
+  `emit_partial` still publishes every partial Record.
+- **Deliberately not `rclpy`'s built-in `throttle_duration_sec`.** Tried it first; two
+  problems, both found by reading `rclpy/impl/rcutils_logger.py` rather than guessing:
+  1. rclpy keys the throttle context by **call site** (`CallerId` = function name + file +
+     line + `f_lasti`), stored on the logger object. Every group shares the same line of
+     code, so one permanently broken group would throttle the warnings of every other group
+     in the node -- the exact opposite of what you want when a second group starts failing.
+  2. `get_filters_from_kwargs` detects the filter with `any(kwargs.get(p) for p in params)`,
+     i.e. by **truthiness**, so `throttle_duration_sec=0.0` silently disables throttling.
+     That happens to match the intended "0.0 = log everything", but by accident.
+  Worked around (1) with a per-group child logger (`get_logger().get_child(group)`, giving
+  each group its own `contexts` dict) before discarding that too -- see the test note below.
+  The replacement is ~15 explicit lines (`take_sync_timeout_log_slot`) keeping
+  `{"last": Time, "suppressed": int}` per group, throttled on the **node clock** rather than
+  rclpy's steady clock, so it behaves under `use_sim_time` like the rest of the node.
+- 4 new tests (12 total, all still passing), asserting on what an operator actually sees by
+  subscribing to **`/rosout`** and filtering for the node's own WARN lines: `drop` warns and
+  names the silent topic; repeated timeouts over 1.6s produce >= 3 partial Records but
+  exactly 1 warning at `sync_timeout_log_throttle: 30.0`; a 1.0s throttle over 2.5s logs
+  more than once with a later line carrying the `[+N more ...]` suffix; and `0.0` logs once
+  per timeout (`warnings == records`).
+- Two real traps hit while writing those, both worth recording:
+  - The `/rosout` subscription must use **`rcl_qos_profile_rosout_default`**
+    (KEEP_LAST/1000, RELIABLE, **TRANSIENT_LOCAL**). A default volatile subscription is
+    QoS-compatible but only receives what is published *after* it matches, so it silently
+    dropped the very first warning -- which is precisely the one the throttle test counts.
+    Matching the durability delivers the backlog on match instead of racing it.
+  - The child-logger approach *worked standalone but failed under pytest*: rcl's rosout
+    **sublogger** registry is process-global and survives `rclpy.shutdown()`, so on the
+    second `rclpy.init()` in the same process the child logger's lines still reached stderr
+    but never `/rosout`. Since the manual throttle removed the only reason for the child
+    logger, dropping it fixed the test and simplified the code -- the group name moved back
+    into the message (`Group 'memory_cpu': no complete set after ...`) instead of living in
+    the logger name.
+  - (Self-inflicted, noted so the next reader does not re-derive it: moving the group name
+    back into the message made it read `...: no complete set` lowercase, while the test
+    filter still matched `"No complete set"` -- 4 tests failed with an empty log list, which
+    looks exactly like a rosout plumbing failure and is not one. The filter is now
+    case-insensitive. A speculative "unique node name per test" fix went in and came back
+    out once the real cause was found.)
+- Verified the same way as the parent change: suite green 3x back-to-back in the
+  `dc-workspace` Podman image (~22s per run), then the CI path itself -- `colcon build` +
+  `colcon test --packages-select dc_group` -> `12 tests, 0 errors, 0 failures, 0 skipped`.
+  `pre-commit` clean on all changed files (`pycln` still skipped, same broken hook env as
+  the parent entry; `black` reformatted the test file once, re-ran clean).
+- `doc/src/dc/groups.md` gains the parameter row and a "Warnings and throttling" subsection
+  with both rendered log lines (plain and `[+N more ...]`), the per-group-not-per-call-site
+  guarantee, and the explicit note that Records are never throttled, only the log line.

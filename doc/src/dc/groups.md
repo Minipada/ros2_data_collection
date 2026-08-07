@@ -42,6 +42,7 @@ See the [migration guide](./migration.md#tags-what-changed).
 | sync_delay         | Delay to wait during all subscriber data need to reach before being published again | float       | 5.0                 |
 | sync_timeout       | Seconds an incomplete set may wait before `on_sync_timeout` applies. 0.0 disables it | float       | 0.0                 |
 | on_sync_timeout    | What to do with an incomplete set once `sync_timeout` elapses: `drop`/`emit_partial` | str         | "drop"              |
+| sync_timeout_log_throttle | Seconds between two sync-timeout warnings for this group. 0.0 logs every one  | float       | 60.0                |
 | group_key          | Dictionary key under which data is grouped                                          | str         | {group_name}        |
 | exclude_keys       | List of keys to exclude from the published data. Data depth is separated by a dot   | list\[str\] | N/A                 |
 | nested_data        | Whether measurements are nested dictionaries or flat                                | bool        | false               |
@@ -75,6 +76,32 @@ of a set and later Records do not push it back. After a set times out, the Group
 every Record it was holding, so a Record already published in a partial set is never
 merged a second time when its late partner finally arrives.
 ```
+
+### Warnings and throttling
+
+Every timeout logs a warning naming the group, the deadline it missed, and the input
+topics that produced nothing — including under `drop`, where the warning is the only trace
+left since nothing is published:
+
+```text
+[WARN] [group_server]: Group 'memory_cpu': no complete set after 10.0s, dropping the
+incomplete set (no Record from: ['/dc/measurement/memory'])
+```
+
+A Measurement that dies stays dead, so the group keeps timing out and an unthrottled
+warning would repeat every `sync_timeout` for as long as the robot runs.
+`sync_timeout_log_throttle` caps this at one warning per group per window (60s by default);
+set it to `0.0` to log every timeout. The first timeout after a quiet window always logs
+immediately, and reports how many warnings the throttle swallowed since the last one:
+
+```text
+[WARN] [group_server]: Group 'memory_cpu': no complete set after 10.0s, dropping the
+incomplete set (no Record from: ['/dc/measurement/memory']) [+5 more in the last 60.0s]
+```
+
+The throttle is per group, so a permanently broken group does not silence the warnings of a
+healthy one that starts failing. Only the *log line* is rate-limited — under `emit_partial`
+every timeout still publishes its partial Record, throttled or not.
 
 ### What a partial Record looks like
 
