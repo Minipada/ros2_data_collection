@@ -2742,3 +2742,104 @@ from `gh-pages`) is being retired.
   codespell, trailing-whitespace/EOF-newline, and all package-metadata hooks. Only
   `poetry-requirements` failed, the same pre-existing `ModuleNotFoundError: No module named
   'poetry'` noted for #123/#124/#125 above -- environment issue, unrelated to this diff.
+
+### #126 - Group: drop or emit a partial Record when the sync timeout is reached
+
+- Two new per-group parameters in `dc_group/dc_group/group_server.py`:
+  - `sync_timeout` (double, default `0.0` = disabled) -- real seconds an incomplete set may
+    wait, measured from the arrival of its *first* Record. Deliberately a different thing
+    from the existing `sync_delay`, which is the `ApproximateTimeSynchronizer`'s *slop* (the
+    max spread between merged Records' timestamps, not wall-clock patience); the two were
+    easy to confuse so the doc spells the distinction out.
+  - `on_sync_timeout` (string, default `"drop"`) -- `drop` or `emit_partial`. Invalid
+    values, and `emit_partial` without a positive `sync_timeout` (nothing to fire on), log
+    an error and fall back to `drop` rather than silently doing nothing.
+  - Default `sync_timeout: 0.0` means no timer is created at all and `on_input` is never
+    even registered, so an unchanged params file gets byte-identical behaviour to before --
+    that is what the issue's "drop as the default (current behaviour)" asks for. The three
+    effective modes are therefore: no deadline (default) / deadline + actively discard /
+    deadline + publish what arrived.
+- `message_filters` still has no timeout of its own (the premise of the linked ROS Answers
+  thread), so the implementation is a per-group `rclpy` timer alongside the synchroniser:
+  - Created once per group in `init_sync_timeouts()` and immediately `cancel()`ed; started
+    with `reset()` (which un-cancels -- `rcl_timer_reset` clears the `canceled` flag) only
+    on the transition from empty to non-empty pending set, so later inputs do not push the
+    deadline back. The deadline is on the *set*, not per input.
+  - An extra callback per input `Subscriber` (`on_input`) records the latest unmatched
+    Record per input index. **Registered before `init_time_synchronizer()` runs**, which is
+    the whole reason the registration lives in `init_subscribers()`:
+    `SimpleFilter.callbacks` is an insertion-ordered dict fired in order, so registering
+    first guarantees a Record lands in `pending` *before* it can complete a set and trigger
+    the synchroniser callback that clears `pending`. Registering after would leave every
+    consumed Record behind as a phantom incomplete set that times out later.
+  - On timeout: `emit_partial` publishes the Records that did arrive, `drop` logs and
+    publishes nothing; **both** then purge the synchroniser's internal queues
+    (`sync.queues` under `sync.lock`). Without the purge a Record already emitted in a
+    partial set gets matched a second time when its late partner finally arrives, i.e. a
+    duplicate. Reading the installed
+    `/opt/ros/jazzy/.../message_filters/__init__.py` first was what made this obvious --
+    `ApproximateTimeSynchronizer.add` only deletes queue entries it actually matched.
+- **Partial Record shape decided and documented** (the issue asked for an explicit call):
+  missing inputs' keys are **omitted, not present-and-null**. Not a style preference -- the
+  Group node knows a missing input's *topic* and nothing else, because a Record's
+  `group_key` and its fields both travel inside the Record itself, so there is no
+  correctly shaped null placeholder it could invent for a Measurement that never published.
+  A partial Record additionally carries `partial: true` and `missing_inputs: [topics...]`;
+  both are absent from complete Records, so a complete Record's wire shape is unchanged and
+  nothing downstream has to adapt to keep consuming them. Noted in the doc that Vector's
+  `postgres` sink silently drops top-level keys with no matching column, so the two marker
+  keys need `partial boolean` / `missing_inputs jsonb` columns added before they land
+  anywhere (checked against `tools/infrastructure/docker/config/postgresql/init.sql`, whose
+  header documents exactly that mapping).
+- **Pre-existing Jazzy bug found and fixed while writing the first test**: `groups` and
+  `{group}.inputs` were declared as `declare_parameter(name=..., descriptor=Parameter
+  Descriptor(type=...))` with no default value. Since Jazzy, `rclpy`'s `declare_parameters`
+  *overwrites* a descriptor's `type` with the type inferred from the default value, so that
+  form raises `ValueError: Cannot declare a statically typed parameter with default value of
+  type PARAMETER_NOT_SET` -- i.e. `group_server` could not construct at all on this branch,
+  which is presumably why `dc_group` had no tests to catch it. Switched both to the Jazzy
+  form `declare_parameter(name, Parameter.Type.STRING_ARRAY)`; the
+  `ParameterUninitializedException` path that exits when `groups` is unset still works, and
+  the now-unused `rcl_interfaces.msg` import was dropped.
+- **`dc_group/test/` created** (the package had none) with 8 tests in
+  `test_group_sync_timeout.py`, all driving a real `GroupServer` through a real
+  `SingleThreadedExecutor` over real DDS topics -- the thing under test *is* the interaction
+  between synchroniser, timer and subscriptions, which a mocked test would not exercise.
+  Covers: complete set still publishes one unmarked Record with the timer armed; silent
+  input publishes nothing under the default (asserting no timer exists *and* the
+  synchroniser still holds the lone Record, i.e. genuinely the old behaviour); `drop` with a
+  timeout publishes nothing *and* clears the held Record (the observable that distinguishes
+  it from the default); `emit_partial` publishes exactly one partial Record with `a`
+  present, `b` absent, `partial: true`, `missing_inputs == ["/dc/test/b"]`; the late input
+  arriving after a partial produces its own partial rather than re-publishing the first
+  Record (the duplicate the purge prevents); the group recovers and publishes a normal
+  complete Record after a partial (the purge does not wedge the synchroniser); and both
+  fallback-to-`drop` validation paths. Added `<test_depend>python3-pytest</test_depend>`
+  to `package.xml` and `**kwargs` passthrough on `GroupServer.__init__` so tests can inject
+  `parameter_overrides`.
+- **Verified for real**: ran the suite inside the `dc-workspace` Podman image against the
+  mounted worktree -- 8/8 pass, and re-run 3x back-to-back with identical results to check
+  for timing flakiness (~15s per run; every wait is a `spin_until` predicate, not a fixed
+  sleep, so a pass returns immediately and only a real failure burns the budget). Then did
+  the real thing CI does: copied the worktree's `dc_group` into the image's workspace and
+  ran `colcon build --packages-select dc_group` + `colcon test --packages-select dc_group`
+  -- `colcon test-result --verbose` reports `8 tests, 0 errors, 0 failures, 0 skipped`,
+  confirming `colcon test` discovers this first Python test suite in the repo without extra
+  wiring (every other package's tests are C++ gtest).
+- `pre-commit run --files` on all five changed files: everything passes, including flake8
+  (with darglint's `DAR101` satisfied by Google-style `Args:` blocks on the two multi-line
+  docstrings), black, isort, codespell, xmllint, and this time the full Podman-backed
+  `build-doc` hook (host disk space allowed it, unlike some earlier entries above).
+  `pycln` had to be skipped: its hook env is broken here with `FileNotFoundError:
+  .../site-packages/pyproject.toml`, a pre-existing environment fault unrelated to this
+  diff. The `flake8` hook env was *also* broken on first run (`ModuleNotFoundError: No
+  module named 'pkg_resources'` -- `flake8-logging-format` imports it and setuptools >= 81
+  dropped it); installed `setuptools<81` into that cached hook venv to get a real lint
+  result rather than skipping the hook.
+- Docs: `doc/src/dc/groups.md` gains the two parameters in the table, an "Incomplete sets"
+  section with a behaviour matrix for the three modes and the `sync_delay` vs `sync_timeout`
+  distinction, a "What a partial Record looks like" subsection with a worked JSON example
+  and the omitted-vs-null rationale, and `emit_partial` wired into the example params file.
+  `doc/src/dc/faq.md`'s "My group data is not published on the group topic" entry said
+  "there is no way to ignore that ... Help is welcome here :)" -- now false, so it points at
+  the new option and the groups doc instead.
