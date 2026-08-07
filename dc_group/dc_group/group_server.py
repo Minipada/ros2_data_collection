@@ -4,6 +4,7 @@ import sys
 
 import rclpy
 from message_filters import ApproximateTimeSynchronizer, Subscriber
+from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rclpy_message_converter import message_converter
@@ -19,6 +20,11 @@ ON_SYNC_TIMEOUT_DROP = "drop"
 ON_SYNC_TIMEOUT_EMIT_PARTIAL = "emit_partial"
 ON_SYNC_TIMEOUT_POLICIES = (ON_SYNC_TIMEOUT_DROP, ON_SYNC_TIMEOUT_EMIT_PARTIAL)
 
+# A Measurement that dies stays dead, so an unthrottled warning would repeat every
+# `sync_timeout` for as long as the robot runs. One line a minute per group keeps the
+# problem visible in the logs without drowning them; 0.0 disables the throttle.
+DEFAULT_SYNC_TIMEOUT_LOG_THROTTLE = 60.0
+
 
 class GroupServer(Node):
     def __init__(self, node_name: str, **kwargs):
@@ -30,6 +36,11 @@ class GroupServer(Node):
         # the timer measuring how long that incomplete set has been waiting.
         self.pending = {}
         self.sync_timers = {}
+        # Per group: {"last": Time of the last timeout warning, "suppressed": count since}.
+        # The throttle is kept here rather than handed to rclpy's `throttle_duration_sec`
+        # because rclpy keys that state by *call site*: every group shares one line of code,
+        # so one noisy group would throttle the warnings of all the others.
+        self.sync_timeout_log_state = {}
         self.group_msg_type_cls = None
         self.group_exclude_keys = None
         self.group_measurement_plugins = None
@@ -131,6 +142,9 @@ class GroupServer(Node):
             self.declare_parameter(f"{group}.sync_delay", 5.0)
             self.declare_parameter(f"{group}.sync_timeout", 0.0)
             self.declare_parameter(f"{group}.on_sync_timeout", ON_SYNC_TIMEOUT_DROP)
+            self.declare_parameter(
+                f"{group}.sync_timeout_log_throttle", DEFAULT_SYNC_TIMEOUT_LOG_THROTTLE
+            )
             self.declare_parameter(f"{group}.group_key", group)
             self.declare_parameter(f"{group}.tags", [""])
             self.declare_parameter(f"{group}.nested_data", True)
@@ -152,6 +166,11 @@ class GroupServer(Node):
                 "on_sync_timeout": self.get_parameter(f"{group}.on_sync_timeout")
                 .get_parameter_value()
                 .string_value,
+                "sync_timeout_log_throttle": self.get_parameter(
+                    f"{group}.sync_timeout_log_throttle"
+                )
+                .get_parameter_value()
+                .double_value,
                 "group_key": self.get_parameter(f"{group}.group_key")
                 .get_parameter_value()
                 .string_value,
@@ -186,6 +205,13 @@ class GroupServer(Node):
                 f"'{ON_SYNC_TIMEOUT_DROP}'"
             )
             self.params[group]["on_sync_timeout"] = ON_SYNC_TIMEOUT_DROP
+
+        if self.params[group]["sync_timeout_log_throttle"] < 0.0:
+            self.get_logger().error(
+                f"Group '{group}': sync_timeout_log_throttle cannot be negative, "
+                f"disabling the throttle"
+            )
+            self.params[group]["sync_timeout_log_throttle"] = 0.0
 
     def sync_timeout_enabled(self, group):
         return self.params[group]["sync_timeout"] > 0.0
@@ -230,6 +256,7 @@ class GroupServer(Node):
             self.sync_timers[group] = None
             if not self.sync_timeout_enabled(group):
                 continue
+            self.sync_timeout_log_state[group] = {"last": None, "suppressed": 0}
             timer = self.create_timer(
                 self.params[group]["sync_timeout"],
                 functools.partial(self.on_sync_timeout, group=group),
@@ -259,21 +286,52 @@ class GroupServer(Node):
         # Ordered by input, not by arrival, so a partial Record's keys are deterministic.
         measurements = [pending[index] for index in sorted(pending)]
 
-        if self.params[group]["on_sync_timeout"] == ON_SYNC_TIMEOUT_EMIT_PARTIAL:
+        emit_partial = self.params[group]["on_sync_timeout"] == ON_SYNC_TIMEOUT_EMIT_PARTIAL
+        action = "emitting a partial Record" if emit_partial else "dropping the incomplete set"
+        # Only the log line is rate-limited: `emit_partial` still publishes every partial
+        # Record, throttled or not.
+        suffix = self.take_sync_timeout_log_slot(group)
+        if suffix is not None:
             self.get_logger().warning(
                 f"Group '{group}': no complete set after "
-                f"{self.params[group]['sync_timeout']}s, emitting a partial Record "
-                f"(no Record from: {missing_inputs})"
-            )
-            self.publish_record(group, measurements, missing_inputs=missing_inputs)
-        else:
-            self.get_logger().warning(
-                f"Group '{group}': no complete set after "
-                f"{self.params[group]['sync_timeout']}s, dropping the incomplete set "
-                f"(no Record from: {missing_inputs})"
+                f"{self.params[group]['sync_timeout']}s, {action} "
+                f"(no Record from: {missing_inputs}){suffix}"
             )
 
+        if emit_partial:
+            self.publish_record(group, measurements, missing_inputs=missing_inputs)
+
         self.purge_synchronizer(group)
+
+    def take_sync_timeout_log_slot(self, group):
+        """Rate-limit `group`'s timeout warning, per group rather than per call site.
+
+        A Measurement that dies stays dead, so warning on every single timeout would fill
+        the logs for as long as the robot runs.
+
+        Args:
+            group (str): Name of the group whose warning is about to be logged
+
+        Returns:
+            str: Suffix to append to the warning, naming how many warnings were suppressed
+                since the last one, or None if this warning must itself be suppressed
+        """
+        throttle = self.params[group]["sync_timeout_log_throttle"]
+        if throttle <= 0.0:
+            return ""
+
+        state = self.sync_timeout_log_state[group]
+        now = self.get_clock().now()
+        if state["last"] is not None and now - state["last"] < Duration(seconds=throttle):
+            state["suppressed"] += 1
+            return None
+
+        suppressed = state["suppressed"]
+        state["last"] = now
+        state["suppressed"] = 0
+        # Say what the throttle hid, so a rate-limited warning still conveys how often the
+        # group is actually timing out.
+        return f" [+{suppressed} more in the last {throttle}s]" if suppressed else ""
 
     def cancel_sync_timeout(self, group):
         timer = self.sync_timers.get(group)
