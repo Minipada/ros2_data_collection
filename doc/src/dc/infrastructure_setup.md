@@ -7,6 +7,7 @@ the ones the demos and examples assume:
 | --------------------------------------- | -------------------------------------------------------------- |
 | [PostgreSQL](./infrastructure_setup/postgresql.md) | A `postgres` Destination, and the File status log   |
 | [RustFS](./infrastructure_setup/rustfs.md)         | An `s3` Destination, for Records and for File uploads |
+| [Elasticsearch](./infrastructure_setup/elasticsearch.md) | A passthrough Destination (`elasticsearch`), + Kibana |
 | [InfluxDB](./infrastructure_setup/influxdb.md)     | A passthrough Destination (`influxdb_logs`)         |
 | [IP camera](./infrastructure_setup/ip_camera.md)   | An RTSP source for the IP camera Measurement        |
 

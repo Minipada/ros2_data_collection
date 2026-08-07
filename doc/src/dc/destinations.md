@@ -159,7 +159,23 @@ Snippets must not re-define component ids owned by the generated config (the
 `dc_bridge_in` source, the `dc_bridge_normalize` and `dc` transforms, or any configured
 Destination's name) or by another snippet. An invalid or colliding snippet is a loud
 Bridge startup error naming the offending file; as a backstop, the merged config set is
-also checked with `vector validate` before the Shipper is started.
+also checked with `vector validate` before the Shipper is started. A snippet may define
+transforms as well as sinks — only *defining* a reserved id is rejected, consuming one is
+not.
+
+A snippet cannot route a topic on its own. The Bridge derives both its ROS subscriptions
+and its `dc.<tag>` route branches from `destinations`, and never reads a snippet's
+`inputs` — so every topic a snippet consumes must also appear in some blessed
+Destination's `inputs`, and `destinations` must name at least one (a `console` or `file`
+Destination is the cheapest way to satisfy that). Two consequences follow from the
+passthrough being outside the rendered config: the snippet's sink gets Vector's **default
+in-memory buffer**, not the disk buffer `dc_bridge` gives every blessed sink, and it is
+the snippet's job to make re-delivery idempotent if the store cares — the Shipper is
+at-least-once (ADR-0002) either way.
+
+The [Elasticsearch tutorial](./demos/elasticsearch.md) is the worked example for all of
+this, end to end; the [InfluxDB demo](./demos/tb3_aws_influxdb.md) is the same mechanism
+against a simulated robot.
 
 ## File uploads: `receives: files` (the Uploader, ADR-0005)
 

@@ -9,7 +9,7 @@ Install infrastructure tool on the system.
 
 Arguments:
 --help/-h           Show this help text
---tool              Set the tool to install [chromium, influxdb, grafana, rustfs, postgresql] (mandatory)
+--tool              Set the tool to install [chromium, elasticsearch, influxdb, grafana, rustfs, postgresql] (mandatory)
 --install-type      Set the type of installation [docker, native] (mandatory)
 "
     echo "${usage}"

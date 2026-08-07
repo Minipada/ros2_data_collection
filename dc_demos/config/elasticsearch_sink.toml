@@ -1,0 +1,82 @@
+# ADR-0003 passthrough sink for the Elasticsearch tutorial
+# (doc/src/dc/demos/elasticsearch.md).
+#
+# dc_bridge blesses four Destination types — postgres, s3, file, console — and
+# Elasticsearch is not one of them, so there is no `type: elasticsearch` to write in the
+# params file. Instead this is plain Vector configuration, merged as-is with the config
+# dc_bridge renders, consuming the public `dc.<tag>` routes (see
+# doc/src/dc/destinations.md). Nothing here is DC-specific except those `inputs`.
+#
+# A route exists only for a topic that some *blessed* Destination already lists in its
+# `inputs` — the Bridge derives both its ROS subscriptions and its route branches from
+# `destinations`, never from this file. That is why elasticsearch.yaml still configures a
+# `console` Destination over the same four topics; drop it and these inputs resolve to
+# nothing.
+#
+# Copied into place before the first launch:
+#   mkdir -p ~/.dc
+#   cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/elasticsearch_sink.toml" ~/.dc/
+
+[transforms.elasticsearch_prepare]
+type = "remap"
+inputs = [
+  "dc.dc.measurement.cpu",
+  "dc.dc.measurement.memory",
+  "dc.dc.measurement.os",
+  "dc.dc.measurement.uptime",
+]
+source = '''
+# Elasticsearch's own convention for the document's time field is `@timestamp`, and
+# Kibana offers it as the default time field when creating a data view. Vector names it
+# `timestamp`, so copy it across. Copy, not move: `bulk.index` below is a strftime
+# template rendered from the event's own `timestamp`, and deleting that field makes
+# every document fail to render an index name and be dropped.
+."@timestamp" = .timestamp
+
+# A deterministic document id, so a re-delivered Record overwrites its earlier copy
+# instead of being indexed a second time. The Shipper is at-least-once (ADR-0002): after
+# a store outage, Records in flight when it started are re-sent on recovery, and with
+# Elasticsearch's default auto-generated `_id` every one of those re-sends becomes
+# another document. Keying on (Tag, Record timestamp, run id) makes the write an upsert
+# and collapses them back to one.
+.doc_id = sha2(
+  to_string!(.tag) + "|" + to_string!(.date) + "|" + to_string!(.run_id),
+  variant: "SHA-256"
+)
+'''
+
+[sinks.elasticsearch]
+type = "elasticsearch"
+inputs = ["elasticsearch_prepare"]
+endpoints = ["http://127.0.0.1:9200"]
+# Elasticsearch 8.x/9.x. Vector auto-detects when this is omitted; pinning it means a
+# store that is briefly unreachable at startup can't be probed as the wrong version.
+api_version = "v8"
+mode = "bulk"
+# One index per UTC day, the usual shape for time-series data: `dc-records-*` is then a
+# single Kibana data view, and dropping old data is dropping whole indices.
+bulk.index = "dc-records-%Y.%m.%d"
+# `index` (the default action) is create-or-replace by `_id` — that plus the
+# deterministic id above is what makes a re-delivery idempotent.
+bulk.action = "index"
+id_key = "doc_id"
+
+# dc_bridge gives every *blessed* sink a disk buffer; a passthrough sink gets Vector's
+# default, which is in-memory and 500 events deep. Both survive an outage without losing
+# Records — the Bridge holds unacknowledged Records and retries — but the shallow default
+# starts applying backpressure within seconds, which is what turns a long outage into a
+# large burst of re-deliveries. A disk buffer absorbs the outage instead. `max_size` is in
+# bytes and Vector rejects anything under ~256 MiB; the buffer lives under the Bridge's
+# own `shipper.data_dir`.
+[sinks.elasticsearch.buffer]
+type = "disk"
+max_size = 268435488
+
+# No `auth` block: docker-compose.elasticsearch.yaml runs with xpack.security disabled so
+# the tutorial has no credentials to manage. Against any real cluster, add one — e.g.
+#   [sinks.elasticsearch.auth]
+#   strategy = "basic"
+#   user = "elastic"
+#   password = "$DC_ES_PASSWORD"
+# `$VAR` expansion in a passthrough snippet is Vector's own, not dc_bridge's: Vector
+# expands environment variables it finds in its configuration when it starts.
