@@ -2706,3 +2706,39 @@ from `gh-pages`) is being retired.
   criterion literally names it as the hard gate) once host disk space is available or in CI --
   the local `mdbook build` above exercises the identical toolchain/preprocessor versions and
   is believed equivalent, but wasn't run through the container itself.
+
+### #125 follow-up - swap C4 mermaid diagrams for hand-designed SVGs
+
+- The user had a matching C4 diagram set (System Context / Container / Component) already
+  drafted in a Claude Design project (`a4399355-762f-4c03-af40-ab9430c0b6e8`,
+  `DC Architecture C4.dc.html`), styled with a dedicated legend and IBM Plex type rather than
+  mermaid's default C4 renderer. Content matches the mermaid diagrams it replaces one-for-one
+  (same actors: Robot Operator/Analytics Consumer; same containers:
+  `lifecycle_manager`/`readiness_gate`/`measurement_server`/`group_server`/`bridge`/`shipper`;
+  same Bridge components: Node/Config renderer/Supervisor/Readiness/Forwarder/Topic
+  mapper/Intent queue/Uploader/Retention/Object store client) -- verified by reading the raw
+  SVG through the `DesignSync` MCP tool (`get_file` on the project's flattened
+  `dc-1-system-context.svg`/`dc-2-container.svg`/`dc-3-component.svg` exports) before using it.
+- Read via `DesignSync` MCP (`list_projects`/`get_project`/`list_files`/`get_file`), since the
+  live `.dc.html` document itself embeds a JS runtime (`support.js`, `<sc-if>` conditionals)
+  that isn't standalone HTML -- the pre-exported flat SVGs are what got copied into the repo,
+  not the `.dc.html` source.
+- Saved the three SVGs to `doc/src/images/dc-c4-{context,container,component}.svg`, matching
+  the existing flat `doc/src/images/*.png` convention (see `../../images/*.png` refs in
+  `doc/src/dc/demos/*.md`), and swapped the three ```mermaid C4Context/C4Container/C4Component
+  code blocks in `doc/src/dc/data_pipeline.md` for `![...](../images/dc-c4-*.svg)` markdown
+  image embeds at the same three headings (Context (C1) / Container (C2) / Component (C3)).
+  The narrative flowchart mermaid block later in the same file (`flowchart LR`, "The path of a
+  Record") is untouched -- mermaid is still needed for that one, so no book.toml/preprocessor
+  changes.
+- Rebuilt with local `mdbook build` (same toolchain versions as `book.toml` pins) --
+  confirmed all three `<img src="../images/dc-c4-*.svg">` tags and copied SVG files land in
+  `book/html/dc/data_pipeline.html` / `book/html/images/`. Only the same two pre-existing
+  linkcheck warnings as before (`list[str]` false positives in `diagnostics.md`/
+  `serial_interface.md`), unrelated to this change.
+- `pre-commit run --files` on the four changed files: this time host disk space allowed the
+  full Podman-backed `build-doc` hook to run and pass (unlike #125's own initial pass, which
+  had to fall back to a bare `mdbook build` -- see above), plus xmllint on the new SVGs,
+  codespell, trailing-whitespace/EOF-newline, and all package-metadata hooks. Only
+  `poetry-requirements` failed, the same pre-existing `ModuleNotFoundError: No module named
+  'poetry'` noted for #123/#124/#125 above -- environment issue, unrelated to this diff.
