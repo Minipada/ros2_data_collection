@@ -6,7 +6,11 @@ measurement_server:
 
     memory:
       plugin: "dc_measurements/Memory"
-      polling_interval: 1000
+      # 5 Hz, unlike every other Measurement here. Deliberate: it is the only topic that
+      # puts several Records inside the same wall-clock second, which is what makes the
+      # timestamp-resolution check in verify_zero_loss.py meaningful. At 1 Hz a
+      # regression to whole-second timestamps (#308) would not collide and would pass.
+      polling_interval: 200
       group_key: "memory"
 
     os:
@@ -172,7 +176,6 @@ dc_bridge:
       database: "dc"
       table: "dc_records"
       time_key: "date"
-      time_format: "double"
 
     pgsql_files:
       type: postgres
@@ -189,7 +192,6 @@ dc_bridge:
       database: "dc"
       table: "dc_files"
       time_key: "date"
-      time_format: "double"
 
     rustfs:
       type: s3

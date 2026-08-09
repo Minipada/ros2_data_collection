@@ -50,7 +50,6 @@ dc_bridge:
       database: "dc"
       table: "dc_records"
       time_key: "date"
-      time_format: "double"
 
     pgsql_files:
       type: postgres
@@ -64,7 +63,6 @@ dc_bridge:
       database: "dc"
       table: "dc_files"
       time_key: "date"
-      time_format: "double"
 
     rustfs:
       type: s3

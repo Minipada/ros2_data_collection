@@ -25,9 +25,29 @@ using namespace dc_bridge;
 namespace
 {
 
-Record make_record(const std::string& tag, const std::string& json)
+Record make_record(const std::string& tag, const std::string& json, std::uint32_t nanos = 0)
 {
-  return Record{ tag, 1700000000ULL, nlohmann::json::parse(json) };
+  return Record{ tag, 1700000000ULL, nanos, nlohmann::json::parse(json) };
+}
+
+// The EventTime extension the frame carries the timestamp in: msgpack ext type 0x00,
+// 8-byte body of big-endian seconds then big-endian nanoseconds (#308). Built here
+// independently of the packing code so the test pins the wire bytes rather than
+// re-deriving them the same way the implementation does.
+std::string expected_event_time_bytes(std::uint32_t secs, std::uint32_t nanos)
+{
+  std::string out;
+  out.push_back(static_cast<char>(0xd7));  // fixext8
+  out.push_back(static_cast<char>(0x00));  // ext type 0 = EventTime
+  for (int i = 0; i < 4; ++i)
+  {
+    out.push_back(static_cast<char>((secs >> (8 * (3 - i))) & 0xFF));
+  }
+  for (int i = 0; i < 4; ++i)
+  {
+    out.push_back(static_cast<char>((nanos >> (8 * (3 - i))) & 0xFF));
+  }
+  return out;
 }
 
 // A mock shipper ingest protocol server: binds :0, hands back the chosen port, and runs
@@ -147,7 +167,8 @@ TEST(Forwarder, FrameIsWellFormedWithCorrectTag)
   msgpack::object entries = top.via.array.ptr[1];
   ASSERT_EQ(entries.via.array.size, 1u);
   msgpack::object entry = entries.via.array.ptr[0];  // [time, record]
-  EXPECT_EQ(entry.via.array.ptr[0].as<std::uint64_t>(), 1700000000ULL);
+  // The time element is the EventTime extension, not a bare integer of seconds (#308).
+  EXPECT_EQ(entry.via.array.ptr[0].type, msgpack::type::EXT);
 
   msgpack::object rec = entry.via.array.ptr[1];
   ASSERT_EQ(rec.type, msgpack::type::MAP);
@@ -161,6 +182,36 @@ TEST(Forwarder, FrameIsWellFormedWithCorrectTag)
     }
   }
   EXPECT_TRUE(found);
+}
+
+// #308: sub-second resolution must survive the wire. Before this, the frame carried a
+// plain integer of whole seconds, so a Measurement polling faster than 1 Hz produced
+// Records that all claimed the same instant.
+TEST(Forwarder, FrameCarriesSubSecondPrecisionAsEventTime)
+{
+  const std::uint32_t nanos = 123456789u;
+  const std::string frame = Forwarder::frame(make_record("dc.test", R"({"n": 1})", nanos), "chunk-ns");
+  EXPECT_NE(frame.find(expected_event_time_bytes(1700000000u, nanos)), std::string::npos)
+      << "frame does not carry the EventTime extension for 1700000000.123456789";
+}
+
+// Two Records one nanosecond apart must not collapse onto the same wire timestamp —
+// the property that makes a timestamp usable as part of an identity.
+TEST(Forwarder, FramesWithinTheSameSecondAreDistinguishable)
+{
+  const std::string a = Forwarder::frame(make_record("dc.test", R"({"n": 1})", 1u), "c1");
+  const std::string b = Forwarder::frame(make_record("dc.test", R"({"n": 1})", 2u), "c1");
+  EXPECT_NE(a, b);
+  EXPECT_NE(a.find(expected_event_time_bytes(1700000000u, 1u)), std::string::npos);
+  EXPECT_NE(b.find(expected_event_time_bytes(1700000000u, 2u)), std::string::npos);
+}
+
+// A whole-second Record still encodes as EventTime, with a zero nanosecond half, rather
+// than falling back to the integer form.
+TEST(Forwarder, WholeSecondTimestampStillUsesEventTime)
+{
+  const std::string frame = Forwarder::frame(make_record("dc.test", R"({"n": 1})", 0u), "c0");
+  EXPECT_NE(frame.find(expected_event_time_bytes(1700000000u, 0u)), std::string::npos);
 }
 
 TEST(Forwarder, FrameCarriesTheChunkOption)
@@ -258,7 +309,7 @@ TEST(Forwarder, ReturnsBackpressureWhenPeerStalls)
 
   nlohmann::json big;
   big["blob"] = std::string(1000000, 'x');
-  Record big_record{ "dc.test", 1700000000ULL, big };
+  Record big_record{ "dc.test", 1700000000ULL, 0u, big };
 
   bool saw_backpressure = false;
   for (int i = 0; i < 20; ++i)

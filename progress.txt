@@ -2951,3 +2951,69 @@ patch was local-only and is not committed.
 - Interior Record deleted -> **FAIL**, naming the value.
 - Contiguous tail 85..96 deleted, no interior gap -> **old check PASSES, new check FAILS**.
   That is the whole point of the issue, shown side by side.
+### #308 - Record timestamps were truncated to whole seconds on the wire
+
+Found while investigating #309's duplicate Records: `(tag, date, run_id)` looked like a
+free dedup key until the timestamps turned out not to be unique.
+
+- **The bug.** `bridge_node.cpp` read only `msg.header.stamp.sec` and dropped
+  `.nanosec`; the struct field was `std::uint64_t timestamp_secs`, so there was nowhere
+  to put it, and the Forwarder packed it as a plain msgpack integer. Measured before the
+  fix, a `Memory` Measurement at `polling_interval: 200`: **8 Records, 3 distinct
+  timestamps.** Everything downstream was faithful to an already-rounded number — not a
+  Vector problem.
+- **The wire already supported it.** Fluent Forward has an EventTime extension (ext type
+  `0x00`, 4 bytes seconds + 4 nanoseconds). Verified against the vendored Vector 0.57.0
+  by hand-rolling both frame shapes at its `fluent` source: integer seconds gave
+  `"timestamp":"...T11:36:28Z"`, EventTime gave `"...T11:36:28.123456789Z"`. Same source,
+  same config — only the Bridge needed to change.
+- Fix: `Record` carries seconds + nanoseconds, the Forwarder packs EventTime, all three
+  forwarding sites fill both halves (the two Bridge-generated ones via a new `stamp_now`
+  helper, since they have no ROS header to read).
+- **New `epoch_nanos` time_format, now the default.** `double` cannot carry nanoseconds:
+  a float64 has ~15-16 significant digits and current epoch seconds spend 10 of them, so
+  it tops out near microseconds. That is IEEE 754, not an implementation choice.
+  `epoch_nanos` is an exact i64 — and exactness is what makes it usable as part of the
+  identity #309 needs. `double`/`iso8601` remain available.
+- Schema follows: `date double precision` -> `bigint` in both `tools/e2e/sql/init.sql`
+  and the demos' `postgresql/init.sql`, `to_timestamp(date)` -> `to_timestamp(date / 1e9)`
+  in the Grafana dashboard, and the params files that write to those tables dropped their
+  explicit `time_format: "double"`. Console/stdout-only demos keep theirs — harmless
+  there, and it keeps the docs' example of the option honest.
+
+**Verified, not assumed:**
+- 58 unit tests pass, up from a 53-test baseline I ran on pristine `origin/jazzy` to be
+  sure the delta was mine. 5 new: EventTime bytes for a sub-second stamp, two stamps one
+  nanosecond apart producing different frames, a whole-second stamp still using EventTime,
+  every `time_format` string parsing, and `epoch_nanos` rendering with no `to_float(` in
+  the VRL at all.
+- **A trap worth recording.** Adding `timestamp_nanos` between `timestamp_secs` and
+  `payload` silently broke `Record big_record{ "dc.test", 1700000000ULL, big }` in
+  `forwarder_test.cpp` — it still *compiled*, because `nlohmann::json` has an implicit
+  conversion to `uint32_t`, then threw at runtime and took the test binary down with
+  `terminate called without an active exception` (an exception escaping past a joinable
+  `std::thread`). It looked like a crash in an unrelated backpressure test. The baseline
+  run is what proved it was mine rather than pre-existing.
+- End to end with the rebuilt Bridge, same 5 Hz Measurement as the "before" measurement:
+  `date=1786279421087842889 / ...287875768 / ...487844760 / ...` — **8 of 8 distinct**,
+  exactly 200 ms apart, all integers, all with a nanosecond remainder.
+- New `check_timestamp_resolution` in `verify_zero_loss.py` guards the regression in CI,
+  and `e2e_params.yaml`'s `memory` Measurement now polls at 5 Hz specifically so several
+  Records land inside one second — at 1 Hz a return to whole-second stamps would not
+  collide and would pass unnoticed. The check asserts a nanosecond remainder exists, that
+  some second holds 2+ Records (so it cannot pass vacuously), and that no two Records
+  share an instant. Exercised against a **real Postgres** with the new `bigint` schema
+  (`podman exec`, so no host port needed): good 5 Hz data passes; whole-second data,
+  colliding stamps, 1 Hz-only data, and an empty table all fail.
+- `pre-commit`: clang-format clean; flake8 back to the pre-existing baseline (E221x2 /
+  E231x2 / VNE001x2, all in the untouched `main()`); a JSON hook reflowed `robot.json`'s
+  long `rawSql` lines, including two I had not touched. `pycln` and the two
+  `poetry-requirements` hooks fail identically on an untouched file. `build_doc.sh` could
+  not finish its image-**tag** step (`/` is at 0 bytes free, podman's image copy needs
+  `/var/tmp`), so the two content steps were run in the cached image directly — clean,
+  linkcheck included.
+- **Not run locally**: the full `tools/e2e/scripts/run.sh`. A rootless-Docker Postgres
+  holds port 5432 on this host and the harness binds its stores on `--network host`. CI
+  gates it. (Superseded by the #312 entry above: the harness *can* be run locally by
+  giving the containers a private netns via an anchor container, which is how #312 was
+  verified. This entry is left as written for the record.)

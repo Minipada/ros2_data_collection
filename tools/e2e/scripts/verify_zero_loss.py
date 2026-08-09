@@ -256,6 +256,73 @@ def check_files(pg_container: str, violations: list, notes: list, details: dict)
         )
 
 
+# The Measurement configured above 1 Hz in params/e2e_params.yaml. It is the only topic
+# that puts several Records inside one wall-clock second, which is what gives the
+# resolution check below something to actually collide on.
+FAST_TAG = "dc.measurement.memory"
+
+
+def check_timestamp_resolution(
+    pg_container: str, tag: str, violations: list, notes: list, details: dict
+) -> None:
+    """Assert sub-second timestamps survive the pipeline (#308).
+
+    `date` is epoch_nanos, an exact integer of nanoseconds. If the Bridge went back to
+    sending whole seconds, every value would be an exact multiple of 1e9 and the Records
+    of a 5 Hz Measurement would collapse onto shared timestamps.
+
+    Args:
+        pg_container: name of the Postgres container to query via podman exec.
+        tag: Tag of the faster-than-1-Hz Measurement to check.
+        violations: hard failures, appended to in place.
+        notes: informational observations, appended to in place.
+        details: counters for the JSON report, populated in place.
+    """
+    total = scalar_int(pg_container, f"SELECT count(*) FROM dc_records WHERE tag='{tag}'")
+    distinct = scalar_int(
+        pg_container, f"SELECT count(DISTINCT date) FROM dc_records WHERE tag='{tag}'"
+    )
+    sub_second = scalar_int(
+        pg_container,
+        f"SELECT count(*) FROM dc_records WHERE tag='{tag}' AND date % 1000000000 <> 0",
+    )
+    # Seconds holding more than one Record — proves the Measurement really ran above
+    # 1 Hz, so "no two Records share a timestamp" is a real assertion, not a vacuous one.
+    shared_seconds = scalar_int(
+        pg_container,
+        f"SELECT count(*) FROM (SELECT date / 1000000000 AS sec FROM dc_records "
+        f"WHERE tag='{tag}' GROUP BY sec HAVING count(*) > 1) t",
+    )
+    details["timestamp_resolution"] = {
+        "tag": tag,
+        "total": total,
+        "distinct_timestamps": distinct,
+        "sub_second_timestamps": sub_second,
+        "seconds_holding_multiple_records": shared_seconds,
+    }
+
+    if total == 0:
+        violations.append(f"timestamps: zero Records for {tag} — cannot check resolution")
+        return
+    if sub_second == 0:
+        violations.append(
+            f"timestamps: every {tag} Record has a whole-second timestamp ({total} Records, "
+            "none with a nanosecond remainder) — sub-second resolution was lost on the "
+            "wire (#308)"
+        )
+    if shared_seconds == 0:
+        violations.append(
+            f"timestamps: no wall-clock second holds more than one {tag} Record, so this "
+            "check proves nothing — is that Measurement still polling above 1 Hz?"
+        )
+    elif distinct < total:
+        violations.append(
+            f"timestamps: {total - distinct} {tag} Record(s) share a timestamp with another "
+            f"({distinct} distinct out of {total}) — Records taken at different instants "
+            "must be distinguishable in time"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -293,6 +360,7 @@ def main() -> int:
     for tag in REAL_TAGS:
         check_real_tag(pg, tag, violations, notes, details)
     check_files(pg, violations, notes, details)
+    check_timestamp_resolution(pg, FAST_TAG, violations, notes, details)
 
     report = {"pass": not violations, "violations": violations, "notes": notes, "details": details}
     if args.report:

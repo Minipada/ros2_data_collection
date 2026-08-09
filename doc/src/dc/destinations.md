@@ -84,8 +84,32 @@ deployments work identically: set `endpoint`, explicit credentials, and (typical
 
 Common parameters for every blessed type: `type`, `receives` (`records` | `files`, see
 the File uploads section below), `inputs` (ROS topic names), `time_key` (default
-`date`) and `time_format` (`double` | `iso8601`, default `double`) controlling the
-normalized timestamp field written into each Record before routing.
+`date`) and `time_format` (default `epoch_nanos`) controlling the normalized timestamp
+field written into each Record before routing.
+
+### `time_format`
+
+The Bridge forwards each Record's timestamp at full nanosecond resolution, taken from the
+ROS message header. `time_format` decides how that is written into the Record:
+
+| Value         | Written as                                     | Resolution kept |
+| ------------- | ---------------------------------------------- | --------------- |
+| `epoch_nanos` | integer nanoseconds since the epoch (default)  | nanosecond — exact |
+| `iso8601`     | `2026-08-09T11:36:28.123456789` string         | nanosecond |
+| `double`      | fractional seconds as a float64                | ~microsecond, rounds |
+
+`double` is lossy by construction, not by implementation: a float64 has ~15–16 significant
+digits and current epoch seconds already consume 10 of them. It remains available for
+consumers that want a fractional-seconds column, but it cannot represent the resolution
+the pipeline delivers.
+
+```admonish warning
+The destination's own column type can truncate independently of `time_format`. A
+`double precision` column rounds an `epoch_nanos` value back off; PostgreSQL's native
+`timestamptz` is microseconds internally; Elasticsearch's `date` type is milliseconds
+(use `date_nanos` for the full value). Choose the column to match — `bigint` for
+`epoch_nanos` is exact, sortable and indexable.
+```
 
 Type-specific parameters:
 
