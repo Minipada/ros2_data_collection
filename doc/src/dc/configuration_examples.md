@@ -59,7 +59,7 @@ dc_bridge:
       receives: records
       inputs: ["/dc/measurement/uptime"]
       time_key: "date"                       # Field the normalized timestamp is written to
-      time_format: "iso8601"                 # "double" (Unix epoch seconds) or "iso8601"
+      time_format: "iso8601"                 # "epoch_nanos" (default) | "iso8601" | "double"
 
 measurement_server:
   ros__parameters:

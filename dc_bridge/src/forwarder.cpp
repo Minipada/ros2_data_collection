@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <array>
 #include <cerrno>
 #include <cstring>
 #include <ctime>
@@ -87,6 +88,29 @@ void pack_record_map(Packer& pk, const nlohmann::json& payload)
   }
 }
 
+// Packs a timestamp as the ingest protocol's **EventTime** extension: msgpack ext type
+// 0x00 with an 8-byte body — 4 bytes of seconds then 4 of nanoseconds, both big-endian
+// (network order), exactly as the protocol specifies.
+//
+// The alternative the protocol allows is a plain integer of whole seconds, which is what
+// DC sent until #308. That silently rounded every Record's timestamp down to the second,
+// so five Records from a 5 Hz Measurement all claimed the same instant. Seconds are
+// narrowed to 32 bits here because the extension's layout is fixed at 4 bytes; that field
+// overflows in 2106, long after the int32 ROS header stamp this is built from.
+template <typename Packer>
+void pack_event_time(Packer& pk, std::uint64_t seconds, std::uint32_t nanos)
+{
+  std::array<char, 8> body{};
+  const auto secs32 = static_cast<std::uint32_t>(seconds);
+  for (int i = 0; i < 4; ++i)
+  {
+    body[i] = static_cast<char>((secs32 >> (8 * (3 - i))) & 0xFF);
+    body[4 + i] = static_cast<char>((nanos >> (8 * (3 - i))) & 0xFF);
+  }
+  pk.pack_ext(body.size(), 0x00);
+  pk.pack_ext_body(body.data(), body.size());
+}
+
 }  // namespace
 
 Forwarder::Forwarder(ForwarderConfig config) : config_(std::move(config))
@@ -153,7 +177,7 @@ std::string Forwarder::frame(const Record& record, const std::string& chunk_id)
   pk.pack(record.tag);
   pk.pack_array(1);  // one entry
   pk.pack_array(2);  // [time, record]
-  pk.pack(record.timestamp_secs);
+  pack_event_time(pk, record.timestamp_secs, record.timestamp_nanos);
   pack_record_map(pk, record.payload);
   pk.pack_map(1);
   pk.pack(std::string("chunk"));

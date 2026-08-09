@@ -36,8 +36,16 @@ inline constexpr std::uint64_t MIN_DISK_BUFFER_BYTES = 268435488ULL;
 /// route transform id, rest = the Tag verbatim).
 std::string route_output_for_tag(const std::string& tag);
 
+/// How a Destination's normalized time field is written.
+///
+/// `EpochNanos` is the default: an exact integer count of nanoseconds since the epoch.
+/// `Double` divides that by 1e9 into a float64, which has ~15-16 significant digits and
+/// spends 10 of them on the seconds — so it cannot represent better than roughly
+/// microseconds, and rounds. It stays available for consumers that want a fractional
+/// seconds column, but it is lossy by construction, not by implementation (#308).
 enum class TimeFormat
 {
+  EpochNanos,
   Double,
   Iso8601,
 };

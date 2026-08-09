@@ -417,6 +417,33 @@ TEST(Render, DestinationFromRawRejectsInvalidTimeFormat)
   }
 }
 
+TEST(Render, DestinationFromRawAcceptsEveryTimeFormat)
+{
+  const std::vector<std::pair<std::string, TimeFormat>> cases = { { "epoch_nanos", TimeFormat::EpochNanos },
+                                                                  { "double", TimeFormat::Double },
+                                                                  { "iso8601", TimeFormat::Iso8601 } };
+  for (const auto& c : cases)
+  {
+    RawDestinationParams raw;
+    raw.time_format = c.first;
+    auto dest = destination_from_raw("debug_console", "console", "records", { "/dc/measurement/map" }, raw);
+    EXPECT_EQ(dest.time_format, c.second) << "time_format '" << c.first << "'";
+  }
+}
+
+// The normalize transform must emit the timestamp with no float arithmetic in it —
+// `to_float(...) / 1000000000.0` is precisely what loses resolution below ~1 us.
+TEST(Render, EpochNanosNormalizesWithoutFloatRounding)
+{
+  auto config =
+      config_with({ make_destination("pgsql", { "/dc/group/robot" }, TimeFormat::EpochNanos, postgres_kind()) });
+  const std::string rendered = render(config);
+  EXPECT_NE(rendered.find(".date = to_unix_timestamp!(.timestamp, unit: \"nanoseconds\")"), std::string::npos)
+      << rendered;
+  EXPECT_EQ(rendered.find("to_float("), std::string::npos)
+      << "epoch_nanos must not round through a float: " << rendered;
+}
+
 TEST(Render, PostgresFromRawRejectsMissingRequiredFields)
 {
   RawDestinationParams raw;
@@ -465,11 +492,13 @@ TEST(Render, PostgresFromRawAppliesDefaults)
   EXPECT_EQ(pg.port, 5432);
 }
 
+// #308: the default is the exact integer format, not the lossy float one. A Destination
+// that says nothing about time must not silently round its timestamps.
 TEST(Render, DestinationFromRawAppliesTimeDefaults)
 {
   auto dest = destination_from_raw("debug_console", "console", "records", { "/dc/group/robot" }, {});
   EXPECT_EQ(dest.time_key, "date");
-  EXPECT_EQ(dest.time_format, TimeFormat::Double);
+  EXPECT_EQ(dest.time_format, TimeFormat::EpochNanos);
 }
 
 TEST(Render, S3FromRawRejectsMissingBucket)

@@ -17,12 +17,20 @@ namespace dc_bridge
 {
 
 /// A DC Record ready to be forwarded: a shipper ingest protocol tag, a Unix timestamp
-/// (seconds since the epoch, matching the protocol's integer time), and the Record's
+/// split into whole seconds plus the nanoseconds within that second, and the Record's
 /// JSON payload (StringStamped.data, already parsed).
+///
+/// The split mirrors the ingest protocol's **EventTime** extension (4 bytes of seconds,
+/// 4 of nanoseconds), which is what the Forwarder emits. The protocol's older integer
+/// time carries whole seconds only; sending that rounded every Record's timestamp to the
+/// second, so a Measurement polling faster than 1 Hz produced Records that were
+/// indistinguishable in time (#308).
 struct Record
 {
   std::string tag;
   std::uint64_t timestamp_secs;
+  /// Nanoseconds within `timestamp_secs`; always < 1'000'000'000.
+  std::uint32_t timestamp_nanos{ 0 };
   nlohmann::json payload;
 };
 

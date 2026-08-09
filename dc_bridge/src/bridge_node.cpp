@@ -39,6 +39,19 @@ std::string expand_with_env(const std::string& input)
   return expand_env(input, env_lookup);
 }
 
+// Stamps a Bridge-generated Record (File status, retention audit) with the current time,
+// split into the seconds/nanoseconds pair the ingest protocol's EventTime carries. These
+// Records have no ROS header to take a stamp from, unlike the ones forwarded from a
+// Measurement's topic. Truncating this to whole seconds was part of #308.
+void stamp_now(Record& record)
+{
+  const auto since_epoch = std::chrono::system_clock::now().time_since_epoch();
+  const auto secs = std::chrono::duration_cast<std::chrono::seconds>(since_epoch);
+  record.timestamp_secs = static_cast<std::uint64_t>(secs.count());
+  record.timestamp_nanos =
+      static_cast<std::uint32_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(since_epoch - secs).count());
+}
+
 // Declares `name` with dynamic typing and a PARAMETER_NOT_SET default, so a value the
 // user didn't provide reads back as nullopt (rather than forcing a sentinel/default).
 std::optional<std::string> declare_optional_string(rclcpp::Node* node, const std::string& name)
@@ -419,7 +432,11 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
           {
             Record record;
             record.tag = tag;
+            // Both halves of the ROS stamp. The nanoseconds used to be dropped here,
+            // which rounded every Record to the second and left a Measurement polling
+            // faster than 1 Hz with Records indistinguishable in time (#308).
             record.timestamp_secs = static_cast<std::uint64_t>(std::max<std::int32_t>(0, msg.header.stamp.sec));
+            record.timestamp_nanos = msg.header.stamp.nanosec;
             record.payload = std::move(payload);
             try
             {
@@ -465,8 +482,7 @@ void BridgeNode::run_uploader_worker(std::string forward_host, std::uint16_t for
   auto emit = [&forwarder](const nlohmann::json& row) {
     Record record;
     record.tag = uploader::FILE_STATUS_TAG;
-    record.timestamp_secs = static_cast<std::uint64_t>(
-        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    stamp_now(record);
     record.payload = row;
     // Vector may be briefly down (restart, backpressure); keep trying for a while before
     // handing the whole Record back for an idempotent retry.
@@ -493,8 +509,7 @@ void BridgeNode::run_uploader_worker(std::string forward_host, std::uint16_t for
   auto retention_emit = [&forwarder](const nlohmann::json& row) {
     Record record;
     record.tag = uploader::FILE_STATUS_TAG;
-    record.timestamp_secs = static_cast<std::uint64_t>(
-        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+    stamp_now(record);
     record.payload = row;
     forwarder.send(record);
   };

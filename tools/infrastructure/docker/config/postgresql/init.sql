@@ -25,7 +25,7 @@
 -- wire up a CPU panel.
 CREATE TABLE IF NOT EXISTS dc (
   -- Common (every Record)
-  date double precision,
+  date bigint,
   name text,
   robot_name text,
   id text,
