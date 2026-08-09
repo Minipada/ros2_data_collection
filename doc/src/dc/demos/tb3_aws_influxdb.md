@@ -223,17 +223,40 @@ They are used in the distance traveled measurement to only take values in a cert
 
 ### Destination: the passthrough
 
-`dc_bridge`'s own `destinations` list is empty — there is nothing to bless here:
+There is no InfluxDB Destination to bless, but `destinations` is **not** empty — it names a
+`file` Destination whose `inputs` are what put these topics on the `dc.<tag>` routes the
+snippet consumes:
 
 ```yaml
 dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"
-    destinations: []
+    destinations: ["records_log"]
+    records_log:
+      type: file
+      receives: records
+      inputs: ["/dc/measurement/cpu", "/dc/measurement/memory", ...]
+      path: "/tmp/dc/tb3_simulation_influxdb_records.ndjson"
+      time_key: "date"
+      time_format: "double"
     custom_config_files: ["$HOME/.dc/tb3_simulation_influxdb_sink.toml"]
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224
+```
+
+`dc_bridge` derives both its ROS subscriptions and its `dc.<tag>` route branches from
+`destinations`, and never reads a passthrough snippet's `inputs` — so a passthrough always
+accompanies at least one blessed Destination covering the same topics. `file` is used here
+rather than `console` only because this demo collects base64 camera and map images, which
+make for unreadable terminal output; the [Elasticsearch tutorial](./elasticsearch.md) uses
+`console` for the same job and explains the rule in more detail.
+
+```admonish warning
+`destinations: []` does not work as a way to say "passthrough only". rclcpp cannot load an
+empty YAML sequence (no inferable element type), so the Bridge dies at startup with
+`parameter_value_from failed for parameter 'destinations': No parameter value set` and
+never reads `custom_config_files` at all.
 ```
 
 `custom_config_files` lists raw Vector config snippets that are merged as-is alongside whatever `dc_bridge` itself renders (here, nothing) — see [Destinations](../destinations.md)'s passthrough section for the full contract (naming collisions, `vector validate` as a startup backstop, etc.). The snippet installed above:

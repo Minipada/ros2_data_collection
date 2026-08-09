@@ -124,6 +124,13 @@ Invalid parameters (unknown `type`, missing required field, half a credential pa
 out-of-range port…) are rejected with a clear error at Bridge startup — before Vector
 is ever started.
 
+`$VAR` environment references are expanded by the Bridge in `shipper.data_dir`,
+`custom_config_files`, and the `password` / `secret_access_key` credentials — and
+**nowhere else**. In particular `file`'s `path` is handed to Vector verbatim, and Vector
+does not expand environment variables there: `path: "$HOME/records.ndjson"` silently
+writes to a literal `$HOME` directory beside the Bridge's working directory. Use an
+absolute path (Vector creates missing parent directories).
+
 ## The `dc.<tag>` routing contract (public API)
 
 The Bridge exposes one Shipper route per **Tag**. The Tag for a topic is its name with

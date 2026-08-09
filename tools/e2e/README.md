@@ -69,7 +69,16 @@ not just a local tool.
    volume) is empty once the run stops — proof the queue actually drained rather than
    silently orphaning a pending upload across the restart above (the pre-#265 in-memory
    queue would have forgotten it).
-6. **Verification** (`tools/e2e/scripts/verify_zero_loss.py`): queries Postgres via
+6. **Passthrough coverage** (ADR-0003, `params/e2e_passthrough_sink.toml`): a raw Vector
+   `file` sink loaded through `custom_config_files` — a sink `dc_bridge` has no knowledge
+   of — consuming the public `dc.<tag>` routes for `synth00`/`synth01` alongside the
+   blessed Destinations. Before this, the passthrough was covered only by
+   `render_test.cpp`'s pure `validate_custom_config_files()` unit tests (TOML parsing,
+   component-id collisions); nothing asserted that a passthrough sink actually *receives*
+   Records. A `file` sink rather than a networked one on purpose: it needs no extra
+   container, and it stays up through the induced outage, so a gap in its output is
+   unambiguously the pipeline losing a Record rather than a store that hadn't come back.
+7. **Verification** (`tools/e2e/scripts/verify_zero_loss.py`): queries Postgres via
    `podman exec` on the Postgres container (no host psycopg2/psql needed). The shipper is
    at-least-once (ADR-0002), so it **hard-fails on loss**. Loss is found by diffing what
    arrived against `params/../workload_ledger.txt` — the generator's own record of every
@@ -84,9 +93,15 @@ not just a local tool.
    reported: the tick in flight when the harness restarts the DC container, and the last
    Records at shutdown. The workload generator runs *inside* that container, so a message
    it published as the process died was never handed to `measurement_server` and no buffer
-   could have held it. A gap anywhere other than a kill point is loss and fails. Nothing here is a skip-on-missing check — a table
-   that doesn't exist or a query that fails is a FAIL, not silence.
-7. **Resource usage** (`tools/e2e/scripts/measure_resources.sh`): samples the `dc`
+   could have held it. A gap anywhere other than a kill point is loss and fails.
+
+   Nothing here is a skip-on-missing check — a table that doesn't exist or a query that
+   fails is a FAIL, not silence. The passthrough sink's own output (`check_passthrough`)
+   is held to the same standard and on the same ledger basis: every published Record must
+   have reached it, it must have received *only* the Tags it subscribed to (proving the
+   per-Tag route branches discriminate rather than fanning everything out), and a missing
+   or empty output file is a FAIL, never a skip.
+8. **Resource usage** (`tools/e2e/scripts/measure_resources.sh`): samples the `dc`
    container's CPU/RSS throughout the run into `tools/e2e/.run/resource_usage.csv`.
    Informational only, per the PRD — it does not gate the run.
 
@@ -133,7 +148,14 @@ below.
   hold across a restart, not just a live process.
 - `params/e2e_params.yaml` — the reference workload's ROS parameters (measurement
   plugins, `dc_bridge` destinations: `pgsql_records`, `pgsql_files` for the Uploader's
-  metadata Records, `rustfs` for the actual File bytes).
+  metadata Records, `rustfs` for the actual File bytes), plus the `custom_config_files`
+  entry that loads the passthrough snippet below.
+- `params/e2e_passthrough_sink.toml` — the ADR-0003 passthrough snippet: a raw Vector
+  `file` sink on the `dc.<tag>` routes for `synth00`/`synth01`, written to the
+  `dc_e2e_data` volume so it survives the mid-run restart. Note its `inputs` name topics
+  that `pgsql_records` already lists, and must: `dc_bridge` builds its subscriptions and
+  route branches from `destinations` alone and never reads a snippet's `inputs`, so a
+  topic listed only in the snippet would resolve to a route that does not exist.
 - `scripts/workload_generator.py` — the synthetic counter/image publisher (runs inside
   the `dc` container, started by `scripts/entrypoint.sh` alongside the real DC stack).
 - `scripts/build.sh` — builds `Containerfile` (the shared workspace image: handles the

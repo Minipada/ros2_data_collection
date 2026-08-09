@@ -1,0 +1,42 @@
+# ADR-0003 passthrough coverage for the zero-loss harness (#131 follow-up).
+#
+# Before this, the passthrough was tested only by render_test.cpp's pure
+# validate_custom_config_files() unit tests — TOML parsing and component-id collisions.
+# Nothing exercised the thing users actually depend on: that a sink dc_bridge knows
+# nothing about, wired to the public `dc.<tag>` routes, really receives Records, and
+# keeps the same zero-loss guarantee as a blessed Destination across the harness's
+# induced outage and full stack restart.
+#
+# A `file` sink is deliberately chosen over a networked one: it needs no extra container,
+# and the harness's outage stops Postgres and RustFS — a passthrough whose own store also
+# went down would confound "did the passthrough keep working" with "did the store come
+# back". This sink stays up throughout, so a gap in its output is unambiguously the
+# pipeline losing a Record.
+#
+# `synth00`/`synth01` carry workload_generator.py's strictly-incrementing per-topic
+# counter, which is what makes gaps (loss) and repeats (double delivery) countable — the
+# same property verify_zero_loss.py's Postgres checks rely on.
+#
+# Note these two topics also appear in the `pgsql_records` Destination's `inputs` in
+# e2e_params.yaml, and must: dc_bridge derives its ROS subscriptions and its `dc.<tag>`
+# route branches from `destinations` alone and never reads this file's `inputs`, so a
+# topic listed only here would resolve to a route that does not exist (and `vector
+# validate` would reject the merged config at Bridge startup).
+[sinks.e2e_passthrough]
+type = "file"
+inputs = ["dc.dc.measurement.synth00", "dc.dc.measurement.synth01"]
+# Under the `dc_e2e_data` named volume, so the output survives run.sh's `podman restart`
+# of the DC container mid-run. Vector creates missing parent directories, and opens the
+# file in append mode on restart rather than truncating it (both verified against the
+# vendored Vector 0.57.0 binary) — without the append guarantee a restart would look
+# exactly like catastrophic loss.
+path = "/root/.dc/e2e/data/passthrough/records.ndjson"
+encoding.codec = "json"
+
+# The disk buffer a passthrough sink should declare: dc_bridge gives every *blessed* sink
+# one, but a snippet's sink gets Vector's default (in-memory, 500 events) unless it asks.
+# Mirrors what doc/src/dc/demos/elasticsearch.md tells readers to write, so the harness
+# covers the shape actually documented. Vector rejects max_size below ~256 MiB.
+[sinks.e2e_passthrough.buffer]
+type = "disk"
+max_size = 268435488

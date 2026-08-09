@@ -231,6 +231,18 @@ if [ "${LEFTOVER_INTENTS:-0}" -ne 0 ]; then
 fi
 log "PASS: upload intent queue empty (0 orphaned intents)"
 
+# --- extract the passthrough sink's output (ADR-0003) --------------------------------
+# The passthrough sink writes to a file on the dc_e2e_data volume rather than to a
+# store, so there's no container to query — read it back the same way the intent-queue
+# check above does, via a one-off container on the (now stopped) DC container's volume.
+# Deliberately not `|| true`: if the extraction itself fails, that's a real failure, and
+# an empty file would otherwise be indistinguishable from a passthrough that shipped
+# nothing. verify_zero_loss.py hard-fails on a missing or empty file either way.
+log "extracting the passthrough sink's output"
+podman run --rm --entrypoint bash \
+  -v dc_e2e_data:/vol:ro "$DC_IMAGE" \
+  -c 'cat /vol/passthrough/records.ndjson 2>/dev/null || true' > "$RUN_DIR/passthrough.ndjson"
+
 # --- verify -------------------------------------------------------------------------
 # The generator's ledger of what it published (#312) — the independent side of the
 # comparison. It lives on the dc_e2e_data volume so it survives the restart above; read it
@@ -245,6 +257,7 @@ python3 "$SCRIPT_DIR/verify_zero_loss.py" \
   --postgres-container "$PG_C" \
   --num-synth-topics 14 \
   --ledger-file "$RUN_DIR/workload_ledger.txt" \
+  --passthrough-file "$RUN_DIR/passthrough.ndjson" \
   --report "$RUN_DIR/verification_report.json"
 
 log "PASS: zero-loss E2E harness"

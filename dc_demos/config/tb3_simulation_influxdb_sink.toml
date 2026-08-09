@@ -2,10 +2,22 @@
 #
 # dc_bridge's blessed destinations are postgres/s3/file/console only — there is no
 # blessed InfluxDB type — so this demo reaches InfluxDB via a raw Vector config
-# consuming the public `dc.<tag>` routes (see doc/src/dc/destinations.md) instead of
-# a `destinations:` entry in the params YAML. Field names below match Vector's
-# `influxdb_logs` sink for InfluxDB 1.x; check your installed Vector version's own
-# sink reference if you're pointing this at a different InfluxDB release.
+# consuming the public `dc.<tag>` routes (see doc/src/dc/destinations.md) rather than
+# a `type: influxdb` entry in the params YAML.
+#
+# Those routes are not created by this file: dc_bridge derives both its ROS
+# subscriptions and its route branches from the params file's `destinations`, and never
+# reads a snippet's `inputs`. tb3_simulation_influxdb.yaml therefore configures a `file`
+# Destination over these same topics — drop it and every input below resolves to a route
+# that does not exist.
+#
+# Field names below are Vector 0.57's `influxdb_logs` sink in its **InfluxDB 1.x** form —
+# `database` selects v1, and the settings are flat. (The nested `[…influxdb1_settings]`
+# table older Vector releases used is gone; a config carrying it is rejected outright with
+# "unknown field `influxdb1_settings`" by the `vector validate` backstop, before the
+# Shipper starts.) For InfluxDB 2.x, replace `database` with `bucket` + `org` + `token`.
+# Check your installed Vector version's sink reference if you vendor a different one:
+#   vector generate --fragment //influxdb_logs
 [sinks.influxdb]
 type = "influxdb_logs"
 inputs = [
@@ -22,8 +34,12 @@ inputs = [
   "dc.dc.measurement.influxdb_health",
 ]
 endpoint = "http://127.0.0.1:8086"
+# Both required: `database` picks the InfluxDB 1.x write API and names the database
+# docker-compose.influxdb.yaml creates (INFLUXDB_DB=dc); `measurement` names the
+# line-protocol measurement every Record is written into.
+database = "dc"
 measurement = "dc"
 
-[sinks.influxdb.influxdb1_settings]
-database = "dc"
-username = "dc"
+# No `username`/`password`: the demo's InfluxDB 1.8 container runs with authentication
+# off, so credentials would be ignored. Add them (or an auth token, for 2.x) before
+# pointing this at anything else.
