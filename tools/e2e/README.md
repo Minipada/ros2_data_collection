@@ -73,9 +73,12 @@ not just a local tool.
    `podman exec` on the Postgres container (no host psycopg2/psql needed). The shipper is
    at-least-once (ADR-0002), so it **hard-fails on loss** — a gap in a synth topic's
    counter (checked against the *distinct* values, so a re-send can't hide a gap), or
-   zero Records for any of the 20 measurement Tags — while a boundary **duplicate** (a
-   record re-sent on recovery) is reported as a note and deduplicated on read
-   (exactly-once on read), not failed. Nothing here is a skip-on-missing check — a table
+   zero Records for any of the 20 measurement Tags. Since #309 it **also hard-fails on
+   duplicates**: re-delivery still happens, but the destination schema collapses it on
+   write (a `BEFORE INSERT` trigger keyed on `(tag, date)` — see `sql/init.sql`), so a
+   duplicate row reaching the verifier means that dedup did not work. `dc_files` is the
+   one exception and still reports duplicates as notes: its rows are timestamped at emit
+   time, so `(tag, date)` is not their identity. Nothing here is a skip-on-missing check — a table
    that doesn't exist or a query that fails is a FAIL, not silence.
 7. **Resource usage** (`tools/e2e/scripts/measure_resources.sh`): samples the `dc`
    container's CPU/RSS throughout the run into `tools/e2e/.run/resource_usage.csv`.

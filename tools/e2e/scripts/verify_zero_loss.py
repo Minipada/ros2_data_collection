@@ -17,9 +17,13 @@ standard, cheap answer for an at-least-once pipeline is to dedupe on *read* — 
 exact re-sends on the natural key (a one-line DISTINCT) at query time. So:
 
   - LOSS is a hard failure: a value the pipeline accepted must come out (zero-loss).
-  - A boundary DUPLICATE is expected and reported as a note, not a failure. The checks
-    below assert the *deduplicated* data is exactly-once — every record present once
-    after collapsing exact re-sends — which is exactly-once-on-read.
+  - A DUPLICATE is now also a hard failure (#309). Re-delivery still happens — that is
+    inherent to at-least-once — but the destination schema collapses it on write: a
+    BEFORE INSERT trigger keyed on (tag, date) skips a row already present, so a
+    re-delivered Record overwrites nothing and adds nothing. `date` is exact to the
+    nanosecond (#308), so that key identifies a Record rather than a second. A duplicate
+    row surviving to here means the dedup did not work, which is what these assertions
+    are for. (dc_files is exempt — see check_files.)
 
 Checks:
 
@@ -98,11 +102,12 @@ def check_synth_topic(
             f"{name}: {expected - distinct} value(s) missing (expected {expected} distinct "
             f"values 0..{max_value}, got {distinct}) — data loss"
         )
-    # At-least-once boundary re-send (informational): collapsed by dedup-on-read.
+    # #309: the schema's dedup trigger should have collapsed any re-delivery on write.
     if total > distinct:
-        notes.append(
+        violations.append(
             f"{name}: {total - distinct} duplicate row(s) across {dup_values} value(s) "
-            "(at-least-once outage-boundary re-send; deduped on read)"
+            "survived the (tag, date) dedup trigger — re-delivered Records must not "
+            "accumulate"
         )
 
 
@@ -117,14 +122,14 @@ def check_real_tag(
     )
     details[tag] = {"total": total, "duplicate_dates": dup_count}
     # These Measurements carry no counter, so loss can't be checked by sequence; the
-    # presence + the synth topics' zero-loss result stand in. A duplicate timestamp is
-    # the expected at-least-once boundary re-send, deduped on read — a note, not a fail.
+    # presence + the synth topics' zero-loss result stand in. A repeated timestamp is a
+    # re-delivery the dedup trigger should have skipped on write (#309) — now a failure.
     if total == 0:
         violations.append(f"{tag}: zero Records landed in Postgres")
     if dup_count > 0:
-        notes.append(
-            f"{tag}: {dup_count} duplicate timestamp(s) "
-            "(at-least-once outage-boundary re-send; deduped on read)"
+        violations.append(
+            f"{tag}: {dup_count} repeated timestamp(s) survived the (tag, date) dedup "
+            "trigger — re-delivered Records must not accumulate"
         )
 
 
@@ -155,9 +160,13 @@ def check_files(pg_container: str, violations: list, notes: list, details: dict)
     if complete_count == 0:
         violations.append("files: zero group_complete markers for the camera group")
     if dup_uploaded > 0:
+        # Still a note, not a failure: dc_files carries no dedup trigger. Its rows are
+        # Bridge-generated audit records timestamped at emit time, so (tag, date) is not
+        # their identity the way it is for Measurement Records — a re-emitted status row
+        # gets a fresh timestamp. Giving dc_files its own key is follow-up work (#309).
         notes.append(
             f"files: {dup_uploaded} local_path(s) have more than one 'uploaded' status row "
-            "(at-least-once outage-boundary re-send; deduped on read)"
+            "(Uploader-level re-emit; dc_files has no dedup trigger yet)"
         )
 
 

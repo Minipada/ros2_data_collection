@@ -124,6 +124,68 @@ Invalid parameters (unknown `type`, missing required field, half a credential pa
 out-of-range port…) are rejected with a clear error at Bridge startup — before Vector
 is ever started.
 
+## Delivery is at-least-once: make the write idempotent
+
+The Shipper confirms every Record end to end, and re-sends anything it has not had
+confirmed. That is what makes the pipeline lossless — but it means a Record in flight
+when a destination goes away, or when the Bridge restarts, can be **delivered twice**.
+Measured in the E2E harness before this was handled: an outage plus a restart duplicated
+roughly a fifth of the run.
+
+A re-delivery is byte-identical to the original — the Forwarder re-sends the frame it
+serialised the first time, so the timestamp is the one the Measurement sampled at, not
+the time of the retry. With `time_format: epoch_nanos` that makes **`(tag, <time_key>)`
+an exact identity** for a Record, and the destination can collapse a re-delivery on write.
+
+For a `postgres` Destination, DC's example schemas ship this trigger (see
+`tools/e2e/sql/init.sql`):
+
+```sql
+CREATE OR REPLACE FUNCTION dc_skip_duplicate() RETURNS trigger AS $$
+DECLARE
+  already_present boolean;
+BEGIN
+  EXECUTE format('SELECT EXISTS (SELECT 1 FROM %I WHERE tag = $1 AND date = $2)', TG_TABLE_NAME)
+    INTO already_present USING NEW.tag, NEW.date;
+  IF already_present THEN
+    RETURN NULL;  -- skip this row; the rest of the batch still commits
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE INDEX IF NOT EXISTS dc_records_identity ON dc_records (tag, date);
+
+CREATE TRIGGER dc_records_skip_duplicate BEFORE INSERT ON dc_records
+  FOR EACH ROW EXECUTE FUNCTION dc_skip_duplicate();
+```
+
+```admonish danger title="Do not use a UNIQUE constraint for this"
+It looks like the obvious answer and it will lose data. Vector's `postgres` sink has no
+conflict handling — its configuration accepts only `endpoint`, `table`, `pool_size`,
+`batch`, `request` and `acknowledgements` — and it writes a whole batch in a single
+statement. A constraint violation therefore fails the **entire statement**, which Vector
+classes as non-retriable and drops. Measured: a batch of four containing one duplicate
+lost all four, with no retry and no dead-letter. One re-delivered Record takes out every
+Record batched with it.
+
+The trigger avoids this because returning `NULL` from `BEFORE INSERT` skips one row
+without failing the statement. Keep the index non-unique: the trigger enforces identity,
+the index only makes its lookup cheap.
+```
+
+Other destination types need their own equivalent — an S3 Destination wants a
+deterministic object key, and a passthrough sink is its author's responsibility. An
+Elasticsearch sink, for instance, gets there by deriving its document `id_key` from the
+same fields, which turns a re-delivery into an overwrite of the row it duplicates.
+
+```admonish info
+Two caveats on the trigger. It costs one indexed lookup per inserted row, which is
+negligible at Measurement rates but not free. And `EXISTS` followed by `INSERT` is not
+atomic, so it assumes a single writer — Vector's default `pool_size`. Raise that and two
+concurrent batches could both pass the check.
+```
+
 ## The `dc.<tag>` routing contract (public API)
 
 The Bridge exposes one Shipper route per **Tag**. The Tag for a topic is its name with

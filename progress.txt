@@ -2969,3 +2969,49 @@ free dedup key until the timestamps turned out not to be unique.
 - **Not run locally**: the full `tools/e2e/scripts/run.sh`. A rootless-Docker Postgres
   holds port 5432 on this host and the harness binds its stores on `--network host`. CI
   gates it.
+
+### #309 - collapse duplicate Records on write
+
+Depends on #308/#310: `(tag, date)` only became an exact per-Record identity once
+timestamps carried nanoseconds.
+
+- **Vector's `postgres` sink cannot do this itself.** Its config accepts only
+  `endpoint`, `table`, `pool_size`, `batch`, `request`, `acknowledgements`; `on_conflict`
+  is rejected as an unknown field. Checked against the vendored 0.57.0 binary.
+- **A UNIQUE constraint would have lost data.** The sink writes a batch in one statement,
+  so a violation fails the whole statement, which Vector classes non-retriable and drops.
+  Measured against a real Postgres: a batch of 4 containing 1 duplicate → `Events dropped
+  intentional=false count=4`, all three good Records gone, no retry, no dead-letter. That
+  is strictly worse than the duplicates it was meant to fix.
+- **What shipped**: a `BEFORE INSERT` trigger returning `NULL`, which skips the offending
+  row without failing the statement. Added to both `tools/e2e/sql/init.sql` and
+  `tools/infrastructure/docker/config/postgresql/init.sql`, with a **non-unique** index on
+  `(tag, date)` — the trigger enforces identity, the index only makes its lookup cheap.
+  Verified through the shipped file: schema loads clean, and a single-statement insert of
+  4 rows where 1 already exists returns `INSERT 0 3` with the other three committed.
+- `verify_zero_loss.py` now **hard-fails on duplicates** for `dc_records` instead of
+  reporting them as notes — re-delivery still happens, but nothing should survive the
+  trigger. `dc_files` stays a note and says why: its rows are Bridge-generated audit
+  records stamped at emit time, so `(tag, date)` is not their identity. Giving them their
+  own key is follow-up.
+- `destinations.md` gains a "Delivery is at-least-once: make the write idempotent"
+  section with the trigger, the measured danger of the UNIQUE alternative, and the two
+  honest caveats (one indexed lookup per row; `EXISTS`-then-`INSERT` assumes a single
+  writer, i.e. Vector's default `pool_size`).
+
+**The local reproduction did not duplicate, and that is worth recording.** Before writing
+any fix I tried to reproduce the CI numbers on one topic at 1 Hz with a Postgres
+Destination: steady state gave 97 rows / 97 distinct, and a 60s outage plus a mid-outage
+container restart plus a 120s drain gave **271 rows / 271 distinct, zero duplicates**. So
+duplicates are not a deterministic consequence of outage+restart, and the CI harness's 26
+per topic depend on something my single-topic workload does not exercise (20 topics, a
+30s steady-state window immediately before the outage, and far more in flight). Two
+consequences: steady state is genuinely clean, which was previously only an assumption;
+and the fix is verified by CI's own reproduction rather than a local one.
+
+**Deliberately not done**: Vector's `dedupe` transform. It would stop a re-delivery
+crossing the uplink rather than cleaning up after it, which is the better place to solve
+the bandwidth half. But it only helps if duplicates are born at the Bridge → Vector hop —
+a sink retry re-sends a batch that has *already* passed the transform, so it would not be
+caught. Which hop dominates is still unmeasured (the local repro produced nothing to
+measure), so adding it now would be speculative. Left in #309.
