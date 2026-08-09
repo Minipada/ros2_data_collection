@@ -6,8 +6,13 @@
 -- lands here. `tag` (added to every event by Vector's fluent source) + `date` (the
 -- normalized event timestamp, per the destination's time_key/time_format) are the
 -- verification key tools/e2e/scripts/verify_zero_loss.py uses.
+--
+-- `date` is bigint, not double precision: the default time_format is epoch_nanos, an
+-- exact integer count of nanoseconds since the epoch (#308). A double would round it
+-- back off below roughly microsecond resolution, which is what made timestamps useless
+-- for telling two Records of a fast Measurement apart.
 CREATE TABLE IF NOT EXISTS dc_records (
-  date double precision,
+  date bigint,
   tag text,
   group_key text,
   -- memory
@@ -39,7 +44,7 @@ CREATE TABLE IF NOT EXISTS dc_records (
 -- column set proven against real dc_bridge behavior in
 -- dc_bridge/dc_bridge_core/tests/uploader_tests.rs and dc_bridge/tests/end_to_end.rs.
 CREATE TABLE IF NOT EXISTS dc_files (
-  date double precision,
+  date bigint,
   kind text,
   group_name text,
   robot_name text,

@@ -136,7 +136,7 @@ console:
   receives: records
   inputs: ["/dc/group/data"]
   time_key: "date"          # was json_date_key
-  time_format: "iso8601"    # was json_date_format; "double" | "iso8601"
+  time_format: "iso8601"    # was json_date_format; "epoch_nanos" (default) | "iso8601" | "double"
 ```
 
 `format` is gone: the `console` Destination always writes JSON.
@@ -591,9 +591,33 @@ dc_bridge:
 See [Setup](./setup.md) for the resulting install, which is now `rosdep install` +
 `colcon build`.
 
+## Timestamps: `time_format` now defaults to `epoch_nanos`
+
+Records carry their ROS header timestamp at full nanosecond resolution, and the default
+`time_format` writes it as an exact integer count of nanoseconds since the epoch rather
+than fractional seconds in a float64.
+
+```admonish warning title="Schema change"
+The column receiving `time_key` must be **`bigint`**, not `double precision`. A double
+rounds the value back off below roughly microsecond resolution — which is what stopped
+timestamps telling two Records of a fast Measurement apart in the first place.
+
+If you already have a populated `dc_records` from an earlier `jazzy` checkout:
+
+    ALTER TABLE dc_records ALTER COLUMN date TYPE bigint USING (date * 1e9)::bigint;
+
+and update any query that treated the column as seconds — `to_timestamp(date)` becomes
+`to_timestamp(date / 1e9)`.
+```
+
+Set `time_format: "double"` explicitly to keep the old fractional-seconds column. It
+remains supported, and remains lossy: a float64 has ~15-16 significant digits and current
+epoch seconds already spend 10 of them. `iso8601` is the other lossless option.
+
 ## Migration checklist
 
 - [ ] `destination_server:` renamed to `dc_bridge:`, `destination_plugins:` to `destinations:`
+- [ ] The column behind `time_key` is `bigint` (or `time_format: "double"` is set explicitly)
 - [ ] Every destination has a `type:` and a `receives:` instead of a `plugin:`
 - [ ] The `flb:` block is deleted; `shipper.data_dir` is set
 - [ ] Every `tags:` entry under `measurement_server` / `group_server` is deleted

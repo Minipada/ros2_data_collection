@@ -134,7 +134,14 @@ std::string render_normalize_source(const RenderConfig& config)
   for (const auto& dest : config.destinations)
   {
     out += "if " + tag_condition(destination_tags(dest)) + " {\n";
-    if (dest.time_format == TimeFormat::Double)
+    if (dest.time_format == TimeFormat::EpochNanos)
+    {
+      // Exact: an i64 of nanoseconds since the epoch, no float rounding anywhere. Good
+      // until the year 2262, and the only format here that can round-trip the full
+      // resolution the Forwarder now sends (#308).
+      out += "  ." + dest.time_key + " = to_unix_timestamp!(.timestamp, unit: \"nanoseconds\")\n";
+    }
+    else if (dest.time_format == TimeFormat::Double)
     {
       out +=
           "  ." + dest.time_key + " = to_float(to_unix_timestamp!(.timestamp, unit: \"nanoseconds\")) / 1000000000.0\n";
@@ -430,9 +437,13 @@ Destination destination_from_raw(const std::string& name, const std::string& typ
   }
 
   std::string time_key = optional_field(raw.time_key).value_or("date");
-  std::string tf = raw.time_format && !raw.time_format->empty() ? *raw.time_format : "double";
+  std::string tf = raw.time_format && !raw.time_format->empty() ? *raw.time_format : "epoch_nanos";
   TimeFormat time_format;
-  if (tf == "double")
+  if (tf == "epoch_nanos")
+  {
+    time_format = TimeFormat::EpochNanos;
+  }
+  else if (tf == "double")
   {
     time_format = TimeFormat::Double;
   }
@@ -442,9 +453,10 @@ Destination destination_from_raw(const std::string& name, const std::string& typ
   }
   else
   {
-    throw RenderError(
-        RenderErrorKind::InvalidTimeFormat,
-        "destination '" + name + "': time_format '" + tf + "' is invalid (expected 'double' or 'iso8601')", name, tf);
+    throw RenderError(RenderErrorKind::InvalidTimeFormat,
+                      "destination '" + name + "': time_format '" + tf +
+                          "' is invalid (expected 'epoch_nanos', 'double' or 'iso8601')",
+                      name, tf);
   }
 
   DestinationKind kind;

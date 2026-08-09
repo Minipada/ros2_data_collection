@@ -25,7 +25,10 @@ dc_bridge:
       database: "dc"
       table: "dc"
       time_key: "date"
-      time_format: "double"
+      # epoch_nanos (default) = exact integer nanoseconds since the epoch; iso8601 =
+      # "…T11:36:28.123456789" string; double = fractional seconds, which is a float64
+      # and rounds below ~1 us. Match the column type: bigint for epoch_nanos.
+      time_format: "epoch_nanos"
     # The other blessed destination types (add the name to `destinations` to enable):
     #
     # rustfs:                     # S3-compatible object storage (self-hosted: RustFS

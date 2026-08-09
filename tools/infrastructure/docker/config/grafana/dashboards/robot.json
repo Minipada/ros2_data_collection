@@ -62,7 +62,8 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(date) AS \"time\", (speed->>'computed')::double precision AS speed FROM dc WHERE name = 'robot' AND speed IS NOT NULL ORDER BY 1",
+          "rawSql":
+              "SELECT to_timestamp(date / 1e9) AS \"time\", (speed->>'computed')::double precision AS speed FROM dc WHERE name = 'robot' AND speed IS NOT NULL ORDER BY 1",
           "refId": "A"
         },
         {
@@ -72,7 +73,8 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(date) AS \"time\", (cmd_vel->'linear'->>'x')::double precision AS cmd_vel_linear_x, (cmd_vel->'angular'->>'z')::double precision AS cmd_vel_angular_z FROM dc WHERE name = 'robot' AND cmd_vel IS NOT NULL ORDER BY 1",
+          "rawSql":
+              "SELECT to_timestamp(date / 1e9) AS \"time\", (cmd_vel->'linear'->>'x')::double precision AS cmd_vel_linear_x, (cmd_vel->'angular'->>'z')::double precision AS cmd_vel_angular_z FROM dc WHERE name = 'robot' AND cmd_vel IS NOT NULL ORDER BY 1",
           "refId": "B"
         }
       ],
@@ -106,7 +108,8 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(updated_at) AS \"time\", group_name, robot_name, storage_type, remote_path, content_type, size, uploaded FROM dc_files WHERE kind = 'file_status' ORDER BY updated_at DESC LIMIT 100",
+          "rawSql":
+              "SELECT to_timestamp(updated_at) AS \"time\", group_name, robot_name, storage_type, remote_path, content_type, size, uploaded FROM dc_files WHERE kind = 'file_status' ORDER BY updated_at DESC LIMIT 100",
           "refId": "A"
         }
       ],
@@ -140,7 +143,8 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT to_timestamp(updated_at) AS \"time\", group_name, robot_name, file_count, complete FROM dc_files WHERE kind = 'group_complete' ORDER BY updated_at DESC LIMIT 20",
+          "rawSql":
+              "SELECT to_timestamp(updated_at) AS \"time\", group_name, robot_name, file_count, complete FROM dc_files WHERE kind = 'group_complete' ORDER BY updated_at DESC LIMIT 20",
           "refId": "A"
         }
       ],

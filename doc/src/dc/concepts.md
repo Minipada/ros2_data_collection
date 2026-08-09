@@ -71,8 +71,9 @@ The `data` string **must** be valid JSON:
 
 The timestamp is the time the Record was created. Measurements convert ROS time to a
 UTC timestamp. Each Destination normalizes it into one field before delivery, controlled
-by `time_key` (default `date`) and `time_format` (`double` for Unix epoch seconds, or
-`iso8601`).
+by `time_key` (default `date`) and `time_format` (`epoch_nanos`, the default, for exact
+integer nanoseconds since the epoch; `iso8601` for a string; `double` for fractional
+seconds, which rounds — see [Destinations](./destinations.md#time_format)).
 
 ### JSON validation
 
