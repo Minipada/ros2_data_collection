@@ -3015,3 +3015,25 @@ the bandwidth half. But it only helps if duplicates are born at the Bridge → V
 a sink retry re-sends a batch that has *already* passed the transform, so it would not be
 caught. Which hop dominates is still unmeasured (the local repro produced nothing to
 measure), so adding it now would be speculative. Left in #309.
+
+#### #309 follow-up - make the dedup assertion non-vacuous
+
+The "no duplicate rows" checks only fail if the run happened to produce a re-delivery,
+and the local repro above showed re-delivery is **not** deterministic — so a quiet CI run
+would have passed them without the trigger ever firing. Same vacuous-pass flaw the
+timestamp check is explicitly guarded against; it should not have shipped without the
+same guard.
+
+`check_dedup_trigger` now injects a known duplicate every run: it inserts a probe row,
+then re-inserts it in a *single statement* alongside two fresh rows (how Vector's sink
+writes a batch), and asserts exactly 3 rows survive. Uses its own `dc.e2e.dedup_probe`
+Tag that no other check reads, and deletes its rows in a `finally`.
+
+Exercised against a real Postgres loading the shipped `sql/init.sql`, four ways:
+trigger present -> PASS; trigger dropped -> FAIL naming the missing trigger; a UNIQUE
+index instead of the trigger -> FAIL with its own message; trigger restored -> PASS.
+Table left empty afterwards.
+
+Writing that fourth case found a bug in the check itself: the UNIQUE-index path made
+`psql()` raise, so the verifier crashed with a traceback instead of reporting the one
+failure mode most worth explaining. Now caught and reported as a violation.

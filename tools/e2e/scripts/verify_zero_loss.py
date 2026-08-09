@@ -237,6 +237,72 @@ def check_timestamp_resolution(
         )
 
 
+# A Tag no other check looks at, so the probe rows below can't disturb them.
+DEDUP_PROBE_TAG = "dc.e2e.dedup_probe"
+
+
+def check_dedup_trigger(pg_container: str, violations: list, notes: list, details: dict) -> None:
+    """Prove the dedup trigger actually rejects a duplicate (#309).
+
+    The "no duplicate rows" assertions elsewhere only fail if the run happened to produce
+    a re-delivery, and re-delivery is not deterministic — a quiet run would pass them
+    without the trigger ever firing. This injects a known duplicate instead, so the
+    guarantee is exercised on every run whether or not the outage produced one.
+
+    Writes the duplicate and two fresh rows in a *single* statement, which is how Vector's
+    postgres sink writes a batch: that is what distinguishes a trigger (skips the one row)
+    from a UNIQUE constraint (fails the statement, and Vector drops the whole batch).
+
+    Args:
+        pg_container: name of the Postgres container to query via podman exec.
+        violations: hard failures, appended to in place.
+        notes: informational observations, appended to in place.
+        details: counters for the JSON report, populated in place.
+
+    Raises:
+        RuntimeError: a psql failure that isn't the expected constraint violation.
+    """
+    tag = DEDUP_PROBE_TAG
+    batch = (
+        f"INSERT INTO dc_records (date, tag) SELECT * FROM "
+        f"(VALUES (1, '{tag}'), (2, '{tag}'), (3, '{tag}')) AS v(date, tag)"
+    )
+    try:
+        psql(pg_container, f"DELETE FROM dc_records WHERE tag='{tag}'")
+        psql(pg_container, f"INSERT INTO dc_records (date, tag) VALUES (1, '{tag}')")
+        # One statement: the already-present row plus two new ones.
+        try:
+            psql(pg_container, batch)
+        except RuntimeError as exc:
+            if "unique constraint" in str(exc) or "duplicate key" in str(exc):
+                # The whole statement was rejected — with Vector this is a non-retriable
+                # error and the entire batch is dropped, so the two good rows would be
+                # lost along with the duplicate. Report it rather than crashing here.
+                violations.append(
+                    "dedup: the duplicate probe aborted the whole INSERT — a UNIQUE "
+                    "constraint is in play instead of the BEFORE INSERT trigger. Vector "
+                    "drops the entire batch on this error, so one re-delivered Record "
+                    "would take every Record batched with it (see tools/e2e/sql/init.sql)"
+                )
+                return
+            raise
+        total = scalar_int(pg_container, f"SELECT count(*) FROM dc_records WHERE tag='{tag}'")
+        distinct = scalar_int(
+            pg_container, f"SELECT count(DISTINCT date) FROM dc_records WHERE tag='{tag}'"
+        )
+    finally:
+        psql(pg_container, f"DELETE FROM dc_records WHERE tag='{tag}'")
+
+    details["dedup_trigger"] = {"rows_after_probe": total, "distinct_after_probe": distinct}
+
+    if total != 3 or distinct != 3:
+        violations.append(
+            f"dedup: expected 3 rows after re-inserting 1 of 3, got {total} row(s) / "
+            f"{distinct} distinct — the (tag, date) dedup trigger is missing or not "
+            "skipping duplicates (see tools/e2e/sql/init.sql)"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -259,6 +325,7 @@ def main() -> int:
         check_real_tag(pg, tag, violations, notes, details)
     check_files(pg, violations, notes, details)
     check_timestamp_resolution(pg, FAST_TAG, violations, notes, details)
+    check_dedup_trigger(pg, violations, notes, details)
 
     report = {"pass": not violations, "violations": violations, "notes": notes, "details": details}
     if args.report:

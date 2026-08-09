@@ -78,7 +78,11 @@ not just a local tool.
    write (a `BEFORE INSERT` trigger keyed on `(tag, date)` — see `sql/init.sql`), so a
    duplicate row reaching the verifier means that dedup did not work. `dc_files` is the
    one exception and still reports duplicates as notes: its rows are timestamped at emit
-   time, so `(tag, date)` is not their identity. Nothing here is a skip-on-missing check — a table
+   time, so `(tag, date)` is not their identity. Because a re-delivery is not
+   deterministic (a quiet run may produce none), the verifier also **injects a known
+   duplicate** and asserts the trigger skips it — writing it in one statement alongside
+   two fresh rows, so a UNIQUE constraint (which would abort the whole batch) fails the
+   check with its own message rather than passing. Nothing here is a skip-on-missing check — a table
    that doesn't exist or a query that fails is a FAIL, not silence.
 7. **Resource usage** (`tools/e2e/scripts/measure_resources.sh`): samples the `dc`
    container's CPU/RSS throughout the run into `tools/e2e/.run/resource_usage.csv`.
