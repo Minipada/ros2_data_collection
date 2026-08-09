@@ -36,6 +36,11 @@ Checks:
    group_complete marker for the camera group; duplicate "uploaded" status rows for the
    same local_path are reported as notes (the Uploader's own idempotency guarantee,
    ADR-0005/#248, holding up under this harness's induced outage + restart).
+4. Passthrough (ADR-0003, #131 follow-up): the raw Vector sink from
+   params/e2e_passthrough_sink.toml — a sink dc_bridge knows nothing about, wired to the
+   public `dc.<tag>` routes — received the same synth counters with no gaps, and received
+   *only* the Tags it subscribed to (proving the per-Tag route branches actually
+   discriminate rather than fanning everything out).
 """
 import argparse
 import json
@@ -58,6 +63,11 @@ REAL_TAGS = [
     "dc.measurement.tcp_health",
     "dc.measurement.dummy",
 ]
+
+# The synth topics params/e2e_passthrough_sink.toml routes into the passthrough sink, and
+# the Tags they arrive under. Kept in lockstep with that file's `inputs`.
+PASSTHROUGH_SOURCES = ["synth00", "synth01"]
+PASSTHROUGH_TAGS = {f"dc.measurement.{s}" for s in PASSTHROUGH_SOURCES}
 
 
 def psql(pg_container: str, query: str) -> str:
@@ -323,6 +333,134 @@ def check_timestamp_resolution(
         )
 
 
+def check_passthrough(
+    path: str,
+    published: dict,
+    boundaries: dict,
+    violations: list,
+    notes: list,
+    details: dict,
+) -> None:
+    """Assert the ADR-0003 passthrough sink got the same zero-loss treatment.
+
+    A missing or empty output file is a FAIL, never a skip: a passthrough that silently
+    produced nothing must not look identical to one that worked (the same rule the
+    Postgres checks above follow).
+
+    Args:
+        path: newline-delimited JSON run.sh extracted from the passthrough sink's output.
+        published: per-source values the generator recorded as published.
+        boundaries: per-source counter values the generator resumed at after a kill.
+        violations: hard failures, appended to in place.
+        notes: informational at-least-once observations, appended to in place.
+        details: per-source counters for the JSON report, populated in place.
+    """
+    if not os.path.exists(path):
+        violations.append(
+            f"passthrough: no output at {path} — the sink produced nothing, or run.sh "
+            "could not extract it from the dc_e2e_data volume"
+        )
+        return
+
+    per_source: dict = {s: [] for s in PASSTHROUGH_SOURCES}
+    unexpected_tags: set = set()
+    malformed = 0
+    total_lines = 0
+
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            total_lines += 1
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                malformed += 1
+                continue
+            tag = event.get("tag")
+            if tag not in PASSTHROUGH_TAGS:
+                unexpected_tags.add(tag)
+                continue
+            source = event.get("source")
+            value = event.get("value")
+            if source in per_source and isinstance(value, int):
+                per_source[source].append(value)
+            else:
+                malformed += 1
+
+    details["passthrough"] = {
+        "total_events": total_lines,
+        "malformed_events": malformed,
+        "unexpected_tags": sorted(t for t in unexpected_tags if t is not None),
+        "per_source": {
+            s: {"total": len(v), "distinct": len(set(v)), "max_value": max(v) if v else None}
+            for s, v in per_source.items()
+        },
+    }
+
+    if total_lines == 0:
+        violations.append(f"passthrough: {path} is empty — the sink received no Records")
+        return
+    if malformed:
+        violations.append(
+            f"passthrough: {malformed} event(s) were not parseable as a synth Record "
+            "(missing/!int `value` or missing `source`)"
+        )
+    # The route transform has one branch per Tag with reroute_unmatched=false, so a Tag
+    # the sink never subscribed to arriving here means routing stopped discriminating.
+    if unexpected_tags:
+        violations.append(
+            f"passthrough: received Tag(s) it never subscribed to: "
+            f"{sorted(t for t in unexpected_tags if t is not None)} — dc.<tag> routing is "
+            "not discriminating between Tags"
+        )
+
+    for source, values in per_source.items():
+        if not values:
+            violations.append(
+                f"passthrough/{source}: zero Records reached the passthrough sink "
+                "(the dc.<tag> route delivered nothing)"
+            )
+            continue
+        arrived = set(values)
+        # Same basis as check_synth_topic (#312): diff against what the generator recorded
+        # as published, not against `max(arrived) + 1`. Inferring the expectation from the
+        # data being checked cannot see a missing tail — and a passthrough sink deserves
+        # the same standard as a blessed one, which is the whole point of covering it.
+        expected = published.get(source, set())
+        if not expected:
+            violations.append(
+                f"passthrough/{source}: the ledger recorded nothing published, so the "
+                "passthrough cannot be verified"
+            )
+            continue
+        missing = expected - arrived
+        kill_points = set(boundaries.get(source, set())) | {max(expected) + 1}
+        tolerated = {
+            value
+            for value in missing
+            if any(0 < point - value <= MAX_KILL_GAP for point in kill_points)
+        }
+        lost = missing - tolerated
+        if lost:
+            violations.append(
+                f"passthrough/{source}: {len(lost)} published Record(s) never reached the "
+                f"passthrough sink, away from any kill point — first missing: "
+                f"{sorted(lost)[:10]} — data loss through the passthrough"
+            )
+        if tolerated:
+            notes.append(
+                f"passthrough/{source}: {len(tolerated)} Record(s) lost in flight where "
+                "the generator was killed (tolerated)"
+            )
+        if len(values) > len(arrived):
+            notes.append(
+                f"passthrough/{source}: {len(values) - len(arrived)} duplicate value(s) "
+                "(at-least-once re-delivery; deduplicated on read)"
+            )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -335,6 +473,11 @@ def main() -> int:
         "--ledger-file",
         required=True,
         help="workload ledger extracted from the dc_e2e_data volume (what was published)",
+    )
+    parser.add_argument(
+        "--passthrough-file",
+        required=True,
+        help="newline-delimited JSON extracted from the ADR-0003 passthrough sink's output",
     )
     parser.add_argument("--report", default=None, help="write a JSON report to this path")
     args = parser.parse_args()
@@ -361,6 +504,7 @@ def main() -> int:
         check_real_tag(pg, tag, violations, notes, details)
     check_files(pg, violations, notes, details)
     check_timestamp_resolution(pg, FAST_TAG, violations, notes, details)
+    check_passthrough(args.passthrough_file, published, boundaries, violations, notes, details)
 
     report = {"pass": not violations, "violations": violations, "notes": notes, "details": details}
     if args.report:

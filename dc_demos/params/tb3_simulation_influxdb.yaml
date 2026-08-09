@@ -4,12 +4,47 @@ dc_bridge:
       data_dir: "$HOME/.dc/buffer"
     # dc_bridge has no blessed InfluxDB destination (only postgres, s3, file, and
     # console are blessed — see doc/src/dc/destinations.md) so this demo shows the
-    # ADR-0003 passthrough escape hatch instead: `destinations` stays empty and a raw
-    # Vector sink config is loaded via `custom_config_files`, consuming the public
-    # `dc.<tag>` routes documented in doc/src/dc/destinations.md. Copy the example
-    # sink shipped with this package into place before launching this demo:
+    # ADR-0003 passthrough escape hatch instead: a raw Vector sink config loaded via
+    # `custom_config_files`, consuming the public `dc.<tag>` routes documented in
+    # doc/src/dc/destinations.md. Copy the example sink shipped with this package into
+    # place before launching this demo:
     #   mkdir -p ~/.dc && cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/tb3_simulation_influxdb_sink.toml" ~/.dc/
-    destinations: []
+    #
+    # `destinations` must still name at least one *blessed* Destination, and its `inputs`
+    # are what create the `dc.<tag>` routes the snippet consumes — dc_bridge derives both
+    # its ROS subscriptions and its route branches from `destinations`, and never reads
+    # the snippet's own `inputs`. (`destinations: []` is not an option either: rclcpp
+    # can't load an empty YAML array — no inferable element type — and dc_bridge fatals
+    # at startup with "parameter_value_from failed for parameter 'destinations'", same
+    # trap as `inputs: []`.) A `file` Destination is the cheapest thing to put here and
+    # leaves a local trace of what was shipped; `console` would work too, but this demo
+    # collects base64 camera and map images, which makes for unreadable terminal output.
+    destinations: ["records_log"]
+    records_log:
+      type: file
+      receives: records
+      inputs:
+        [
+          "/dc/measurement/cpu",
+          "/dc/measurement/memory",
+          "/dc/measurement/os",
+          "/dc/measurement/uptime",
+          "/dc/measurement/camera",
+          "/dc/measurement/cmd_vel",
+          "/dc/measurement/distance_traveled",
+          "/dc/measurement/position",
+          "/dc/measurement/speed",
+          "/dc/measurement/map",
+          "/dc/measurement/influxdb_health",
+        ]
+      # Absolute, with no `$HOME`: unlike `shipper.data_dir` and `custom_config_files`,
+      # a Destination's `path` is passed to Vector verbatim, and Vector does not expand
+      # environment variables in it — `$HOME/x` silently becomes a literal `$HOME`
+      # directory next to the Bridge's working directory. Vector does create the parent
+      # directories.
+      path: "/tmp/dc/tb3_simulation_influxdb_records.ndjson"
+      time_key: "date"
+      time_format: "double"
     custom_config_files: ["$HOME/.dc/tb3_simulation_influxdb_sink.toml"]
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224

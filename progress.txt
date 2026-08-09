@@ -3088,3 +3088,85 @@ observed, and several of the findings contradict what I would have written other
   files except `pycln` (same broken hook env as earlier entries) and the two
   `poetry-requirements` hooks — both reproduce on an untouched `README.md`, so neither is
   this diff.
+
+### #131 follow-up - fix the InfluxDB passthrough demo, and cover the passthrough in E2E
+
+Both asked for after the tutorial landed: the bugs the tutorial's research surfaced were
+worth fixing in the same PR, and the passthrough had no end-to-end coverage at all.
+
+**Two independent bugs in the InfluxDB demo, both fixed and verified.** The demo could
+never have started as shipped:
+
+1. `destinations: []` — rclcpp cannot type an empty YAML sequence, so dc_bridge fatals
+   with `parameter_value_from failed for parameter 'destinations': No parameter value
+   set` before it ever reads `custom_config_files`. Replaced with a blessed `file`
+   Destination named `records_log` over the same 11 topics the sink snippet consumes —
+   which is the *only* thing that creates their `dc.<tag>` routes. `file` rather than
+   `console` because this demo collects base64 camera and map images.
+2. `[sinks.influxdb.influxdb1_settings]` — Vector 0.57 rejects it outright: `unknown
+   field 'influxdb1_settings'`. The nested v1 settings table is gone; v1 is now selected
+   by a flat `database` key, and `measurement` is required alongside it. Found because
+   the `vector validate` backstop caught it at Bridge startup once bug 1 was fixed —
+   the backstop doing exactly its documented job.
+   Correct shape confirmed from the vendored binary itself
+   (`vector generate --fragment //influxdb_logs`) rather than from upstream docs.
+- **Verified**: with the real `docker-compose.influxdb.yaml` (InfluxDB 1.8) up,
+  `dc_bridge up: 11 subscribed topic(s)` → `Bridge is ready` → `Managed nodes are
+  active`, and `SELECT * FROM dc` returns rows with real `/cpu/average`, `/memory/used`,
+  `/uptime/time`, `/influxdb_health/*` values; the `file` Destination wrote 1642 lines.
+  The tb3 params file itself can't complete a launch here (its TF-dependent Measurements
+  block `on_configure` without Gazebo/nav2 — pre-existing and by design), so the run used
+  the demo's `dc_bridge` block **verbatim** with the Measurement list cut to the
+  hardware-free subset. The full params file was separately confirmed to load and
+  subscribe to all 11 topics.
+
+**A third trap, found while fixing the first**: a `file` Destination's `path` is *not*
+env-expanded. dc_bridge expands `$VAR` in `shipper.data_dir`, `custom_config_files`,
+`password` and `secret_access_key` — nowhere else — and Vector does not expand env vars
+in a sink path either. Verified directly: `path = "$HOME/.dc/expanded.ndjson"` produced
+`/tmp/$HOME/.dc/expanded.ndjson`, a literal `$HOME` directory beside the process's cwd.
+Demo now uses an absolute path; `destinations.md` documents the rule.
+
+**E2E coverage for the passthrough** (`tools/e2e/params/e2e_passthrough_sink.toml`). Before
+this, the only passthrough tests were `render_test.cpp`'s five pure
+`validate_custom_config_files()` cases — TOML parsing and component-id collisions. Nothing
+asserted a passthrough sink ever *receives* a Record. Now the harness's own params load a
+raw Vector `file` sink on the `dc.<tag>` routes for `synth00`/`synth01`, and
+`verify_zero_loss.py` gained `check_passthrough()`, held to the same standard as the
+Postgres checks: no counter gaps, and a missing or empty output file is a FAIL, never a
+skip. It additionally asserts the sink received **only** the two Tags it subscribed to,
+which is the one property nothing else tests — that the route transform's per-Tag branches
+discriminate instead of fanning everything out.
+- A `file` sink, not a networked one, on purpose: no extra container, and it stays up
+  through the induced outage, so a gap in its output is unambiguously the pipeline losing
+  a Record rather than a store that hadn't come back yet.
+- Two Vector behaviours the design depends on were verified against the vendored 0.57.0
+  binary rather than assumed: the `file` sink **creates missing parent directories**, and
+  it **appends on restart** rather than truncating (120 → 241 lines across two runs).
+  Without the append guarantee the harness's mid-run `podman restart` would look exactly
+  like catastrophic loss.
+- **Verified**: the real `dc-e2e` image with the real `e2e_params.yaml` produced 168
+  events — exactly `dc.measurement.synth00` × 84 and `dc.measurement.synth01` × 84,
+  `value` starting at 0, surviving a `podman restart` mid-run — and run.sh's extraction
+  command read them back off the `dc_e2e_data` volume. `check_passthrough` was then
+  exercised against six inputs to prove it can actually fail: real output → PASS; one
+  value dropped → FAIL (loss); an unsubscribed Tag injected → FAIL (routing); empty file
+  → FAIL; missing file → FAIL; duplicates → PASS with notes. A check that cannot fail is
+  worth nothing, so this mattered more than the happy path.
+- **Not verified locally**: the full `run.sh` sequence. This machine has a rootless-Docker
+  Postgres holding port 5432, and the harness runs its stores on `--network host`, so
+  Postgres exits with "could not bind IPv4 address: Address already in use". Nothing to do
+  with this change — it would have blocked the harness before it too. CI's runner has no
+  such conflict, and `run.sh` is CI-gating on every PR.
+
+**Docs/lint state.** `pre-commit`: flake8 back to exactly its pre-existing baseline on
+`verify_zero_loss.py` (E221×2 / E231×2 / VNE001×2, all in the untouched `main()`); my own
+DAR101×4 (added a Google-style `Args:` block) and one E702 (flake8 mis-tokenising a `;`
+inside an f-string — reworded) are gone. `pycln` and the two `poetry-requirements` hooks
+still fail, and still fail identically on an untouched `README.md`. `build_doc.sh` could
+not complete its image-tag step: this host's `/` is at **0 bytes free**, and podman's
+image copy needs `/var/tmp` (`no space left on device`; `TMPDIR` is not honoured for that
+path). The `dc-doc` image was a full cache hit, so the script's two content steps
+(`strictdoc export`, `mdbook build`) were run in it directly — both clean, linkcheck
+included, with only the two pre-existing `list[str]` warnings in unrelated measurement
+pages. The disk is a host problem, not a repo one, and worth clearing before the next run.
