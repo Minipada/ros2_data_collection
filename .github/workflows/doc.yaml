@@ -13,6 +13,15 @@
 # internal link, and book.toml sets `create-missing = false` so a SUMMARY.md entry
 # pointing at a missing page fails too. External links are not followed — see the comment
 # on `follow-web-links` in doc/book.toml.
+#
+# Build cache (#315): each run is a fresh runner, so podman's build cache is otherwise
+# local-only and never survives between runs — this image (Rust toolchain + five `cargo
+# install`s) was rebuilding from scratch every time. Mirrors ci.yaml's `build-workspace`
+# job: log into ghcr.io, compute a stable `dc-doc-cache` ref, and pass it to
+# build_doc.sh's `--cache-from`/`--cache-to`. `packages: write` only actually lands for
+# same-repo events — GitHub forces GITHUB_TOKEN to read-only on `pull_request` from a
+# fork regardless of what's requested here. That just means a fork PR pushes no cache and
+# builds cold, same as before this change; it does not fail the build.
 
 name: Documentation
 
@@ -39,6 +48,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -53,9 +63,24 @@ jobs:
       - name: Verify podman
         run: podman --version
 
+      - name: Log in to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # ghcr image names must be lowercase and GitHub expressions have no lowercase
+      # function, so the ref is computed here rather than inline (same as ci.yaml).
+      - name: Compute the cache ref
+        id: refs
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          IMAGE="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
+          echo "cache_ref=$IMAGE/dc-doc-cache" >> "$GITHUB_OUTPUT"
+
       - name: Build the documentation
         env:
           IMAGE_TAG: dc-doc:${{ github.sha }}
+          CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
         run: ./tools/ci/pre-commit/build_doc.sh
 
       - name: Upload the built site
