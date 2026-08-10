@@ -232,10 +232,19 @@ fi
 log "PASS: upload intent queue empty (0 orphaned intents)"
 
 # --- verify -------------------------------------------------------------------------
-log "verifying zero-loss (duplicates from the at-least-once boundary are deduped on read)"
+# The generator's ledger of what it published (#312) — the independent side of the
+# comparison. It lives on the dc_e2e_data volume so it survives the restart above; read it
+# back the same way the intent-queue check does, via a one-off container on that volume.
+log "extracting the workload ledger (what the generator published)"
+podman run --rm --entrypoint bash \
+  -v dc_e2e_data:/vol:ro "$DC_IMAGE" \
+  -c 'cat /vol/workload_ledger.txt 2>/dev/null || true' > "$RUN_DIR/workload_ledger.txt"
+
+log "verifying zero-loss against the published ledger"
 python3 "$SCRIPT_DIR/verify_zero_loss.py" \
   --postgres-container "$PG_C" \
   --num-synth-topics 14 \
+  --ledger-file "$RUN_DIR/workload_ledger.txt" \
   --report "$RUN_DIR/verification_report.json"
 
 log "PASS: zero-loss E2E harness"
