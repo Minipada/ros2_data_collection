@@ -1,5 +1,5 @@
 # DC 2.0 (Jazzy) documentation build (#252). Builds the mdbook site and the strictdoc
-# requirements export as a CI gate; does not publish anywhere. GitHub Pages for this repo
+# requirements export as a CI gate; does not deploy anywhere. GitHub Pages for this repo
 # has been taken down (gh-pages branch deleted) and this job no longer deploys to it.
 #
 # Like ci.yaml, this runs the same script a developer runs locally
@@ -22,6 +22,15 @@
 # same-repo events — GitHub forces GITHUB_TOKEN to read-only on `pull_request` from a
 # fork regardless of what's requested here. That just means a fork PR pushes no cache and
 # builds cold, same as before this change; it does not fail the build.
+#
+# PR preview (#135): the built site is uploaded as a workflow artifact on every run,
+# including PRs — deliberately artifact-only rather than a hosted deploy, since this repo
+# has no preview host configured (#184 closed without one) and reaching one from a fork PR
+# would need `pull_request_target` plus a deploy token, i.e. secrets exposed to untrusted
+# PR code. `pull_request` (not `pull_request_target`) keeps this safe for fork PRs — the
+# default `GITHUB_TOKEN` is read-only there, which is all an artifact upload needs. The
+# job summary step below turns that artifact into a one-click link from the PR's Checks
+# tab instead of leaving reviewers to dig through the run's Artifacts section.
 
 name: Documentation
 
@@ -84,7 +93,23 @@ jobs:
         run: ./tools/ci/pre-commit/build_doc.sh
 
       - name: Upload the built site
+        id: upload-doc-site
         uses: actions/upload-artifact@v4
         with:
           name: doc-site
           path: doc/book/html
+
+      - name: Link the preview from the job summary
+        if: github.event_name == 'pull_request'
+        env:
+          ARTIFACT_URL: ${{ steps.upload-doc-site.outputs.artifact-url }}
+        run: |
+          {
+            echo "### 📖 Documentation preview"
+            echo
+            echo "[Download the built site](${ARTIFACT_URL}) (\`doc-site\`)."
+            echo
+            echo "This is a workflow artifact, not a hosted deploy — unzip it and open"
+            echo "\`index.html\`. Downloading requires a GitHub login with read access to"
+            echo "this repo, same as any other Actions artifact."
+          } >> "$GITHUB_STEP_SUMMARY"
