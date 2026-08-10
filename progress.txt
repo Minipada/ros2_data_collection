@@ -3213,3 +3213,35 @@ run --files .github/workflows/doc.yaml tools/ci/pre-commit/build_doc.sh` — `ch
 `shellcheck`, and the `build-doc` hook (a real `strictdoc export` + `mdbook build`) all
 pass; only the pre-existing `poetry-requirements` env failure reproduces (same as every
 prior entry above — not this diff).
+
+### #135 - Publish a documentation preview from PR builds
+
+`doc.yaml` (#252) already uploaded the built book as a workflow artifact
+(`actions/upload-artifact`, name `doc-site`) on every run including PRs — that step has no
+`if:` restricting it to push, so the "build the docs on PRs" half of #135 was already
+done before this issue was filed. What was actually missing was *discoverability*: the
+artifact only surfaced at the bottom of the run's Artifacts section, several clicks past
+where a reviewer lands from the PR's Checks tab.
+
+**Fix**: gave the upload step an `id`, and added a step (`if:
+github.event_name == 'pull_request'`) that reads its `artifact-url` output (available
+since upload-artifact v4, no waiting for run completion) into an env var and writes a
+Markdown link to `$GITHUB_STEP_SUMMARY` — the summary is exactly what "Details" on a PR
+check opens, so the download link is now one click away instead of buried.
+
+**Stayed artifact-only, deliberately**, matching the option the issue itself flagged as
+the one needing no tradeoff: this repo has no preview host configured (#184 closed
+without one), and a hosted preview reachable from fork PRs would need
+`pull_request_target` plus a deploy token — secrets handed to untrusted PR code. Kept
+`pull_request` (not `_target`); its default `GITHUB_TOKEN` is read-only, which is all an
+artifact upload needs, so fork PRs get the same preview as same-repo PRs with zero secret
+exposure. All three acceptance criteria are satisfied by the artifact-only path: reachable
+from Checks (job summary), works for fork PRs, no secrets.
+
+**Verified**: `pre-commit run --files .github/workflows/doc.yaml` — `check-yaml` and the
+`build-doc` hook (a real `strictdoc export` + `mdbook build`, unaffected by this change)
+both pass; only the pre-existing `poetry-requirements` env failure reproduces (progress.txt
+entries above; not this diff). Did not verify the summary rendering end-to-end against a
+live GitHub Actions run (would need a pushed branch + opened PR) — the `artifact-url`
+output and `$GITHUB_STEP_SUMMARY` mechanism are both documented, stable GitHub Actions
+features, not something this repo's tooling can dry-run locally.
