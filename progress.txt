@@ -2904,3 +2904,50 @@ from `gh-pages`) is being retired.
 - `doc/src/dc/groups.md` gains the parameter row and a "Warnings and throttling" subsection
   with both rendered log lines (plain and `[+N more ...]`), the per-group-not-per-call-site
   guarantee, and the explicit note that Records are never throttled, only the log line.
+
+### #312 - the E2E zero-loss check could pass while Records were missing
+
+Found by running the full harness to test something else (#309's dedup), which is the
+only reason it surfaced at all.
+
+- **The defect**, in `jazzy` since the harness landed and gating every PR:
+  `verify_zero_loss.py` computed `expected = max(value) + 1` from the table it was
+  verifying. It cannot notice that the largest value received is smaller than the largest
+  value *sent*. Demonstrated: deliver a contiguous 0..84 having lost 85..96 and the old
+  check reports `expected = 85, distinct = 85` -> **PASS with 12 Records gone**. The tail
+  is exactly what is at risk, being what is in flight when the outage hits.
+- **Second defect, same file**: `workload_generator.py` reset every counter to 0 in
+  `__init__`, and the harness restarts that container mid-run by design. So the counter
+  repeated, which (a) let a republished low value fill the hole left by a lost one, and
+  (b) made every post-restart Record look like a duplicate. Measured before the fix:
+  `synth00` finished with 96 rows, 96 *distinct timestamps*, max value 64.
+- **That second point retracts #309.** The "~20% duplication" was this artifact — those
+  rows have distinct timestamps and are distinct Records, and the counts track the
+  post-restart window exactly (CI's 30s drain -> 26; a 40s drain -> 31). The real
+  Measurement Tags showed zero duplicates and zero gaps throughout. My earlier local repro
+  (271 rows / 271 distinct on `uptime.time`, which does not reset) was right, and I
+  discounted it because CI disagreed.
+- **Fix**: the generator appends every published `source,value` to a ledger on the
+  `dc_e2e_data` volume, resumes its counters from it instead of resetting, and writes a
+  `#boundary,<source>,<value>` marker where it was killed. The verifier diffs the ledger
+  against Postgres one-to-one. Ledger entries are written *after* publish returns, so it
+  can never claim a Record that was never handed to the middleware; the reverse leaves a
+  delivered Record unrecorded, which is reported rather than counted as loss.
+- **Kill-point tolerance, deliberately bounded.** The generator publishes from inside the
+  container the harness restarts, so the tick in flight when it dies is genuinely
+  unrecoverable — nothing persists it. Rather than excuse it vaguely, the marker makes the
+  kill points explicit and only `MAX_KILL_GAP` (3) Records adjacent to one may vanish;
+  anything else fails. The real run loses exactly 1 there (value 65) plus 2 at shutdown.
+
+**Verified with the full harness, run locally for the first time.** The port-5432 conflict
+that blocked earlier attempts was worked around without touching the host's database: an
+"anchor" container owns a private netns and the others join it with
+`--network container:`, so `127.0.0.1` works between them and nothing binds on the host.
+(Tried a podman pod first; it needs to build a pause image and `/` is at 0 bytes.) That
+patch was local-only and is not committed.
+
+- Healthy run: **PASSED, 0 violations**, with the three kill-point losses reported as
+  notes (65 at the restart, 95-96 at shutdown).
+- Interior Record deleted -> **FAIL**, naming the value.
+- Contiguous tail 85..96 deleted, no interior gap -> **old check PASSES, new check FAILS**.
+  That is the whole point of the issue, shown side by side.

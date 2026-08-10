@@ -23,9 +23,13 @@ exact re-sends on the natural key (a one-line DISTINCT) at query time. So:
 
 Checks:
 
-1. Per synth topic (tools/e2e/scripts/workload_generator.py's strictly-incrementing
-   `value` counter): the distinct values are exactly 0..max with no gap (loss) — a check
-   independent of timestamp precision. Repeated values are counted and reported as notes.
+1. Per synth topic: every value the generator recorded in its ledger
+   (tools/e2e/scripts/workload_generator.py, on the dc_e2e_data volume) is present in
+   Postgres. The ledger is written independently of the pipeline, so this compares what
+   was *sent* against what *arrived*, one to one. It replaces `expected = max(value) + 1`,
+   which read its expectation out of the very table it was checking and therefore could
+   not notice a missing tail: lose the last 40 of 100 and `max` drops to 59, the bar drops
+   with it, and the check passed (#312).
 2. Per real-measurement Tag (memory/os/storage/uptime/tcp_health/dummy): at least one
    Record landed; duplicate (tag, date) rows are reported as notes.
 3. File pipeline (ADR-0005): at least one verified file_status row and one
@@ -35,8 +39,16 @@ Checks:
 """
 import argparse
 import json
+import os
 import subprocess
 import sys
+
+# Records lost at a point where the harness kills the workload generator — the mid-run
+# container restart, and the stop that ends the run. The generator publishes from inside
+# that container, so a tick in flight when it dies was never handed to measurement_server
+# and no buffer could have held it. Bounded and reported, never a blanket excuse: a gap
+# anywhere other than a kill point is loss and fails.
+MAX_KILL_GAP = 3
 
 REAL_TAGS = [
     "dc.measurement.memory",
@@ -65,44 +77,127 @@ def scalar_int(pg_container: str, query: str) -> int:
     return int(out) if out else 0
 
 
+def read_ledger(path: str) -> dict:
+    """Load the generator's published-Record ledger as {source: set(values)}.
+
+    Args:
+        path: newline-delimited "source,value" file extracted from the dc_e2e_data volume.
+
+    Returns:
+        dict: per-source set of published counter values.
+
+    Raises:
+        RuntimeError: the ledger is missing or empty — the generator never wrote it, so
+            there is nothing to verify against and silence would look like success.
+    """
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        raise RuntimeError(
+            f"workload ledger missing or empty at {path} — without it there is no "
+            "independent record of what was published, so loss cannot be checked"
+        )
+    published: dict = {}
+    with open(path) as ledger:
+        for line in ledger:
+            source, _, value = line.strip().partition(",")
+            if source and value.isdigit():
+                published.setdefault(source, set()).add(int(value))
+    return published
+
+
+def read_boundaries(path: str) -> dict:
+    """Load the kill-point markers the generator wrote when it resumed after a restart.
+
+    Args:
+        path: the same ledger file read by read_ledger.
+
+    Returns:
+        dict: {source: set(resume values)} — a gap just below one of these is the
+            generator having been killed mid-tick, not the pipeline losing a Record.
+    """
+    boundaries: dict = {}
+    with open(path) as ledger:
+        for line in ledger:
+            if not line.startswith("#boundary,"):
+                continue
+            _, _, rest = line.strip().partition(",")
+            source, _, value = rest.partition(",")
+            if source and value.isdigit():
+                boundaries.setdefault(source, set()).add(int(value))
+    return boundaries
+
+
 def check_synth_topic(
-    pg_container: str, name: str, violations: list, notes: list, details: dict
+    pg_container: str,
+    name: str,
+    published: set,
+    boundaries: set,
+    violations: list,
+    notes: list,
+    details: dict,
 ) -> None:
+    """Compare what the generator published against what reached Postgres, one to one.
+
+    Args:
+        pg_container: name of the Postgres container to query via podman exec.
+        name: synth topic name.
+        published: values the generator recorded as published for this topic.
+        boundaries: counter values the generator resumed at after being killed.
+        violations: hard failures, appended to in place.
+        notes: informational observations, appended to in place.
+        details: counters for the JSON report, populated in place.
+    """
     total = scalar_int(pg_container, f"SELECT count(*) FROM dc_records WHERE source='{name}'")
-    distinct = scalar_int(
-        pg_container, f"SELECT count(DISTINCT value) FROM dc_records WHERE source='{name}'"
-    )
-    dup_values = scalar_int(
-        pg_container,
-        f"SELECT count(*) FROM (SELECT value FROM dc_records "
-        f"WHERE source='{name}' GROUP BY value HAVING count(*) > 1) t",
-    )
-    max_out = psql(pg_container, f"SELECT max(value) FROM dc_records WHERE source='{name}'")
-    max_value = int(max_out) if max_out else None
+    rows = psql(pg_container, f"SELECT DISTINCT value FROM dc_records WHERE source='{name}'")
+    arrived = {int(v) for v in rows.split() if v.strip().isdigit()}
+
+    missing = published - arrived
+    unexpected = arrived - published
+
+    # Every point at which the generator was killed: each restart it resumed from, plus
+    # the end of the run (the stop that ends the harness). Only the few Records
+    # immediately below such a point may go missing without it being pipeline loss.
+    kill_points = set(boundaries) | {max(published) + 1 if published else 0}
+    tolerated = {
+        value
+        for value in missing
+        if any(0 < point - value <= MAX_KILL_GAP for point in kill_points)
+    }
+    lost = missing - tolerated
 
     details[name] = {
-        "total": total,
-        "distinct": distinct,
-        "max_value": max_value,
-        "duplicate_values": dup_values,
+        "published": len(published),
+        "arrived": len(arrived),
+        "rows": total,
+        "lost": len(lost),
+        "tolerated_at_kill_points": len(tolerated),
+        "unexpected": len(unexpected),
     }
 
-    if max_value is None or total == 0:
-        violations.append(f"{name}: zero Records landed in Postgres")
+    if not published:
+        violations.append(f"{name}: the ledger recorded nothing published")
         return
-    # Zero-loss (hard): every value 0..max must be present after dedup. A gap here is a
-    # value the pipeline accepted but never delivered — real loss.
-    expected = max_value + 1
-    if distinct < expected:
+    if lost:
         violations.append(
-            f"{name}: {expected - distinct} value(s) missing (expected {expected} distinct "
-            f"values 0..{max_value}, got {distinct}) — data loss"
+            f"{name}: {len(lost)} published Record(s) never arrived, away from any kill "
+            f"point — first missing: {sorted(lost)[:10]} — data loss"
         )
-    # At-least-once boundary re-send (informational): collapsed by dedup-on-read.
-    if total > distinct:
+    if tolerated:
         notes.append(
-            f"{name}: {total - distinct} duplicate row(s) across {dup_values} value(s) "
-            "(at-least-once outage-boundary re-send; deduped on read)"
+            f"{name}: {len(tolerated)} Record(s) lost in flight where the generator was "
+            f"killed ({sorted(tolerated)}) — the workload runs inside the restarted "
+            "container, so nothing could persist them"
+        )
+    if unexpected:
+        notes.append(
+            f"{name}: {len(unexpected)} row(s) in Postgres with no ledger entry "
+            "(generator killed between publish and ledger write)"
+        )
+    # A value now identifies exactly one Record for the whole run, so a repeat is a
+    # genuine double delivery rather than the counter having restarted (#312).
+    if total > len(arrived):
+        notes.append(
+            f"{name}: {total - len(arrived)} duplicate row(s) "
+            "(at-least-once re-delivery; deduplicated on read)"
         )
 
 
@@ -169,6 +264,11 @@ def main() -> int:
         help="name of the running Postgres container to query via podman exec",
     )
     parser.add_argument("--num-synth-topics", type=int, default=14)
+    parser.add_argument(
+        "--ledger-file",
+        required=True,
+        help="workload ledger extracted from the dc_e2e_data volume (what was published)",
+    )
     parser.add_argument("--report", default=None, help="write a JSON report to this path")
     args = parser.parse_args()
 
@@ -177,8 +277,19 @@ def main() -> int:
     notes: list = []
     details: dict = {}
 
+    published = read_ledger(args.ledger_file)
+    boundaries = read_boundaries(args.ledger_file)
     for i in range(args.num_synth_topics):
-        check_synth_topic(pg, f"synth{i:02d}", violations, notes, details)
+        name = f"synth{i:02d}"
+        check_synth_topic(
+            pg,
+            name,
+            published.get(name, set()),
+            boundaries.get(name, set()),
+            violations,
+            notes,
+            details,
+        )
     for tag in REAL_TAGS:
         check_real_tag(pg, tag, violations, notes, details)
     check_files(pg, violations, notes, details)

@@ -71,11 +71,20 @@ not just a local tool.
    queue would have forgotten it).
 6. **Verification** (`tools/e2e/scripts/verify_zero_loss.py`): queries Postgres via
    `podman exec` on the Postgres container (no host psycopg2/psql needed). The shipper is
-   at-least-once (ADR-0002), so it **hard-fails on loss** — a gap in a synth topic's
-   counter (checked against the *distinct* values, so a re-send can't hide a gap), or
-   zero Records for any of the 20 measurement Tags — while a boundary **duplicate** (a
-   record re-sent on recovery) is reported as a note and deduplicated on read
-   (exactly-once on read), not failed. Nothing here is a skip-on-missing check — a table
+   at-least-once (ADR-0002), so it **hard-fails on loss**. Loss is found by diffing what
+   arrived against `params/../workload_ledger.txt` — the generator's own record of every
+   value it published, written to the `dc_e2e_data` volume so it survives the restart.
+   That comparison is one-to-one against an independent source. It replaced
+   `expected = max(value) + 1`, which read its expectation out of the table it was
+   checking and so could not see a missing tail: deliver a clean 0..84 having lost 85..96
+   and `max` drops to 84, the bar drops with it, and the check passed with 12 Records gone
+   (#312). A **duplicate** is reported as a note and deduplicated on read.
+
+   Two gaps are tolerated rather than failed, both bounded by `MAX_KILL_GAP` and both
+   reported: the tick in flight when the harness restarts the DC container, and the last
+   Records at shutdown. The workload generator runs *inside* that container, so a message
+   it published as the process died was never handed to `measurement_server` and no buffer
+   could have held it. A gap anywhere other than a kill point is loss and fails. Nothing here is a skip-on-missing check — a table
    that doesn't exist or a query that fails is a FAIL, not silence.
 7. **Resource usage** (`tools/e2e/scripts/measure_resources.sh`): samples the `dc`
    container's CPU/RSS throughout the run into `tools/e2e/.run/resource_usage.csv`.
