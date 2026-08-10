@@ -44,12 +44,8 @@ Thermal::~Thermal() = default;
 void Thermal::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".base_path",
-                                               rclcpp::ParameterValue(std::string("/sys/class/thermal")));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".zones",
-                                               rclcpp::ParameterValue(std::vector<std::string>{}));
-  node->get_parameter(measurement_name_ + ".base_path", base_path_);
-  node->get_parameter(measurement_name_ + ".zones", zones_);
+  base_path_ = dc_util::get_str_type_param(node, measurement_name_, "base_path", "/sys/class/thermal");
+  zones_ = dc_util::get_str_array_type_param(node, measurement_name_, "zones", std::vector<std::string>{});
 
   // Deliberately don't touch the filesystem (or throw) here: a missing/unreadable
   // /sys/class/thermal (e.g. a container without the host's thermal sysfs mounted, or a

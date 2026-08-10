@@ -4,7 +4,7 @@
 
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
-#include "nav2_util/node_utils.hpp"
+#include "dc_util/node_utils.hpp"
 #include "nav2_util/robot_utils.hpp"
 
 namespace dc_measurements

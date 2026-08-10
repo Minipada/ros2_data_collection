@@ -12,51 +12,26 @@ Camera::~Camera() = default;
 void Camera::onConfigure()
 {
   auto node = getNode();
-  // Declare parameters
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".cam_name", rclcpp::PARAMETER_STRING);
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".cam_topic", rclcpp::PARAMETER_STRING);
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".draw_det_barcodes",
-                                               rclcpp::ParameterValue(true));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".rotation_angle", rclcpp::ParameterValue(0));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_raw_img", rclcpp::ParameterValue(false));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_rotated_img",
-                                               rclcpp::ParameterValue(false));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_detections_img",
-                                               rclcpp::ParameterValue(true));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_raw_path",
-                                               rclcpp::ParameterValue("camera/raw/%Y-%m-%dT%H:%M:%S"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_raw_base64",
-                                               rclcpp::ParameterValue(false));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_rotated_path",
-                                               rclcpp::ParameterValue("camera/rotated/%Y-%m-%dT%H:%M:%S"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_rotated_base64",
-                                               rclcpp::ParameterValue(false));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_inspected_path",
-                                               rclcpp::ParameterValue("camera/inspected/%Y-%m-%dT%H:%M:%S"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_inspected_base64",
-                                               rclcpp::ParameterValue(false));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".detection_modules",
-                                               rclcpp::ParameterValue(std::vector<std::string>()));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".destinations.minio.bucket",
-                                               rclcpp::ParameterValue(std::string("")));
-
-  // Get parameters
-  node->get_parameter(measurement_name_ + ".cam_name", cam_name_);
-  node->get_parameter(measurement_name_ + ".draw_det_barcodes", draw_det_barcodes_);
-  node->get_parameter(measurement_name_ + ".rotation_angle", rotation_angle_);
-  node->get_parameter(measurement_name_ + ".cam_topic", cam_topic_);
-  node->get_parameter(measurement_name_ + ".save_raw_img", save_raw_img_);
-  node->get_parameter(measurement_name_ + ".save_rotated_img", save_rotated_img_);
-  node->get_parameter(measurement_name_ + ".save_detections_img", save_detections_img_);
-  node->get_parameter(measurement_name_ + ".save_raw_path", save_raw_path_);
-  node->get_parameter(measurement_name_ + ".save_raw_base64", save_raw_base64_);
-  node->get_parameter(measurement_name_ + ".save_rotated_path", save_rotated_path_);
-  node->get_parameter(measurement_name_ + ".save_rotated_base64", save_rotated_base64_);
-  node->get_parameter(measurement_name_ + ".save_inspected_path", save_inspected_path_);
-  node->get_parameter(measurement_name_ + ".save_inspected_base64", save_inspected_base64_);
-  node->get_parameter(measurement_name_ + ".detection_modules", detection_modules_);
+  cam_name_ = dc_util::get_str_type_param(node, measurement_name_, "cam_name");
+  cam_topic_ = dc_util::get_str_type_param(node, measurement_name_, "cam_topic");
+  draw_det_barcodes_ = dc_util::get_bool_type_param(node, measurement_name_, "draw_det_barcodes", true);
+  rotation_angle_ = dc_util::get_int_type_param(node, measurement_name_, "rotation_angle", 0);
+  save_raw_img_ = dc_util::get_bool_type_param(node, measurement_name_, "save_raw_img", false);
+  save_rotated_img_ = dc_util::get_bool_type_param(node, measurement_name_, "save_rotated_img", false);
+  save_detections_img_ = dc_util::get_bool_type_param(node, measurement_name_, "save_detections_img", true);
+  save_raw_path_ =
+      dc_util::get_str_type_param(node, measurement_name_, "save_raw_path", "camera/raw/%Y-%m-%dT%H:%M:%S");
+  save_raw_base64_ = dc_util::get_bool_type_param(node, measurement_name_, "save_raw_base64", false);
+  save_rotated_path_ =
+      dc_util::get_str_type_param(node, measurement_name_, "save_rotated_path", "camera/rotated/%Y-%m-%dT%H:%M:%S");
+  save_rotated_base64_ = dc_util::get_bool_type_param(node, measurement_name_, "save_rotated_base64", false);
+  save_inspected_path_ =
+      dc_util::get_str_type_param(node, measurement_name_, "save_inspected_path", "camera/inspected/%Y-%m-%dT%H:%M:%S");
+  save_inspected_base64_ = dc_util::get_bool_type_param(node, measurement_name_, "save_inspected_base64", false);
+  detection_modules_ =
+      dc_util::get_str_array_type_param(node, measurement_name_, "detection_modules", std::vector<std::string>());
   // FIXME Not used, wrong parameter too, should be without measurement_name_
-  node->get_parameter(measurement_name_ + ".destinations.minio.bucket", minio_bucket_);
+  minio_bucket_ = dc_util::get_str_type_param(node, measurement_name_, "destinations.minio.bucket", "");
 
   client_cb_group_ = node->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 

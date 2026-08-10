@@ -10,12 +10,9 @@ IntegerSuperior::IntegerSuperior() : dc_conditions::Condition()
 void IntegerSuperior::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".key", rclcpp::PARAMETER_STRING);
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".value", rclcpp::PARAMETER_INTEGER);
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".include_value", rclcpp::ParameterValue(true));
-  node->get_parameter(condition_name_ + ".key", key_);
-  node->get_parameter(condition_name_ + ".value", value_);
-  node->get_parameter(condition_name_ + ".include_value", include_value_);
+  key_ = dc_util::get_str_type_param(node, condition_name_, "key");
+  value_ = dc_util::get_int_type_param(node, condition_name_, "value");
+  include_value_ = dc_util::get_bool_type_param(node, condition_name_, "include_value", true);
 }
 
 bool IntegerSuperior::getState(dc_interfaces::msg::StringStamped msg)

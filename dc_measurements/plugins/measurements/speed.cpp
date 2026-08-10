@@ -32,9 +32,7 @@ void Speed::odomCb(const nav_msgs::msg::Odometry& msg)
 void Speed::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".odom_topic", rclcpp::ParameterValue("/odom"));
-
-  node->get_parameter(measurement_name_ + ".odom_topic", odom_topic_);
+  odom_topic_ = dc_util::get_str_type_param(node, measurement_name_, "odom_topic", "/odom");
 
   subscription_ = node->create_subscription<nav_msgs::msg::Odometry>(
       odom_topic_, 10, std::bind(&Speed::odomCb, this, std::placeholders::_1));

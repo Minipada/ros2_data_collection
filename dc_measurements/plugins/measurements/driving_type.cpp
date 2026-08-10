@@ -23,25 +23,16 @@ DrivingType::~DrivingType() = default;
 void DrivingType::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".mode_topic",
-                                               rclcpp::ParameterValue(std::string("")));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".value_mapping_from",
-                                               rclcpp::ParameterValue(std::vector<std::string>{}));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".value_mapping_to",
-                                               rclcpp::ParameterValue(std::vector<std::string>{}));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".velocity_topics",
-                                               rclcpp::ParameterValue(std::vector<std::string>{}));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".velocity_modes",
-                                               rclcpp::ParameterValue(std::vector<std::string>{}));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".velocity_timeout_s",
-                                               rclcpp::ParameterValue(1.0));
-
-  node->get_parameter(measurement_name_ + ".mode_topic", mode_topic_);
-  node->get_parameter(measurement_name_ + ".value_mapping_from", value_mapping_from_);
-  node->get_parameter(measurement_name_ + ".value_mapping_to", value_mapping_to_);
-  node->get_parameter(measurement_name_ + ".velocity_topics", velocity_topics_);
-  node->get_parameter(measurement_name_ + ".velocity_modes", velocity_modes_);
-  node->get_parameter(measurement_name_ + ".velocity_timeout_s", velocity_timeout_s_);
+  mode_topic_ = dc_util::get_str_type_param(node, measurement_name_, "mode_topic", "");
+  value_mapping_from_ =
+      dc_util::get_str_array_type_param(node, measurement_name_, "value_mapping_from", std::vector<std::string>{});
+  value_mapping_to_ =
+      dc_util::get_str_array_type_param(node, measurement_name_, "value_mapping_to", std::vector<std::string>{});
+  velocity_topics_ =
+      dc_util::get_str_array_type_param(node, measurement_name_, "velocity_topics", std::vector<std::string>{});
+  velocity_modes_ =
+      dc_util::get_str_array_type_param(node, measurement_name_, "velocity_modes", std::vector<std::string>{});
+  velocity_timeout_s_ = dc_util::get_double_type_param(node, measurement_name_, "velocity_timeout_s", 1.0);
 
   // No mode has been observed yet: emit "unknown" rather than suppressing the Record, so
   // downstream consumers can tell "not yet known" apart from "no data collected at all".

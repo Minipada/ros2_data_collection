@@ -10,8 +10,8 @@
 #include "dc_measurements/measurement.hpp"
 #include "dc_util/base64.hpp"
 #include "dc_util/filesystem_utils.hpp"
+#include "dc_util/node_utils.hpp"
 #include "dc_util/string_utils.hpp"
-#include "nav2_util/node_utils.hpp"
 
 namespace dc_measurements
 {

@@ -20,10 +20,7 @@ void Dummy::setValidationSchema()
 void Dummy::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".record",
-                                               rclcpp::ParameterValue("{\"message\":\"Hello from ROS 2 DC\"}"));
-
-  node->get_parameter(measurement_name_ + ".record", record_);
+  record_ = dc_util::get_str_type_param(node, measurement_name_, "record", "{\"message\":\"Hello from ROS 2 DC\"}");
 }
 
 dc_interfaces::msg::StringStamped Dummy::collect()

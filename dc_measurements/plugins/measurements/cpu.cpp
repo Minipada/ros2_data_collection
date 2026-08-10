@@ -13,10 +13,8 @@ Cpu::~Cpu() = default;
 void Cpu::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".max_processes", rclcpp::ParameterValue(5));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".cpu_min", rclcpp::ParameterValue(5.0));
-  node->get_parameter(measurement_name_ + ".max_processes", max_processes_);
-  node->get_parameter(measurement_name_ + ".cpu_min", cpu_min_);
+  max_processes_ = dc_util::get_int_type_param(node, measurement_name_, "max_processes", 5);
+  cpu_min_ = dc_util::get_double_type_param(node, measurement_name_, "cpu_min", 5.0);
 }
 
 void Cpu::setValidationSchema()

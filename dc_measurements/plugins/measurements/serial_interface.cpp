@@ -51,23 +51,13 @@ int SerialInterface::baudToSpeed(int baud_rate)
 void SerialInterface::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".port", rclcpp::ParameterValue(""));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".baud_rate", rclcpp::ParameterValue(9600));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".framing", rclcpp::ParameterValue("line"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".parsing_type",
-                                               rclcpp::ParameterValue("delimiter"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".delimiter", rclcpp::ParameterValue(","));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".regex", rclcpp::ParameterValue(""));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".fields",
-                                               rclcpp::ParameterValue(std::vector<std::string>{}));
-
-  node->get_parameter(measurement_name_ + ".port", port_);
-  node->get_parameter(measurement_name_ + ".baud_rate", baud_rate_);
-  node->get_parameter(measurement_name_ + ".framing", framing_);
-  node->get_parameter(measurement_name_ + ".parsing_type", parsing_type_);
-  node->get_parameter(measurement_name_ + ".delimiter", delimiter_);
-  node->get_parameter(measurement_name_ + ".regex", regex_pattern_);
-  node->get_parameter(measurement_name_ + ".fields", fields_);
+  port_ = dc_util::get_str_type_param(node, measurement_name_, "port", "");
+  baud_rate_ = dc_util::get_int_type_param(node, measurement_name_, "baud_rate", 9600);
+  framing_ = dc_util::get_str_type_param(node, measurement_name_, "framing", "line");
+  parsing_type_ = dc_util::get_str_type_param(node, measurement_name_, "parsing_type", "delimiter");
+  delimiter_ = dc_util::get_str_type_param(node, measurement_name_, "delimiter", ",");
+  regex_pattern_ = dc_util::get_str_type_param(node, measurement_name_, "regex", "");
+  fields_ = dc_util::get_str_array_type_param(node, measurement_name_, "fields", std::vector<std::string>{});
 
   if (framing_ != "line")
   {

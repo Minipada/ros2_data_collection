@@ -11,18 +11,14 @@ MeasurementServer::MeasurementServer(const rclcpp::NodeOptions& options,
   , measurement_plugin_loader_("dc_core", "dc_core::Measurement")
   , condition_plugin_loader_("dc_core", "dc_core::Condition")
 {
-  declare_parameter("measurement_plugins", measurement_plugins);
-  get_parameter("measurement_plugins", measurement_ids_);
-  declare_parameter("condition_plugins", std::vector<std::string>());
-  get_parameter("condition_plugins", condition_ids_);
+  measurement_ids_ = dc_util::get_str_array_param(this, "measurement_plugins", measurement_plugins);
+  condition_ids_ = dc_util::get_str_array_param(this, "condition_plugins", std::vector<std::string>());
 }
 
 void MeasurementServer::setBaseSavePath()
 {
-  declare_parameter("save_local_base_path", "$HOME/ros2/data/%Y/%M/%D/%H");
-  get_parameter("save_local_base_path", save_local_base_path_);
-  declare_parameter("all_base_path", "");
-  get_parameter("all_base_path", all_base_path_);
+  save_local_base_path_ = dc_util::get_str_param(this, "save_local_base_path", "$HOME/ros2/data/%Y/%M/%D/%H");
+  all_base_path_ = dc_util::get_str_param(this, "all_base_path", "");
 
   save_local_base_path_expanded_ = dc_util::expand_env(save_local_base_path_);
   save_local_base_path_expanded_ = dc_util::expand_values(save_local_base_path_expanded_, this);
@@ -34,16 +30,15 @@ void MeasurementServer::setBaseSavePath()
 
 void MeasurementServer::setCustomParameters()
 {
-  nav2_util::declare_parameter_if_not_declared(this, "custom_str_params.force_override", rclcpp::ParameterValue(false));
-  nav2_util::declare_parameter_if_not_declared(this, "custom_str_params_list",
-                                               rclcpp::ParameterValue(std::vector<std::string>()));
-  custom_str_params_list_ = this->get_parameter("custom_str_params_list").as_string_array();
+  // Declared for override parity with the per-parameter custom_str_params.<name>.force_override
+  // below; not consumed here (each custom param's own force_override is what's actually read).
+  dc_util::get_bool_type_param(this, "custom_str_params", "force_override", false);
+  custom_str_params_list_ = dc_util::get_str_array_param(this, "custom_str_params_list", std::vector<std::string>());
 
   for (auto param = std::begin(measurement_custom_str_params_); param != std::end(measurement_custom_str_params_);
        ++param)
   {
-    declare_parameter(*param, "");
-    get_parameter(*param, custom_str_params_map_[*param]);
+    custom_str_params_map_[*param] = dc_util::get_str_param(this, *param, "");
   }
 
   custom_params_.resize(custom_str_params_list_.size());
@@ -51,19 +46,11 @@ void MeasurementServer::setCustomParameters()
   for (size_t i = 0; i < custom_str_params_list_.size(); i++)
   {
     auto custom_param = custom_str_params_list_[i];
-    nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".name",
-                                                 rclcpp::ParameterValue(""));
-    nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".value",
-                                                 rclcpp::ParameterValue(""));
-    nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".value_from_file",
-                                                 rclcpp::ParameterValue(""));
-    nav2_util::declare_parameter_if_not_declared(this, "custom_str_params." + custom_param + ".force_override",
-                                                 rclcpp::ParameterValue(false));
-    std::string key = this->get_parameter("custom_str_params." + custom_param + ".name").as_string();
-    std::string value = this->get_parameter("custom_str_params." + custom_param + ".value").as_string();
-    std::string value_from_file =
-        this->get_parameter("custom_str_params." + custom_param + ".value_from_file").as_string();
-    bool force_override = this->get_parameter("custom_str_params." + custom_param + ".force_override").as_bool();
+    std::string custom_param_ns = "custom_str_params." + custom_param;
+    std::string key = dc_util::get_str_type_param(this, custom_param_ns, "name", "");
+    std::string value = dc_util::get_str_type_param(this, custom_param_ns, "value", "");
+    std::string value_from_file = dc_util::get_str_type_param(this, custom_param_ns, "value_from_file", "");
+    bool force_override = dc_util::get_bool_type_param(this, custom_param_ns, "force_override", false);
 
     custom_params_[i]["key"] = key;
     custom_params_[i]["override"] = force_override;
@@ -81,15 +68,11 @@ void MeasurementServer::setCustomParameters()
 void MeasurementServer::setRunId()
 {
   auto node = shared_from_this();
-  nav2_util::declare_parameter_if_not_declared(node, "run_id.enabled", rclcpp::ParameterValue(true));
-  nav2_util::declare_parameter_if_not_declared(node, "run_id.counter", rclcpp::ParameterValue(true));
-  nav2_util::declare_parameter_if_not_declared(node, "run_id.counter_path", rclcpp::ParameterValue("$HOME/run_id"));
-  nav2_util::declare_parameter_if_not_declared(node, "run_id.uuid", rclcpp::ParameterValue(false));
-
-  run_id_enabled_ = this->get_parameter("run_id.enabled").as_bool();
-  run_id_counter_ = this->get_parameter("run_id.counter").as_bool();
-  run_id_counter_path_ = dc_util::expand_env(this->get_parameter("run_id.counter_path").as_string());
-  run_id_uuid_ = this->get_parameter("run_id.uuid").as_bool();
+  run_id_enabled_ = dc_util::get_bool_type_param(node, "run_id", "enabled", true);
+  run_id_counter_ = dc_util::get_bool_type_param(node, "run_id", "counter", true);
+  run_id_counter_path_ =
+      dc_util::expand_env(dc_util::get_str_type_param(node, "run_id", "counter_path", "$HOME/run_id"));
+  run_id_uuid_ = dc_util::get_bool_type_param(node, "run_id", "uuid", false);
 
   if (run_id_enabled_)
   {

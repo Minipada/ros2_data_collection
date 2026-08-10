@@ -20,16 +20,10 @@ void Random::setValidationSchema()
 void Random::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".type",
-                                               rclcpp::ParameterValue(std::string("integer")));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".min", rclcpp::ParameterValue(0.0));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".max", rclcpp::ParameterValue(100.0));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".seed", rclcpp::ParameterValue(-1));
-
-  node->get_parameter(measurement_name_ + ".type", value_type_);
-  node->get_parameter(measurement_name_ + ".min", min_);
-  node->get_parameter(measurement_name_ + ".max", max_);
-  node->get_parameter(measurement_name_ + ".seed", seed_);
+  value_type_ = dc_util::get_str_type_param(node, measurement_name_, "type", "integer");
+  min_ = dc_util::get_double_type_param(node, measurement_name_, "min", 0.0);
+  max_ = dc_util::get_double_type_param(node, measurement_name_, "max", 100.0);
+  seed_ = dc_util::get_int_type_param(node, measurement_name_, "seed", -1);
 
   if (value_type_ != "integer" && value_type_ != "double")
   {

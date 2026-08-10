@@ -12,13 +12,15 @@ DistanceTraveled::~DistanceTraveled() = default;
 void DistanceTraveled::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".global_frame", rclcpp::ParameterValue("map"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".robot_base_frame",
-                                               rclcpp::ParameterValue("base_link"));
+  global_frame_ = dc_util::get_str_type_param(node, measurement_name_, "global_frame", "map");
+  robot_base_frame_ = dc_util::get_str_type_param(node, measurement_name_, "robot_base_frame", "base_link");
+  // NOTE: pre-existing bug -- this declares "transform_tolerance" but reads back
+  // "transform_timeout" (an undeclared name); the documented/YAML-configured parameter is
+  // never actually applied to transform_timeout_. Left as its original direct nav2_util call
+  // rather than routed through dc_util, to avoid silently changing this behavior. Not in scope
+  // for #178; worth its own follow-up.
   nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".transform_tolerance",
                                                rclcpp::ParameterValue(static_cast<float>(0.1)));
-  node->get_parameter(measurement_name_ + ".global_frame", global_frame_);
-  node->get_parameter(measurement_name_ + ".robot_base_frame", robot_base_frame_);
   node->get_parameter(measurement_name_ + ".transform_timeout", transform_timeout_);
 }
 

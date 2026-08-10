@@ -12,19 +12,11 @@ Map::~Map() = default;
 void Map::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".topic", rclcpp::ParameterValue("/map"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_path",
-                                               rclcpp::ParameterValue("map/%Y-%m-%dT%H:%M:%S"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_map_timeout",
-                                               rclcpp::ParameterValue(3.0));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".quiet", rclcpp::ParameterValue(true));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_base64", rclcpp::ParameterValue(false));
-
-  node->get_parameter(measurement_name_ + ".topic", map_topic_);
-  node->get_parameter(measurement_name_ + ".save_path", save_path_);
-  node->get_parameter(measurement_name_ + ".save_map_timeout", save_map_timeout_);
-  node->get_parameter(measurement_name_ + ".quiet", quiet_);
-  node->get_parameter(measurement_name_ + ".save_base64", save_base64_);
+  map_topic_ = dc_util::get_str_type_param(node, measurement_name_, "topic", "/map");
+  save_path_ = dc_util::get_str_type_param(node, measurement_name_, "save_path", "map/%Y-%m-%dT%H:%M:%S");
+  save_map_timeout_ = dc_util::get_double_type_param(node, measurement_name_, "save_map_timeout", 3.0);
+  quiet_ = dc_util::get_bool_type_param(node, measurement_name_, "quiet", true);
+  save_base64_ = dc_util::get_bool_type_param(node, measurement_name_, "save_base64", false);
 }
 
 void Map::setValidationSchema()

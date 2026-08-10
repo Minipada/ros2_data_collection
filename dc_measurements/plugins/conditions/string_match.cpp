@@ -10,10 +10,8 @@ StringMatch::StringMatch() : dc_conditions::Condition()
 void StringMatch::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".key", rclcpp::PARAMETER_STRING);
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".regex", rclcpp::PARAMETER_STRING);
-  node->get_parameter(condition_name_ + ".regex", regex_);
-  node->get_parameter(condition_name_ + ".key", key_);
+  key_ = dc_util::get_str_type_param(node, condition_name_, "key");
+  regex_ = dc_util::get_str_type_param(node, condition_name_, "regex");
 }
 
 bool StringMatch::getState(dc_interfaces::msg::StringStamped msg)

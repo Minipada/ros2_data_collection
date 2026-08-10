@@ -26,9 +26,7 @@ void CmdVel::cmdVelCb(const geometry_msgs::msg::Twist& msg)
 void CmdVel::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".topic", rclcpp::ParameterValue("/cmd_vel"));
-
-  node->get_parameter(measurement_name_ + ".topic", cmd_vel_topic_);
+  cmd_vel_topic_ = dc_util::get_str_type_param(node, measurement_name_, "topic", "/cmd_vel");
 
   subscription_ = node->create_subscription<geometry_msgs::msg::Twist>(
       cmd_vel_topic_, 10, std::bind(&CmdVel::cmdVelCb, this, std::placeholders::_1));

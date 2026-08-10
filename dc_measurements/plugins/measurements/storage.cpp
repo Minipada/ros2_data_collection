@@ -10,8 +10,7 @@ Storage::Storage() : dc_measurements::Measurement()
 void Storage::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".path", rclcpp::PARAMETER_STRING);
-  node->get_parameter(measurement_name_ + ".path", path_);
+  path_ = dc_util::get_str_type_param(node, measurement_name_, "path");
 
   full_path_ = dc_util::expand_env(path_);
 
