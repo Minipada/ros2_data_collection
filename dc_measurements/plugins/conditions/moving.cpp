@@ -11,14 +11,10 @@ void Moving::onConfigure()
 {
   auto node = getNode();
 
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".odom_topic", rclcpp::ParameterValue("/odom"));
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".speed_threshold", rclcpp::ParameterValue(0.2));
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".count_limit", rclcpp::ParameterValue(8));
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".count_hysteresis", rclcpp::ParameterValue(5));
-  node->get_parameter(condition_name_ + ".odom_topic", odom_topic_);
-  node->get_parameter(condition_name_ + ".speed_threshold", speed_threshold_);
-  node->get_parameter(condition_name_ + ".count_limit", count_limit_);
-  node->get_parameter(condition_name_ + ".count_hysteresis", count_hysteresis_);
+  odom_topic_ = dc_util::get_str_type_param(node, condition_name_, "odom_topic", "/odom");
+  speed_threshold_ = dc_util::get_double_type_param(node, condition_name_, "speed_threshold", 0.2);
+  count_limit_ = dc_util::get_int_type_param(node, condition_name_, "count_limit", 8);
+  count_hysteresis_ = dc_util::get_int_type_param(node, condition_name_, "count_hysteresis", 5);
 
   subscription_ = node->create_subscription<nav_msgs::msg::Odometry>(
       odom_topic_, 10, std::bind(&Moving::odomCb, this, std::placeholders::_1));

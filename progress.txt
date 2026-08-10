@@ -3245,3 +3245,87 @@ entries above; not this diff). Did not verify the summary rendering end-to-end a
 live GitHub Actions run (would need a pushed branch + opened PR) — the `artifact-url`
 output and `$GITHUB_STEP_SUMMARY` mechanism are both documented, stable GitHub Actions
 features, not something this repo's tooling can dry-run locally.
+
+### #178 - Unify parameter declaration across the measurement and group servers
+
+Before this change, parameter declaration in `dc_measurements`/`dc_group` was three
+patterns at once: ~34 Measurement/Condition plugin files called
+`nav2_util::declare_parameter_if_not_declared` directly in `onConfigure()`, hand-rolling
+the same declare-then-`get_parameter`-then-fatal-on-failure boilerplate every time;
+`measurement_server.cpp` mixed that with 5 raw `declare_parameter` calls for its own
+node-level parameters (which throw on redeclaration instead of being idempotent); and a
+`dc_util::get_*_type_param()` helper family existed but was only reached by ~20 of the
+roughly 90 plugin-parameter call sites.
+
+- **Decision recorded in `docs/adr/0008-dc-util-owns-parameter-declaration.md`**:
+  `nav2_util` stays a dependency (`MeasurementServer` already inherits
+  `nav2_util::LifecycleNode`, so dropping it isn't on the table regardless), and
+  `dc_util::get_*_type_param()`/`get_*_param()` becomes the single sanctioned way to
+  declare a parameter in `dc_measurements`/`dc_group` C++ code — plugin authors call
+  these, never `declare_parameter`/`nav2_util::declare_parameter_if_not_declared`
+  directly. `dc_util/include/dc_util/node_utils.hpp` is now the only file allowed to
+  reference `nav2_util` for parameter declaration.
+- **`dc_util/include/dc_util/node_utils.hpp` rewritten**: the 14 near-identical
+  declare/get/try-catch-fatal helper bodies collapsed into one shared
+  `detail::declare_and_get<T>()` core (same behavior, log messages simplified from
+  "...for %s"-with-plugin-name to a single full parameter name — not part of the public
+  parameter contract, so not a "no behaviour change" violation). Added the type coverage
+  the plugins actually needed but didn't have: `get_double_type_param`,
+  `get_bool_array_type_param`/`get_int_array_type_param`/`get_double_array_type_param`
+  (mandatory-only, matching their only call sites), plus node-level (unprefixed)
+  `get_str_param`/`get_str_array_param` for `measurement_server.cpp`'s own parameters.
+  These are separately-named functions rather than new overloads of the existing
+  `(node, plugin_name, param_name[, default])` helpers, since a 3-argument
+  `(node, plugin_name, param_name)` call and a 3-argument `(node, param_name, default)`
+  call are indistinguishable by signature when both a plugin_name and a default happen to
+  be strings. The broken, unused `get_float_type_param` (declared `PARAMETER_DOUBLE`,
+  returned `int`, zero call sites anywhere) was deleted rather than fixed in place.
+- **`measurement_server.cpp`**: all 5 raw `declare_parameter` calls (constructor's
+  `measurement_plugins`/`condition_plugins`, `setBaseSavePath`'s
+  `save_local_base_path`/`all_base_path`, the custom-string-param loop) and its 3 direct
+  `nav2_util::declare_parameter_if_not_declared` call sites (`custom_str_params.*`,
+  `run_id.*`) converted to `dc_util` helpers.
+- **All 34 Measurement/Condition plugin `.cpp` files** (`dc_measurements/plugins/{measurements,conditions}/`)
+  converted from direct `nav2_util::declare_parameter_if_not_declared` + `get_parameter`
+  pairs to the matching `dc_util::get_*_type_param()` call, including the mandatory
+  (no-default) forms and the previously-unsupported `double`/array-of-scalar types.
+  Corresponding header includes swapped from `nav2_util/node_utils.hpp` to
+  `dc_util/node_utils.hpp` (or the latter added, where a plugin's parameters came in
+  transitively) everywhere the file no longer calls `nav2_util` directly.
+- **Two pre-existing, unrelated bugs surfaced while cross-checking every declared-vs-read
+  parameter name and type across all 34 files, and were deliberately left untouched**
+  (each flagged inline with a `NOTE:` comment, not fixed, to honor "no behaviour change"):
+  - `bool_equal.cpp`'s `value_` field is `double`
+    (`dc_measurements/plugins/conditions/bool_equal.hpp`) despite the parameter being
+    declared `PARAMETER_BOOL` — a copy-paste leftover from `double_equal`, apparently
+    never exercised (no test, no demo config references `bool_equal`).
+  - `distance_traveled.cpp` declares `<measurement_name>.transform_tolerance` but reads
+    back the different, undeclared name `<measurement_name>.transform_timeout` — several
+    shipped demo YAMLs (`dc_demos/params/tb3_simulation_*.yaml`,
+    `qrcodes_minio_pgsql.yaml`) set `transform_timeout` under this exact measurement,
+    meaning the configured value has never actually reached `transform_timeout_`.
+    `position.cpp` has the analogous parameter and does not have this bug (declared and
+    read name match there).
+  Both remain direct `nav2_util::declare_parameter_if_not_declared`/`get_parameter` calls
+  with an explanatory comment; worth their own follow-up issues.
+- **`dc_group`/Python**: reviewed, not changed. `group_server.py` already declares every
+  parameter exactly once via plain `self.declare_parameter(...)` — the
+  declare-if-not-declared problem the C++ helpers solve (plugins/`onConfigure()` calls
+  potentially re-entering a shared namespace) doesn't exist there, so it's already a
+  single, internally-consistent pattern; recorded as such in the ADR rather than adding
+  an unneeded wrapper.
+- **`doc/src/dc/contributing.md`** gained a "Declaring plugin parameters" section: the
+  `dc_util` convention with a short code example, the available types, and a pointer to
+  ADR-0008 for the "why".
+- **Verified in the real ROS 2 Jazzy environment** (the `dc-workspace` Podman image built
+  in earlier #249-line sessions, this worktree bind-mounted fresh): `colcon build
+  --packages-select dc_util dc_core dc_measurements dc_interfaces dc_common dc_group` —
+  clean, 6/6 packages, zero errors/warnings. `colcon test --packages-select dc_util
+  dc_measurements dc_group` — 46 tests, 0 errors, 0 failures, 0 skipped (10 dc_measurements
+  gtest suites + 12 dc_group pytest cases), including `MeasurementOSTest`,
+  `MeasurementThermalTest`, `MeasurementUptimeTest`, and the full
+  `test_group_sync_timeout.py` suite exercising the exact parameters this change touched.
+- **Not done / left for follow-up**: the two bugs noted above; `dc_util` itself has no
+  dedicated unit test target (its helpers are exercised indirectly through every
+  dc_measurements plugin test instead — no new gap introduced by this change, but a
+  direct `dc_util` test target would be worth its own issue).

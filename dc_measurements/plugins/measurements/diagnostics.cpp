@@ -37,16 +37,9 @@ uint8_t Diagnostics::levelThresholdFromString(const std::string& level_threshold
 void Diagnostics::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".topic",
-                                               rclcpp::ParameterValue("/diagnostics"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".level_threshold",
-                                               rclcpp::ParameterValue("OK"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".names",
-                                               rclcpp::ParameterValue(std::vector<std::string>{}));
-
-  node->get_parameter(measurement_name_ + ".topic", topic_);
-  node->get_parameter(measurement_name_ + ".level_threshold", level_threshold_str_);
-  node->get_parameter(measurement_name_ + ".names", names_);
+  topic_ = dc_util::get_str_type_param(node, measurement_name_, "topic", "/diagnostics");
+  level_threshold_str_ = dc_util::get_str_type_param(node, measurement_name_, "level_threshold", "OK");
+  names_ = dc_util::get_str_array_type_param(node, measurement_name_, "names", std::vector<std::string>{});
 
   level_threshold_ = levelThresholdFromString(level_threshold_str_);
 

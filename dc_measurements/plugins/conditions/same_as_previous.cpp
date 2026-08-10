@@ -10,10 +10,8 @@ SameAsPrevious::SameAsPrevious() : dc_conditions::Condition()
 void SameAsPrevious::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".keys", rclcpp::PARAMETER_STRING_ARRAY);
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".exclude", rclcpp::PARAMETER_STRING_ARRAY);
-  node->get_parameter(condition_name_ + ".keys", keys_);
-  node->get_parameter(condition_name_ + ".exclude", exclude_);
+  keys_ = dc_util::get_str_array_type_param(node, condition_name_, "keys");
+  exclude_ = dc_util::get_str_array_type_param(node, condition_name_, "exclude");
 
   for (std::size_t i = 0; i < keys_.size(); ++i)
   {

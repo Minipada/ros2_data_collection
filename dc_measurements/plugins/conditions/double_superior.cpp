@@ -10,12 +10,9 @@ DoubleSuperior::DoubleSuperior() : dc_conditions::Condition()
 void DoubleSuperior::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".key", rclcpp::PARAMETER_STRING);
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".value", rclcpp::PARAMETER_DOUBLE);
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".include_value", rclcpp::ParameterValue(true));
-  node->get_parameter(condition_name_ + ".key", key_);
-  node->get_parameter(condition_name_ + ".value", value_);
-  node->get_parameter(condition_name_ + ".include_value", include_value_);
+  key_ = dc_util::get_str_type_param(node, condition_name_, "key");
+  value_ = dc_util::get_double_type_param(node, condition_name_, "value");
+  include_value_ = dc_util::get_bool_type_param(node, condition_name_, "include_value", true);
 }
 
 bool DoubleSuperior::getState(dc_interfaces::msg::StringStamped msg)

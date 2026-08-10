@@ -12,10 +12,8 @@ StringStamped::~StringStamped() = default;
 void StringStamped::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".topic", rclcpp::PARAMETER_STRING);
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".timer_based", rclcpp::ParameterValue(true));
-  node->get_parameter(measurement_name_ + ".topic", topic_);
-  node->get_parameter(measurement_name_ + ".timer_based", timer_based_);
+  topic_ = dc_util::get_str_type_param(node, measurement_name_, "topic");
+  timer_based_ = dc_util::get_bool_type_param(node, measurement_name_, "timer_based", true);
 
   subscription_ = node->create_subscription<dc_interfaces::msg::StringStamped>(
       topic_, 10, std::bind(&StringStamped::dataCb, this, std::placeholders::_1));

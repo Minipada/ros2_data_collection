@@ -10,11 +10,8 @@ Network::Network() : dc_measurements::Measurement()
 void Network::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".ping_address",
-                                               rclcpp::ParameterValue("8.8.8.8"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".ping_timeout", rclcpp::ParameterValue(200));
-  node->get_parameter(measurement_name_ + ".ping_address", ping_address_);
-  node->get_parameter(measurement_name_ + ".ping_timeout", ping_timeout_ms_);
+  ping_address_ = dc_util::get_str_type_param(node, measurement_name_, "ping_address", "8.8.8.8");
+  ping_timeout_ms_ = dc_util::get_int_type_param(node, measurement_name_, "ping_timeout", 200);
 
   // Validate parameters
   // https://stackoverflow.com/questions/5284147/validating-ipv4-addresses-with-regexp

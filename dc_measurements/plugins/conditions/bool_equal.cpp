@@ -10,9 +10,13 @@ BoolEqual::BoolEqual() : dc_conditions::Condition()
 void BoolEqual::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".key", rclcpp::PARAMETER_STRING);
+  key_ = dc_util::get_str_type_param(node, condition_name_, "key");
+  // NOTE: `value_` is `double` (dc_measurements/plugins/conditions/bool_equal.hpp) despite the
+  // parameter being declared PARAMETER_BOOL -- a pre-existing type mismatch, left as its
+  // original direct nav2_util call rather than routed through dc_util::get_bool_type_param,
+  // which would change what type get_parameter() reads and so risk changing behavior. Not in
+  // scope for #178; worth its own follow-up.
   nav2_util::declare_parameter_if_not_declared(node, condition_name_ + ".value", rclcpp::PARAMETER_BOOL);
-  node->get_parameter(condition_name_ + ".key", key_);
   node->get_parameter(condition_name_ + ".value", value_);
 }
 

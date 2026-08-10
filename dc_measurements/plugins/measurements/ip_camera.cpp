@@ -24,30 +24,16 @@ std::string IpCamera::getAbsolutePath(const std::string& param_reference)
 void IpCamera::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".input", rclcpp::PARAMETER_STRING);
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".video", rclcpp::ParameterValue(true));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".audio", rclcpp::ParameterValue(false));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".bitrate_video", rclcpp::ParameterValue("2M"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".bitrate_audio",
-                                               rclcpp::ParameterValue("192k"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".segment", rclcpp::ParameterValue(true));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".segment_time", rclcpp::ParameterValue(10));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".ffmpeg_log_level",
-                                               rclcpp::ParameterValue("info"));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".ffmpeg_banner", rclcpp::ParameterValue(true));
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".save_path",
-                                               rclcpp::ParameterValue("ffmpeg_%Y-%m-%dT%H:%M:%S"));
-
-  node->get_parameter(measurement_name_ + ".input", input_);
-  node->get_parameter(measurement_name_ + ".video", video_);
-  node->get_parameter(measurement_name_ + ".audio", audio_);
-  node->get_parameter(measurement_name_ + ".bitrate_video", bitrate_video_);
-  node->get_parameter(measurement_name_ + ".bitrate_audio", bitrate_audio_);
-  node->get_parameter(measurement_name_ + ".segment", segment_);
-  node->get_parameter(measurement_name_ + ".segment_time", segment_time_);
-  node->get_parameter(measurement_name_ + ".ffmpeg_log_level", ffmpeg_log_level_);
-  node->get_parameter(measurement_name_ + ".ffmpeg_banner", ffmpeg_banner_);
-  node->get_parameter(measurement_name_ + ".save_path", save_path_);
+  input_ = dc_util::get_str_type_param(node, measurement_name_, "input");
+  video_ = dc_util::get_bool_type_param(node, measurement_name_, "video", true);
+  audio_ = dc_util::get_bool_type_param(node, measurement_name_, "audio", false);
+  bitrate_video_ = dc_util::get_str_type_param(node, measurement_name_, "bitrate_video", "2M");
+  bitrate_audio_ = dc_util::get_str_type_param(node, measurement_name_, "bitrate_audio", "192k");
+  segment_ = dc_util::get_bool_type_param(node, measurement_name_, "segment", true);
+  segment_time_ = dc_util::get_int_type_param(node, measurement_name_, "segment_time", 10);
+  ffmpeg_log_level_ = dc_util::get_str_type_param(node, measurement_name_, "ffmpeg_log_level", "info");
+  ffmpeg_banner_ = dc_util::get_bool_type_param(node, measurement_name_, "ffmpeg_banner", true);
+  save_path_ = dc_util::get_str_type_param(node, measurement_name_, "save_path", "ffmpeg_%Y-%m-%dT%H:%M:%S");
 
   // Validate parameters
   if (dc_util::stringMatchesRegex(save_path_, "^(?!%).+"))

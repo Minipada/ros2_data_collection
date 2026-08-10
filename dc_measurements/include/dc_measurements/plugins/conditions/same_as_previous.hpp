@@ -9,8 +9,8 @@
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/condition.hpp"
 #include "dc_util/json_utils.hpp"
+#include "dc_util/node_utils.hpp"
 #include "dc_util/string_utils.hpp"
-#include "nav2_util/node_utils.hpp"
 
 namespace dc_conditions
 {

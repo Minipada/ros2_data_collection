@@ -12,10 +12,8 @@ Permissions::~Permissions() = default;
 void Permissions::onConfigure()
 {
   auto node = getNode();
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".path", rclcpp::PARAMETER_STRING);
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".format", rclcpp::ParameterValue("int"));
-  node->get_parameter(measurement_name_ + ".path", path_);
-  node->get_parameter(measurement_name_ + ".format", permission_format_);
+  path_ = dc_util::get_str_type_param(node, measurement_name_, "path");
+  permission_format_ = dc_util::get_str_type_param(node, measurement_name_, "format", "int");
 
   full_path_ = dc_util::expand_env(path_);
 
