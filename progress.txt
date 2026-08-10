@@ -3170,3 +3170,46 @@ path). The `dc-doc` image was a full cache hit, so the script's two content step
 (`strictdoc export`, `mdbook build`) were run in it directly — both clean, linkcheck
 included, with only the two pre-existing `list[str]` warnings in unrelated measurement
 pages. The disk is a host problem, not a repo one, and worth clearing before the next run.
+
+### #315 - Wire registry-backed podman build cache into the docs image build
+
+Raised live: a user rebuilding the docs image twice in CI saw no cache hit on the second
+run. Root cause was `tools/ci/pre-commit/build_doc.sh` never wiring up a registry cache at
+all — unlike `tools/e2e/scripts/build.sh` (the E2E workspace image builder), which already
+accepts a `CACHE_REF` env var and passes `--cache-from`/`--cache-to` to `podman build`,
+populated by `ci.yaml`'s `build-workspace` job via a `ghcr.io/<repo>/dc-workspace-cache`
+ref. `doc.yaml` never logged into `ghcr.io` or computed a cache ref, so every run rebuilt
+the Rust toolchain + five `cargo install`s from scratch, first run or hundredth — every
+GitHub Actions run is a fresh VM, so podman's build cache is otherwise local-only and
+doesn't survive between runs.
+
+**Fix**: added the identical `CACHE_REF` mechanism to `build_doc.sh` (an array-built
+`podman build --layers ...`, conditionally appending `--cache-from`/`--cache-to` when
+`CACHE_REF` is set — mirrors `build.sh`'s pattern exactly), and wired `doc.yaml` to log
+into `ghcr.io`, compute a stable `dc-doc-cache` ref (mirroring `ci.yaml`'s
+`build-workspace` job's `cache_ref` computation, including the lowercasing dance since
+ghcr image names must be lowercase and GitHub Actions expressions have no lowercase
+function), and pass it through.
+
+**Scoped down, deliberately**: `ci.yaml`'s `build-e2e-image` job also runs a bare `podman
+build` (for `tools/e2e/Containerfile.e2e`) with no cache flags — left untouched. Its
+`FROM` is the just-built, SHA-tagged workspace image, which is a different ref on every
+run; a cache keyed on the prior layer's digest can never hit there regardless of what ref
+it's pointed at. The layer itself is also just 3 `COPY`s + a `chmod` — sub-second, nothing
+worth caching. Wiring the same mechanism onto it would be inert cargo-culting, not a fix.
+
+**Fork PRs**: `packages: write` was added to `doc.yaml`'s permissions, but GitHub forces
+`GITHUB_TOKEN` to read-only on `pull_request` events from a fork regardless of what a
+workflow requests — documented inline. A fork PR simply builds cold (same as before this
+change); it does not fail the build, since `--cache-to`'s push is a secondary effect of a
+`podman build` that has already produced the tagged image locally.
+
+**Verified locally**: `IMAGE_TAG=dc-doc:cachetest ./tools/ci/pre-commit/build_doc.sh` run
+twice back-to-back (no `CACHE_REF` — the local-build path is unchanged) — clean build both
+times, and the second run's log shows `--> Using cache <digest>` on every one of the 12
+`STEP`s, confirming `--layers` didn't regress local caching. Did not verify the ghcr.io
+round-trip itself (would need real repo credentials against a live Actions run). `pre-commit
+run --files .github/workflows/doc.yaml tools/ci/pre-commit/build_doc.sh` — `check-yaml`,
+`shellcheck`, and the `build-doc` hook (a real `strictdoc export` + `mdbook build`) all
+pass; only the pre-existing `poetry-requirements` env failure reproduces (same as every
+prior entry above — not this diff).
