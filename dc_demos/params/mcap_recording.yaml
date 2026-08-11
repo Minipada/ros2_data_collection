@@ -2,19 +2,11 @@ dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"
-    # MCAP is not a blessed Destination type (only postgres, s3, file and console are —
-    # see doc/src/dc/destinations.md) and Vector has no MCAP sink at all, so recording is
-    # reached through the ADR-0003/ADR-0009 passthrough: a raw Vector `socket` sink
-    # config listed in `custom_config_files`, consuming the public `dc.<tag>` routes and
-    # streaming them to the standalone `dc_mcap_writer` process. Copy it into place
-    # before launching:
-    #   mkdir -p ~/.dc && cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/mcap_sink.toml" ~/.dc/
-    #
-    # `destinations` still has to name at least one blessed Destination, and the routes
-    # the snippet consumes exist only for topics listed in *its* `inputs` — dc_bridge
-    # derives both its ROS subscriptions and its route branches from `destinations`, and
-    # never reads the snippet's `inputs`. `console` is the cheapest thing to put there,
-    # and doubles as a local view of the same Records `dc_mcap_writer` is recording.
+    # `destinations` still has to name at least one blessed Destination — dc_bridge
+    # derives both its ROS subscriptions and its `dc.<tag>` route branches from
+    # `destinations` alone, and dc_mcap_writer's own `inputs` below never adds a route
+    # dc_bridge doesn't already have. `console` is the cheapest thing to put here, and
+    # doubles as a local view of the same Records dc_mcap_writer is recording.
     destinations: ["console"]
     console:
       type: console
@@ -28,9 +20,31 @@ dc_bridge:
         ]
       time_key: "date"
       time_format: "epoch_nanos"
-    custom_config_files: ["$HOME/.dc/mcap_sink.toml"]
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224
+
+# MCAP is not a blessed Destination type (only postgres, s3, file and console are —
+# see doc/src/dc/destinations.md) and Vector has no MCAP sink at all, so recording goes
+# through the ADR-0003/ADR-0009 passthrough — but configured here like any other
+# Destination: dc_bringup.launch.py reads this block, starts the standalone
+# dc_mcap_writer process, and generates its matching Vector sink automatically. No
+# TOML to hand-author, no second terminal to start it in.
+dc_mcap_writer:
+  ros__parameters:
+    enabled: true
+    inputs:
+      [
+        "/dc/measurement/cpu",
+        "/dc/measurement/memory",
+        "/dc/measurement/os",
+        "/dc/measurement/uptime",
+      ]
+    output_dir: "$HOME/dc_mcap_out"
+    host: "127.0.0.1"
+    port: 9191
+    max_bytes: 134217728
+    max_duration_secs: 300
+    prefix: "records"
 
 measurement_server:
   ros__parameters:

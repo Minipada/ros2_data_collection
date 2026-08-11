@@ -3564,3 +3564,74 @@ in full end to end multiple times against a freshly-built image, final run passi
 completely (`ZERO-LOSS VERIFICATION PASSED (24 sources checked, 0 violations)`,
 including `mcap/synth02`/`mcap/synth03` with only the same tolerated boundary-kill loss
 every other check accepts, zero real loss).
+
+### #210 follow-up 2 - auto-launch dc_mcap_writer so it configures like a Destination
+
+User feedback on the passthrough UX: manually copying a Vector TOML into `~/.dc/` and
+starting `dc_mcap_writer` in a second terminal "kind of breaks the whole YAML flow"
+every other Destination follows. Recommended and built launch-time integration so it
+*looks* like configuring a Destination — one block in the same params file, one
+`ros2 launch` command — without touching `dc_bridge` itself (ADR-0009 stands: no
+dc_bridge code changes, Vector still has no MCAP sink).
+
+- **`dc_bringup/launch/dc_bringup.launch.py`**: new `build_bridge_and_mcap_actions()`
+  replaces the two (previously identical, one per composed/non-composed branch) static
+  `dc_bridge` `Node(...)` definitions with an `OpaqueFunction` that, at launch time,
+  reads a `dc_mcap_writer:` top-level block from `dc_params_file` — sibling to
+  `dc_bridge:`, *not* nested inside its `destinations` list, since that list is parsed
+  and validated by `dc_bridge` itself in C++ and an unrecognized `type` is a hard
+  startup error by design; teaching it a fifth type would mean changing `dc_bridge`,
+  exactly what ADR-0009 avoided. When `enabled: true`: renders the ADR-0009 passthrough
+  Vector `socket` sink from `inputs` (topic → `dc.<tag>` route, same transform
+  `dc_bridge` itself uses) to `~/.dc/generated_mcap_sink.toml`, merges that path into
+  whatever `dc_bridge.custom_config_files` the params file already lists (a second
+  `parameters=[...]` entry for a list-valued ROS parameter *replaces* rather than
+  merges — has to happen in this function's own Python), and starts `dc_mcap_writer` as
+  an `ExecuteProcess` running `python3 -m dc_mcap_writer.cli` directly — not
+  `ros2 run dc_mcap_writer dc_mcap_writer` (the bug fixed in the e2e-coverage follow-up
+  above: `ros2 run` doesn't forward signals to its child). When the block is absent
+  (every existing demo, unchanged), returns exactly the single static `dc_bridge` Node
+  the two call sites used to have — verified byte-for-byte equivalent behavior below.
+- **`dc_bringup/package.xml`**: added `dc_mcap_writer` and `python3-yaml` exec_depends
+  (the launch file now directly `import yaml`s to read the params file at launch time).
+- **`dc_bringup/params/dc_params.yaml`**: documented the new block (commented, matching
+  the style of every other commented Destination example already there).
+- **`dc_demos/params/mcap_recording.yaml`**: rewritten to the new integrated shape;
+  `dc_demos/config/mcap_sink.toml` deleted (generated at launch time now, nothing to
+  ship in the package or hand-copy into `~/.dc/`).
+- **`doc/src/dc/demos/mcap_recording.md`**: rewritten for the one-command flow; explains
+  why the block can't literally live inside `dc_bridge.destinations` and documents
+  `python3 -m dc_mcap_writer.cli` as the standalone entrypoint still underneath it.
+
+**Verified against the rebuilt workspace image (podman), not just read through**:
+- New flow end-to-end: `ros2 launch dc_demos mcap_recording.launch.py` → process tree
+  shows `dc_mcap_writer` as `python3 -m dc_mcap_writer.cli`, a *direct* child of the
+  launch process (no `ros2 run` wrapper); Vector's own log shows it loaded
+  `/root/.dc/generated_mcap_sink.toml` with the exact `inputs`/`address` the YAML block
+  specified; a real `.mcap` file landed in the configured `output_dir` and (once
+  correctly given time to shut down — see below) is independently readable via
+  `mcap.reader`, with the right topic set and message counts.
+- Graceful shutdown specifically: `ros2 launch`'s own SIGINT handling — sent directly
+  to the launch process, not through a container's PID-1-signal-delivery quirks (a
+  separate concern from this feature, orthogonal to why `ros2 run` was broken) — logs
+  `sending signal 'SIGINT' to process[dc_mcap_writer-3]`, and `dc_mcap_writer` logs
+  `closed <path>` in response: launch's own `ExecuteProcess` supervision (its core,
+  heavily-relied-on job, unlike the narrow `ros2 run` tool) forwards signals correctly.
+  (An unrelated `component_container_isolated` SIGSEGV surfaced during this same
+  shutdown sequence — a known-class rclcpp_components composition-teardown crash,
+  reproducible without any `dc_mcap_writer` involvement; not investigated further here
+  since it's orthogonal to this change and the overall launch still exits 0.)
+- Regression, the more important check given how central this file is: `ros2 launch
+  dc_demos elasticsearch.launch.py` (no `dc_mcap_writer:` block, an existing demo
+  untouched by this work) — `dc_bridge`'s fatal-error path (before completing its own
+  documented `~/.dc/elasticsearch_sink.toml` setup step) already proved
+  `custom_config_files` came through as exactly that one file, nothing merged in; a
+  second run completing that setup step confirmed a full clean launch with `pgrep -f
+  dc_mcap_writer` correctly finding nothing and Vector's own log listing only
+  `elasticsearch_sink.toml`, byte-for-byte the same as before this change.
+- `flake8` clean via `pre-commit` on every changed file (repo config) — one real
+  finding of its own, an f-string `{host}:{port}` colon false-positive matching the
+  same pycodestyle/Python-3.12-tokenizer class of bug hit earlier in `dc_mcap_writer`,
+  fixed by building the address with `+` concatenation instead; the other three
+  findings pre-commit reported were confirmed pre-existing (diffed against the
+  pre-change file under the same hook) in code this change never touches.
