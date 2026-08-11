@@ -91,3 +91,21 @@ dc_bridge:
     # custom_config_files: ["$HOME/.dc/custom_sinks.toml"]
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224
+
+# MCAP recording (ADR-0009, #210): record Records as ros2 bag/Foxglove-replayable
+# .mcap files. Not a `dc_bridge` Destination (Vector has no MCAP sink, and teaching
+# dc_bridge a fifth blessed type would mean touching it, which ADR-0009 avoids) — a
+# top-level block instead, sibling to dc_bridge above, that dc_bringup.launch.py reads
+# to both start the standalone `dc_mcap_writer` process and generate its matching
+# Vector passthrough sink automatically. See doc/src/dc/demos/mcap_recording.md.
+#
+# dc_mcap_writer:
+#   ros__parameters:
+#     enabled: true
+#     inputs: ["/dc/measurement/uptime"]   # same shape as a Destination's `inputs`
+#     output_dir: "$HOME/.dc/mcap"
+#     host: "127.0.0.1"                    # dc_mcap_writer's own TCP listener
+#     port: 9191
+#     max_bytes: 134217728                 # rotate past this size; 128 MiB default
+#     max_duration_secs: 300               # rotate past this age; 5 min default
+#     prefix: "records"                    # filename prefix for each rotation
