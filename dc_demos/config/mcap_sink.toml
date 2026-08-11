@@ -1,0 +1,40 @@
+# ADR-0003/ADR-0009 passthrough sink for the MCAP recording tutorial
+# (doc/src/dc/demos/mcap_recording.md).
+#
+# dc_bridge blesses four Destination types — postgres, s3, file, console — and Vector
+# has no MCAP sink at all, so MCAP recording is not a `type:` to write in the params
+# file. Instead this is plain Vector configuration, merged as-is with the config
+# dc_bridge renders, streaming the public `dc.<tag>` routes (see
+# doc/src/dc/destinations.md) as newline-delimited JSON to the standalone
+# `dc_mcap_writer` process (ADR-0009), which converts them into rotated .mcap files.
+#
+# A route exists only for a topic that some *blessed* Destination already lists in its
+# `inputs` — the Bridge derives both its ROS subscriptions and its route branches from
+# `destinations`, never from this file. That is why mcap_recording.yaml still configures
+# a `console` Destination over the same four topics; drop it and these inputs resolve to
+# nothing.
+#
+# Copied into place before the first launch:
+#   mkdir -p ~/.dc
+#   cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/mcap_sink.toml" ~/.dc/
+
+[sinks.mcap_writer]
+type = "socket"
+inputs = [
+  "dc.dc.measurement.cpu",
+  "dc.dc.measurement.memory",
+  "dc.dc.measurement.os",
+  "dc.dc.measurement.uptime",
+]
+mode = "tcp"
+# `dc_mcap_writer` listens here (its own `--host`/`--port`, defaulting to this address) —
+# start it before launching DC, so the very first Record has somewhere to land instead of
+# being dropped while Vector's socket sink is still retrying the connection.
+address = "127.0.0.1:9191"
+encoding.codec = "json"
+framing.method = "newline_delimited"
+
+# dc_bridge gives every *blessed* sink a disk buffer; a passthrough sink gets Vector's
+# default, which is in-memory and 500 events deep (see the "Passthrough" section of
+# doc/src/dc/destinations.md) — same as every other passthrough sink, not a special case
+# for MCAP.

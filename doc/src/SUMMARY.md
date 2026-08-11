@@ -10,6 +10,7 @@
   - [Turtlebot3 AWS Warehouse RustFS PostgreSQL](./dc/demos/tb3_aws_minio_pgsql.md)
   - [Turtlebot3 AWS Warehouse InfluxDB (passthrough)](./dc/demos/tb3_aws_influxdb.md)
   - [Elasticsearch (passthrough)](./dc/demos/elasticsearch.md)
+  - [MCAP recording (passthrough)](./dc/demos/mcap_recording.md)
   - [QRcodes to PostgreSQL/RustFS](./dc/demos/qrcodes_minio_pgsql.md)
   - [Custom plugin](./dc/demos/custom_stdout.md)
 - [Concepts](./dc/concepts.md)

@@ -18,6 +18,7 @@ Have you checked the [configuration examples](./configuration_examples.md) befor
 | [Turtlebot3 AWS Warehouse RustFS PostgreSQL](./demos/tb3_aws_minio_pgsql.md) | Collect system, robot, environment and infrastructure data and send it to RustFS and PostgreSQL |
 | [Turtlebot3 AWS Warehouse InfluxDB](./demos/tb3_aws_influxdb.md)            | Collect system, robot, environment and infrastructure data and send it to InfluxDB via the passthrough Destination |
 | [Elasticsearch](./demos/elasticsearch.md)                                   | Send system data to Elasticsearch via the passthrough Destination, and look at it in Kibana. No robot or simulator needed |
+| [MCAP recording](./demos/mcap_recording.md)                                 | Record system data as .mcap via the passthrough Destination and `dc_mcap_writer`, and open it with `ros2 bag info`/Foxglove. No robot or simulator needed |
 | [Turtlebot3 QR codes](./demos/qrcodes_minio_pgsql.md)                       | Collect QR codes and images                                                                    |
 | [Custom plugin](./demos/custom_stdout.md)                                   | Create an external plugin                                                                      |
 
