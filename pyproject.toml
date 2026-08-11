@@ -10,6 +10,7 @@ opencv-python = "^4.7.0"
 numpy = "^1.24.2"
 pydantic = "^1.10.4"
 Pillow = "^9.4.0"
+mcap = "^1.4.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.10.0"

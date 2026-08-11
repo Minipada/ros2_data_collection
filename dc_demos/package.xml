@@ -16,6 +16,7 @@
 
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>dc_bringup</exec_depend>
+  <exec_depend>dc_mcap_writer</exec_depend>
   <exec_depend>dc_simulation</exec_depend>
   <exec_depend>nav2_bringup</exec_depend>
   <exec_depend>nav2_simple_commander</exec_depend>

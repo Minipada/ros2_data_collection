@@ -182,7 +182,9 @@ at-least-once (ADR-0002) either way.
 
 The [Elasticsearch tutorial](./demos/elasticsearch.md) is the worked example for all of
 this, end to end; the [InfluxDB demo](./demos/tb3_aws_influxdb.md) is the same mechanism
-against a simulated robot.
+against a simulated robot. [MCAP recording](./demos/mcap_recording.md) (ADR-0009,
+issue #210) is the same passthrough consumed by a standalone process instead of a
+Vector-native sink — the shape to follow for any store Vector has no sink for at all.
 
 ## File uploads: `receives: files` (the Uploader, ADR-0005)
 

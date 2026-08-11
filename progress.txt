@@ -3387,3 +3387,78 @@ confirmed the old naming was carried over unchanged from humble):
   full docs pipeline (or CI, which builds a fresh runner each time and won't hit this).
   The `.sdoc` edit itself is a pure text substitution inside existing `STATEMENT`
   fields, not a structural change, so the regeneration risk is low.
+
+### #210 - Add MCAP as a Destination (ROS 2 bag storage)
+
+The issue asked for Records to be recordable as `.mcap` files (`ros2 bag info`/Foxglove
+replayable), and for the blessed-vs-passthrough decision (ADR-0003) to be recorded before
+implementing since Vector has no MCAP sink.
+
+- **`docs/adr/0009-mcap-as-a-passthrough-destination.md`**: recorded the decision —
+  passthrough (`dc_mcap_writer`, a standalone process), not a `dc_bridge`-side blessed
+  Destination. The issue's own stated justification for the Bridge-side option
+  (local-first durability surviving a Shipper outage) isn't a real gap here: the Shipper
+  is already at-least-once and disk-buffered per blessed sink (ADR-0002), so nothing is
+  lost either way, only delayed. Passthrough keeps `dc_bridge` itself unchanged and
+  matches how every other non-blessed destination works (#246).
+- **New package `dc_mcap_writer`** (`ament_python`, no ROS dependencies of its own):
+  - `writer.py`: `RotatingMcapWriter` — one JSON-schema Channel per distinct Tag (the
+    `foxglove/mcap` `jsonschema/writer.cpp` pattern the issue links), using the low-level
+    `mcap.writer.Writer` API. Rotates to a new file by `max_bytes`/`max_duration_secs`,
+    whichever comes first (mirrors the "whichever limit first" shape `files.retention`,
+    ADR-0005, already uses). `extract_log_time_ns()` reads a Record's normalized
+    timestamp field and handles all three `time_format` values Destinations already
+    support (`epoch_nanos` int, `double` float seconds, `iso8601` string), falling back
+    to wall-clock time for a missing/unparsable field. `iter_ndjson()` skips and logs a
+    malformed line instead of raising, since this feeds a long-running process.
+  - `cli.py`: the `dc_mcap_writer` console entrypoint — a `ThreadingTCPServer` that
+    Vector's `socket` sink connects to (NDJSON per connection), plus a `--stdin` mode for
+    manual conversion/testing. Flags: `--output-dir`, `--prefix`, `--host`/`--port`,
+    `--max-bytes` (default 128 MiB), `--max-duration-secs` (default 3600s), `--time-key`.
+  - `test/test_writer.py`: 12 pytest cases — valid-mcap round-trip via `mcap.reader`,
+    per-Tag channel creation, `tag`/`name`/fallback routing, both rotation policies, the
+    "no policy" and "empty file" edge cases, all three `time_format` conversions, and
+    NDJSON malformed-line handling.
+- **Demo**: `dc_demos/config/mcap_sink.toml` (Vector `socket` sink, TCP,
+  newline-delimited JSON, consuming the `dc.<tag>` routes), `dc_demos/params/
+  mcap_recording.yaml`, `dc_demos/launch/mcap_recording.launch.py` — same shape as the
+  existing Elasticsearch/InfluxDB passthrough demos. `dc_demos/package.xml` gained
+  `exec_depend dc_mcap_writer`.
+- **Docs**: `doc/src/dc/demos/mcap_recording.md` (new tutorial: build, install the
+  passthrough snippet, run `dc_mcap_writer` + the launch file, verify with `ros2 bag
+  info` and Foxglove, rotation behavior, config walkthrough) linked from `SUMMARY.md`,
+  `doc/src/dc/demos.md`'s table, and a new paragraph in `doc/src/dc/destinations.md`'s
+  passthrough section pointing at it as "the shape to follow for any store Vector has no
+  sink for at all".
+- **Dependencies**: `mcap` added to `pyproject.toml` (`[tool.poetry.dependencies]`) and
+  `requirements.txt` (plus its transitive `lz4`/`zstandard`, resolved via `uv pip
+  install` locally since `poetry` isn't installed in this environment either — matching
+  how `numpy`/`opencv-python`/`pydantic`/`Pillow` are already managed outside rosdep).
+  `dc_mcap_writer`'s own `package.xml` declares no exec_depend for it, same precedent.
+- **Bug caught by the new tests**: the first rotation implementation named files by
+  timestamp alone (`%Y%m%dT%H%M%SZ`) — two rotations inside the same wall-clock second
+  (small `max_bytes`/`max_duration_secs` in a fast test, or just a coarse clock) produced
+  identical filenames, so the second `open(path, "wb")` truncated the first file's
+  already-finished content before it was ever read. Fixed by adding a per-process
+  rotation counter to the filename (`<prefix>_<timestamp>_<0001>.mcap`); the two rotation
+  tests (`test_max_bytes_rotation_opens_a_new_file`,
+  `test_max_duration_rotation_opens_a_new_file`) failed before the fix and pass after.
+- **Verified locally** (no ROS 2 install in this environment, matching the gap noted in
+  earlier entries): created a throwaway `uv venv` with `mcap`/`pytest`/`flake8` +
+  the repo's flake8 plugin set installed, ran the 12-case suite (all pass), smoke-tested
+  the CLI's `--stdin` mode end-to-end (piped 2 NDJSON Records in, read the resulting
+  `.mcap` back with `mcap.reader.make_reader`, confirmed both Channels/schema/timestamps
+  round-tripped correctly), and ran `pre-commit run --files <every changed/new file>`
+  (black/isort/pyupgrade/flake8/xmllint/yaml/toml all clean; caught and fixed one real
+  flake8 E231 false-positive by moving an f-string's `:04d` format spec out of the
+  f-string). `pycln` and the `poetry-requirements` hooks fail in this environment the
+  same way prior entries already logged (`poetry`/pycln's `pyproject.toml` lookup
+  broken locally) — pre-existing, not caused by this change.
+- **Not verified**: `colcon build --packages-select dc_mcap_writer` and `ros2 bag info`/
+  Foxglove against a real recorded file — this environment has no ROS 2 Jazzy install
+  (`ros2: command not found`); needs the podman-based `dc-workspace` image prior entries
+  used for the equivalent C++ verification. The `mcap.reader` round-trip above is the
+  closest available substitute: it independently re-parses the emitted file's magic
+  bytes, Header, Schema, Channel and Message records rather than trusting the writer's
+  own state, which is what `ros2 bag info` would additionally need a real ROS 2 install
+  to do on top of.
