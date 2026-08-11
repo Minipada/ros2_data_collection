@@ -3329,3 +3329,61 @@ roughly 90 plugin-parameter call sites.
   dedicated unit test target (its helpers are exercised indirectly through every
   dc_measurements plugin test instead — no new gap introduced by this change, but a
   direct `dc_util` test target would be worth its own issue).
+
+### #186 - Rename custom_params to custom_keys
+
+What `custom_str_params`/`custom_params` add to a Record is custom **keys** in the
+serialized JSON, not parameters of the `measurement_server` node — the old naming was
+misleading. Renamed everywhere it appeared in the jazzy-line DC 2.0 port (the issue
+confirmed the old naming was carried over unchanged from humble):
+
+- **Node parameters** (breaking config change): `custom_str_params_list` ->
+  `custom_key_str_list`, `custom_str_params` -> `custom_keys_str` (and its
+  `.<name>.name`/`.value`/`.value_from_file`/`.force_override` sub-keys, plus the
+  top-level `custom_str_params.force_override` parity declaration).
+- **C++** (`dc_core/include/dc_core/measurement.hpp`,
+  `dc_measurements/include/dc_measurements/measurement.hpp`,
+  `dc_measurements/include/dc_measurements/measurement_server.hpp`,
+  `dc_measurements/src/measurement_server.cpp`): every `custom_params*`/
+  `custom_str_params*` variable, member, and local (`custom_params_` ->
+  `custom_keys_`, `custom_str_params_list_` -> `custom_key_str_list_`,
+  `custom_str_params_map_` -> `custom_keys_str_map_`,
+  `custom_str_params_force_override_` -> `custom_keys_str_force_override_`,
+  `measurement_custom_str_params_` -> `measurement_custom_keys_str_`, loop locals
+  `custom_param`/`custom_param_ns` -> `custom_key`/`custom_key_ns`), and the two methods
+  named after the old concept (`setCustomParameters` -> `setCustomKeys`,
+  `addCustomParameters` -> `addCustomKeys`), including their doc comments and log
+  messages.
+- **Demo configs**: `custom_str_params_list:`/`custom_str_params:` renamed to
+  `custom_key_str_list:`/`custom_keys_str:` in all 7 `dc_demos/params/*.yaml` files that
+  set them.
+- **Docs**: `doc/src/dc/measurements.md`'s parameter table (realigned column widths
+  after the rename changed cell lengths), `doc/src/dc/demos/{tb3_stdout,uptime_stdout,
+  qrcodes_minio_pgsql}.md`. `doc/src/dc/demos/qrcodes_minio_pgsql.md`'s unrelated
+  "start … with custom parameters" prose (about Turtlebot launch args, not this
+  parameter) was deliberately left alone.
+- **Requirements**: `requirements/measurement_server.sdoc`'s three `MS-VAR-*`
+  STATEMENTs updated to reference `custom_keys_str`; `custom variables` (the concept
+  name) left as-is since that wording was never about "parameters" in the first place.
+- **`doc/src/dc/migration.md`**: added a `custom_str_params*` -> `custom_keys_str*`
+  section (before/after config snippet + rename table) and a migration-checklist entry,
+  since this is a breaking change for anyone upgrading from an earlier `jazzy` checkout.
+- **Verified**: repo-wide case-insensitive grep for `custom_param` returns zero hits
+  outside the gitignored `doc/book/` build output. `pre-commit run --all-files`: the
+  hooks that touch this diff's files (`check-xml`, `pyupgrade`, `pycln`'s no-op here,
+  `clang-format` — reflowed one `for` line in `measurement_server.cpp` now that the
+  identifier is shorter, applied) ran clean; the failures in the same run
+  (`build-doc`/podman "boot ID differs from cached boot ID" after a host reboot,
+  `poetry-requirements`/no `poetry` module, `flake8` findings in
+  `dc_bringup/launch/dc_bringup.launch.py`, `dc_demos/dc_demos/streamlit_dashboard/`,
+  `tools/e2e/scripts/`) are pre-existing local-environment/lint issues in files this
+  change never touches, matching the pattern already logged for `poetry-requirements` in
+  earlier entries above.
+- **Not verified**: the generated `doc/src/dc/requirements/html/` and `doc/book/`
+  artifacts (both gitignored, not part of this diff) — `strictdoc` isn't installed
+  locally and the `build-doc` pre-commit hook's Podman image build hit the stale
+  boot-ID cache error above; clearing `/run/user/1000/containers` to unblock it needs a
+  root/host-level action outside this diff's scope, so left for whoever next runs the
+  full docs pipeline (or CI, which builds a fresh runner each time and won't hit this).
+  The `.sdoc` edit itself is a pure text substitution inside existing `STATEMENT`
+  fields, not a structural change, so the regeneration risk is low.
