@@ -41,6 +41,12 @@ Checks:
    public `dc.<tag>` routes — received the same synth counters with no gaps, and received
    *only* the Tags it subscribed to (proving the per-Tag route branches actually
    discriminate rather than fanning everything out).
+5. MCAP passthrough (ADR-0009, #210): a second, differently-shaped passthrough — a
+   Vector `socket` sink (params/e2e_mcap_sink.toml) streaming synth02/synth03 to the
+   standalone `dc_mcap_writer` process — held to the same zero-loss/only-subscribed-Tags
+   standard as the NDJSON passthrough above, via a JSON summary of its `.mcap` capture
+   (scripts/mcap_summary.py, which needs the `mcap` library and so runs inside the DC
+   image via run.sh, not on the CI host runner).
 """
 import argparse
 import json
@@ -68,6 +74,11 @@ REAL_TAGS = [
 # the Tags they arrive under. Kept in lockstep with that file's `inputs`.
 PASSTHROUGH_SOURCES = ["synth00", "synth01"]
 PASSTHROUGH_TAGS = {f"dc.measurement.{s}" for s in PASSTHROUGH_SOURCES}
+
+# Same idea for params/e2e_mcap_sink.toml (ADR-0009, #210) — a distinct pair of synth
+# topics from the NDJSON passthrough above, so the two checks stay independent.
+MCAP_SOURCES = ["synth02", "synth03"]
+MCAP_TAGS = {f"dc.measurement.{s}" for s in MCAP_SOURCES}
 
 
 def psql(pg_container: str, query: str) -> str:
@@ -461,6 +472,126 @@ def check_passthrough(
             )
 
 
+def check_mcap_passthrough(
+    path: str,
+    published: dict,
+    boundaries: dict,
+    violations: list,
+    notes: list,
+    details: dict,
+) -> None:
+    """Assert the ADR-0009 MCAP passthrough writer got the same zero-loss treatment.
+
+    A second, differently-shaped passthrough from check_passthrough() above: Vector has
+    no MCAP sink, so params/e2e_mcap_sink.toml is a `socket` sink streaming to the
+    standalone `dc_mcap_writer` process instead of to a Vector-native sink. `path` is a
+    JSON summary of its `.mcap` capture (scripts/mcap_summary.py's output,
+    {tag: [record, ...]}), not the raw binary — parsing MCAP needs the `mcap` library,
+    which only the DC image has, not this script's own host runner. A missing or empty
+    summary is a FAIL, never a skip, same rule as check_passthrough().
+
+    Args:
+        path: JSON summary file produced by scripts/mcap_summary.py.
+        published: per-source values the generator recorded as published.
+        boundaries: per-source counter values the generator resumed at after a kill.
+        violations: hard failures, appended to in place.
+        notes: informational at-least-once observations, appended to in place.
+        details: per-source counters for the JSON report, populated in place.
+    """
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        violations.append(
+            f"mcap: no output at {path} — dc_mcap_writer produced nothing, or run.sh "
+            "could not summarize its .mcap capture"
+        )
+        return
+
+    with open(path) as f:
+        try:
+            per_tag = json.load(f)
+        except json.JSONDecodeError as exc:
+            violations.append(f"mcap: {path} is not valid JSON ({exc})")
+            return
+
+    # The route transform has one branch per Tag with reroute_unmatched=false, so a Tag
+    # the sink never subscribed to arriving here means routing stopped discriminating.
+    unexpected_tags = sorted(set(per_tag) - MCAP_TAGS)
+    if unexpected_tags:
+        violations.append(
+            f"mcap: received Tag(s) it never subscribed to: {unexpected_tags} — dc.<tag> "
+            "routing is not discriminating between Tags"
+        )
+
+    per_source: dict = {s: [] for s in MCAP_SOURCES}
+    malformed = 0
+    for tag, records in per_tag.items():
+        if tag not in MCAP_TAGS:
+            continue
+        source = tag.rsplit(".", 1)[-1]
+        for record in records:
+            value = record.get("value")
+            if source in per_source and isinstance(value, int):
+                per_source[source].append(value)
+            else:
+                malformed += 1
+
+    details["mcap"] = {
+        "malformed_events": malformed,
+        "unexpected_tags": unexpected_tags,
+        "per_source": {
+            s: {"total": len(v), "distinct": len(set(v)), "max_value": max(v) if v else None}
+            for s, v in per_source.items()
+        },
+    }
+
+    if malformed:
+        violations.append(
+            f"mcap: {malformed} event(s) were not parseable as a synth Record "
+            "(missing/non-int `value`)"
+        )
+
+    for source, values in per_source.items():
+        if not values:
+            violations.append(
+                f"mcap/{source}: zero Records reached dc_mcap_writer "
+                "(the dc.<tag> route delivered nothing)"
+            )
+            continue
+        arrived = set(values)
+        # Same basis as check_passthrough (#312): diff against what the generator
+        # recorded as published, not against `max(arrived) + 1`.
+        expected = published.get(source, set())
+        if not expected:
+            violations.append(
+                f"mcap/{source}: the ledger recorded nothing published, so the MCAP "
+                "capture cannot be verified"
+            )
+            continue
+        missing = expected - arrived
+        kill_points = set(boundaries.get(source, set())) | {max(expected) + 1}
+        tolerated = {
+            value
+            for value in missing
+            if any(0 < point - value <= MAX_KILL_GAP for point in kill_points)
+        }
+        lost = missing - tolerated
+        if lost:
+            violations.append(
+                f"mcap/{source}: {len(lost)} published Record(s) never reached "
+                f"dc_mcap_writer, away from any kill point — first missing: "
+                f"{sorted(lost)[:10]} — data loss through the MCAP passthrough"
+            )
+        if tolerated:
+            notes.append(
+                f"mcap/{source}: {len(tolerated)} Record(s) lost in flight where the "
+                "generator was killed (tolerated)"
+            )
+        if len(values) > len(arrived):
+            notes.append(
+                f"mcap/{source}: {len(values) - len(arrived)} duplicate value(s) "
+                "(at-least-once re-delivery; deduplicated on read)"
+            )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -478,6 +609,12 @@ def main() -> int:
         "--passthrough-file",
         required=True,
         help="newline-delimited JSON extracted from the ADR-0003 passthrough sink's output",
+    )
+    parser.add_argument(
+        "--mcap-summary-file",
+        required=True,
+        help="JSON summary (scripts/mcap_summary.py output) of the ADR-0009 MCAP "
+        "passthrough writer's .mcap capture",
     )
     parser.add_argument("--report", default=None, help="write a JSON report to this path")
     args = parser.parse_args()
@@ -505,6 +642,9 @@ def main() -> int:
     check_files(pg, violations, notes, details)
     check_timestamp_resolution(pg, FAST_TAG, violations, notes, details)
     check_passthrough(args.passthrough_file, published, boundaries, violations, notes, details)
+    check_mcap_passthrough(
+        args.mcap_summary_file, published, boundaries, violations, notes, details
+    )
 
     report = {"pass": not violations, "violations": violations, "notes": notes, "details": details}
     if args.report:

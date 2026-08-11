@@ -78,7 +78,15 @@ not just a local tool.
    Records. A `file` sink rather than a networked one on purpose: it needs no extra
    container, and it stays up through the induced outage, so a gap in its output is
    unambiguously the pipeline losing a Record rather than a store that hadn't come back.
-7. **Verification** (`tools/e2e/scripts/verify_zero_loss.py`): queries Postgres via
+7. **MCAP passthrough coverage** (ADR-0009, `params/e2e_mcap_sink.toml`, #210): a second,
+   differently-shaped passthrough alongside the one above — Vector has no MCAP sink at
+   all, so this is a `socket` sink streaming `synth02`/`synth03` to the standalone
+   `dc_mcap_writer` process (started by `entrypoint.sh` before the DC stack), which
+   writes them to `.mcap` files under the `dc_e2e_data` volume. Held to the same
+   zero-loss/only-subscribed-Tags standard as the NDJSON passthrough, via a JSON summary
+   of the capture (`scripts/mcap_summary.py`, which needs the `mcap` library the DC image
+   installs — not this script's own host runner).
+8. **Verification** (`tools/e2e/scripts/verify_zero_loss.py`): queries Postgres via
    `podman exec` on the Postgres container (no host psycopg2/psql needed). The shipper is
    at-least-once (ADR-0002), so it **hard-fails on loss**. Loss is found by diffing what
    arrived against `params/../workload_ledger.txt` — the generator's own record of every
@@ -101,7 +109,7 @@ not just a local tool.
    have reached it, it must have received *only* the Tags it subscribed to (proving the
    per-Tag route branches discriminate rather than fanning everything out), and a missing
    or empty output file is a FAIL, never a skip.
-8. **Resource usage** (`tools/e2e/scripts/measure_resources.sh`): samples the `dc`
+9. **Resource usage** (`tools/e2e/scripts/measure_resources.sh`): samples the `dc`
    container's CPU/RSS throughout the run into `tools/e2e/.run/resource_usage.csv`.
    Informational only, per the PRD — it does not gate the run.
 
@@ -156,8 +164,17 @@ below.
   that `pgsql_records` already lists, and must: `dc_bridge` builds its subscriptions and
   route branches from `destinations` alone and never reads a snippet's `inputs`, so a
   topic listed only in the snippet would resolve to a route that does not exist.
+- `params/e2e_mcap_sink.toml` — the ADR-0009 MCAP passthrough snippet (#210): a Vector
+  `socket` sink on the `dc.<tag>` routes for `synth02`/`synth03`, streamed to the
+  standalone `dc_mcap_writer` process rather than to a Vector-native sink (Vector has no
+  MCAP sink at all). Same `inputs`/`pgsql_records` constraint as the `file` sink above.
 - `scripts/workload_generator.py` — the synthetic counter/image publisher (runs inside
   the `dc` container, started by `scripts/entrypoint.sh` alongside the real DC stack).
+- `scripts/mcap_summary.py` — reads back `dc_mcap_writer`'s `.mcap` capture and emits a
+  JSON summary `verify_zero_loss.py` can consume; runs inside the DC image (the only
+  place the `mcap` library is installed), invoked by `run.sh` as a one-off container on
+  the `dc_e2e_data` volume, the same pattern used to extract the workload ledger and the
+  NDJSON passthrough's output.
 - `scripts/build.sh` — builds `Containerfile` (the shared workspace image: handles the
   `.dockerignore` dance below, the coverage `ARG`, and an optional registry-backed
   `--cache-from`/`--cache-to`). Used by both `run.sh` and `ci.yaml`.
@@ -167,7 +184,7 @@ below.
 - `scripts/run.sh` — the one-command harness orchestrator described above. Builds the
   workspace + `dc-e2e` images locally, or runs a prebuilt `dc-e2e` image when handed one
   via `DC_E2E_IMAGE` (as CI's `e2e` job does).
-- `scripts/verify_zero_loss.py` — the hard-failing Postgres verification.
+- `scripts/verify_zero_loss.py` — the hard-failing Postgres + passthrough verification.
 - `scripts/measure_resources.sh` — the informational resource sampler.
 - `params/e2e_retention_params.yaml` / `scripts/run_retention.sh` — the files retention
   scenario (#267) described above; a separate, narrower harness reusing the same

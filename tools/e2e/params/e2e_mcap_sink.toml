@@ -1,0 +1,32 @@
+# ADR-0003/ADR-0009 MCAP passthrough coverage for the zero-loss harness (#210).
+#
+# A second, differently-shaped passthrough alongside e2e_passthrough_sink.toml's `file`
+# sink: Vector has no MCAP sink at all, so this is a `socket` sink streaming
+# newline-delimited JSON to the standalone `dc_mcap_writer` process
+# (tools/e2e/scripts/entrypoint.sh starts it before the DC stack) rather than to a
+# Vector-native sink. Its own subscribers — synth02/synth03, distinct from the `file`
+# sink's synth00/synth01 — keep the two passthrough checks independent, so a bug specific
+# to one code path can't hide behind the other's pass.
+#
+# Note synth02/synth03 also appear in the `pgsql_records` Destination's `inputs` in
+# e2e_params.yaml, and must: dc_bridge derives its ROS subscriptions and its `dc.<tag>`
+# route branches from `destinations` alone and never reads this file's `inputs`, so a
+# topic listed only here would resolve to a route that does not exist (and `vector
+# validate` would reject the merged config at Bridge startup).
+[sinks.e2e_mcap]
+type = "socket"
+inputs = ["dc.dc.measurement.synth02", "dc.dc.measurement.synth03"]
+mode = "tcp"
+# dc_mcap_writer's own default listener address (dc_demos/config/mcap_sink.toml uses the
+# same one); entrypoint.sh doesn't override --host/--port, so this must match.
+address = "127.0.0.1:9191"
+encoding.codec = "json"
+framing.method = "newline_delimited"
+
+# The disk buffer a passthrough sink should declare: dc_bridge gives every *blessed* sink
+# one, but a snippet's sink gets Vector's default (in-memory, 500 events) unless it asks.
+# Mirrors e2e_passthrough_sink.toml and what doc/src/dc/demos/mcap_recording.md tells
+# readers to write.
+[sinks.e2e_mcap.buffer]
+type = "disk"
+max_size = 268435488

@@ -208,11 +208,13 @@ dc_bridge:
       delete_when_sent: false
       metadata_destination: "pgsql_files"
 
-    # ADR-0003 passthrough: a raw Vector sink dc_bridge has no knowledge of, consuming the
-    # public dc.<tag> routes. Its output is asserted by verify_zero_loss.py's
-    # check_passthrough() with the same zero-loss standard as the blessed Destinations.
-    # See params/e2e_passthrough_sink.toml for why a `file` sink and why synth00/synth01.
-    custom_config_files: ["/opt/e2e/e2e_passthrough_sink.toml"]
+    # ADR-0003 passthrough: raw Vector sinks dc_bridge has no knowledge of, consuming the
+    # public dc.<tag> routes. Their output is asserted by verify_zero_loss.py's
+    # check_passthrough()/check_mcap_passthrough() with the same zero-loss standard as
+    # the blessed Destinations. See params/e2e_passthrough_sink.toml for why a `file`
+    # sink and why synth00/synth01, and params/e2e_mcap_sink.toml (ADR-0009, #210) for
+    # the second, differently-shaped passthrough on synth02/synth03.
+    custom_config_files: ["/opt/e2e/e2e_passthrough_sink.toml", "/opt/e2e/e2e_mcap_sink.toml"]
 
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224

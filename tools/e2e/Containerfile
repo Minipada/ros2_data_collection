@@ -28,12 +28,17 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # build-arg rebuilds the apt layer once per UTC day so OS security patches don't go stale.
 # Its own RUN layer (no DC source) so it stays a cache hit across code changes.
 # fastcov: tools/code_coverage_report.bash's C++ coverage tool; lcov/ccache round it out.
+# mcap: dc_mcap_writer's (#210/ADR-0009) one Python dependency. `colcon build`'s
+# ament_python step installs each package with `pip install --no-deps`, deliberately
+# never fetching a package's `install_requires` over the network at build time — so
+# listing `mcap` in dc_mcap_writer/setup.py alone does not make it importable here; it
+# has to be installed into this image explicitly, same as fastcov below.
 RUN echo "apt cache bust: ${APT_CACHEBUST}" && \
     apt-get -q update && \
     apt-get -q -y dist-upgrade && \
     apt-get -q install --no-install-recommends -y \
     git python3-pip ccache lcov && \
-    pip install --break-system-packages --no-cache-dir fastcov && \
+    pip install --break-system-packages --no-cache-dir fastcov mcap && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /root/ws

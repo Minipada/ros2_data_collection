@@ -55,7 +55,21 @@ first Record lands instead of being retried:
 
 ```bash
 mkdir -p ~/dc_mcap_out
-ros2 run dc_mcap_writer dc_mcap_writer --output-dir ~/dc_mcap_out --max-duration-secs 300
+python3 -m dc_mcap_writer.cli --output-dir ~/dc_mcap_out --max-duration-secs 300
+```
+
+```admonish warning
+Use `python3 -m dc_mcap_writer.cli`, not `ros2 run dc_mcap_writer dc_mcap_writer`, in
+any script or supervisor that stops it with a targeted signal rather than an
+interactive Ctrl-C. `ros2 run` starts the target as a *child* of its own process and
+does not forward signals to it — a `kill` on `ros2 run`'s own PID leaves the real
+`dc_mcap_writer` process running, orphaned, and it never gets the chance to finish
+its currently-open `.mcap` file (see the Rotation section below). An interactive
+Ctrl-C is unaffected — the terminal sends SIGINT to the whole foreground process
+group, which reaches both — but anything backgrounding it via `&` and killing it by
+PID, a systemd unit, or a container entrypoint, hits this. `dc_mcap_writer` has no
+rclpy/ROS-node dependency of its own, so nothing here actually needs `ros2 run`'s
+node-launching machinery — a sourced workspace already puts it on `PYTHONPATH`.
 ```
 
 Then, in a second terminal:
@@ -105,12 +119,27 @@ topic.
 ## Rotation
 
 `dc_mcap_writer` rotates to a new `.mcap` file once the current one hits `--max-bytes`
-(default 128 MiB) or has been open `--max-duration-secs` (default 3600s), whichever
+(default 128 MiB) or has been open `--max-duration-secs` (default 300s), whichever
 comes first — the same "whichever limit first" shape used for `files.retention`
 (ADR-0005), applied here to `dc_mcap_writer`'s own output rather than the Bridge's
 Uploader queue (ADR-0009 explains why this stays outside `dc_bridge`). Filenames are
-`<prefix>_<UTC timestamp>_<rotation index>.mcap`; the counter suffix guarantees a
-unique name even when two rotations land in the same wall-clock second.
+`<prefix>_<UTC timestamp>_<pid>_<rotation index>.mcap`; the PID and counter together
+guarantee a unique name even across a process restart landing in the same wall-clock
+second as the previous process's last rotation — without both, the new process could
+compute the identical name and its `open(..., "wb")` would silently truncate the file
+the previous process had already finished.
+
+```admonish warning
+A `.mcap` file only becomes readable once its rotation finishes — writing the file's
+closing footer is what `--max-bytes`/`--max-duration-secs` triggers, not something
+every individual Record write does. A process that never gets to shut down gracefully
+(`SIGKILL`, or a container/orchestrator grace period too short for the clean-shutdown
+path to complete) loses whatever is in the file still open at that moment; every
+already-finished rotation stays valid and readable regardless. `--max-duration-secs`'s
+default balances this against not producing too many small files — lower it for
+tighter durability, raise it for fewer files, per your own tolerance for that
+loss window.
+```
 
 ## Understanding the configuration
 
