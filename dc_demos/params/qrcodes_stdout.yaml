@@ -19,8 +19,8 @@ measurement_server:
     save_local_base_path: "$HOME/dc_data/"
     all_base_path: "=robot_name/%Y/%m/%d/%H"
     condition_plugins: ["moving"]
-    custom_str_params_list: ["robot_name", "id"]
-    custom_str_params:
+    custom_key_str_list: ["robot_name", "id"]
+    custom_keys_str:
       robot_name:
         name: robot_name
         value: "r2d2"

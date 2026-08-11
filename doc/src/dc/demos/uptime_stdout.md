@@ -33,8 +33,8 @@ measurement_server:
       enable_validator: true
       debug: true
       init_collect: true
-    custom_str_params_list: ["robot_name", "id"]
-    custom_str_params:
+    custom_key_str_list: ["robot_name", "id"]
+    custom_keys_str:
       robot_name:
         name: robot_name
         value: C3PO
@@ -74,17 +74,17 @@ This will collect the uptime every 5 seconds (including when the node starts), w
 
 Here, we want to append some content in every record: the robot name and its ID. While the robot name comes from a fixed variable in the parameter file, the id comes from the machine-id file.
 
-**custom_str_params_list (Optional)**: Look for those keys in this configuration to add them as keys and values in each record.
+**custom_key_str_list (Optional)**: Look for those keys in this configuration to add them as keys and values in each record.
 
-**custom_str_params.robot_name (Optional)**: This parameter is loaded since it is mentioned in custom_str_params_list
+**custom_keys_str.robot_name (Optional)**: This parameter is loaded since it is mentioned in custom_key_str_list
 
-**custom_str_params.robot_name.name (Optional)**: Key in the dictionary to add
+**custom_keys_str.robot_name.name (Optional)**: Key in the dictionary to add
 
-**custom_str_params.robot_name.value (Optional)**: Value associated to the key in the dictionary to add
+**custom_keys_str.robot_name.value (Optional)**: Value associated to the key in the dictionary to add
 
-**custom_str_params.id.name (Optional)**: Key in the dictionary to add
+**custom_keys_str.id.name (Optional)**: Key in the dictionary to add
 
-**custom_str_params.id.value_from_file (Optional)**: Value associated to the key in the dictionary to add taken from the content of a file
+**custom_keys_str.id.value_from_file (Optional)**: Value associated to the key in the dictionary to add taken from the content of a file
 
 
 ```admonish info

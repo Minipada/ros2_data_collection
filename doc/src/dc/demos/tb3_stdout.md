@@ -135,7 +135,7 @@ This record contains the map data from the measurement.
 ```yaml
 measurement_server:
   ros__parameters:
-    custom_str_params: ["robot_name"]
+    custom_keys_str: ["robot_name"]
     robot_name: "C3PO"
     measurement_plugins: ["cmd_vel", "map", "position", "speed"]
     run_id:
@@ -178,7 +178,7 @@ measurement_server:
 
 **save_local_base_path (Optional)**: Used as a common base for all saved files from measurement plugins. *all_base_path* is concatenated to it afterwards for defining the path where files are saved.
 
-**all_base_path (Optional)**: Used as a common base for some measurements to save files. Is concatenated to *save_local_base_path*. Note the =robot_name, which is later replaced by C3PO (the variable defined in custom_str_params)
+**all_base_path (Optional)**: Used as a common base for some measurements to save files. Is concatenated to *save_local_base_path*. Note the =robot_name, which is later replaced by C3PO (the variable defined in custom_keys_str)
 
 **map.remote_keys**: creates a dictionary inside **remote_paths** which is named by the strings in this field — each name must match a `receives: files` Destination in the `dc_bridge` block below, so the Bridge's Uploader knows where to send the file.
 
@@ -225,8 +225,8 @@ dc_bridge:
 
 measurement_server:
   ros__parameters:
-    custom_str_params_list: ["robot_name", "id"]
-    custom_str_params:
+    custom_key_str_list: ["robot_name", "id"]
+    custom_keys_str:
       robot_name:
         name: robot_name
         value: "C3PO"

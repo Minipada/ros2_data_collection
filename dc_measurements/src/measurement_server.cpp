@@ -24,43 +24,42 @@ void MeasurementServer::setBaseSavePath()
   save_local_base_path_expanded_ = dc_util::expand_values(save_local_base_path_expanded_, this);
   RCLCPP_INFO(get_logger(), "Base save path expanded to %s", save_local_base_path_expanded_.c_str());
   all_base_path_expanded_ = dc_util::expand_env(all_base_path_);
-  all_base_path_expanded_ = dc_util::expand_values(all_base_path_expanded_, this, "custom_str_params.", ".value");
+  all_base_path_expanded_ = dc_util::expand_values(all_base_path_expanded_, this, "custom_keys_str.", ".value");
   RCLCPP_INFO(get_logger(), "All Base path expanded to %s", all_base_path_expanded_.c_str());
 }
 
-void MeasurementServer::setCustomParameters()
+void MeasurementServer::setCustomKeys()
 {
-  // Declared for override parity with the per-parameter custom_str_params.<name>.force_override
-  // below; not consumed here (each custom param's own force_override is what's actually read).
-  dc_util::get_bool_type_param(this, "custom_str_params", "force_override", false);
-  custom_str_params_list_ = dc_util::get_str_array_param(this, "custom_str_params_list", std::vector<std::string>());
+  // Declared for override parity with the per-parameter custom_keys_str.<name>.force_override
+  // below; not consumed here (each custom key's own force_override is what's actually read).
+  dc_util::get_bool_type_param(this, "custom_keys_str", "force_override", false);
+  custom_key_str_list_ = dc_util::get_str_array_param(this, "custom_key_str_list", std::vector<std::string>());
 
-  for (auto param = std::begin(measurement_custom_str_params_); param != std::end(measurement_custom_str_params_);
-       ++param)
+  for (auto param = std::begin(measurement_custom_keys_str_); param != std::end(measurement_custom_keys_str_); ++param)
   {
-    custom_str_params_map_[*param] = dc_util::get_str_param(this, *param, "");
+    custom_keys_str_map_[*param] = dc_util::get_str_param(this, *param, "");
   }
 
-  custom_params_.resize(custom_str_params_list_.size());
+  custom_keys_.resize(custom_key_str_list_.size());
 
-  for (size_t i = 0; i < custom_str_params_list_.size(); i++)
+  for (size_t i = 0; i < custom_key_str_list_.size(); i++)
   {
-    auto custom_param = custom_str_params_list_[i];
-    std::string custom_param_ns = "custom_str_params." + custom_param;
-    std::string key = dc_util::get_str_type_param(this, custom_param_ns, "name", "");
-    std::string value = dc_util::get_str_type_param(this, custom_param_ns, "value", "");
-    std::string value_from_file = dc_util::get_str_type_param(this, custom_param_ns, "value_from_file", "");
-    bool force_override = dc_util::get_bool_type_param(this, custom_param_ns, "force_override", false);
+    auto custom_key = custom_key_str_list_[i];
+    std::string custom_key_ns = "custom_keys_str." + custom_key;
+    std::string key = dc_util::get_str_type_param(this, custom_key_ns, "name", "");
+    std::string value = dc_util::get_str_type_param(this, custom_key_ns, "value", "");
+    std::string value_from_file = dc_util::get_str_type_param(this, custom_key_ns, "value_from_file", "");
+    bool force_override = dc_util::get_bool_type_param(this, custom_key_ns, "force_override", false);
 
-    custom_params_[i]["key"] = key;
-    custom_params_[i]["override"] = force_override;
+    custom_keys_[i]["key"] = key;
+    custom_keys_[i]["override"] = force_override;
     if (!value.empty())
     {
-      custom_params_[i]["value"] = value;
+      custom_keys_[i]["value"] = value;
     }
     else if (!value_from_file.empty())
     {
-      custom_params_[i]["value"] = dc_util::get_file_content(value_from_file);
+      custom_keys_[i]["value"] = dc_util::get_file_content(value_from_file);
     }
   }
 }
@@ -129,7 +128,7 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   RCLCPP_INFO(get_logger(), "Configuring");
   auto node = shared_from_this();
   setRunId();
-  setCustomParameters();
+  setCustomKeys();
   setBaseSavePath();
 
   tf_ = std::make_shared<tf2_ros::Buffer>(get_clock());
@@ -281,7 +280,7 @@ bool MeasurementServer::loadMeasurementPlugins()
           measurement_if_all_conditions_[i], measurement_if_any_conditions_[i], measurement_if_none_conditions_[i],
           measurement_gate_condition_[i], measurement_remote_keys_[i], measurement_remote_prefixes_[i],
           measurement_nested_[i], measurement_flatten_[i], save_local_base_path_, all_base_path_,
-          all_base_path_expanded_, save_local_base_path_expanded_, run_id_, run_id_enabled_, custom_params_);
+          all_base_path_expanded_, save_local_base_path_expanded_, run_id_, run_id_enabled_, custom_keys_);
     }
     catch (const pluginlib::PluginlibException& ex)
     {

@@ -617,6 +617,38 @@ Set `time_format: "double"` explicitly to keep the old fractional-seconds column
 remains supported, and remains lossy: a float64 has ~15-16 significant digits and current
 epoch seconds already spend 10 of them. `iso8601` is the other lossless option.
 
+## `custom_str_params*` renamed to `custom_keys_str*`
+
+`measurement_server`'s custom-key parameters were named `custom_str_params_list` /
+`custom_str_params.*`, even though what they add are custom **keys** in the Record JSON,
+not parameters of the node. Rename them:
+
+| DC 1.x / earlier `jazzy`         | DC 2.0                       |
+| --------------------------------- | ----------------------------- |
+| `custom_str_params_list`          | `custom_key_str_list`         |
+| `custom_str_params.<name>`        | `custom_keys_str.<name>`      |
+| `custom_str_params.force_override`| `custom_keys_str.force_override` |
+
+```yaml
+# Before
+measurement_server:
+  ros__parameters:
+    custom_str_params_list: ["robot_name"]
+    custom_str_params:
+      robot_name:
+        name: robot_name
+        value: "C3PO"
+
+# After
+measurement_server:
+  ros__parameters:
+    custom_key_str_list: ["robot_name"]
+    custom_keys_str:
+      robot_name:
+        name: robot_name
+        value: "C3PO"
+```
+
 ## Migration checklist
 
 - [ ] `destination_server:` renamed to `dc_bridge:`, `destination_plugins:` to `destinations:`
@@ -629,4 +661,5 @@ epoch seconds already spend 10 of them. `iso8601` is the other lossless option.
 - [ ] `files.metadata_destination` names a `receives: records` Destination
 - [ ] Un-blessed destinations are expressed as `custom_config_files` snippets consuming `dc.<tag>` routes
 - [ ] Destination tables exist in PostgreSQL, and object-storage buckets are created
+- [ ] `custom_str_params_list:` / `custom_str_params:` under `measurement_server` are renamed to `custom_key_str_list:` / `custom_keys_str:`
 - [ ] Secrets moved out of the params file into `$VAR` environment references
