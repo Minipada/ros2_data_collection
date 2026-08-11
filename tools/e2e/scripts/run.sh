@@ -243,6 +243,16 @@ podman run --rm --entrypoint bash \
   -v dc_e2e_data:/vol:ro "$DC_IMAGE" \
   -c 'cat /vol/passthrough/records.ndjson 2>/dev/null || true' > "$RUN_DIR/passthrough.ndjson"
 
+# --- summarize the MCAP passthrough writer's output (ADR-0009, #210) -----------------
+# scripts/mcap_summary.py needs the `mcap` library, which is only installed in the DC
+# image (tools/e2e/Containerfile) — run it inside a one-off container on the same
+# dc_e2e_data volume dc_mcap_writer wrote to, same as every other extraction above,
+# rather than parsing the binary .mcap files on this script's own host runner.
+log "summarizing the MCAP passthrough writer's output"
+podman run --rm --entrypoint python3 \
+  -v dc_e2e_data:/vol:ro "$DC_IMAGE" \
+  /opt/e2e/mcap_summary.py /vol/mcap > "$RUN_DIR/mcap_summary.json"
+
 # --- verify -------------------------------------------------------------------------
 # The generator's ledger of what it published (#312) — the independent side of the
 # comparison. It lives on the dc_e2e_data volume so it survives the restart above; read it
@@ -258,6 +268,7 @@ python3 "$SCRIPT_DIR/verify_zero_loss.py" \
   --num-synth-topics 14 \
   --ledger-file "$RUN_DIR/workload_ledger.txt" \
   --passthrough-file "$RUN_DIR/passthrough.ndjson" \
+  --mcap-summary-file "$RUN_DIR/mcap_summary.json" \
   --report "$RUN_DIR/verification_report.json"
 
 log "PASS: zero-loss E2E harness"

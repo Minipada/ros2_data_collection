@@ -1,6 +1,7 @@
 """Rotating MCAP writer for Records consumed over the ADR-0003 passthrough (#210)."""
 import json
 import logging
+import os
 import threading
 import time
 from collections.abc import Iterable, Iterator
@@ -135,15 +136,32 @@ class RotatingMcapWriter:
             self._file.close()
             logger.info("closed %s", self._current_path)
         timestamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-        # The counter, not just the timestamp, guarantees a unique filename: two
-        # rotations inside the same wall-clock second (small `max_bytes`/
-        # `max_duration_secs`, or a coarse system clock) must never collide and
-        # silently overwrite the file just finished.
+        # The rotation index alone only guarantees uniqueness *within* one process's
+        # lifetime — it resets to 0 on every new process, so two independent
+        # dc_mcap_writer processes (a container restart is exactly this, e.g. the
+        # zero-loss e2e harness's `podman restart`) that each open their first file in
+        # the same wall-clock second would otherwise both compute rotation index 1 and
+        # collide on the identical filename, and the second process's `open(..., "wb")`
+        # would silently truncate the first process's already-finished file. The PID
+        # makes that collision impossible across processes; the rotation index still
+        # covers same-second rotations within one process.
         self._rotation_index += 1
         index = str(self._rotation_index).zfill(4)
-        self._current_path = self._output_dir / f"{self._prefix}_{timestamp}_{index}.mcap"
+        pid = os.getpid()
+        self._current_path = self._output_dir / f"{self._prefix}_{timestamp}_{pid}_{index}.mcap"
         self._file = open(self._current_path, "wb")
-        self._writer = Writer(self._file)
+        # Chunking (mcap's default) buffers messages entirely in memory — a Chunk isn't
+        # written to `self._file` at all until it reaches `chunk_size` (1 MiB default)
+        # or `finish()` runs. At this passthrough's Record rate that chunk can easily
+        # outlive the process: a container killed abruptly (SIGKILL, or a restart grace
+        # period too short for the graceful SIGTERM path below to complete — a real
+        # failure mode, not hypothetical) loses every message since the file opened,
+        # not just the last few. Disabling it makes `add_message()` write straight
+        # through to `self._file` (verified: `self._file.tell()` grows immediately per
+        # message), which also makes the `max_bytes` rotation check above meaningful —
+        # with chunking it was only ever reacting to header/schema overhead, since
+        # message bytes never touched `self._file` until a chunk closed.
+        self._writer = Writer(self._file, use_chunking=False)
         self._writer.start(profile="", library="dc_mcap_writer")
         self._schema_id = self._writer.register_schema(
             name="dc/record", encoding="jsonschema", data=_RECORD_JSON_SCHEMA

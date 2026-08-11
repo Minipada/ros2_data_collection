@@ -3462,3 +3462,105 @@ implementing since Vector has no MCAP sink.
   bytes, Header, Schema, Channel and Message records rather than trusting the writer's
   own state, which is what `ros2 bag info` would additionally need a real ROS 2 install
   to do on top of.
+
+### #210 follow-up - real e2e coverage for the MCAP passthrough, and three bugs it caught
+
+The PR review asked for a proper test — "an e2e one or smoke" — for the MCAP
+passthrough. Added both, and the e2e side caught three real bugs the unit/smoke tests
+never exercised, all now fixed and verified by a full local run of
+`tools/e2e/scripts/run.sh` (`ZERO-LOSS VERIFICATION PASSED (24 sources checked, 0
+violations)`, including the new MCAP passthrough alongside the existing NDJSON one).
+
+**Smoke tests** (`dc_mcap_writer/test/test_cli_smoke.py`, 5 cases): spawn the real
+`dc_mcap_writer` console entrypoint as a subprocess and talk to it the way its actual
+callers do — a real TCP client sending NDJSON (mimicking Vector's `socket` sink) and
+real `SIGTERM`/`SIGINT` — neither exercised by `test_writer.py`'s direct-object tests.
+Caught two bugs immediately: the test helper's own `stdin=PIPE` was missing (so
+`communicate(input=...)` silently no-opped), and the CLI itself only handled
+`KeyboardInterrupt` (SIGINT) — a container/systemd stop sends SIGTERM, which would have
+skipped `mcap_writer.close()` entirely. Fixed both (`cli.py` now maps `SIGTERM` onto
+`signal.default_int_handler`, reusing the SIGINT path).
+
+**e2e harness** (`tools/e2e/`): wired `dc_mcap_writer` in as a *second*, independently-
+verified passthrough alongside the existing NDJSON `file` sink — a Vector `socket` sink
+on `synth02`/`synth03` (`params/e2e_mcap_sink.toml`), started by `entrypoint.sh` before
+the DC stack, summarized by a new `scripts/mcap_summary.py` (runs inside the DC image,
+the only place with the `mcap` library — not the CI host runner) and checked by a new
+`check_mcap_passthrough()` in `verify_zero_loss.py`, same zero-loss/only-subscribed-
+Tags standard as `check_passthrough()`. `README.md` documents it as step 7.
+
+Getting this to actually pass surfaced three real, previously-latent bugs:
+
+1. **`mcap` never installed in the workspace image.** `colcon build`'s ament_python
+   step installs with `pip install --no-deps` — a package's own `install_requires`
+   (`dc_mcap_writer/setup.py`'s `mcap`) is never fetched at build time. This is what
+   the CI failure the user flagged (`colcon-test`, `dc_mcap_writer`, "collection
+   failure") turned out to be — confirmed by reproducing it locally
+   (`ModuleNotFoundError: No module named 'mcap'`) before the fix, and by a clean
+   `colcon test --packages-select dc_mcap_writer` (18/18 pass) after. Fixed by adding
+   `mcap` to `tools/e2e/Containerfile`'s existing `pip install --break-system-packages`
+   step (same one `fastcov` already used) — the one image both `colcon-test` and `e2e`
+   build from.
+2. **Filename collision across process restarts.** The rotation-index uniqueness
+   guard added in the original PR only held *within* one process's lifetime — it
+   resets to 0 on every new process. Two independent `dc_mcap_writer` processes (a
+   container restart is exactly this) that each open their first file in the same
+   wall-clock second computed the identical filename, and the second process's
+   `open(path, "wb")` silently truncated the first's already-finished file. Fixed by
+   adding the PID to the filename (`<prefix>_<timestamp>_<pid>_<index>.mcap`).
+   Regression test: `test_two_process_restarts_in_the_same_second_do_not_collide` spawns
+   two real back-to-back `--stdin` subprocesses at the same `--output-dir` — verified it
+   fails without the fix (both processes' data collapses into one file) and passes with it.
+3. **mcap's default chunking loses everything since the file opened, on any abrupt
+   kill — and made `max_bytes` rotation meaningless.** `mcap.writer.Writer`'s default
+   (`use_chunking=True`) buffers every message in a pure-Python `ChunkBuilder` and never
+   touches the underlying file object until a 1 MiB chunk closes or `finish()` runs. At
+   this passthrough's Record rate that chunk easily outlives the process: a SIGKILL (or
+   a restart/stop grace period too short for a clean shutdown — confirmed happening
+   under this harness's real load, not hypothetical) loses every message since the file
+   opened, and `self._file.tell()` (what `max_bytes` checks) was only ever reacting to
+   header/schema overhead the whole time, never real content. Fixed by constructing
+   `Writer(self._file, use_chunking=False)` — verified empirically (a second file
+   descriptor sees written bytes immediately after `add_message()`) and with a new
+   regression test, `test_max_bytes_rotation_reacts_to_real_message_volume_not_just_the_header`
+   (300-byte threshold the header alone can't cross; confirmed failing without the fix,
+   passing with it). Also lowered the CLI's default `--max-duration-secs` from 3600 to
+   300 and documented in `mcap_recording.md` that a file only becomes readable once its
+   rotation *finishes* — an abrupt kill can only ever cost the currently-open segment,
+   never an already-finished one, so shorter rotation directly bounds exposure.
+4. **`ros2 run` doesn't forward signals to the process it starts.** This was the actual
+   root cause behind bugs 2 and 3 still producing unreadable files in the harness even
+   after both were fixed: `entrypoint.sh` used `ros2 run dc_mcap_writer dc_mcap_writer &`
+   and captured `$!` — but `ros2 run` spawns the real executable as a *child* of its own
+   Python process rather than exec-replacing itself, and never forwards signals to that
+   child. `kill "$MCAP_PID"` was only ever reaching the `ros2 run` wrapper; the actual
+   writer process ran on, orphaned, until the container runtime killed it outright,
+   never running its own graceful-shutdown path. Confirmed empirically inside the built
+   workspace image: `kill -TERM` on `ros2 run`'s own PID left the real process running;
+   `kill -TERM` on `python3 -m dc_mcap_writer.cli`'s PID (no wrapper in between) stopped
+   it immediately with a valid, readable file. Fixed by switching `entrypoint.sh` (and
+   the `mcap_recording.md` tutorial's example, for anyone who scripts/backgrounds it
+   rather than Ctrl-C's it interactively — that path already works today, since a
+   terminal's SIGINT goes to the whole foreground process group) to
+   `python3 -m dc_mcap_writer.cli` — `dc_mcap_writer` has no rclpy/node dependency, so
+   nothing here actually needed `ros2 run`'s node-launching machinery, and a sourced
+   workspace already puts it on `PYTHONPATH`.
+
+**Startup-latency gate, investigated and ruled out as unrelated**: two initial harness
+runs on this (shared, sandboxed) machine missed the `run.sh` startup-latency gate
+(<10s) by ~1-2s. Isolated with a controlled comparison — built a baseline `dc-e2e`
+image from the *original*, unmodified `entrypoint.sh` (no `dc_mcap_writer` at all) and
+ran it back to back with the feature image under identical conditions: the baseline
+missed the gate too (11.6s). This is this local machine being slower than the gate
+assumes, not a regression from this change — real CI already passed the `e2e` job
+(7m46s) on the pre-this-work commit. Not touched; local validation runs after this used
+`DC_E2E_STARTUP_TIMEOUT_SECONDS` overridden higher purely to get past this
+machine-specific gate and reach the actual verification logic.
+
+**Verified**: `dc_mcap_writer`'s 18-case suite (`pytest`, both locally in a throwaway
+venv and via `colcon test` inside the real workspace image) all green; `flake8` clean
+on every changed file (repo config, via `pre-commit`); `tools/e2e/scripts/run.sh` run
+in full end to end multiple times against a freshly-built image, final run passing
+completely (`ZERO-LOSS VERIFICATION PASSED (24 sources checked, 0 violations)`,
+including `mcap/synth02`/`mcap/synth03` with only the same tolerated boundary-kill loss
+every other check accepts, zero real loss).

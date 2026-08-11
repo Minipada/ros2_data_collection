@@ -81,6 +81,30 @@ def test_max_bytes_rotation_opens_a_new_file(tmp_path):
     assert len(all_messages) == 2
 
 
+def test_max_bytes_rotation_reacts_to_real_message_volume_not_just_the_header(tmp_path):
+    """Regression test: `max_bytes` must count actual written bytes, not just overhead.
+
+    `mcap.writer.Writer`'s default chunking buffers every message in memory and never
+    hands it to the file object until a 1 MiB chunk closes or `finish()` runs — so
+    `self._file.tell()` (what `max_bytes` checks) would keep reading the same small
+    header-only size no matter how many real messages had been queued, making
+    `max_bytes` react only to per-file overhead, never to actual content.
+    `RotatingMcapWriter` disables chunking specifically so this works.
+
+    Args:
+        tmp_path: pytest's per-test temporary directory fixture.
+    """
+    writer = RotatingMcapWriter(output_dir=tmp_path, rotation=RotationPolicy(max_bytes=300))
+    for i in range(5):
+        writer.write_record(_record(date=1786118523000000000 + i))
+    writer.close()
+
+    files = sorted(tmp_path.glob("*.mcap"))
+    assert len(files) > 1, "5 real messages past a 300-byte threshold never rotated"
+    all_messages = [message for f in files for message in _read_all(f)]
+    assert len(all_messages) == 5
+
+
 def test_max_duration_rotation_opens_a_new_file(tmp_path):
     writer = RotatingMcapWriter(
         output_dir=tmp_path, rotation=RotationPolicy(max_duration_secs=0.05)

@@ -8,6 +8,7 @@ doc/src/dc/demos/mcap_recording.md.
 import argparse
 import io
 import logging
+import signal
 import socketserver
 import sys
 from collections.abc import Sequence
@@ -68,8 +69,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--max-duration-secs",
         type=float,
-        default=3600.0,
-        help="Rotate once the current file has been open this long; 0 disables the time limit",
+        default=300.0,
+        help="Rotate once the current file has been open this long; 0 disables the time limit. "
+        "A file only becomes readable once its rotation finishes (writes the footer) — this "
+        "bounds how much a process that never gets to shut down gracefully (SIGKILL, a "
+        "container/restart grace period too short for a clean exit) can cost: everything in "
+        "already-finished rotations stays safe, only the file open at the moment of the kill "
+        "is at risk.",
     )
     parser.add_argument(
         "--time-key",
@@ -92,6 +98,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         argv: Command-line arguments, or None to use `sys.argv`.
     """
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    # A container/systemd stop sends SIGTERM, not SIGINT — without this, `finally:
+    # mcap_writer.close()` below never runs and the current .mcap is left without its
+    # finishing Data End record/index, unreadable. Mapping it onto the same
+    # KeyboardInterrupt Ctrl-C already raises reuses that one shutdown path for both.
+    signal.signal(signal.SIGTERM, signal.default_int_handler)
     args = build_arg_parser().parse_args(argv)
     rotation = RotationPolicy(
         max_bytes=args.max_bytes or None, max_duration_secs=args.max_duration_secs or None
