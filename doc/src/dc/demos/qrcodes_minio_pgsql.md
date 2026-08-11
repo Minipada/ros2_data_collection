@@ -136,11 +136,11 @@ group_server:
 
 measurement_server:
   ros__parameters:
-    custom_str_params: ["robot_name"]
+    custom_keys_str: ["robot_name"]
     robot_name: "C3PO"
     measurement_plugins: ["cmd_vel", "position", "speed"]
-    custom_str_params_list: ["robot_name", "id"]
-    custom_str_params:
+    custom_key_str_list: ["robot_name", "id"]
+    custom_keys_str:
       robot_name:
         name: robot_name
         value: "C3PO"
@@ -289,8 +289,8 @@ measurement_server:
   ...
   measurement_plugins: ["cmd_vel", "position", "speed", "map", "right_camera", "left_camera"]
   condition_plugins: ["moving", "inspected_exists"]
-  custom_str_params_list: ["robot_name", "id"]
-  custom_str_params:
+  custom_key_str_list: ["robot_name", "id"]
+  custom_keys_str:
     robot_name:
       name: robot_name
       value: "C3PO"

@@ -51,7 +51,7 @@ public:
    * from if_all/if_any/if_none, which are re-evaluated on every collection
    * @param  run_id Unique ID of the current run
    * @param  run_id Whether Run Id is enabled
-   * @param  custom_params Vector of JSON with custom parameters
+   * @param  custom_keys Vector of JSON with custom keys
    */
   virtual void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                          const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
@@ -68,7 +68,7 @@ public:
                          const bool& nest, const bool& flatten, const std::string& save_local_base_path,
                          const std::string& all_base_path, const std::string& all_base_path_expanded,
                          const std::string& save_local_base_path_expanded, const std::string& run_id,
-                         const bool& run_id_enabled, const std::vector<json>& custom_params) = 0;
+                         const bool& run_id_enabled, const std::vector<json>& custom_keys) = 0;
 
   /**
    * @brief Method to cleanup resources used on shutdown.

@@ -83,7 +83,7 @@ protected:
   nav2_util::CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) override;
 
   void setRunId();
-  void setCustomParameters();
+  void setCustomKeys();
   void setBaseSavePath();
 
   std::shared_ptr<tf2_ros::Buffer> tf_;
@@ -99,9 +99,9 @@ protected:
   bool run_id_counter_;
   bool run_id_uuid_;
 
-  // Custom parameters
-  std::vector<std::string> custom_str_params_list_;
-  std::vector<json> custom_params_;
+  // Custom keys
+  std::vector<std::string> custom_key_str_list_;
+  std::vector<json> custom_keys_;
 
   // std::vector<std::string> measurement_plugins_;
   std::vector<std::string> measurement_group_key_;
@@ -129,9 +129,9 @@ protected:
   std::string save_local_base_path_expanded_;
   std::string all_base_path_;
   std::string all_base_path_expanded_;
-  std::vector<std::string> measurement_custom_str_params_;
-  std::map<std::string, std::string> custom_str_params_map_;
-  bool custom_str_params_force_override_;
+  std::vector<std::string> measurement_custom_keys_str_;
+  std::map<std::string, std::string> custom_keys_str_map_;
+  bool custom_keys_str_force_override_;
 
   // Conditions
   std::map<std::string, std::shared_ptr<dc_core::Condition>> conditions_;

@@ -423,7 +423,7 @@ public:
       addTags(msg);
       addMeasurementName(msg);
       addMeasurementPluginName(msg);
-      addCustomParameters(msg);
+      addCustomKeys(msg);
     }
     if (!msg.data.empty() && msg.data != "null")
     {
@@ -482,9 +482,9 @@ public:
     }
   }
 
-  void addCustomParameters(dc_interfaces::msg::StringStamped& msg)
+  void addCustomKeys(dc_interfaces::msg::StringStamped& msg)
   {
-    if (!custom_params_.empty() && (!msg.data.empty() && msg.data != "null"))
+    if (!custom_keys_.empty() && (!msg.data.empty() && msg.data != "null"))
     {
       json data;
       try
@@ -493,9 +493,9 @@ public:
       }
       catch (json::parse_error& e)
       {
-        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding custom parameters: " << data.dump());
+        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding custom keys: " << data.dump());
       }
-      for (auto& param : custom_params_)
+      for (auto& param : custom_keys_)
       {
         auto key = param["key"].get<std::string>();
         auto value = param["value"].get<std::string>();
@@ -535,7 +535,7 @@ public:
                  const std::vector<std::string>& remote_prefixes, const bool& nested, const bool& flatten,
                  const std::string& save_local_base_path, const std::string& all_base_path,
                  const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
-                 const std::string& run_id, const bool& run_id_enabled, const std::vector<json>& custom_params) override
+                 const std::string& run_id, const bool& run_id_enabled, const std::vector<json>& custom_keys) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -569,7 +569,7 @@ public:
     save_local_base_path_expanded_ = save_local_base_path_expanded;
     run_id_ = run_id;
     run_id_enabled_ = run_id_enabled;
-    custom_params_ = custom_params;
+    custom_keys_ = custom_keys;
 
     condition_max_measurements_ = condition_max_measurements;
     if_all_conditions_ = if_all_conditions;
@@ -665,8 +665,8 @@ protected:
   bool run_id_enabled_;
   std::string run_id_;
 
-  // Custom params
-  std::vector<json> custom_params_;
+  // Custom keys
+  std::vector<json> custom_keys_;
 
   // Parameters
   bool init_collect_;

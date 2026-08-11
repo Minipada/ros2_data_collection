@@ -122,17 +122,17 @@ TITLE: Custom variables
 [REQUIREMENT]
 UID: MS-VAR-001
 TITLE: Can load custom variables
-STATEMENT: The custom_str_params parameter should allow the user to specify custom variables. Each variable should have a name subparameter and either a value or value_fromfile subparameter. If a required subparameter is missing or the file specified in value\_from\_file does not exist, the node should stop processing.
+STATEMENT: The custom_keys_str parameter should allow the user to specify custom variables. Each variable should have a name subparameter and either a value or value_fromfile subparameter. If a required subparameter is missing or the file specified in value\_from\_file does not exist, the node should stop processing.
 
 [REQUIREMENT]
 UID: MS-VAR-002
 TITLE: Can load custom variables from a file
-STATEMENT: The custom_str_params parameter should allow the user to specify custom variables that are loaded from a file. If the file specified in value\_from\_file does not exist, the node should stop processing.
+STATEMENT: The custom_keys_str parameter should allow the user to specify custom variables that are loaded from a file. If the file specified in value\_from\_file does not exist, the node should stop processing.
 
 [REQUIREMENT]
 UID: MS-VAR-03
 TITLE: Can load custom variables from a fixed string
-STATEMENT: The custom_str_params parameter should allow the user to specify custom variables that are loaded from a fixed string. If the value subparameter is empty, the node should stop processing.
+STATEMENT: The custom_keys_str parameter should allow the user to specify custom variables that are loaded from a fixed string. If the value subparameter is empty, the node should stop processing.
 
 [/SECTION]
 
