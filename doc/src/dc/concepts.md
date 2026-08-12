@@ -179,6 +179,10 @@ manager (ADR-0006): it must be up and its Shipper ready *before* the collection 
 are allowed to activate. See [Data Pipeline](./data_pipeline.md).
 ```
 
+See [Lifecycle Manager](./lifecycle_manager.md) for the managed-node list, the bond
+heartbeat and state-transition diagrams, and the autostart flow that ties into the
+Bridge readiness gate above.
+
 ## Buffering and data persistence
 
 The Shipper manages its own disk buffer (`shipper.data_dir` on the Bridge's parameters)
