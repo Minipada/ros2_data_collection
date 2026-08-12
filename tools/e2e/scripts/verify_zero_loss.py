@@ -56,6 +56,7 @@ Checks:
    image via run.sh, not on the CI host runner).
 """
 import argparse
+import datetime
 import json
 import os
 import subprocess
@@ -526,6 +527,12 @@ def check_raw(
     total_lines = 0
     namespace_events = 0
     decoded_fields = 0
+    # Stored volume (#227): the bytes a raw Record actually costs in a Destination, and
+    # the wall-clock span they arrived over, so every run reports what "collect this
+    # topic raw" is worth in MB/day rather than leaving operators to guess. Reported,
+    # never gated: throughput on a CI runner is not a property worth failing a build on.
+    total_bytes = 0
+    event_times: list = []
 
     with open(path) as f:
         for line in f:
@@ -533,6 +540,7 @@ def check_raw(
             if not line:
                 continue
             total_lines += 1
+            total_bytes += len(line) + 1  # the newline the sink wrote
             try:
                 event = json.loads(line)
             except json.JSONDecodeError:
@@ -542,6 +550,14 @@ def check_raw(
                 unexpected_tags.add(event.get("tag"))
                 continue
             namespace_events += 1
+            stored_at = event.get("timestamp")
+            if isinstance(stored_at, str):
+                try:
+                    event_times.append(
+                        datetime.datetime.fromisoformat(stored_at.replace("Z", "+00:00"))
+                    )
+                except ValueError:
+                    pass
             # The introspection walk has to have produced every field of the message:
             # the two `string`s, and the nested Header with its nested builtin Time.
             stamp = (event.get("header") or {}).get("stamp") or {}
@@ -567,7 +583,18 @@ def check_raw(
         "distinct_values": len(arrived),
         "first_value": min(arrived) if arrived else None,
         "last_value": max(arrived) if arrived else None,
+        "stored_bytes": total_bytes,
+        "bytes_per_record": total_bytes // total_lines if total_lines else None,
     }
+    # Only meaningful with two timestamps far enough apart to divide by.
+    if len(event_times) >= 2:
+        span = (max(event_times) - min(event_times)).total_seconds()
+        if span >= 1.0:
+            details["raw"]["span_seconds"] = round(span, 1)
+            details["raw"]["bytes_per_second"] = round(total_bytes / span, 1)
+            details["raw"]["projected_mb_per_day"] = round(
+                total_bytes / span * 86400 / 1e6, 1
+            )
 
     if total_lines == 0:
         violations.append(
