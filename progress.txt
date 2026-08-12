@@ -3994,3 +3994,61 @@ the same pre-existing reason as earlier entries (no local `poetry` binary); `bla
 reformatted an unrelated file (`tools/e2e/scripts/verify_zero_loss.py`) as a side
 effect of the hook run against the whole repo — reverted before committing since it's
 outside this issue's scope.
+
+## #254: Test coverage epic (measurement plugins) — camera plugin
+
+**Read**: Issue #254 consolidates the individually-closed #146–#157 ("Consolidated
+into the measurement test epic #254... the per-plugin checklist lives there" — each
+sub-issue's closing comment) into one 12-item checklist (camera, cmd_vel,
+distance_traveled, ip_camera, memory, map, network, permissions, position, speed,
+storage, tcp_health); none had tests yet (`dc_measurements/test/` only covers
+diagnostics, driving_type, dummy, gate_condition, os, parameters, random,
+serial_interface, thermal, uptime). Since each checkbox is described as a
+self-contained, good-first-issue-sized contribution, and per `CLAUDE.md`'s "one task
+per run" convention, this session does one item — `camera`, the first in the list —
+and leaves the rest for future runs.
+
+**Added**: `dc_measurements/test/test_measurement_camera.cpp`, registered in
+`CMakeLists.txt`'s `tests` list. Follows `test_measurement_diagnostics.cpp`'s pattern
+(a helper node publishes synthetic input on the subscribed topic, `count_subscribers`
+gates against a race where the publish happens before the plugin's subscription
+exists, then the output topic is asserted against) rather than `test_measurement_os.cpp`'s
+simpler no-input pattern, since `Camera::collect()` reads `last_data_` set by a
+`sensor_msgs/msg/Image` subscription on `cam_topic`. Three tests:
+- `PublishesBase64EncodedRawImage`: publishes a synthetic 4x4 BGR8 image,
+  `save_raw_base64=true`, asserts `camera_name` and `base64.raw` are present and that
+  base64-decoding + `cv::imdecode`ing the JPEG round-trips to a 4x4 image — tests the
+  Record JSON's actual image payload, not just that some string is present.
+- `RotatesImageBeforeEncoding`: `rotation_angle=90`, `save_rotated_base64=true`, a
+  non-square 4x8 source image so the 90° rotation is observable as a dimension swap
+  (8x4) in the decoded output — exercises `Camera::rotateImage()` externally via the
+  published Record rather than as a white-box unit test.
+- `NoPublishBeforeFirstImageReceived`: polls through several `collect()` cycles with
+  no image ever published; `Camera::collect()` returns an empty `StringStamped` when
+  `last_data_.data` is empty, and `Measurement::publish()` drops empty messages, so no
+  callback should fire.
+
+**Found**: `camera.draw_det_barcodes` defaults to `true`, and `Camera::onConfigure()`
+creates a `/dc/service/draw_image` client and blocks (`wait_for_service`, retried every
+second) until that service appears — regardless of whether `detection_modules`
+actually includes `"barcode"`. Every test here explicitly sets
+`camera.draw_det_barcodes=false` to avoid hanging on a service this test suite doesn't
+stand up (barcode detection itself, and the `dc_services draw_image` service dependency
+it pulls in, are out of scope for this checklist item — `draw_det_barcodes` only
+gates the *drawing* of detection boxes onto the saved/base64 image, not detection
+itself, so this doesn't skip anything the acceptance criteria asks for).
+
+**Not done / left for follow-up**: no local `colcon`/ROS install in this sandbox (same
+constraint as #242/#243 — disk space), so `colcon test` could not be run directly;
+CI (`tools/e2e/scripts/test.sh`) is the real gate. Verified via `pre-commit`
+(`clang-format` — no changes needed; the `build-doc`, `poetry-requirements` hooks are
+unrelated to C++ test files) and a manual read-through of `camera.cpp`/`camera.hpp`
+and the base `Measurement`/`MeasurementServer` classes to confirm parameter defaults,
+lifecycle-configure ordering, and the `publish()` empty-message-drop path referenced
+above. `black` reformatted an unrelated file
+(`tools/e2e/scripts/verify_zero_loss.py`) as a side effect of running pre-commit
+against the whole repo — reverted before committing, same as prior entries. The
+remaining 11 checklist items (cmd_vel, distance_traveled, ip_camera, memory, map,
+network, permissions, position, speed, storage, tcp_health) are untouched; the PR for
+this session uses "Contributes to #254" rather than "Closes #254" so the epic stays
+open for them.
