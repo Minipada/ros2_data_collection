@@ -3702,3 +3702,76 @@ root-level markdown like `README.md`. Checked that `jazzy` is not branch-protect
 (`gh api .../branches/jazzy/protection` → 404), so a skipped run leaves no required status
 check pending forever — the usual trap with path-filtered workflows, noted in a comment
 above the trigger block for whoever turns branch protection on later.
+
+### #224 - Write tests for dc_lifecycle_manager
+
+`dc_lifecycle_manager` had no `test/` directory at all — the only DC C++ package
+managing other nodes' lifecycles was the one with no coverage of that behaviour. Added a
+gtest suite covering the three things the issue asked for (startup ordering, bond timeout
+handling, respawn) plus the teardown ordering that falls out of the same code path.
+
+**Shape of the suite** (`dc_lifecycle_manager/test/`, wired into `colcon test` from
+`CMakeLists.txt` with the `set(tests …)` + `foreach`/`ament_add_gtest` pattern
+`dc_measurements` already uses, `TIMEOUT 300` since bond timeouts are wall-clock waits):
+
+- **`managed_node_harness.hpp`** — shared doubles. `DummyManagedNode` is a
+  `nav2_util::LifecycleNode` that records every transition it is driven through into a
+  mutex-guarded `TransitionRecorder`, keeps a bond with the manager exactly like the real
+  collection nodes do (`createBond()` on activate, `destroyBond()` on deactivate), and —
+  the key affordance for the bond tests — puts *spinning* under the test's control, so a
+  node can be made to stop answering heartbeats without killing the process it shares
+  with the manager. Per ADR-0006 nothing here models the Bridge: it is deliberately
+  outside the manager, and its startup ordering is the `dc_bringup` readiness gate's job.
+- **`test_lifecycle_manager_startup.cpp`** (5 tests) — every node configured before any
+  is activated and each phase driven in `node_names` order; a **regression test for the
+  single-managed-node case** (pairing `transitions` with `node_names` index-wise used to
+  drop every transition past the node count, leaving one node configured but never
+  activated); `autostart: false` moving nothing until a STARTUP request arrives; RESET
+  and SHUTDOWN transitioning nodes in *reverse* order. Driven through
+  `LifecycleManagerClient` over the real `manage_nodes` / `is_active` services, which
+  gives that class coverage too.
+- **`test_lifecycle_manager_bond.cpp`** (3 tests) — a silenced node's bond timing out
+  takes the whole managed set down and respawn reconnection brings it back
+  (configure+activate re-run, `is_active` ACTIVE again); the same failure with
+  `attempt_respawn_reconnection: false` leaves it down; and the respawn retry window
+  closing after `bond_respawn_max_duration`.
+
+**Three non-obvious things the tests ran into**, all documented in the files themselves:
+
+- **A manager outlives the test that created it.** `createLifecycleServiceClients()`
+  builds `nav2_util::LifecycleServiceClient`s from the manager's own `shared_from_this()`
+  and stores them on the manager — a reference cycle, so `manager_.reset()` does not
+  destroy the node, and its service thread keeps answering. The first run had a test
+  asserting INACTIVE get ACTIVE from the *previous* test's manager. Fixed by giving each
+  test its own manager node name (`__node:=` remap through `NodeOptions::arguments`), so
+  every test's client talks only to its own. Left the cycle alone: in production the
+  manager is a process-lifetime singleton and `shutdown()`'s
+  `destroyLifecycleServiceClients()` breaks it, so it is a test-isolation problem rather
+  than a leak worth changing production code for.
+- **`bond_timeout` doubles as the bond *formation* deadline.** `createBondConnection()`
+  gives `waitUntilFormed()` half of `bond_timeout`; at 1.5 s the second managed node's
+  bond lost that race (~110 ms formation, but only after the first bond's traffic was
+  already flowing) and startup failed outright. The tests use 4.0 — the DC/nav2 default —
+  and the constant says why.
+- **A bond only becomes detectable after its *second* heartbeat.** Probing bondcpp
+  directly (a scratch test, since the manager's logs show nothing either way): its
+  heartbeat-timeout timer is armed from `BondSM::Heartbeat()`, which the first status
+  message does not reach — that one only moves the state machine out of
+  `WaitingForSister`. A peer silenced the instant its bond forms is therefore *never*
+  declared dead, no matter how long you wait (verified: 15 s with `isBroken()` staying
+  false). The tests let a fresh bond beat for 2 s before silencing a node, and the
+  silence lasts 8 s — past the 4 s heartbeat timeout plus the bond's own disconnect
+  timeout — so the manager's side is conclusively dead before the node starts answering
+  again. Spinning is restored afterwards on purpose: the manager's recovery path calls
+  `change_state` with no timeout, so a permanently dead node would block the manager
+  instead of exercising the reset+respawn it triggers.
+
+**Verified** against the workspace image (podman, this worktree bind-mounted over
+`/root/ws/src/ros2_data_collection`, the same `colcon test` path CI runs): 10 tests, 0
+failures, ~32 s for the package. The bond suite's logs show the real sequence end to end
+— "CRITICAL FAILURE: SERVER bond_node_b IS DOWN after not receiving a heartbeat for 4000
+ms" → hard reset in reverse order → "Successfully re-established connections from server
+respawns, starting back up" → both nodes configured and activated again. `pre-commit run
+--files` on the new/changed files is clean apart from the `poetry-requirements` hook,
+which fails on this machine for a missing local `poetry` install and touches none of
+them.
