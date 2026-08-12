@@ -55,10 +55,15 @@ dc_bridge:
 
       # --- volume --------------------------------------------------------------------
       # Per-topic ceiling on Records per second; extra messages are dropped at the
-      # source, newest-wins. 0 = unlimited (only do this if you know the topic's rate).
+      # source. Dropping by time is uniform — every window is still represented — so the
+      # result is an honest lower-resolution time series. 0 = unlimited (only do this if
+      # you know the topic's rate).
       max_rate_hz: 10.0
-      # Serialized messages larger than this are dropped whole, before deserialization.
-      # 0 = unlimited.
+      # Circuit breaker, not a volume knob: serialized messages larger than this are
+      # dropped whole, before deserialization. Keep it high enough that it essentially
+      # never fires. Lowering it to shed a big topic drops *by content*, which keeps the
+      # small messages and silently biases the data — exclude the topic or its type
+      # instead. 0 = unlimited.
       max_message_size_bytes: 1048576
 
       # Tag namespace. Every raw Record's Tag is this + the sanitised topic name, and

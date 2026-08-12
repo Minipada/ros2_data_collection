@@ -3809,7 +3809,7 @@ ready, ADR-0006; with none launched there is nothing to hold).
 - **Volume control: shed at the source, in four bounds.** In the order a message meets
   them: `qos_depth` (the middleware's own history — it drops before DC ever sees the
   message), `max_message_size_bytes` (dropped whole *before* deserialization, so an
-  unexpected point cloud costs nothing), `max_rate_hz` (per-topic newest-wins decimation,
+  unexpected point cloud costs nothing), `max_rate_hz` (per-topic decimation by time,
   default 10 Hz), and finally the Shipper refusing the Record. That last one is the
   deliberate difference from a Measurement Record: a raw Record the Forwarder rejects is
   **dropped and counted, never kept in the unacked window**, because a firehose topic

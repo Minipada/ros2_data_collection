@@ -126,10 +126,19 @@ private:
 /// safety net for anything a future ROS naming rule allows.
 std::string raw_tag(const std::string& tag_prefix, const std::string& topic);
 
-/// Per-topic decimation: at most one message per `1/max_rate_hz` seconds, newest wins.
+/// Per-topic decimation: at most one message per `1/max_rate_hz` seconds — specifically,
+/// a message passes once that long has elapsed since the last one that passed. So each
+/// Record is the newest message at the instant it is emitted (nothing is buffered and
+/// released later); between emissions, the most recent Record is up to one window old.
+///
 /// Deliberately not a token bucket — a bucket lets a burst through all at once, which is
-/// exactly the shape of traffic this exists to flatten. Not thread-safe; the subscription
-/// manager owns the lock (raw callbacks can run on several executor threads).
+/// exactly the shape of traffic this exists to flatten. Dropping by time like this is
+/// uniform: every window is represented, so the result is an unbiased lower-resolution
+/// time series. (Contrast `max_message_size_bytes`, which drops by *content* and
+/// therefore biases what survives — see doc/src/dc/raw_topics.md.)
+///
+/// Not thread-safe; the subscription manager owns the lock (raw callbacks can run on
+/// several executor threads).
 class RawRateLimiter
 {
 public:

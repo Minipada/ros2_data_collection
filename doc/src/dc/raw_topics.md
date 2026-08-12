@@ -179,11 +179,14 @@ message meets them:
    ever sees them.
 2. **`max_message_size_bytes`** (default 1 MiB, 0 = unlimited) — a serialized message
    above this is dropped whole, *before* deserialization, so an unexpected point cloud
-   costs nothing but a throttled warning.
+   costs nothing but a throttled warning. Treat this as a **circuit breaker, not a volume
+   knob** — see the warning below.
 3. **`max_rate_hz`** (default 10, per topic, 0 = unlimited) — at most one Record per
-   `1/rate` seconds per topic, newest wins. A 200 Hz topic at the default becomes 10 Hz of
-   Records. This is deliberately decimation, not a token bucket: a bucket lets a burst
-   through all at once, which is the exact traffic shape this exists to flatten.
+   `1/rate` seconds per topic: a message passes once that long has elapsed since the last
+   one that passed, so each Record is the newest message at the moment it is emitted and
+   nothing is held back. A 200 Hz topic at the default becomes 10 Hz of Records. This is
+   deliberately decimation, not a token bucket: a bucket lets a burst through all at once,
+   which is the exact traffic shape this exists to flatten.
 4. **The Shipper refusing the Record** — if Vector is unreachable or its socket is blocked
    past the Forwarder's write timeout, the raw Record is dropped and counted. Measurement
    Records are kept in the Forwarder's unacked window for resend; raw Records are not,
@@ -222,13 +225,28 @@ The last row is the whole argument for the default type exclusions: one VGA fram
 as much as ~3 000 odometry Records, and JSON roughly **doubles** a byte array (every
 pixel byte becomes `"0,"`).
 
-**The size cap will not save you from a camera.** That same 640×480 frame is 921 600
-bytes on the wire — *under* the default `max_message_size_bytes` of 1 MiB — so it passes
-the size gate and lands as 1.8 MB of JSON. The two guards are not redundant: it is
-`exclude_types` that keeps images out, and removing it removes the protection entirely.
-If you deliberately collect image-shaped topics, lower `max_message_size_bytes` to
-something well under one frame (e.g. 262144) so the size gate becomes a real backstop
-rather than a formality.
+**The size cap will not save you from a camera** — and it should not be asked to. That
+same 640×480 frame is 921 600 bytes on the wire, *under* the default
+`max_message_size_bytes` of 1 MiB, so it passes the size gate and lands as 1.8 MB of
+JSON. It is `exclude_types` that keeps images out, and removing that list removes the
+protection entirely.
+
+The tempting fix — lower the size cap until frames stop fitting — is a bad trade, because
+**the two limits fail differently**:
+
+- `max_rate_hz` drops *by time*, uniformly. Every window is still represented, so you get
+  an honest lower-resolution time series.
+- `max_message_size_bytes` drops *by content*. On any topic whose messages vary in size —
+  a compressed image, a point cloud that grows with scene complexity, a diagnostics array,
+  a string payload — it removes precisely the large ones and keeps the small ones. The
+  result looks complete and is silently biased toward the least interesting data, with
+  nothing in the stored Records to say what went missing.
+
+So set the size cap high enough that it essentially never fires, and treat it as a circuit
+breaker against the pathological and unanticipated (the topic you did not know carried
+100 MB). To *not* collect something, exclude it by type or topic: all-or-nothing, visible
+in the startup log, and no biased sample. The only case for a low size cap is when you
+genuinely want "this topic, except its outliers" — which is rarely what anyone means.
 
 Every drop is counted, and the counters are on the Bridge's readiness service — the
 fastest way to answer "is raw mode shedding?":
