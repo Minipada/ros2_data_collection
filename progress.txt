@@ -3902,9 +3902,29 @@ the namespace, and have no gaps *inside the window raw mode was subscribed for*.
 last qualifier is the honest one: unlike a Measurement, a raw subscription does not exist
 until the topic is discovered, and the harness restarts the container mid-run, so values
 published before a (re-)discovery were never offered to the pipeline at all — a gap
-anywhere else is loss and fails. A local run of the full harness (short outage/drain
-overrides) was still in flight when this was committed; CI runs the same script on the
-PR, and any fix it turns up lands on this branch.
+anywhere else is loss and fails.
+
+**The harness run itself** (locally, with compressed windows —
+`DC_E2E_STARTUP_TIMEOUT_SECONDS=30 DC_E2E_OUTAGE_SECONDS=20 DC_E2E_STEADY_STATE_SECONDS=20
+DC_E2E_DRAIN_SECONDS=30`): `check_raw()` passes outright — 61 events, every one under the
+`dc.raw.dc.e2e.synth.synth00` Tag, every one fully decoded, counter values 0..60 with **no
+gaps at all**, the mid-run container restart included. (Value 0 survives because raw mode
+subscribing to `synth00` is itself what satisfies the generator's
+`get_subscription_count() > 0` wait.) The synth, passthrough, MCAP and intent-queue
+checks all pass too.
+
+Two *other* gates fail on this machine, and both were confirmed pre-existing by re-running
+the identical command against a `dc-e2e` image built before this change:
+
+- **The <10 s launch-to-first-Record gate**: 11.24 s on this branch, **13.08 s** on the
+  pre-change baseline. This machine is slower than the PRD's budget; the change is, if
+  anything, marginally faster. Worth knowing for anyone running the harness locally — it
+  aborts at this gate before reaching any of the checks above, which is why the run has to
+  be given `DC_E2E_STARTUP_TIMEOUT_SECONDS` to exercise the rest.
+- **The camera `file_status` / `group_complete` checks**: identical failure on the
+  baseline image with the same overrides. A 15-second-interval camera Measurement's File
+  cannot complete an upload inside a 20 s outage + 30 s drain; CI's own longer windows
+  cover it.
 
 **Docs**: `doc/src/dc/raw_topics.md` (new, in `SUMMARY.md` between Groups and
 Destinations) is the reference — how it works, the filter semantics, the Tag/route
