@@ -268,6 +268,7 @@ install(DIRECTORY plugins/measurements/json
 )
 
 set(tests
+  test_measurement_camera
   test_measurement_diagnostics
   test_measurement_driving_type
   test_measurement_dummy
