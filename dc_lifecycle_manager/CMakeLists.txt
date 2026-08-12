@@ -68,6 +68,31 @@ install(TARGETS
 
 install(DIRECTORY include/ DESTINATION include/)
 
+set(tests
+  test_lifecycle_manager_startup
+  test_lifecycle_manager_bond
+)
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  foreach(test ${tests})
+    # Bond timeouts and the respawn retry window are wall-clock waits; the default
+    # 60 s gtest timeout is not enough for them.
+    ament_add_gtest(${PROJECT_NAME}_${test} test/${test}.cpp TIMEOUT 300)
+    target_include_directories(${PROJECT_NAME}_${test} PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>
+      $<INSTALL_INTERFACE:include>
+    )
+    ament_target_dependencies(${PROJECT_NAME}_${test}
+      ${dependencies}
+    )
+    target_link_libraries(${PROJECT_NAME}_${test}
+      ${library_name}
+    )
+  endforeach()
+endif()
+
 ament_export_include_directories(include)
 ament_export_libraries(${library_name})
 ament_export_dependencies(${dependencies})
