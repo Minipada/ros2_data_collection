@@ -3635,3 +3635,56 @@ dc_bridge code changes, Vector still has no MCAP sink).
   fixed by building the address with `+` concatenation instead; the other three
   findings pre-commit reported were confirmed pre-existing (diffed against the
   pre-change file under the same hook) in code this change never touches.
+
+### #215 - Split the demos documentation into beginner/intermediate/advanced tiers
+
+`doc/src/dc/demos.md` was a flat table of nine demos (the issue was written when there
+were seven; #131's Elasticsearch and #210's MCAP tutorials landed in between) and
+`SUMMARY.md` listed them as one undifferentiated group, so a first-time reader had no
+signal about which ones need a database standing up and which are one `ros2 launch` away.
+
+**The tiering criterion**, stated on the page itself so future demos land in the right
+tier: *a demo's tier is the heavier of the two things it asks of you — the infrastructure
+you have to run alongside DC, and the DC machinery you have to understand or write.*
+Infrastructure alone doesn't tier the set, which is exactly what made `custom_stdout`'s
+placement a judgement call in the issue: it needs no infrastructure at all but has you
+writing a C++ Measurement plugin, so the second axis puts it in Advanced. The same axis
+resolves the two demos the issue predates:
+
+- **`mcap_recording` → Intermediate.** Since #210's follow-up it needs no external
+  service and no simulator (one params block, one launch command), so on the
+  infrastructure axis alone it would be Beginner — but it is built on the ADR-0003
+  passthrough and its output leaves the terminal for a file you open in
+  `ros2 bag info`/Foxglove. Same tier as the demo it generalises from.
+- **`elasticsearch` → Intermediate.** One compose stack, no robot, passthrough — the
+  archetype of the tier.
+
+The rest follow the issue's proposal: Beginner = `uptime_stdout`,
+`memory_uptime_stdout`, `tb3_stdout` (console output, nothing external to start;
+`tb3_stdout` keeps the simulator as a per-demo "also needs" note rather than being
+demoted, since a simulator is not a Destination-side service); Intermediate =
+`tb3_aws_minio_pgsql`, `tb3_aws_influxdb` alongside the two above; Advanced =
+`qrcodes_minio_pgsql` (PostgreSQL + RustFS + Grafana together, plus the simulator) and
+`custom_stdout`.
+
+Each tier now states its prerequisites — what infrastructure, with links to the relevant
+[Infrastructure setup](doc/src/dc/infrastructure_setup.md) page, and roughly how long (5
+min beginner / 20-30 intermediate / 30-45 advanced) — and each demo row carries an "also
+needs" column for what varies within the tier. `SUMMARY.md` nests the demos under three
+mdbook *draft* chapters (`- [Beginner]()`, no path), which render as unclickable grouping
+rows in the sidebar; that avoids inventing three new tier index pages, and `create-missing
+= false` in `book.toml` is unaffected since draft chapters have no path to create.
+
+**Stale links fixed** while in there, both called out in the issue: the `dc_demos` package
+link pointed at the `humble` tree (→ `jazzy`), and the "built and sourced" admonition
+pointed at a `./build.md` that has not existed since the docs overhaul (→
+`./setup.md#build`, the anchor of that page's own Build section).
+
+**Verified**: `tools/ci/pre-commit/build_doc.sh` (the mdbook linkcheck hard gate) passes —
+the only warnings it emits are the two pre-existing `list[str]` "potential incomplete
+link" ones in `measurements/diagnostics.md`/`serial_interface.md`, untouched by this
+change. Confirmed in the generated HTML that the sidebar renders the tiers as non-link
+grouping rows with the demos nested under them (4.1 Beginner → 4.1.1 Uptime, …) and that
+every demo page is still reachable. `pre-commit run --files doc/src/SUMMARY.md
+doc/src/dc/demos.md` is clean apart from the `poetry-requirements` hook, which fails on
+this machine for a missing local `poetry` install and touches neither file.
