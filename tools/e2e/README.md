@@ -86,7 +86,19 @@ not just a local tool.
    zero-loss/only-subscribed-Tags standard as the NDJSON passthrough, via a JSON summary
    of the capture (`scripts/mcap_summary.py`, which needs the `mcap` library the DC image
    installs — not this script's own host runner).
-8. **Verification** (`tools/e2e/scripts/verify_zero_loss.py`): queries Postgres via
+8. **Raw / generic-subscription coverage** (#227, the `raw:` block in
+   `params/e2e_params.yaml`): `dc_bridge` also subscribes *generically* to
+   `/dc/e2e/synth/synth00` — the workload generator's own source topic, carrying
+   `dc_interfaces/msg/StringStamped`, a custom non-`std_msgs` type the Bridge has no
+   compile-time knowledge of — and ships it to its own `file` Destination under the
+   `dc.raw.` Tag namespace, beside the Measurement path that same topic already feeds.
+   `check_raw()` asserts the Records arrived, decoded field-for-field (both strings plus
+   the nested `Header`/`Time`, proving the runtime introspection walk is complete),
+   carry no Tag from outside the namespace (the prefix route branch discriminates), and
+   have no gaps *inside the window raw mode was subscribed for* — unlike a Measurement, a
+   raw subscription doesn't exist until the topic is discovered, so values published
+   before the first discovery were never offered to the pipeline at all.
+9. **Verification** (`tools/e2e/scripts/verify_zero_loss.py`): queries Postgres via
    `podman exec` on the Postgres container (no host psycopg2/psql needed). The shipper is
    at-least-once (ADR-0002), so it **hard-fails on loss**. Loss is found by diffing what
    arrived against `params/../workload_ledger.txt` — the generator's own record of every
@@ -109,7 +121,7 @@ not just a local tool.
    have reached it, it must have received *only* the Tags it subscribed to (proving the
    per-Tag route branches discriminate rather than fanning everything out), and a missing
    or empty output file is a FAIL, never a skip.
-9. **Resource usage** (`tools/e2e/scripts/measure_resources.sh`): samples the `dc`
+10. **Resource usage** (`tools/e2e/scripts/measure_resources.sh`): samples the `dc`
    container's CPU/RSS throughout the run into `tools/e2e/.run/resource_usage.csv`.
    Informational only, per the PRD — it does not gate the run.
 
@@ -156,8 +168,9 @@ below.
   hold across a restart, not just a live process.
 - `params/e2e_params.yaml` — the reference workload's ROS parameters (measurement
   plugins, `dc_bridge` destinations: `pgsql_records`, `pgsql_files` for the Uploader's
-  metadata Records, `rustfs` for the actual File bytes), plus the `custom_config_files`
-  entry that loads the passthrough snippet below.
+  metadata Records, `rustfs` for the actual File bytes, `raw_file` for raw mode's own
+  output), plus the `raw:` block (#227) and the `custom_config_files` entry that loads the
+  passthrough snippet below.
 - `params/e2e_passthrough_sink.toml` — the ADR-0003 passthrough snippet: a raw Vector
   `file` sink on the `dc.<tag>` routes for `synth00`/`synth01`, written to the
   `dc_e2e_data` volume so it survives the mid-run restart. Note its `inputs` name topics

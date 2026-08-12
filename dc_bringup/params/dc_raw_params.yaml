@@ -1,0 +1,69 @@
+# Raw-topic collection (#227) — the params file `dc_raw.launch.py` uses by default.
+#
+# `dc_bridge` subscribes to topics it was never compiled against
+# (rclcpp::GenericSubscription + runtime message introspection, the same mechanism
+# `ros2 bag record -a` uses), turns each message into JSON, and ships it under the Tag
+# `dc.raw.<topic>` to the Destination named by `raw.destination`. No Measurement, no
+# lifecycle node and no plugin is involved.
+#
+# See doc/src/dc/raw_topics.md — especially "Backpressure and volume" — before pointing
+# this at a real robot: raw mode ships whatever a topic contains, at whatever rate the
+# limits below allow.
+dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+
+    destinations: ["raw_console"]
+    raw_console:
+      type: console         # JSON on the Bridge's stdout; swap for postgres/s3/file
+      receives: records
+      # No `inputs` key on purpose: this Destination takes no *topic* subscriptions.
+      # Raw mode routes to it by Tag namespace instead (`raw.destination` below), which
+      # is what lets topics discovered after startup reach it without re-rendering the
+      # Shipper config. (`inputs: []` cannot be written here — rclcpp can't load an
+      # empty YAML array — so the key is omitted.)
+      time_key: "date"
+      time_format: "iso8601"
+
+    raw:
+      enabled: true
+      destination: "raw_console"
+
+      # --- what gets collected -------------------------------------------------------
+      # ECMAScript regexes matched (unanchored `regex_search`) against the topic name.
+      # A topic must match one `include` and no `exclude` to be subscribed.
+      include: ["^/"]
+      # Defaults, spelled out. `/rosout` would feed the Bridge's own log messages back
+      # into the pipeline; `/dc/measurement/*` and `/dc/group/*` are already shipped as
+      # Records by the collection stack, so raw would double them under a second Tag.
+      exclude: ["^/rosout$", "^/parameter_events$", "^/dc/measurement/", "^/dc/group/"]
+      # Excluded by *type*, not by name — a camera topic is not reliably called
+      # anything in particular, and one 640x480 Image is ~900 kB of JSON numbers.
+      # Replace this list (not with an empty one — rclcpp can't load `[]`; use a
+      # pattern that matches nothing, e.g. ["^$"]) to collect them anyway.
+      exclude_types:
+        - "^sensor_msgs/msg/(Image|CompressedImage|PointCloud|PointCloud2|LaserScan)$"
+        - "^tf2_msgs/msg/TFMessage$"
+
+      # --- discovery -----------------------------------------------------------------
+      # How often the graph is re-scanned for topics that appeared after startup. A
+      # topic is therefore collected within ~this long of first being advertised;
+      # messages published before that are not captured. 0 = scan once at startup.
+      rescan_interval_secs: 5.0
+      qos_depth: 10          # per-subscription history depth (also bounds in-flight buffering)
+
+      # --- volume --------------------------------------------------------------------
+      # Per-topic ceiling on Records per second; extra messages are dropped at the
+      # source, newest-wins. 0 = unlimited (only do this if you know the topic's rate).
+      max_rate_hz: 10.0
+      # Serialized messages larger than this are dropped whole, before deserialization.
+      # 0 = unlimited.
+      max_message_size_bytes: 1048576
+
+      # Tag namespace. Every raw Record's Tag is this + the sanitised topic name, and
+      # the rendered Vector config routes the whole namespace with one branch.
+      tag_prefix: "dc.raw."
+
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224

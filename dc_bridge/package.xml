@@ -18,6 +18,13 @@
   <depend>dc_interfaces</depend>
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
+  <!-- Runtime message introspection for raw / generic-subscription mode (#227): types
+       the Bridge was never compiled against are deserialized and walked through these,
+       the same pair `ros2 bag record -a` uses. Core ROS packages — no new rosdep source
+       needed, unlike tomlplusplus/msgpack-cxx below. -->
+  <depend>rosidl_runtime_cpp</depend>
+  <depend>rosidl_typesupport_introspection_cpp</depend>
+  <depend>rcpputils</depend>
   <depend>nlohmann-json-dev</depend>
   <!-- tomlplusplus (Vector-config render/parse) and msgpack-cxx (Fluent Forward framing)
        have no upstream rosdistro rosdep keys; rosdep/dc.yaml (registered as a local

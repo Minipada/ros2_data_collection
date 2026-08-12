@@ -24,6 +24,7 @@ add_library(dc_bridge_core
   ${CORE_ROOT}/src/supervisor.cpp
   ${CORE_ROOT}/src/vector_binary.cpp
   ${CORE_ROOT}/src/render.cpp
+  ${CORE_ROOT}/src/raw_config.cpp
   ${CORE_ROOT}/src/uploader/content_type.cpp
   ${CORE_ROOT}/src/uploader/group.cpp
   ${CORE_ROOT}/src/uploader/status.cpp
@@ -38,7 +39,7 @@ if(TARGET msgpack-cxx)
 endif()
 
 enable_testing()
-foreach(t forwarder supervisor render misc uploader intent_queue retention)
+foreach(t forwarder supervisor render misc uploader intent_queue retention raw_config)
   add_executable(${t}_test ${CORE_ROOT}/test/${t}_test.cpp)
   target_link_libraries(${t}_test dc_bridge_core GTest::gtest GTest::gtest_main Threads::Threads)
   target_compile_definitions(${t}_test PRIVATE

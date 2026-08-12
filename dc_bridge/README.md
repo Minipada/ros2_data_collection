@@ -35,6 +35,8 @@ install` + `colcon build` as every other `dc_*` package. See
     SIGKILL/crash.
   - `readiness` — a TCP-connect probe against Vector's ingest port + a shared ready flag.
   - `topic_config` — derives a shipper ingest protocol Tag from a ROS topic name.
+  - `raw_config` — raw-mode (#227) policy: the include/exclude filter, the
+    `dc.raw.<topic>` Tag derivation, the per-topic rate limiter and the drop counters.
   - `render` — the ADR-0003 config renderer: ROS parameters → a complete Vector TOML
     config (toml++). Pure, gold-file tested.
   - `vector_binary` — locates the vendored Vector binary on `AMENT_PREFIX_PATH`.
@@ -46,6 +48,11 @@ install` + `colcon build` as every other `dc_*` package. See
     exponential backoff, replayed on startup), and `uploader` (the verify-then-delete
     orchestration). All built on an abstract `ObjectStore` interface, so the logic is
     tested against an in-memory fake with no cloud dependency.
+- **`src/raw_subscriptions.cpp`** (`dc_bridge_ros`) — raw / generic-subscription mode's
+  rclcpp half (#227): topic discovery, `create_generic_subscription`, and the runtime
+  introspection walk that turns a message of a type the Bridge was never compiled against
+  into JSON. Its own library rather than a file in the executable, so the conversion is
+  gtested against real message types without the node, Vector or the AWS SDK.
 - **`src/uploader/s3_object_store.cpp`** — the aws-sdk-cpp implementation of
   `ObjectStore` (the only Uploader piece that links the SDK, via `aws_sdk_vendor`).
   Verified against RustFS (PutObject + multipart) before adoption.
@@ -90,6 +97,37 @@ disk buffer per persistent sink; and the blessed sinks.
 `validate_custom_config_files` collision-checks passthrough snippets, and `main.cpp` runs
 `vector validate --no-environment` over the merged config before starting Vector, so a
 bad config fails loudly at startup rather than crash-looping.
+
+## Raw / generic-subscription mode (#227)
+
+Beside the Record topics above, the Bridge can subscribe to topics it was **never
+compiled against** — `rclcpp::GenericSubscription` plus the runtime introspection type
+support, the same mechanism `ros2 bag record -a` uses — and ship every message as a
+Record under the `dc.raw.<topic>` Tag:
+
+```yaml
+    raw:
+      enabled: true
+      destination: "raw_console"   # a configured `receives: records` Destination
+      include: ["^/"]              # topic-name regexes; see doc/src/dc/raw_topics.md
+      max_rate_hz: 10.0            # per topic; raw mode sheds at the source
+```
+
+Two things about this are worth knowing at the code level:
+
+- **The whole Tag namespace shares one Vector route.** Topics are discovered while Vector
+  is already running, and a rendered config can't grow exact-Tag branches without a
+  restart — so `Destination::tag_prefixes` renders a `starts_with(.tag, "dc.raw.")`
+  branch at `dc.dc.raw` (`route_output_for_tag_prefix`). It is the only routing
+  construct in the renderer that matches something other than an exact Tag.
+- **Raw Records are dropped, never queued.** A raw Record the Forwarder refuses
+  (backpressure, dropped connection) is counted and discarded rather than kept in the
+  unacked window: a firehose topic would otherwise fill that window and push real
+  Measurement Records out of it. The counters are on `~/ready`.
+
+`ros2 launch dc_bringup dc_raw.launch.py` runs the Bridge in this mode with no collection
+nodes at all. See [doc/src/dc/raw_topics.md](../doc/src/dc/raw_topics.md) for the
+configuration reference and the volume/backpressure contract.
 
 ## Delivery guarantees (#266)
 

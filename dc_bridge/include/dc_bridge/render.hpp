@@ -36,6 +36,14 @@ inline constexpr std::uint64_t MIN_DISK_BUFFER_BYTES = 268435488ULL;
 /// route transform id, rest = the Tag verbatim).
 std::string route_output_for_tag(const std::string& tag);
 
+/// The public Shipper route a whole Tag *namespace* is exposed under (raw mode, #227):
+/// prefix `dc.raw.` → route `dc.dc.raw`, whose branch matches on `starts_with(.tag, …)`
+/// instead of an exact Tag. A rendered config is fixed at Bridge startup, but raw mode
+/// discovers topics — and therefore mints Tags — while Vector is already running; a
+/// prefix branch is what lets those later Tags reach a Destination without re-rendering
+/// and restarting the Shipper.
+std::string route_output_for_tag_prefix(const std::string& prefix);
+
 /// How a Destination's normalized time field is written.
 ///
 /// `EpochNanos` is the default: an exact integer count of nanoseconds since the epoch.
@@ -107,6 +115,10 @@ struct Destination
   /// Extra Tags routed here that don't come from a topic (Bridge-internal producers —
   /// today just the Uploader's dc.files Tag).
   std::vector<std::string> extra_tags;
+  /// Tag *namespaces* routed here, each matched with `starts_with` rather than equality
+  /// (raw mode's `dc.raw.`, #227) — the one way a Destination can receive Tags that did
+  /// not exist when the config was rendered.
+  std::vector<std::string> tag_prefixes;
   std::string time_key;
   TimeFormat time_format;
   DestinationKind kind;
@@ -131,6 +143,7 @@ enum class RenderErrorKind
   ReservedDestinationName,
   DuplicateDestination,
   EmptyInputs,
+  TagPrefixCollidesWithTag,
   UnsupportedType,
   InvalidReceives,
   FilesRequireObjectStorage,

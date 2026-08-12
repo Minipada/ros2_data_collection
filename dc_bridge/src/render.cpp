@@ -60,6 +60,32 @@ std::string debug_quote(const std::string& s)
   return out;
 }
 
+// The `route` transform branch key a Tag namespace is exposed under: the prefix with its
+// trailing separator dot(s) dropped, so `dc.raw.` → branch `dc.raw` → public route
+// `dc.dc.raw` (route_output_for_tag_prefix), reading exactly like an exact-Tag branch.
+std::string route_branch_for_tag_prefix(const std::string& prefix)
+{
+  std::string branch = prefix;
+  while (!branch.empty() && branch.back() == '.')
+  {
+    branch.pop_back();
+  }
+  return branch;
+}
+
+// The VRL predicate matching every Tag in a namespace.
+//
+// `to_string(.tag) ?? ""` rather than a bare `.tag`: VRL types an event field as `any`,
+// and `starts_with` demands an exact string — Vector rejects the whole config at
+// `validate` time otherwise ("this expression resolves to any", E110). The `??` fallback
+// keeps the predicate infallible, so a Record that somehow arrives with a non-string tag
+// simply doesn't match instead of aborting the transform. `includes()` (the exact-Tag
+// half) has no such requirement, which is why only this side needs the coercion.
+std::string tag_prefix_predicate(const std::string& prefix)
+{
+  return "starts_with(to_string(.tag) ?? \"\", " + debug_quote(prefix) + ")";
+}
+
 bool is_valid_destination_name(const std::string& name)
 {
   if (name.empty())
@@ -112,20 +138,48 @@ std::set<std::string> destination_tags(const Destination& dest)
   return tags;
 }
 
-std::string tag_condition(const std::set<std::string>& tags)
+// The Tag namespaces routed to a Destination with `starts_with` rather than equality
+// (raw mode, #227) — sorted+unique for the same determinism reason as destination_tags.
+std::set<std::string> destination_tag_prefixes(const Destination& dest)
 {
-  std::string joined;
-  bool first = true;
-  for (const auto& t : tags)
+  return std::set<std::string>(dest.tag_prefixes.begin(), dest.tag_prefixes.end());
+}
+
+// The VRL condition selecting a Destination's events: exact Tags via `includes(...)`,
+// plus one `starts_with` per routed Tag namespace. Either half may be empty (a
+// raw-only Destination has no exact Tags at all), never both — validate() rejects that.
+std::string tag_condition(const std::set<std::string>& tags, const std::set<std::string>& prefixes)
+{
+  std::vector<std::string> terms;
+  if (!tags.empty())
   {
-    if (!first)
+    std::string joined;
+    bool first = true;
+    for (const auto& t : tags)
     {
-      joined += ", ";
+      if (!first)
+      {
+        joined += ", ";
+      }
+      joined += debug_quote(t);
+      first = false;
     }
-    joined += debug_quote(t);
-    first = false;
+    terms.push_back("includes([" + joined + "], .tag)");
   }
-  return "includes([" + joined + "], .tag)";
+  for (const auto& prefix : prefixes)
+  {
+    terms.push_back(tag_prefix_predicate(prefix));
+  }
+  std::string out;
+  for (std::size_t i = 0; i < terms.size(); ++i)
+  {
+    if (i > 0)
+    {
+      out += " || ";
+    }
+    out += terms[i];
+  }
+  return out;
 }
 
 std::string render_normalize_source(const RenderConfig& config)
@@ -133,7 +187,7 @@ std::string render_normalize_source(const RenderConfig& config)
   std::string out;
   for (const auto& dest : config.destinations)
   {
-    out += "if " + tag_condition(destination_tags(dest)) + " {\n";
+    out += "if " + tag_condition(destination_tags(dest), destination_tag_prefixes(dest)) + " {\n";
     if (dest.time_format == TimeFormat::EpochNanos)
     {
       // Exact: an i64 of nanoseconds since the epoch, no float rounding anywhere. Good
@@ -185,6 +239,10 @@ toml::array sink_inputs(const Destination& dest)
   for (const auto& tag : destination_tags(dest))
   {
     inputs.push_back(route_output_for_tag(tag));
+  }
+  for (const auto& prefix : destination_tag_prefixes(dest))
+  {
+    inputs.push_back(route_output_for_tag_prefix(prefix));
   }
   return inputs;
 }
@@ -312,7 +370,7 @@ void validate(const RenderConfig& config)
       throw RenderError(RenderErrorKind::DuplicateDestination, "duplicate destination name '" + dest.name + "'",
                         dest.name);
     }
-    if (dest.inputs.empty() && dest.extra_tags.empty())
+    if (dest.inputs.empty() && dest.extra_tags.empty() && dest.tag_prefixes.empty())
     {
       throw RenderError(RenderErrorKind::EmptyInputs, "destination '" + dest.name + "': `inputs` must not be empty",
                         dest.name);
@@ -323,6 +381,36 @@ void validate(const RenderConfig& config)
                         "internal error: `receives: files` destination '" + dest.name +
                             "' reached the shipper config renderer",
                         dest.name);
+    }
+  }
+
+  // A prefix branch and an exact-Tag branch are both keys in the same `route` table, so
+  // a Tag equal to a prefix's branch id (Tag `dc.raw` against prefix `dc.raw.`) would
+  // have one silently overwrite the other and send that Destination's data to the wrong
+  // sink. Vanishingly unlikely — it takes a topic literally named `/dc/raw` — but a
+  // silent mis-route is exactly the failure that must not be possible, so it's a loud
+  // config error instead.
+  std::set<std::string> prefix_branches;
+  std::set<std::string> exact_tags;
+  for (const auto& dest : config.destinations)
+  {
+    for (const auto& prefix : dest.tag_prefixes)
+    {
+      prefix_branches.insert(route_branch_for_tag_prefix(prefix));
+    }
+    for (const auto& tag : destination_tags(dest))
+    {
+      exact_tags.insert(tag);
+    }
+  }
+  for (const auto& tag : exact_tags)
+  {
+    if (prefix_branches.count(tag))
+    {
+      throw RenderError(RenderErrorKind::TagPrefixCollidesWithTag,
+                        "Tag '" + tag + "' collides with the routed Tag namespace '" + tag +
+                            ".'; rename the topic or the raw tag_prefix",
+                        tag);
     }
   }
 }
@@ -342,6 +430,11 @@ std::set<std::string> rendered_component_ids(const RenderConfig& config)
 std::string route_output_for_tag(const std::string& tag)
 {
   return std::string(ROUTE_TRANSFORM_ID) + "." + tag;
+}
+
+std::string route_output_for_tag_prefix(const std::string& prefix)
+{
+  return std::string(ROUTE_TRANSFORM_ID) + "." + route_branch_for_tag_prefix(prefix);
 }
 
 PostgresParams postgres_from_raw(const std::string& name, const RawDestinationParams& raw)
@@ -642,11 +735,16 @@ std::string render(const RenderConfig& config)
   normalize.insert("source", render_normalize_source(config));
 
   std::set<std::string> all_tags;
+  std::set<std::string> all_tag_prefixes;
   for (const auto& dest : config.destinations)
   {
     for (const auto& tag : destination_tags(dest))
     {
       all_tags.insert(tag);
+    }
+    for (const auto& prefix : destination_tag_prefixes(dest))
+    {
+      all_tag_prefixes.insert(prefix);
     }
   }
   toml::table route_branches;
@@ -656,6 +754,13 @@ std::string render(const RenderConfig& config)
     branch.insert("type", "vrl");
     branch.insert("source", ".tag == " + debug_quote(tag));
     route_branches.insert(tag, std::move(branch));
+  }
+  for (const auto& prefix : all_tag_prefixes)
+  {
+    toml::table branch;
+    branch.insert("type", "vrl");
+    branch.insert("source", tag_prefix_predicate(prefix));
+    route_branches.insert(route_branch_for_tag_prefix(prefix), std::move(branch));
   }
   toml::table route;
   route.insert("type", "route");

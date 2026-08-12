@@ -27,6 +27,8 @@
 #include <vector>
 
 #include "dc_bridge/forwarder.hpp"
+#include "dc_bridge/raw_config.hpp"
+#include "dc_bridge/raw_subscriptions.hpp"
 #include "dc_bridge/readiness.hpp"
 #include "dc_bridge/render.hpp"
 #include "dc_bridge/supervisor.hpp"
@@ -89,6 +91,13 @@ private:
   // (the default) either way.
   uploader::RetentionConfig retention_config_;
   std::vector<Storage> files_storages_;
+
+  // Raw / generic-subscription mode (#227) — created only when `raw.enabled` is true.
+  // Its Records go out through the same Forwarder as the Measurement Records above,
+  // under the `dc.raw.<topic>` Tag namespace routed to `raw.destination`.
+  RawConfig raw_config_;
+  RawStats raw_stats_;
+  std::unique_ptr<RawSubscriptionManager> raw_manager_;
 };
 
 }  // namespace dc_bridge

@@ -379,6 +379,72 @@ TEST(Render, ExtraTagsAreRoutedNormalizedAndConsumed)
   EXPECT_NE(normalize->find("includes([\"dc.files\", \"dc.group.robot\"], .tag)"), std::string::npos);
 }
 
+TEST(Render, TagPrefixesRouteAWholeNamespaceWithStartsWith)
+{
+  // Raw mode (#227): the Tags don't exist yet when this config is rendered — topics are
+  // discovered while Vector is already running — so the branch matches the namespace.
+  auto config = basic_config(TimeFormat::Double);
+  config.destinations[0].tag_prefixes.push_back("dc.raw.");
+  toml::table parsed = toml::parse(render(config));
+
+  auto* route = parsed["transforms"]["dc"]["route"].as_table();
+  ASSERT_TRUE(route->contains("dc.raw"));
+  EXPECT_EQ((*route)["dc.raw"]["source"].value<std::string>(), "starts_with(to_string(.tag) ?? \"\", \"dc.raw.\")");
+  // The exact-Tag branches are untouched.
+  EXPECT_TRUE(route->contains("dc.group.robot"));
+
+  auto inputs = parsed["sinks"]["pgsql"]["inputs"].as_array();
+  ASSERT_EQ(inputs->size(), 2u);
+  EXPECT_EQ((*inputs)[0].value<std::string>(), "dc.dc.group.robot");
+  EXPECT_EQ((*inputs)[1].value<std::string>(), "dc.dc.raw");
+
+  // The timestamp normalization has to cover the namespace too, or raw Records would
+  // reach the sink with no `date` column.
+  auto normalize = parsed["transforms"]["dc_bridge_normalize"]["source"].value<std::string>();
+  EXPECT_NE(normalize->find("includes([\"dc.group.robot\"], .tag) || "
+                            "starts_with(to_string(.tag) ?? \"\", \"dc.raw.\")"),
+            std::string::npos);
+}
+
+TEST(Render, DestinationWithOnlyATagPrefixNeedsNoInputs)
+{
+  // The raw-only Destination a `dc_raw.launch.py` bringup produces: no Measurement
+  // topics at all, everything arrives under the namespace.
+  auto config = basic_config(TimeFormat::Double);
+  config.destinations[0].inputs.clear();
+  config.destinations[0].tag_prefixes.push_back("dc.raw.");
+  ASSERT_NO_THROW(render(config));
+
+  toml::table parsed = toml::parse(render(config));
+  auto normalize = parsed["transforms"]["dc_bridge_normalize"]["source"].value<std::string>();
+  EXPECT_NE(normalize->find("if starts_with(to_string(.tag) ?? \"\", \"dc.raw.\") {"), std::string::npos);
+  EXPECT_EQ(normalize->find("includes("), std::string::npos);
+}
+
+TEST(Render, RouteOutputForTagPrefixDropsTheTrailingSeparator)
+{
+  EXPECT_EQ(route_output_for_tag_prefix("dc.raw."), "dc.dc.raw");
+  EXPECT_EQ(route_output_for_tag_prefix("dc.raw"), "dc.dc.raw");
+}
+
+TEST(Render, RejectsATagThatCollidesWithARoutedNamespace)
+{
+  // Topic `/dc/raw` derives Tag `dc.raw`, which is also the branch id the `dc.raw.`
+  // namespace claims — one would silently overwrite the other in the route table.
+  auto config = config_with({ make_destination("pgsql", { "/dc/raw" }, TimeFormat::Double, postgres_kind()) });
+  config.destinations[0].tag_prefixes.push_back("dc.raw.");
+  try
+  {
+    render(config);
+    FAIL() << "expected a RenderError";
+  }
+  catch (const RenderError& e)
+  {
+    EXPECT_EQ(e.kind(), RenderErrorKind::TagPrefixCollidesWithTag);
+    EXPECT_EQ(e.arg0(), "dc.raw");
+  }
+}
+
 TEST(Render, DestinationWithOnlyExtraTagsNeedsNoInputs)
 {
   auto config = basic_config(TimeFormat::Double);
