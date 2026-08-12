@@ -215,6 +215,46 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
     }
   }
 
+  // --- raw / generic-subscription mode (#227) ---
+  // Declared before render() below, because enabling it adds a routed Tag namespace to
+  // one of the Destinations the Vector config is rendered from.
+  raw_config_.enabled = this->declare_parameter<bool>("raw.enabled", false);
+  raw_config_.destination = this->declare_parameter<std::string>("raw.destination", "");
+  raw_config_.include =
+      this->declare_parameter<std::vector<std::string>>("raw.include", std::vector<std::string>{ "^/" });
+  raw_config_.exclude = this->declare_parameter<std::vector<std::string>>("raw.exclude", default_raw_exclude());
+  raw_config_.exclude_types =
+      this->declare_parameter<std::vector<std::string>>("raw.exclude_types", default_raw_exclude_types());
+  raw_config_.rescan_interval_secs = this->declare_parameter<double>("raw.rescan_interval_secs", 5.0);
+  raw_config_.qos_depth =
+      static_cast<std::size_t>(std::max<std::int64_t>(1, this->declare_parameter<std::int64_t>("raw.qos_depth", 10)));
+  raw_config_.max_rate_hz = this->declare_parameter<double>("raw.max_rate_hz", 10.0);
+  raw_config_.max_message_size_bytes = static_cast<std::uint64_t>(
+      std::max<std::int64_t>(0, this->declare_parameter<std::int64_t>("raw.max_message_size_bytes", 1048576)));
+  raw_config_.tag_prefix = this->declare_parameter<std::string>("raw.tag_prefix", RAW_TAG_PREFIX);
+
+  if (raw_config_.enabled)
+  {
+    if (raw_config_.tag_prefix.empty())
+    {
+      // An empty prefix renders as `starts_with(.tag, "")`, which matches every Record
+      // in the pipeline — every Measurement Record would be duplicated into the raw
+      // Destination. Refuse rather than route the whole pipeline by accident.
+      throw std::runtime_error("`raw.tag_prefix` must not be empty");
+    }
+    auto target = std::find_if(records_destinations.begin(), records_destinations.end(),
+                               [this](const Destination& d) { return d.name == raw_config_.destination; });
+    if (target == records_destinations.end())
+    {
+      throw std::runtime_error("raw.destination '" + raw_config_.destination +
+                               "' does not name a configured `receives: records` destination");
+    }
+    // One routed Tag *namespace* rather than one route per topic: raw mode discovers
+    // topics while Vector is already running, and a rendered config can't grow new
+    // routes without a restart (see route_output_for_tag_prefix).
+    target->tag_prefixes.push_back(raw_config_.tag_prefix);
+  }
+
   // files.* parameters (ADR-0005).
   const bool files_delete_when_sent = this->declare_parameter<bool>("files.delete_when_sent", false);
   const std::string files_ffprobe = this->declare_parameter<std::string>("files.ffprobe_binary", "ffprobe");
@@ -452,6 +492,36 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
     subscriptions_.push_back(sub);
   }
 
+  // Raw mode's own subscriptions are created last: they discover topics from the live
+  // graph rather than from parameters, and the Forwarder they feed has to exist first.
+  if (raw_config_.enabled)
+  {
+    raw_manager_ = std::make_unique<RawSubscriptionManager>(
+        this, raw_config_,
+        [this](const std::string& tag, const RawStamp& stamp, nlohmann::json payload) {
+          Record record;
+          record.tag = tag;
+          record.timestamp_secs = stamp.secs;
+          record.timestamp_nanos = stamp.nanos;
+          record.payload = std::move(payload);
+          try
+          {
+            std::lock_guard<std::mutex> lock(forwarder_mutex_);
+            forwarder_->send(record);
+            return true;
+          }
+          catch (const ForwarderError&)
+          {
+            // Deliberately dropped, not retried or queued: raw mode can produce Records
+            // faster than the Shipper accepts them, and the only bounded answer is to
+            // shed at the source. The manager counts the drop and warns (throttled).
+            return false;
+          }
+        },
+        &raw_stats_);
+    raw_manager_->start();
+  }
+
   readiness_service_ = this->create_service<std_srvs::srv::Trigger>(
       "~/ready", [this](const std::shared_ptr<std_srvs::srv::Trigger::Request>,
                         std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
@@ -463,10 +533,23 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
           // without a separate metrics path.
           response->message += " | upload queue depth: " + std::to_string(intent_queue_->size());
         }
+        if (raw_manager_)
+        {
+          // The drop counters are the observable half of raw mode's documented
+          // backpressure behaviour — an operator asking "is raw mode shedding?" gets the
+          // answer from the same probe the readiness gate already uses.
+          response->message += " | " + raw_stats_.summary();
+        }
       });
 
   RCLCPP_INFO(this->get_logger(), "dc_bridge up: %zu subscribed topic(s), supervising %s", subscriptions_.size(),
               vector_binary.c_str());
+  if (raw_manager_)
+  {
+    RCLCPP_INFO(this->get_logger(),
+                "raw mode on: %zu topic(s) discovered so far, Tag namespace '%s' → destination '%s'",
+                raw_manager_->subscription_count(), raw_config_.tag_prefix.c_str(), raw_config_.destination.c_str());
+  }
 }
 
 void BridgeNode::run_uploader_worker(std::string forward_host, std::uint16_t forward_port)

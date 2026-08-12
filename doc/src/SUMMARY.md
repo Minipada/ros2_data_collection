@@ -59,6 +59,7 @@
   - [String match](./dc/conditions/string_match.md)
 - [Data validation](./dc/data_validation.md)
 - [Groups](./dc/groups.md)
+- [Raw topic collection](./dc/raw_topics.md)
 - [Destinations](./dc/destinations.md)
 - [Configuration examples](./dc/configuration_examples.md)
 - [Infrastructure setup](./dc/infrastructure_setup.md)

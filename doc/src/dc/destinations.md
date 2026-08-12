@@ -142,6 +142,12 @@ Tag verbatim (so `/dc/measurement/uptime`'s Records are consumable as
 wired to them internally, and custom snippets consume them the same way. A route
 exists for every topic listed in any configured Destination's `inputs`.
 
+One route is not per-Tag: **`dc.dc.raw`** carries the whole `dc.raw.` Tag namespace when
+[raw topic collection](./raw_topics.md) is enabled. Raw mode discovers topics — and so
+mints Tags — while the Shipper is already running, which no fixed set of exact-Tag
+branches can cover, so that branch matches on the Tag *prefix* instead. It is consumable
+from a snippet exactly like the others; each event still carries its own `tag` field.
+
 ## Passthrough: `custom_config_files`
 
 Any Vector sink type ships Records with zero DC code by consuming `dc.<tag>` routes

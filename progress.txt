@@ -3775,3 +3775,149 @@ respawns, starting back up" → both nodes configured and activated again. `pre-
 --files` on the new/changed files is clean apart from the `poetry-requirements` hook,
 which fails on this machine for a missing local `poetry` install and touches none of
 them.
+
+### #227 - Collect all ROS topics: generic-subscription mode in dc_bridge
+
+The original ask (Lulav Space) was "collect *everything* on the graph into one
+Destination instead of declaring a Measurement per data source". The DC 1.x plan in the
+issue — a universal subscriber inside the Fluent Bit plugin — describes nothing that
+still exists (#250 removed Fluent Bit, #244/ADR-0002 retired the destination server), but
+the need fits DC 2.0 better than it fitted the old architecture: `dc_bridge` is already
+the single process every Record leaves the robot through, so raw collection is a second
+*source* feeding the pipeline that is already there, not a second pipeline.
+
+**What was built**: `raw.enabled: true` makes the Bridge discover topics on the graph,
+subscribe to them with `rclcpp::GenericSubscription` (no compile-time knowledge of the
+type), convert each message to JSON through the runtime introspection type support, and
+ship it as a Record under the Tag `dc.raw.<sanitised topic>` to one configured
+Destination. `ros2 launch dc_bringup dc_raw.launch.py` runs that mode with no collection
+stack at all — no `measurement_server`, no `group_server`, no lifecycle manager, and no
+readiness gate (the gate exists to hold *collection nodes* back until the Bridge is
+ready, ADR-0006; with none launched there is nothing to hold).
+
+**The three open questions in the issue, settled:**
+
+- **Message → JSON: an own introspection walk, not `dynmsg`.** `dynmsg`
+  (`dynamic_message_introspection`) is the obvious candidate and was rejected on two
+  counts: it has no binary release in the Jazzy rosdistro (adopting it means vendoring a
+  source dependency into a workspace that currently builds entirely from rosdep +
+  colcon), and it emits YAML, which would then have to be parsed back into the JSON the
+  ingest protocol actually carries. `raw_subscriptions.cpp`'s walk is ~200 lines against
+  `rosidl_typesupport_introspection_cpp` — a stable core-ROS ABI, the same one
+  `ros2 bag record -a` and PlotJuggler use — produces `nlohmann::json` directly, and adds
+  only type support packages every ROS install already has.
+- **Volume control: shed at the source, in four bounds.** In the order a message meets
+  them: `qos_depth` (the middleware's own history — it drops before DC ever sees the
+  message), `max_message_size_bytes` (dropped whole *before* deserialization, so an
+  unexpected point cloud costs nothing), `max_rate_hz` (per-topic newest-wins decimation,
+  default 10 Hz), and finally the Shipper refusing the Record. That last one is the
+  deliberate difference from a Measurement Record: a raw Record the Forwarder rejects is
+  **dropped and counted, never kept in the unacked window**, because a firehose topic
+  would otherwise fill that window (#266's 10 000 records / 16 MiB) and push real
+  Measurement Records out of it. Every drop reason has its own counter, and the counters
+  are appended to the `~/ready` service message — the operator-facing answer to "is raw
+  mode shedding?".
+- **High-rate sensor topics: excluded by default**, and by *type* rather than by name (a
+  camera topic is not reliably called anything in particular): `sensor_msgs/msg/Image`,
+  `CompressedImage`, `PointCloud`, `PointCloud2`, `LaserScan` and `tf2_msgs/msg/TFMessage`.
+  One 640×480 Image is ~900 kB of JSON numbers at 30 Hz. `/rosout`, `/parameter_events`
+  and DC's own `/dc/measurement/*`, `/dc/group/*` are excluded for different reasons —
+  `/rosout` would feed the Bridge's own volume warnings back into the pipeline, and the
+  Record topics are already shipped as Measurement Records, so raw would double them
+  under a second Tag.
+
+**The one thing that needed a new construct in the renderer.** A rendered Vector config
+is fixed when the Bridge starts, but raw mode mints a Tag whenever a topic appears — so
+the per-Tag route branches (ADR-0003's `dc.<tag>` contract) cannot cover it: the Tag does
+not exist yet at render time. `Destination::tag_prefixes` adds one branch matching a Tag
+*namespace* (`starts_with`, at the public route `dc.dc.raw`), which is the only routing
+construct in `render.cpp` that matches something other than an exact Tag. Three details
+that fell out of it:
+
+- **VRL types an event field as `any`.** `starts_with(.tag, "dc.raw.")` is rejected by
+  `vector validate` outright (E110, "this expression resolves to any but the parameter
+  expects the exact type string") — found by running the real pinned binary, not by
+  reading docs. The rendered predicate is `starts_with(to_string(.tag) ?? "", …)`, which
+  is also infallible, so a Record arriving with a non-string tag fails to match instead
+  of aborting the whole transform. `includes()` (the exact-Tag half) has no such
+  requirement, which is why only this side needs the coercion.
+- **The prefix branch is keyed on the prefix minus its trailing dot** (`dc.raw.` →
+  branch `dc.raw` → route `dc.dc.raw`), so it reads like every other branch. That makes a
+  collision possible in principle — a topic literally named `/dc/raw` derives Tag
+  `dc.raw` — and the two branches would silently overwrite each other in the route table.
+  Vanishingly unlikely, but a silent mis-route is the wrong failure mode, so
+  `RenderErrorKind::TagPrefixCollidesWithTag` makes it a loud startup error.
+- **A raw-only Destination has no `inputs` at all**, which the renderer previously
+  treated as a config error. `EmptyInputs` now also accepts `tag_prefixes`, the same way
+  it already accepted the Uploader's `extra_tags`.
+
+**Two things that make generic subscription actually work in practice**, both learned
+from how `ros2 bag record` does it:
+
+- **QoS is matched to the topic's current publishers** — best effort if *any* publisher
+  is best effort, transient local if *all* are. A plain reliable/volatile subscription is
+  invisible to every sensor driver on the robot; without this, raw mode would silently
+  collect nothing from exactly the topics people expect it to.
+- **Topics advertising more than one type are skipped**, not guessed at: one subscription
+  carries one type, and picking arbitrarily would silently drop the other publisher's
+  messages. Skips are re-evaluated on every rescan (the condition can go away) but logged
+  only once, so a 5-second rescan doesn't reprint the same verdict forever.
+
+**Tests** (`colcon test --packages-select dc_bridge`: 138 tests, 0 failures — was 113):
+
+- `raw_config_test` (13, ROS-free, also in the standalone `test/local` CMake project) —
+  the filter's include/exclude/exclude-types precedence and its defaults, Tag derivation
+  and sanitisation, and the rate limiter (1000 messages across a simulated second at
+  10 Hz → 10 pass).
+- `raw_subscriptions_test` (12, needs a real ROS graph) — the introspection walk against
+  `dc_interfaces/msg/StringStamped` (a genuinely custom, non-`std_msgs` type: the test
+  hands the converter nothing but bytes and a type name) and `std_msgs/msg/
+  Float64MultiArray` (nested message + sequence of nested messages), header-stamp
+  extraction, discovery of a topic that only appears *after* startup, and the two
+  firehose cases: a 200-message burst at a 2 Hz limit sheds >100 and forwards ≤5, and a
+  sink that refuses everything produces `dropped_shipper` with `forwarded == 0` and no
+  in-Bridge queue growth.
+- `render_test` gained 4 cases for the namespace routing (branch shape, raw-only
+  Destination, the route-name derivation, the collision rejection).
+
+The `bringup` path was checked the same way: `ros2 launch dc_bringup dc_raw.launch.py`
+against the default params file starts exactly one process (`dc_bridge-1` — no
+measurement server, no lifecycle manager, no gate), discovers a `/demo/custom` publisher
+started 15 s later, and prints its Records on the `console` Destination.
+
+**Verified end to end** against the real pinned Vector binary and a
+`file` Destination: a `dc_interfaces/msg/StringStamped` published on `/demo/custom` was
+discovered, converted, Tagged `dc.raw.demo.custom`, routed through the namespace branch
+and written out with its `date` normalized from the message's own `header.stamp` —
+8 of the 10 published messages, the first two having been published in the ~1 s before
+the rescan discovered the topic (raw mode's documented discovery-latency behaviour, not
+loss).
+
+**Made permanent as a leg of the zero-loss E2E harness**: `e2e_params.yaml` now
+subscribes generically to `/dc/e2e/synth/synth00` — the workload generator's own source
+topic, a custom type — beside the Measurement path that same topic already feeds, and
+`verify_zero_loss.py`'s new `check_raw()` asserts the Records arrived, decoded
+field-for-field (both strings plus the nested `Header`/`Time`), carry no Tag from outside
+the namespace, and have no gaps *inside the window raw mode was subscribed for*. That
+last qualifier is the honest one: unlike a Measurement, a raw subscription does not exist
+until the topic is discovered, and the harness restarts the container mid-run, so values
+published before a (re-)discovery were never offered to the pipeline at all — a gap
+anywhere else is loss and fails. A local run of the full harness (short outage/drain
+overrides) was still in flight when this was committed; CI runs the same script on the
+PR, and any fix it turns up lands on this branch.
+
+**Docs**: `doc/src/dc/raw_topics.md` (new, in `SUMMARY.md` between Groups and
+Destinations) is the reference — how it works, the filter semantics, the Tag/route
+contract, "Backpressure and volume", and a "when *not* to use it" section (raw mode has
+no Conditions, no validation, no Groups, no File uploads, and is not a rosbag
+replacement). `destinations.md` documents `dc.dc.raw` as the one route that isn't
+per-Tag; `dc_bridge/README.md` covers the two code-level surprises; `dc_params.yaml`
+carries a commented block and `dc_raw_params.yaml` is the fully-annotated standalone one.
+
+**pre-commit**: clean on the changed files (including the mdbook `build-doc` hook, which
+link-checks the new page and its `SUMMARY.md` entry) apart from three environment
+failures that touch nothing here — `poetry-requirements` (no local `poetry`, as in
+earlier entries), `pycln` (a broken hook virtualenv), and `flake8` on
+`verify_zero_loss.py`, whose six findings are all in `main()`'s pre-existing print loops:
+verified identical by running the same hook against `git show HEAD:` of that file, so
+they surface only because the file is now in the changed set.

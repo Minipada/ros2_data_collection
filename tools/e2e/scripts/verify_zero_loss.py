@@ -41,7 +41,14 @@ Checks:
    public `dc.<tag>` routes — received the same synth counters with no gaps, and received
    *only* the Tags it subscribed to (proving the per-Tag route branches actually
    discriminate rather than fanning everything out).
-5. MCAP passthrough (ADR-0009, #210): a second, differently-shaped passthrough — a
+5. Raw / generic-subscription mode (#227): `/dc/e2e/synth/synth00` carries
+   `dc_interfaces/msg/StringStamped`, a custom non-std_msgs type dc_bridge was never
+   compiled against — the `raw:` block subscribes to it generically and ships it to its
+   own `file` Destination under the `dc.raw.` Tag namespace. Asserts the Records
+   arrived, decoded field-for-field (both strings plus the nested Header/Time), carry no
+   Tag from outside the namespace, and have no gaps inside the window raw mode was
+   subscribed for.
+6. MCAP passthrough (ADR-0009, #210): a second, differently-shaped passthrough — a
    Vector `socket` sink (params/e2e_mcap_sink.toml) streaming synth02/synth03 to the
    standalone `dc_mcap_writer` process — held to the same zero-loss/only-subscribed-Tags
    standard as the NDJSON passthrough above, via a JSON summary of its `.mcap` capture
@@ -79,6 +86,11 @@ PASSTHROUGH_TAGS = {f"dc.measurement.{s}" for s in PASSTHROUGH_SOURCES}
 # topics from the NDJSON passthrough above, so the two checks stay independent.
 MCAP_SOURCES = ["synth02", "synth03"]
 MCAP_TAGS = {f"dc.measurement.{s}" for s in MCAP_SOURCES}
+
+# Raw / generic-subscription mode (#227): the `raw:` block in params/e2e_params.yaml
+# subscribes to the generator's own source topic and ships it under this Tag.
+RAW_SOURCE = "synth00"
+RAW_TAG = "dc.raw.dc.e2e.synth.synth00"
 
 
 def psql(pg_container: str, query: str) -> str:
@@ -472,6 +484,143 @@ def check_passthrough(
             )
 
 
+def check_raw(
+    path: str,
+    boundaries: dict,
+    violations: list,
+    notes: list,
+    details: dict,
+) -> None:
+    """Assert raw / generic-subscription mode reached a real Destination (#227).
+
+    This is the end-to-end proof for a message type dc_bridge has no compile-time
+    knowledge of: `/dc/e2e/synth/synth00` carries `dc_interfaces/msg/StringStamped` (a
+    custom, non-std_msgs type), and every event here was produced by loading that type's
+    introspection type support at run time, walking its fields, and shipping the result
+    through the `dc.raw.` Tag namespace to a `file` Destination.
+
+    Loss is judged only *inside* the window raw mode was actually subscribed for. Unlike
+    a Measurement, a raw subscription does not exist until the topic is discovered
+    (`raw.rescan_interval_secs`), and the harness restarts the whole container mid-run —
+    so values published before the first discovery, or during a re-discovery, were never
+    offered to the pipeline at all. Between the first and last value that did arrive, a
+    gap is real loss and fails.
+
+    Args:
+        path: newline-delimited JSON run.sh extracted from the raw `file` Destination.
+        boundaries: per-source counter values the generator resumed at after a kill.
+        violations: hard failures, appended to in place.
+        notes: informational at-least-once observations, appended to in place.
+        details: counters for the JSON report, populated in place.
+    """
+    if not os.path.exists(path):
+        violations.append(
+            f"raw: no output at {path} — the raw Destination produced nothing, or run.sh "
+            "could not extract it from the dc_e2e_data volume"
+        )
+        return
+
+    values: list = []
+    unexpected_tags: set = set()
+    malformed = 0
+    total_lines = 0
+    namespace_events = 0
+    decoded_fields = 0
+
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            total_lines += 1
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                malformed += 1
+                continue
+            if event.get("tag") != RAW_TAG:
+                unexpected_tags.add(event.get("tag"))
+                continue
+            namespace_events += 1
+            # The introspection walk has to have produced every field of the message:
+            # the two `string`s, and the nested Header with its nested builtin Time.
+            stamp = (event.get("header") or {}).get("stamp") or {}
+            if (
+                event.get("group_key") == RAW_SOURCE
+                and isinstance(stamp.get("sec"), int)
+                and isinstance(stamp.get("nanosec"), int)
+                and stamp["sec"] > 0
+            ):
+                decoded_fields += 1
+            try:
+                values.append(int(json.loads(event["data"])["value"]))
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+                malformed += 1
+
+    arrived = set(values)
+    details["raw"] = {
+        "total_events": total_lines,
+        "namespace_events": namespace_events,
+        "malformed_events": malformed,
+        "fully_decoded_events": decoded_fields,
+        "unexpected_tags": sorted(t for t in unexpected_tags if t is not None),
+        "distinct_values": len(arrived),
+        "first_value": min(arrived) if arrived else None,
+        "last_value": max(arrived) if arrived else None,
+    }
+
+    if total_lines == 0:
+        violations.append(
+            f"raw: {path} is empty — no generic-subscription Record reached the Destination"
+        )
+        return
+    if malformed:
+        violations.append(
+            f"raw: {malformed} event(s) did not carry a decodable StringStamped payload "
+            "— the introspection walk produced something the message does not contain"
+        )
+    if decoded_fields != namespace_events:
+        violations.append(
+            f"raw: only {decoded_fields} of {namespace_events} event(s) carried the full "
+            "decoded message (group_key + nested header.stamp) — field-by-field "
+            "conversion of the custom type is incomplete"
+        )
+    # Same reasoning as the passthrough's Tag check: the namespace route branch must
+    # still discriminate, or every Measurement Record would land here too.
+    if unexpected_tags:
+        violations.append(
+            f"raw: received Tag(s) outside the raw namespace: "
+            f"{sorted(t for t in unexpected_tags if t is not None)} — the dc.raw. route "
+            "branch is not discriminating"
+        )
+    if not arrived:
+        violations.append("raw: no event carried a usable counter value")
+        return
+
+    kill_points = set(boundaries.get(RAW_SOURCE, set()))
+    gaps = set(range(min(arrived), max(arrived) + 1)) - arrived
+    tolerated = {
+        value for value in gaps if any(0 < point - value <= MAX_KILL_GAP for point in kill_points)
+    }
+    lost = gaps - tolerated
+    if lost:
+        violations.append(
+            f"raw: {len(lost)} Record(s) missing between the first and last raw value "
+            f"received, away from any kill point — first missing: {sorted(lost)[:10]} — "
+            "data loss through raw mode"
+        )
+    if tolerated:
+        notes.append(
+            f"raw: {len(tolerated)} Record(s) lost in flight where the generator was "
+            "killed (tolerated)"
+        )
+    if len(values) > len(arrived):
+        notes.append(
+            f"raw: {len(values) - len(arrived)} duplicate value(s) (at-least-once "
+            "re-delivery; deduplicated on read)"
+        )
+
+
 def check_mcap_passthrough(
     path: str,
     published: dict,
@@ -616,6 +765,11 @@ def main() -> int:
         help="JSON summary (scripts/mcap_summary.py output) of the ADR-0009 MCAP "
         "passthrough writer's .mcap capture",
     )
+    parser.add_argument(
+        "--raw-file",
+        required=True,
+        help="newline-delimited JSON extracted from the raw (#227) `file` Destination",
+    )
     parser.add_argument("--report", default=None, help="write a JSON report to this path")
     args = parser.parse_args()
 
@@ -645,6 +799,7 @@ def main() -> int:
     check_mcap_passthrough(
         args.mcap_summary_file, published, boundaries, violations, notes, details
     )
+    check_raw(args.raw_file, boundaries, violations, notes, details)
 
     report = {"pass": not violations, "violations": violations, "notes": notes, "details": details}
     if args.report:

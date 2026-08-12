@@ -243,6 +243,16 @@ podman run --rm --entrypoint bash \
   -v dc_e2e_data:/vol:ro "$DC_IMAGE" \
   -c 'cat /vol/passthrough/records.ndjson 2>/dev/null || true' > "$RUN_DIR/passthrough.ndjson"
 
+# --- extract raw / generic-subscription mode's output (#227) -------------------------
+# Same extraction shape as the passthrough above: raw mode's Destination is a `file`
+# sink on the dc_e2e_data volume. Deliberately not `|| true` on the container run itself
+# for the same reason — a failed extraction must not be mistakable for an empty result;
+# verify_zero_loss.py's check_raw() hard-fails on a missing or empty file.
+log "extracting raw mode's Destination output"
+podman run --rm --entrypoint bash \
+  -v dc_e2e_data:/vol:ro "$DC_IMAGE" \
+  -c 'cat /vol/raw/records.ndjson 2>/dev/null || true' > "$RUN_DIR/raw.ndjson"
+
 # --- summarize the MCAP passthrough writer's output (ADR-0009, #210) -----------------
 # scripts/mcap_summary.py needs the `mcap` library, which is only installed in the DC
 # image (tools/e2e/Containerfile) — run it inside a one-off container on the same
@@ -269,6 +279,7 @@ python3 "$SCRIPT_DIR/verify_zero_loss.py" \
   --ledger-file "$RUN_DIR/workload_ledger.txt" \
   --passthrough-file "$RUN_DIR/passthrough.ndjson" \
   --mcap-summary-file "$RUN_DIR/mcap_summary.json" \
+  --raw-file "$RUN_DIR/raw.ndjson" \
   --report "$RUN_DIR/verification_report.json"
 
 log "PASS: zero-loss E2E harness"

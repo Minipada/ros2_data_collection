@@ -164,7 +164,7 @@ dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/e2e/buffer"
-    destinations: ["pgsql_records", "pgsql_files", "rustfs"]
+    destinations: ["pgsql_records", "pgsql_files", "rustfs", "raw_file"]
     pgsql_records:
       type: postgres
       receives: records
@@ -203,6 +203,36 @@ dc_bridge:
       access_key_id: "rustfsadmin"
       secret_access_key: "rustfsadmin"
       force_path_style: true
+
+    # Raw / generic-subscription mode (#227). Subscribes to the generator's *source*
+    # topic — `/dc/e2e/synth/synth00` carries `dc_interfaces/msg/StringStamped`, a
+    # custom non-std_msgs type dc_bridge has no compile-time knowledge of — and ships it
+    # under the `dc.raw.` Tag namespace to its own `file` Destination, entirely beside
+    # the Measurement path that same topic already feeds. verify_zero_loss.py's
+    # check_raw() asserts the Records arrived, decoded field-for-field, and have no gaps
+    # inside the window raw mode was subscribed for.
+    raw_file:
+      type: file
+      receives: records
+      # No `inputs`: raw mode routes to this Destination by Tag namespace, not by topic.
+      path: "/root/.dc/e2e/data/raw/records.ndjson"
+      time_key: "date"
+
+    raw:
+      enabled: true
+      destination: "raw_file"
+      include: ["^/dc/e2e/synth/synth00$"]
+      # The default excludes would veto nothing here, but spell out that the Record
+      # topics stay out: without this raw mode would re-ship every Measurement Record
+      # under a second Tag.
+      exclude: ["^/rosout$", "^/parameter_events$", "^/dc/measurement/", "^/dc/group/"]
+      exclude_types: ["^sensor_msgs/msg/(Image|CompressedImage|PointCloud2)$"]
+      # 1 s below the generator's own 1 Hz, so discovery is quick without the rescan
+      # itself becoming the thing under test.
+      rescan_interval_secs: 1.0
+      # Comfortably above the generator's 1 Hz: the limiter is exercised but must not
+      # drop anything, so a gap in the output is real loss rather than decimation.
+      max_rate_hz: 10.0
 
     files:
       delete_when_sent: false

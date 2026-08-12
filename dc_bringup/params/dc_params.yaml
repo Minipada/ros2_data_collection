@@ -85,6 +85,23 @@ dc_bridge:
     #     max_bytes: 10737418240  # 10 GiB cap on the un-uploaded Files pool
     #     max_age_days: 30        # optional; whichever limit is hit first
     #
+    # Raw topic collection (#227): subscribe to topics dc_bridge was never compiled
+    # against (rclcpp::GenericSubscription + runtime introspection, as `ros2 bag record
+    # -a` does), convert each message to JSON, and ship it under the Tag
+    # `dc.raw.<topic>` to one Destination. Works next to the Measurements above, or on
+    # its own via `ros2 launch dc_bringup dc_raw.launch.py` (params/dc_raw_params.yaml).
+    # Read doc/src/dc/raw_topics.md — especially "Backpressure and volume" — first.
+    #
+    # raw:
+    #   enabled: true
+    #   destination: "pgsql"        # a configured `receives: records` destination
+    #   include: ["^/"]             # topic-name regexes (unanchored regex_search)
+    #   exclude: ["^/rosout$", "^/parameter_events$", "^/dc/measurement/", "^/dc/group/"]
+    #   exclude_types: ["^sensor_msgs/msg/(Image|CompressedImage|PointCloud2)$"]
+    #   rescan_interval_secs: 5.0   # pick up topics that appear later; 0 = scan once
+    #   max_rate_hz: 10.0           # per topic, newest-wins decimation; 0 = unlimited
+    #   max_message_size_bytes: 1048576   # drop bigger messages whole; 0 = unlimited
+    #
     # Any other Vector sink type via the ADR-0003 passthrough: raw Vector config
     # snippets consuming the public per-Tag `dc.<tag>` routes (see
     # doc/src/dc/destinations.md for the routing contract).
