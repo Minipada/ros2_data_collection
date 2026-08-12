@@ -3957,3 +3957,40 @@ earlier entries), `pycln` (a broken hook virtualenv), and `flake8` on
 `verify_zero_loss.py`, whose six findings are all in `main()`'s pre-existing print loops:
 verified identical by running the same hook against `git show HEAD:` of that file, so
 they surface only because the file is now in the changed set.
+
+## #234: Lifecycle manager documentation (mermaid diagram)
+
+**Read**: `dc_lifecycle_manager`'s header/source (`lifecycle_manager.hpp`/`.cpp`),
+`dc_bringup/launch/dc_bringup.launch.py`, ADR-0006, and `concepts.md`'s existing
+"Lifecycle Nodes and Bond" prose section to ground the diagram in the real code rather
+than the general nav2 lifecycle-node story that section already tells.
+
+**Found**: `node_names` is `["measurement_server"]` in every params file that sets it
+(`dc_bringup.launch.py`'s inline `lifecycle_manager_params`, both E2E harness params
+files) — `group_server` launches as a plain `Node`, never added to `node_names`, so it
+is not lifecycle-managed today. `data_pipeline.md`'s C2 section claimed otherwise
+("only three nodes are lifecycle-managed... measurement_server and group_server" — a
+stale claim, inconsistent even with itself on the count), so that sentence was
+corrected alongside the new page rather than left contradicting it.
+
+**Added**: `doc/src/dc/lifecycle_manager.md` — two mermaid diagrams: a flowchart
+showing the ADR-0006 boundary (Vector/Bridge/`bridge_ready_gate` outside the manager)
+feeding into the manager's autostart, and a `stateDiagram-v2` for the five-state
+transition machine plus the bond-loss → hard-reset → respawn-reconnect-or-give-up path
+(`checkBondConnections`/`checkBondRespawnConnection` in `lifecycle_manager.cpp`).
+Covers the acceptance criteria's four elements — managed nodes, bond heartbeats, state
+transitions, autostart flow — and makes the ADR-0006 boundary and the readiness gate
+visible in a diagram, not just prose. Linked from `SUMMARY.md` (between Data Pipeline
+and Measurements), `concepts.md`'s "Lifecycle Nodes and Bond" admonish block, and
+`data_pipeline.md`'s "Deterministic startup ordering" section.
+
+**Verified**: `mdbook build` locally (with linkcheck) — no errors or warnings touching
+the new page or its links; the two pre-existing linkcheck warnings on
+`measurements/diagnostics.md` and `measurements/serial_interface.md` (unrelated
+`list[str]`-as-markdown-link false positives) are untouched by this change. Also ran
+the full `build-doc` pre-commit hook (the real Podman/mdbook toolchain, the hard gate
+per `CLAUDE.md`) against the changed files — passed. `poetry-requirements` failed for
+the same pre-existing reason as earlier entries (no local `poetry` binary); `black`
+reformatted an unrelated file (`tools/e2e/scripts/verify_zero_loss.py`) as a side
+effect of the hook run against the whole repo — reverted before committing since it's
+outside this issue's scope.
