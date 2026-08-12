@@ -3934,6 +3934,22 @@ replacement). `destinations.md` documents `dc.dc.raw` as the one route that isn'
 per-Tag; `dc_bridge/README.md` covers the two code-level surprises; `dc_params.yaml`
 carries a commented block and `dc_raw_params.yaml` is the fully-annotated standalone one.
 
+**Type-mapping caveats found by a live mixed-type check** (a `sensor_msgs/msg/
+BatteryState` — float32 scalars and sequences, `uint8` enums, `bool`, `string`s, nested
+`Header` — published through the real Bridge into a `file` Destination, alongside a
+`diagnostic_msgs/msg/DiagnosticArray` used to confirm `raw.exclude` vetoes a topic).
+Everything converted correctly, and two number behaviours are worth documenting rather
+than fixing, now written up under "Type mapping" in `raw_topics.md`:
+
+- **`NaN` and `Infinity` both serialize as `null`**, since JSON has neither. That makes
+  `+Inf`, `NaN` and "absent" indistinguishable downstream — and it is not exotic, because
+  ROS messages use `NaN` as a documented sentinel (`BatteryState.temperature` is `NaN`
+  with no sensor fitted). `null` is still the right rendering: the alternatives are a
+  non-standard bare `NaN` token that most JSON parsers reject, or a `"NaN"` string that
+  would break the numeric typing of the column for every other row.
+- **`float32` widens to double**, so `4.05` reads back as `4.050000190734863` — the exact
+  binary32 value, not a rounding error introduced by the walk.
+
 **pre-commit**: clean on the changed files (including the mdbook `build-doc` hook, which
 link-checks the new page and its `SUMMARY.md` entry) apart from three environment
 failures that touch nothing here — `poetry-requirements` (no local `poetry`, as in
