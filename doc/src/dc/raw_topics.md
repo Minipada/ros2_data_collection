@@ -193,6 +193,43 @@ Everything past those bounds behaves like any other Record: Vector's disk buffer
 (`shipper.buffer_max_bytes`) absorbs a Destination outage, and delivery to the Shipper is
 acknowledged (see [Destinations](./destinations.md#delivery-guarantees)).
 
+### How much data is this?
+
+Measured against a TurtleBot3-Waffle-shaped workload — the topic mix
+`dc_simulation`'s warehouse world bridges out, at the rates those sensors actually run
+(IMU 100 Hz, odom/tf/joint_states 50 Hz, camera 30 Hz, cmd_vel 20 Hz, lidar 10 Hz,
+battery 1 Hz) — collected into a `file` Destination:
+
+| Configuration | Stored |
+|---|---|
+| **Defaults** (10 Hz cap, sensor types excluded) | 19 kB/s — **67 MB/hour, 1.6 GB/day** |
+| …plus `scan` and `tf` re-enabled | ≈ 4.3 GB/day |
+| …plus the 640×480 camera re-enabled | ≈ **1.6 TB/day** |
+
+Per-Record cost, which is what to multiply by your own topics' rates:
+
+| Message | Bytes per Record |
+|---|---|
+| `geometry_msgs/msg/Twist` | 202 |
+| `sensor_msgs/msg/JointState` (2 joints) | 326 |
+| `sensor_msgs/msg/Imu` | 488 |
+| `nav_msgs/msg/Odometry` | 605 |
+| `tf2_msgs/msg/TFMessage` (2 transforms) | 547 |
+| `sensor_msgs/msg/LaserScan` (360 ranges + intensities) | 2 585 |
+| `sensor_msgs/msg/Image` (640×480 `rgb8`) | **1 843 521** |
+
+The last row is the whole argument for the default type exclusions: one VGA frame costs
+as much as ~3 000 odometry Records, and JSON roughly **doubles** a byte array (every
+pixel byte becomes `"0,"`).
+
+**The size cap will not save you from a camera.** That same 640×480 frame is 921 600
+bytes on the wire — *under* the default `max_message_size_bytes` of 1 MiB — so it passes
+the size gate and lands as 1.8 MB of JSON. The two guards are not redundant: it is
+`exclude_types` that keeps images out, and removing it removes the protection entirely.
+If you deliberately collect image-shaped topics, lower `max_message_size_bytes` to
+something well under one frame (e.g. 262144) so the size gate becomes a real backstop
+rather than a formality.
+
 Every drop is counted, and the counters are on the Bridge's readiness service — the
 fastest way to answer "is raw mode shedding?":
 
