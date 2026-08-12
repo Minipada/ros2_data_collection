@@ -3688,3 +3688,17 @@ grouping rows with the demos nested under them (4.1 Beginner → 4.1.1 Uptime, �
 every demo page is still reachable. `pre-commit run --files doc/src/SUMMARY.md
 doc/src/dc/demos.md` is clean apart from the `poetry-requirements` hook, which fails on
 this machine for a missing local `poetry` install and touches neither file.
+
+**CI follow-up in the same PR**: `.github/workflows/ci.yaml` had no path filters, so this
+docs-only change triggered the full chain — coverage-instrumented workspace image build →
+`colcon test` → E2E image build → zero-loss harness, ~10 minutes of runner time for two
+markdown files (`doc.yaml`, which does have `paths:` filters, finished its docs build in
+33s). Added `paths-ignore: [doc/**, docs/**, progress.txt, "**.md"]` to ci.yaml's
+`pull_request` and `push` triggers. GitHub skips a workflow only when *every* changed file
+matches, so a mixed docs+code PR still gets the full suite; `tools/**`, `containers/**`
+and `.github/**` are deliberately *not* ignored, since those change how CI itself builds.
+Used `"**.md"` rather than `"**/*.md"` — the latter requires a `/` and so would miss
+root-level markdown like `README.md`. Checked that `jazzy` is not branch-protected
+(`gh api .../branches/jazzy/protection` → 404), so a skipped run leaves no required status
+check pending forever — the usual trap with path-filtered workflows, noted in a comment
+above the trigger block for whoever turns branch protection on later.

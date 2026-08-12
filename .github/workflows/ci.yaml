@@ -19,14 +19,30 @@
 
 name: CI
 
+# Documentation-only changes don't need a workspace rebuild. GitHub skips the workflow only
+# when *every* changed file matches `paths-ignore`, so a PR touching both docs and code
+# still gets the full build/test/e2e chain. Deliberately not ignored: `tools/**`,
+# `containers/**` and `.github/**`, which change how CI itself builds. `jazzy` is not
+# branch-protected, so a skipped run leaves no required status check pending — recheck this
+# before enabling branch protection, since skipped path-filtered workflows never report.
 on:
   workflow_dispatch:
   pull_request:
     branches:
       - jazzy
+    paths-ignore:
+      - doc/**
+      - docs/**
+      - progress.txt
+      - "**.md"
   push:
     branches:
       - jazzy
+    paths-ignore:
+      - doc/**
+      - docs/**
+      - progress.txt
+      - "**.md"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
