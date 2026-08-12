@@ -24,10 +24,12 @@ Shipper-supported sink.
 
 ### Container (C2)
 
-Inside DC, only three nodes are lifecycle-managed by `dc_lifecycle_manager`:
-`measurement_server` and `group_server`. The Bridge (`dc_bridge`) and its supervised
-Shipper child are deliberately outside that boundary (ADR-0006) — the Bridge has no
-meaningful deactivated state, so its readiness comes from launch ordering
+Inside DC, `measurement_server` is the node lifecycle-managed by
+`dc_lifecycle_manager` (see [Lifecycle Manager](./lifecycle_manager.md) for the
+managed-node list and why it's just the one node today). `group_server` runs as a plain
+node alongside it, not under lifecycle management. The Bridge (`dc_bridge`) and its
+supervised Shipper child are deliberately outside that boundary too (ADR-0006) — the
+Bridge has no meaningful deactivated state, so its readiness comes from launch ordering
 (`bridge_ready_gate`) instead of a lifecycle transition. See
 [Deterministic startup ordering](#deterministic-startup-ordering) for the sequence this
 diagram's `bridge_ready_gate` → `dc_lifecycle_manager` relationship summarizes.
@@ -134,6 +136,10 @@ can be emitted before the pipeline is able to accept it:
    `lifecycle_manager_dc`, which configures and then activates the collection nodes. If
    the Bridge never becomes ready before the gate's deadline, the whole launch shuts
    down loudly instead of leaving a half-started pipeline running.
+
+See [Lifecycle Manager](./lifecycle_manager.md) for the diagrammed version of this
+sequence, plus the state transitions and bond-heartbeat recovery behavior it drives
+once activated.
 
 ## Durability and supervision
 

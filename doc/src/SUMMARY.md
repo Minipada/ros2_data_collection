@@ -18,6 +18,7 @@
     - [Custom plugin](./dc/demos/custom_stdout.md)
 - [Concepts](./dc/concepts.md)
 - [Data Pipeline](./dc/data_pipeline.md)
+- [Lifecycle Manager](./dc/lifecycle_manager.md)
 - [Measurements](./dc/measurements.md)
   - [Camera](./dc/measurements/camera.md)
   - [Command velocity](./dc/measurements/cmd_vel.md)
