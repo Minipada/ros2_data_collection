@@ -93,6 +93,34 @@ Messages that start with a `std_msgs/msg/Header` are timestamped from
 `header.stamp` — the moment the data was *captured*. Everything else is stamped with the
 Bridge's own clock on arrival.
 
+### Type mapping
+
+| ROS field | JSON |
+|---|---|
+| `bool` | boolean |
+| `int8`…`int64`, `uint8`…`uint64`, `byte`, `char` | number |
+| `float32`, `float64` | number |
+| `string` | string |
+| `wstring` | string (transcoded UTF-16 → UTF-8) |
+| a nested message | object |
+| any array or sequence (fixed, bounded, unbounded) | array |
+
+Two things about numbers are worth knowing before you point a query at the result:
+
+- **`NaN` and `Infinity` both become `null`.** JSON has neither, so there is nowhere else
+  for them to go — but it means `+Inf`, `-Inf`, `NaN` and "the producer sent nothing" are
+  indistinguishable downstream. This is not a corner case: ROS messages routinely use
+  `NaN` as a sentinel (`sensor_msgs/msg/BatteryState.temperature` is `NaN` when the
+  battery has no temperature sensor), so expect nulls in fields whose message definition
+  documents one.
+- **`float32` is widened to double**, so a value written as `4.05` reads back as
+  `4.050000190734863` — the exact binary32 value, not a rounding error introduced here.
+  Round at the query, not in the pipeline, if the extra digits bother a dashboard.
+
+A `uint8[]` is an array of numbers, not base64 — DC does not compress raw payloads on the
+way out. That is one more reason the size and type limits below exist: the answer to a
+megabyte of image bytes is to not collect it, rather than to encode it more cleverly.
+
 ## Choosing what to collect
 
 ```yaml
