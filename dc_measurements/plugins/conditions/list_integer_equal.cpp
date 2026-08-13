@@ -18,11 +18,14 @@ void ListIntegerEqual::onConfigure()
 bool ListIntegerEqual::getState(dc_interfaces::msg::StringStamped msg)
 {
   json data_json = json::parse(msg.data);
-  json flat_json = data_json.flatten();
 
-  std::string key_w_prefix = std::string("/") + key_;
+  // json::json_pointer navigates the unflattened data_json directly, unlike the flatten() +
+  // "/key" lookup pattern other Condition plugins use: flatten() explodes arrays into indexed
+  // keys ("/key/0", "/key/1", ...), so an array-valued "/key" would never be found by that
+  // pattern -- exactly the value type this Condition exists to compare.
+  json::json_pointer key_ptr(std::string("/") + key_);
 
-  if (!flat_json.contains(key_w_prefix))
+  if (!data_json.contains(key_ptr))
   {
     RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found in msg: " << msg.data);
     active_ = false;
@@ -30,7 +33,9 @@ bool ListIntegerEqual::getState(dc_interfaces::msg::StringStamped msg)
     return active_;
   }
 
-  if (flat_json[key_w_prefix].type() != json::value_t::array)
+  const json& field = data_json.at(key_ptr);
+
+  if (field.type() != json::value_t::array)
   {
     RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not an array");
     active_ = false;
@@ -38,8 +43,7 @@ bool ListIntegerEqual::getState(dc_interfaces::msg::StringStamped msg)
     return active_;
   }
 
-  if (!std::all_of(flat_json[key_w_prefix].begin(), flat_json[key_w_prefix].end(),
-                   [](const json& el) { return el.is_number_integer(); }))
+  if (!std::all_of(field.begin(), field.end(), [](const json& el) { return el.is_number_integer(); }))
   {
     RCLCPP_WARN_STREAM(logger_, "All values are not integer in key " << key_);
     active_ = false;
@@ -47,7 +51,7 @@ bool ListIntegerEqual::getState(dc_interfaces::msg::StringStamped msg)
     return active_;
   }
 
-  std::vector<long int> data = flat_json[key_w_prefix].get<std::vector<long int>>();
+  std::vector<long int> data = field.get<std::vector<long int>>();
 
   if (order_matters_ && data == value_)
   {
@@ -69,7 +73,7 @@ bool ListIntegerEqual::getState(dc_interfaces::msg::StringStamped msg)
   {
     active_ = true;
   }
-  else if (!order_matters_ && data == value_)
+  else if (!order_matters_ && data != value_)
   {
     active_ = false;
   }
