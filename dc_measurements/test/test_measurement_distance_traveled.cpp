@@ -116,17 +116,22 @@ TEST_F(MeasurementDistanceTraveledTest, PublishesDistanceFromOriginOnFirstFix)
   EXPECT_NEAR(data_json_["distance_traveled"].get<double>(), 5.0, 1e-2);
 }
 
-TEST_F(MeasurementDistanceTraveledTest, NoTransformYieldsEmptyRecord)
+TEST_F(MeasurementDistanceTraveledTest, NoTransformProducesNoPublish)
 {
   startLifecycleNode();
 
-  while (!callback_active_)
+  // With no transform ever broadcast, every collect() cycle returns an empty StringStamped, and
+  // Measurement::publish() (measurement.hpp) drops empty messages outright (logs a WARN, never
+  // calls data_pub_->publish()) rather than publishing "{}" -- so the callback can never fire.
+  // Poll through several collect() cycles (polling_interval=50) and assert it stays that way,
+  // same pattern as test_measurement_ip_camera.cpp's NoSegmentsYetProducesNoPublish.
+  auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
+  while (std::chrono::steady_clock::now() < deadline)
   {
     rclcpp::spin_some(ms_node_->get_node_base_interface());
   }
 
-  EXPECT_FALSE(data_json_.contains("distance_traveled"));
-  EXPECT_TRUE(data_json_.empty());
+  EXPECT_FALSE(callback_active_);
 }
 
 int main(int argc, char** argv)

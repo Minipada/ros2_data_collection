@@ -4284,6 +4284,74 @@ pushing (same sandbox constraint as every entry in this file) — the fix commit
 informed reasoning from reading the CI log carefully, not verified execution.
 Watching the next CI run on PR #329 to confirm.
 
+### #254 follow-up 2: real CI run on PR #329 (run 31687959072) — same 3 tests still hanging
+
+The previous fix (5ms sleep + 10s deadline) was only applied to the *happy-path* test
+in each of `test_measurement_distance_traveled.cpp`, `test_measurement_position.cpp`,
+and `test_measurement_map.cpp`. Confirmed via `gh run view --log` on this run
+(`colcon-test`): all three still ended as `missing_result` errors at the colcon-test
+level *and* CTest-level failures for the same three test binaries — i.e. the process
+was killed mid-run before writing its gtest XML, not a clean assertion failure.
+
+Root cause: each of these three files' *second* test —
+`NoTransformYieldsEmptyRecord` (distance_traveled, position) and
+`NoMapDataYieldsEmptyRecordWithoutCrashing` (map, the file's only test) — still had
+the exact anti-pattern the first fix targeted: a tight `while (!callback_active_) {
+rclcpp::spin_some(...); }` loop with no sleep and no deadline. The `map` CI log is the
+clearest evidence: `collect()` visibly ran to completion and logged "Message empty
+from measurement map" (i.e. published) roughly 40 times over the run before the job
+was killed, yet `callback_active_` was never observed true by the busy loop — the
+callback almost certainly is being starved of CPU by the test's own tight spin, same
+mechanism already diagnosed for the happy-path loops.
+
+**Fixed**: added the same 5ms `sleep_for` + 10-second `ASSERT_LT` deadline to all
+three straggler loops, so a real regression now fails cleanly with a clear message
+instead of hanging the whole CI job. `map.cpp` also needed `<chrono>`/`<thread>`
+added to its includes (the file's only test didn't need them before).
+
+**Not done**: same sandbox constraint — no local `colcon`/ROS to re-run `colcon test`;
+verified via `clang-format` only. Watching the next CI run on PR #329 to confirm this
+closes out the hang.
+
+### #254 follow-up 3: real CI run on PR #329 (merge commit cf6f658) — the hang is gone, but the "CPU starvation" theory was wrong
+
+The follow-up 2 fix worked as a *symptom* fix: `colcon-test` went from 3 `missing_result`
+errors to 0 — the process no longer hangs and gets killed mid-run. But all three tests
+still failed, now as clean, fast (~10s) `ASSERT_LT` timeouts instead of a multi-minute
+hang. That ruled out the "tight spin_some() loop starves a background publishing
+thread" hypothesis from follow-up 2: a real CPU-starvation fix would have let the
+callback through eventually; instead it never fires even once in 10 real seconds,
+despite the plugin's `collect()` cycle visibly running and logging "Message empty
+from measurement <x>" repeatedly the whole time.
+
+**Root cause (the actual one)**: `Measurement::publish()` (`dc_measurements/include/
+dc_measurements/measurement.hpp`) checks `if (!msg.data.empty() && msg.data !=
+"null")` before ever calling `data_pub_->publish(msg)` — when the condition is false
+it just logs `RCLCPP_WARN_STREAM("Message empty from measurement " << ...)` and
+returns. An empty Record is never published to the topic at all. So
+`NoTransformYieldsEmptyRecord` (distance_traveled, position) and
+`NoMapDataYieldsEmptyRecordWithoutCrashing` (map) were built on a false premise from
+the start — waiting for a subscriber callback that the framework guarantees will never
+fire for an empty Record. This was a pre-existing test-design bug in the original
+follow-up-1 session's tests, not something introduced by the busy-spin fix; the busy
+loop just hid it behind an indefinite hang instead of a fast, legible failure.
+
+The correct assertion, already established by `test_measurement_ip_camera.cpp`'s
+`NoSegmentsYetProducesNoPublish` (same "no data yet" class of test, written in the
+sibling camera PR/branch): poll through a bounded number of `collect()` cycles and
+assert the callback *never* fires, rather than waiting for one that structurally can't.
+
+**Fixed**: renamed and rewrote all three tests to that pattern —
+`NoTransformProducesNoPublish` (distance_traveled, position, 300ms window matching
+`polling_interval=50`) and `NoMapDataProducesNoPublish` (map, 4s window since each
+real `collect()` cycle there costs ~1.3s — `map_saver_cli` subprocess spawn plus its
+1s `save_map_timeout` — so a short window would trivially pass without exercising the
+path at all). Each just asserts `EXPECT_FALSE(callback_active_)` after the window,
+same as the camera-suite sibling.
+
+**Not done**: same sandbox constraint as every entry — no local `colcon`/ROS; verified
+via `clang-format` only. Watching the next CI run on PR #329 to confirm.
+
 ## #255: Test coverage epic (condition plugins) — remaining 13 plugins + list_string_equal
 
 **Context**: The `double_equal` item landed separately (see the entry above) and merged to
