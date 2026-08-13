@@ -19,10 +19,10 @@
 -- (a merged Group Record's top-level keys are its members' own `group_key` names —
 -- `cmd_vel`, `position`, `speed` for the "robot" group used here — plus `tags`).
 --
--- CPU measurement fields are intentionally not enumerated below: no demo's Grafana
--- dashboard currently charts them (see doc/src/dc/demos/), so their JSON keys are
--- silently dropped by the sink rather than stored — add columns here first if you
--- wire up a CPU panel.
+-- The cpu Measurement's `sorted` per-process array and the position/speed/cmd_vel
+-- Measurements' `linear`/`angular`/`x`/`y`/`yaw` components are still intentionally not
+-- enumerated below: nothing charts them, so the sink silently drops those keys rather
+-- than storing them — add columns here first if you wire up a panel that needs one.
 CREATE TABLE IF NOT EXISTS dc (
   -- Common (every Record)
   date bigint,
@@ -44,6 +44,9 @@ CREATE TABLE IF NOT EXISTS dc (
   free bigint,
   capacity bigint,
   time double precision,
+  -- cpu.cpp's average CPU load and total process count (the demo dashboard's CPU panel)
+  average double precision,
+  processes integer,
   -- Robot (camera.cpp, map.cpp, and the "robot" group's merged cmd_vel/position/speed)
   camera_name text,
   local_paths jsonb,
@@ -58,6 +61,10 @@ CREATE TABLE IF NOT EXISTS dc (
   position jsonb,
   speed jsonb,
   distance_traveled double precision,
+  -- Twist magnitude, emitted by both speed.cpp and cmd_vel.cpp as standalone Records
+  -- (tb3_simulation_pgsql_minio); told apart by `name`. Nested under the `speed`/`cmd_vel`
+  -- jsonb columns above instead when the Records go through a Group (qrcodes_minio_pgsql).
+  computed double precision,
   -- Infrastructure (tcp_health.cpp)
   host text,
   port integer,

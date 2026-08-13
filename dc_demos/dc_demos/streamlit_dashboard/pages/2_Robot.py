@@ -85,7 +85,7 @@ class Speed(Section):
                 end_date=st.session_state.get("end_date", None),
             )
             if average_speed_run:
-                speed_annotation_text = f"Avg speed ({round(average_speed_run,2)})"
+                speed_annotation_text = f"Avg speed ({round(average_speed_run, 2)})"
             else:
                 speed_annotation_text = 0
             self.fig.add_hline(
@@ -240,74 +240,44 @@ class CameraImages(Section):
             )
         assert self.df.empty is False
 
+    # A gallery grid — the case the Uploader's optional thumbnails (#256) exist for.
+    # `gallery_url` serves the `.thumb.jpg` preview when one was uploaded and the
+    # full-size File otherwise, so the grid stays correct whether or not
+    # `files.thumbnails` is enabled on the Bridge.
+    def display_gallery(self, tab, images, column: str) -> None:
+        """Lay the Files named by `column` out as a three-wide grid of previews."""
+        # `images` is a filtered slice, so its index is the parent frame's, not 0..n-1 —
+        # iterate the rows themselves rather than positions that may not be labels.
+        rows = [row for _, row in images.iterrows() if row[column]]
+        if not rows:
+            st.info("No data")
+            return
+        cols = tab.columns(3)
+        for count, row in enumerate(rows):
+            cols[count % 3].image(image=gallery_url(row[column]), caption=row["Date"])
+
     @Section.handler_display_data_backend_not_implemented
     @Section.handler_display_data_storage_not_implemented
     @Section.handler_display_data_none
     def display_data(self) -> None:
         assert self.df.empty is False
+        if self.storage != Storage.RUSTFS:
+            return
         camera_names = self.df["Camera Name"].unique()
-        if self.storage == Storage.RUSTFS:
-            camera_tabs = st.tabs(camera_names)
+        camera_tabs = st.tabs(list(camera_names))
 
-            for camera_tab_index, camera_tab in enumerate(camera_tabs):
-                with camera_tab:
-                    images_camera = self.df[
-                        self.df["Camera Name"] == camera_names[camera_tab_index]
-                    ]
-                    df_images_camera_raw = images_camera[images_camera["Raw remote path"].notna()]
-                    df_images_camera_rotated = images_camera[
-                        images_camera["Rotated remote path"].notna()
-                    ]
-                    df_images_camera_inspected = images_camera[
-                        images_camera["Inspected remote path"].notna()
-                    ]
+        for camera_tab_index, camera_tab in enumerate(camera_tabs):
+            with camera_tab:
+                images_camera = self.df[self.df["Camera Name"] == camera_names[camera_tab_index]]
 
-                    raw_tab, rotated_tab, inspected_tab = st.tabs(["Raw", "Rotated", "Inspected"])
+                raw_tab, rotated_tab, inspected_tab = st.tabs(["Raw", "Rotated", "Inspected"])
 
-                    # These three tabs are gallery grids — the case the Uploader's
-                    # optional thumbnails (#256) exist for. `gallery_url` serves the
-                    # `.thumb.jpg` preview when one was uploaded and the full-size File
-                    # otherwise, so the grid stays correct whether or not
-                    # `files.thumbnails` is enabled on the Bridge.
-                    with raw_tab:
-                        if self.storage == Storage.RUSTFS:
-                            if len(df_images_camera_raw):
-                                cols = raw_tab.columns(3)
-                                for i in range(len(df_images_camera_raw)):
-                                    cols[i % 3].image(
-                                        image=gallery_url(
-                                            df_images_camera_raw.loc[i, "Raw remote path"]
-                                        ),
-                                        caption=df_images_camera_raw.loc[i, "Date"],
-                                    )
-                            else:
-                                st.info("No data")
-                    with rotated_tab:
-                        if self.storage == Storage.RUSTFS:
-                            if len(df_images_camera_rotated):
-                                cols = rotated_tab.columns(3)
-                                for i in range(len(df_images_camera_rotated)):
-                                    cols[i % 3].image(
-                                        image=gallery_url(
-                                            df_images_camera_rotated.loc[i, "Rotated remote path"]
-                                        ),
-                                        caption=df_images_camera_raw.loc[i, "Date"],
-                                    )
-                            else:
-                                st.info("No data")
-                    with inspected_tab:
-                        if self.storage == Storage.RUSTFS:
-                            cols = inspected_tab.columns(3)
-                            if len(df_images_camera_inspected):
-                                for i in range(len(df_images_camera_inspected)):
-                                    cols[i % 3].image(
-                                        image=gallery_url(
-                                            df_images_camera_inspected.loc[i, "Rotated remote path"]
-                                        ),
-                                        caption=df_images_camera_inspected.loc[i, "Date"],
-                                    )
-                            else:
-                                st.info("No data")
+                with raw_tab:
+                    self.display_gallery(raw_tab, images_camera, "Raw remote path")
+                with rotated_tab:
+                    self.display_gallery(rotated_tab, images_camera, "Rotated remote path")
+                with inspected_tab:
+                    self.display_gallery(inspected_tab, images_camera, "Inspected remote path")
 
 
 def main():
