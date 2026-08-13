@@ -479,3 +479,294 @@ TEST(Uploader, RecordsWithoutFilesAreNoops)
   EXPECT_EQ(summary.files, 0u);
   EXPECT_TRUE(rows->empty());
 }
+
+// --- Optional thumbnails (#256) ---------------------------------------------------
+//
+// Driven through a fake ThumbnailGenerator rather than real ffmpeg: what has to hold is
+// the Uploader's *contract* around previews — off unless asked for, strictly after the
+// primary upload, never able to fail it, idempotent on replay, no local residue — and
+// none of that depends on a decoder actually being installed on the test machine.
+
+namespace
+{
+
+/// A ThumbnailGenerator that records every request and writes fixed bytes, or fails.
+struct FakeThumbnailer
+{
+  std::shared_ptr<std::vector<std::string>> sources = std::make_shared<std::vector<std::string>>();
+  bool succeed = true;
+  std::string bytes = "thumb-bytes";
+
+  ThumbnailGenerator fn()
+  {
+    auto sources_ = sources;
+    auto succeed_ = succeed;
+    auto bytes_ = bytes;
+    return [sources_, succeed_, bytes_](const std::string& source, const std::string& dest, std::uint32_t) -> bool {
+      sources_->push_back(source);
+      if (!succeed_)
+      {
+        return false;
+      }
+      std::ofstream(dest, std::ios::binary) << bytes_;
+      return true;
+    };
+  }
+};
+
+std::size_t count_files(const std::filesystem::path& dir)
+{
+  std::error_code ec;
+  std::size_t n = 0;
+  for (auto it = std::filesystem::directory_iterator(dir, ec); !ec && it != std::filesystem::directory_iterator(); ++it)
+  {
+    ++n;
+  }
+  return n;
+}
+
+}  // namespace
+
+TEST(UploaderThumbnails, OffByDefault)
+{
+  Fixture fx({ "minio" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  FakeThumbnailer thumbs;
+  // Config left at its defaults — thumbnails.enabled is false — even though a generator
+  // is wired in, so "off by default" is a property of the config, not of the plumbing.
+  Uploader up(
+      fx.config(false), fx.storages, [](const std::string&) { return std::nullopt; }, thumbs.fn());
+  auto rows = std::make_shared<std::vector<json>>();
+
+  auto summary = up.process_record(camera_payload(local, { "minio" }), "dc.measurement.camera", collect_rows(rows));
+
+  EXPECT_TRUE(thumbs.sources->empty());
+  EXPECT_EQ(summary.thumbnails, 0u);
+  EXPECT_EQ(summary.thumbnails_failed, 0u);
+  EXPECT_FALSE(fx.stores[0]->has_object("cam/2026/img.jpg.thumb.jpg"));
+  EXPECT_FALSE(rows_of_kind(*rows, "file_status")[0].contains("thumbnail_path"));
+}
+
+TEST(UploaderThumbnails, UploadsPreviewNextToTheOriginalAndRecordsItsPath)
+{
+  Fixture fx({ "minio" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  FakeThumbnailer thumbs;
+  UploaderConfig cfg = fx.config(false);
+  cfg.thumbnails.enabled = true;
+  Uploader up(
+      cfg, fx.storages, [](const std::string&) { return std::nullopt; }, thumbs.fn());
+  auto rows = std::make_shared<std::vector<json>>();
+
+  auto summary = up.process_record(camera_payload(local, { "minio" }), "dc.measurement.camera", collect_rows(rows));
+
+  EXPECT_EQ(summary.thumbnails, 1u);
+  EXPECT_EQ(summary.thumbnails_failed, 0u);
+  ASSERT_EQ(thumbs.sources->size(), 1u);
+  EXPECT_EQ((*thumbs.sources)[0], local);  // derived from the original, not from the object store
+  EXPECT_EQ(fx.stores[0]->object_bytes("cam/2026/img.jpg.thumb.jpg"), "thumb-bytes");
+
+  auto row = rows_of_kind(*rows, "file_status")[0];
+  ASSERT_TRUE(row.contains("thumbnail_path"));
+  EXPECT_EQ(row["thumbnail_path"], "s3://minio-bucket/cam/2026/img.jpg.thumb.jpg");
+  // The preview decorates the File's own row; it is not a File in its own right, so it
+  // gets no separate status row and doesn't inflate the group.
+  EXPECT_EQ(rows_of_kind(*rows, "file_status").size(), 1u);
+  EXPECT_EQ(rows_of_kind(*rows, "group_complete")[0]["file_count"], 1);
+}
+
+TEST(UploaderThumbnails, GenerationFailureNeverBlocksOrFailsThePrimaryUpload)
+{
+  Fixture fx({ "minio" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  FakeThumbnailer thumbs;
+  thumbs.succeed = false;  // e.g. no ffmpeg on PATH, or an undecodable File.
+  UploaderConfig cfg = fx.config(false);
+  cfg.thumbnails.enabled = true;
+  Uploader up(
+      cfg, fx.storages, [](const std::string&) { return std::nullopt; }, thumbs.fn());
+  auto rows = std::make_shared<std::vector<json>>();
+
+  // No throw: a failed preview is not an incomplete upload, so the intent is acked and
+  // never retried on the preview's account.
+  ProcessSummary summary;
+  ASSERT_NO_THROW(
+      summary = up.process_record(camera_payload(local, { "minio" }), "dc.measurement.camera", collect_rows(rows)));
+
+  EXPECT_EQ(summary.verified, 1u);
+  EXPECT_TRUE(summary.group_complete);
+  EXPECT_EQ(summary.thumbnails, 0u);
+  EXPECT_EQ(summary.thumbnails_failed, 1u);  // counted, so the operator can see it
+  EXPECT_EQ(fx.stores[0]->object_bytes("cam/2026/img.jpg"), JPEG_BYTES);
+  EXPECT_FALSE(rows_of_kind(*rows, "file_status")[0].contains("thumbnail_path"));
+}
+
+TEST(UploaderThumbnails, StoreRejectingThePreviewLeavesTheUploadVerified)
+{
+  Fixture fx({ "minio" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  FakeThumbnailer thumbs;
+  UploaderConfig cfg = fx.config(false);
+  cfg.thumbnails.enabled = true;
+  Uploader up(
+      cfg, fx.storages, [](const std::string&) { return std::nullopt; }, thumbs.fn());
+  auto rows = std::make_shared<std::vector<json>>();
+  fx.stores[0]->fail_put_keys.insert("cam/2026/img.jpg.thumb.jpg");
+
+  ProcessSummary summary;
+  ASSERT_NO_THROW(
+      summary = up.process_record(camera_payload(local, { "minio" }), "dc.measurement.camera", collect_rows(rows)));
+
+  EXPECT_EQ(summary.verified, 1u);
+  EXPECT_TRUE(summary.group_complete);
+  EXPECT_EQ(summary.thumbnails_failed, 1u);
+  EXPECT_FALSE(rows_of_kind(*rows, "file_status")[0].contains("thumbnail_path"));
+}
+
+TEST(UploaderThumbnails, OnlyForImagesAndVideos)
+{
+  Fixture fx({ "minio" });
+  auto yaml = fx.write_file("map.yaml", "image: map.pgm\nresolution: 0.05\n");
+  auto pgm = fx.write_file("map.pgm", std::string("P5\n2 2\n255\n") + std::string("\x00\x01\x02\x03", 4));
+  json payload{ { "name", "map" },
+                { "local_paths", { { "yaml", yaml }, { "pgm", pgm } } },
+                { "remote_paths", { { "minio", { { "yaml", "maps/map.yaml" }, { "pgm", "maps/map.pgm" } } } } } };
+  FakeThumbnailer thumbs;
+  UploaderConfig cfg = fx.config(false);
+  cfg.thumbnails.enabled = true;
+  Uploader up(
+      cfg, fx.storages, [](const std::string&) { return std::nullopt; }, thumbs.fn());
+  auto rows = std::make_shared<std::vector<json>>();
+
+  auto summary = up.process_record(payload, "dc.measurement.map", collect_rows(rows));
+
+  // The PGM gets one; the YAML sidecar is never handed to a decoder at all, and so is
+  // not counted as a failure either.
+  ASSERT_EQ(thumbs.sources->size(), 1u);
+  EXPECT_EQ((*thumbs.sources)[0], pgm);
+  EXPECT_EQ(summary.thumbnails, 1u);
+  EXPECT_EQ(summary.thumbnails_failed, 0u);
+  EXPECT_TRUE(fx.stores[0]->has_object("maps/map.pgm.thumb.jpg"));
+  EXPECT_FALSE(fx.stores[0]->has_object("maps/map.yaml.thumb.jpg"));
+}
+
+TEST(UploaderThumbnails, ReplayedIntentReusesThePreviewInsteadOfRegeneratingIt)
+{
+  Fixture fx({ "minio" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  FakeThumbnailer thumbs;
+  UploaderConfig cfg = fx.config(false);
+  cfg.thumbnails.enabled = true;
+  auto payload = camera_payload(local, { "minio" });
+
+  // Two Uploader instances, as a Bridge restart produces (#265): the second replays the
+  // same intent with an empty in-memory dedup set, so only the object store's own state
+  // can prevent redundant work.
+  {
+    Uploader up(
+        cfg, fx.storages, [](const std::string&) { return std::nullopt; }, thumbs.fn());
+    auto rows = std::make_shared<std::vector<json>>();
+    up.process_record(payload, "dc.measurement.camera", collect_rows(rows));
+  }
+  {
+    Uploader up(
+        cfg, fx.storages, [](const std::string&) { return std::nullopt; }, thumbs.fn());
+    auto rows = std::make_shared<std::vector<json>>();
+    auto summary = up.process_record(payload, "dc.measurement.camera", collect_rows(rows));
+    EXPECT_EQ(summary.thumbnails, 1u);
+    // Still reported on the replayed row, so a status Record re-emitted after a restart
+    // isn't missing the preview the first one carried.
+    EXPECT_EQ(rows_of_kind(*rows, "file_status")[0]["thumbnail_path"], "s3://minio-bucket/cam/2026/img.jpg.thumb.jpg");
+  }
+  EXPECT_EQ(thumbs.sources->size(), 1u);  // decoded once across both runs
+}
+
+TEST(UploaderThumbnails, EveryDestinationGetsItsOwnPreview)
+{
+  Fixture fx({ "minio", "s3_archive" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  FakeThumbnailer thumbs;
+  UploaderConfig cfg = fx.config(false);
+  cfg.thumbnails.enabled = true;
+  Uploader up(
+      cfg, fx.storages, [](const std::string&) { return std::nullopt; }, thumbs.fn());
+  auto rows = std::make_shared<std::vector<json>>();
+
+  auto summary =
+      up.process_record(camera_payload(local, { "minio", "s3_archive" }), "dc.measurement.camera", collect_rows(rows));
+
+  EXPECT_EQ(summary.thumbnails, 2u);
+  for (auto& store : fx.stores)
+  {
+    EXPECT_EQ(store->object_bytes("cam/2026/img.jpg.thumb.jpg"), "thumb-bytes");
+  }
+}
+
+TEST(UploaderThumbnails, LeaveNoLocalResidue)
+{
+  // A preview is scratch, not collected data: it must not linger next to the original
+  // (where delete_when_sent would never remove it) nor in the state dir (where it would
+  // grow without bound). Its lifetime being contained inside one process_record is also
+  // what makes "a thumbnail never outlives its original" true by construction for
+  // retention (#267) — a shed intent's Files never uploaded, so none was ever derived.
+  Fixture fx({ "minio" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  FakeThumbnailer thumbs;
+  UploaderConfig cfg = fx.config(true);  // delete_when_sent
+  cfg.thumbnails.enabled = true;
+  Uploader up(
+      cfg, fx.storages, [](const std::string&) { return std::nullopt; }, thumbs.fn());
+  auto rows = std::make_shared<std::vector<json>>();
+
+  auto summary = up.process_record(camera_payload(local, { "minio" }), "dc.measurement.camera", collect_rows(rows));
+
+  EXPECT_EQ(summary.thumbnails, 1u);
+  EXPECT_EQ(summary.deleted, 1u);
+  EXPECT_FALSE(std::filesystem::exists(local));
+  EXPECT_EQ(count_files(fx.tmp / "state" / "thumbs"), 0u);
+  // Nothing was written beside the original either.
+  EXPECT_FALSE(std::filesystem::exists(local + ".thumb.jpg"));
+}
+
+TEST(UploaderThumbnails, AFileThatNeverUploadsNeverGetsAPreview)
+{
+  // The other half of "a preview obeys its original's retention policy" (#267): because
+  // generation is gated on the File being verified, an intent that never uploads — the
+  // only kind retention ever sheds — cannot leave an orphaned preview on the store
+  // pointing at data that was abandoned.
+  Fixture fx({ "minio" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  FakeThumbnailer thumbs;
+  UploaderConfig cfg = fx.config(false);
+  cfg.thumbnails.enabled = true;
+  cfg.max_attempts = 1;
+  Uploader up(
+      cfg, fx.storages, [](const std::string&) { return std::nullopt; }, thumbs.fn());
+  auto rows = std::make_shared<std::vector<json>>();
+  fx.stores[0]->fail_put_keys.insert("cam/2026/img.jpg");
+
+  EXPECT_THROW(up.process_record(camera_payload(local, { "minio" }), "dc.measurement.camera", collect_rows(rows)),
+               UploadError);
+
+  EXPECT_TRUE(thumbs.sources->empty());
+  EXPECT_FALSE(fx.stores[0]->has_object("cam/2026/img.jpg.thumb.jpg"));
+  EXPECT_EQ(count_files(fx.tmp / "state" / "thumbs"), 0u);
+}
+
+TEST(UploaderThumbnails, MissingLocalFileNeverAttemptsAPreview)
+{
+  Fixture fx({ "minio" });
+  auto local = (fx.tmp / "never-written.jpg").string();
+  FakeThumbnailer thumbs;
+  UploaderConfig cfg = fx.config(false);
+  cfg.thumbnails.enabled = true;
+  Uploader up(
+      cfg, fx.storages, [](const std::string&) { return std::nullopt; }, thumbs.fn());
+  auto rows = std::make_shared<std::vector<json>>();
+
+  auto summary = up.process_record(camera_payload(local, { "minio" }), "dc.measurement.camera", collect_rows(rows));
+
+  EXPECT_EQ(summary.missing, 1u);
+  EXPECT_TRUE(thumbs.sources->empty());
+  EXPECT_EQ(summary.thumbnails_failed, 0u);
+}

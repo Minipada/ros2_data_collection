@@ -54,6 +54,11 @@ dc_bridge:
     files:
       delete_when_sent: true
       metadata_destination: "pgsql_files"
+      # Previews for the dashboard's camera gallery and map view (#256); best-effort,
+      # so the demo is unaffected if ffmpeg isn't installed.
+      thumbnails:
+        enabled: true
+        max_dimension: 320
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224
 

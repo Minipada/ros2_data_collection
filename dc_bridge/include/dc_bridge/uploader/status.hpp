@@ -27,8 +27,13 @@ namespace status
 
 /// The three per-(group, File, Destination) file_status rows, preserving the Humble
 /// column set. `remote_path` is the File's object path on `storage` (before key_prefix).
+/// `thumbnail_path` (#256) is that File's derived preview's object path, when one was
+/// generated and uploaded — the field is simply absent otherwise, so a consumer written
+/// against the Humble column set is unaffected and one that wants previews has a single
+/// nullable column to read.
 nlohmann::json uploaded_row(const FileGroup& group, const FileRef& file, const Storage& storage,
-                            const std::string& remote_path, const FileMeta& meta);
+                            const std::string& remote_path, const FileMeta& meta,
+                            const std::optional<std::string>& thumbnail_path = std::nullopt);
 nlohmann::json missing_row(const FileGroup& group, const FileRef& file, const Storage& storage,
                            const std::string& remote_path);
 nlohmann::json deleted_row(const FileGroup& group, const FileRef& file, const Storage& storage,

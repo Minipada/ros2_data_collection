@@ -48,6 +48,12 @@ dc_bridge:
     files:
       delete_when_sent: true
       metadata_destination: "pgsql_files"
+      # The demo dashboard's camera gallery loads these previews instead of the
+      # full-size JPEGs (#256). Best-effort: with no ffmpeg installed the demo still
+      # works, the gallery just falls back to the originals.
+      thumbnails:
+        enabled: true
+        max_dimension: 320
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224
 

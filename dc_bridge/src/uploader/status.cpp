@@ -39,7 +39,8 @@ nlohmann::json base_row(const FileGroup& group, const FileRef& file, const Stora
 }  // namespace
 
 nlohmann::json uploaded_row(const FileGroup& group, const FileRef& file, const Storage& storage,
-                            const std::string& remote_path, const FileMeta& meta)
+                            const std::string& remote_path, const FileMeta& meta,
+                            const std::optional<std::string>& thumbnail_path)
 {
   nlohmann::json row = base_row(group, file, storage, remote_path);
   row["uploaded"] = true;
@@ -50,6 +51,12 @@ nlohmann::json uploaded_row(const FileGroup& group, const FileRef& file, const S
   if (meta.duration)
   {
     row["duration"] = *meta.duration;
+  }
+  if (thumbnail_path)
+  {
+    // Same shape as `remote_path` above (url_prefix + key), so both columns are read the
+    // same way by a consumer.
+    row["thumbnail_path"] = storage.url_prefix + storage.object_key(*thumbnail_path);
   }
   return row;
 }

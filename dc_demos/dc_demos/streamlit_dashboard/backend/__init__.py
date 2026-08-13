@@ -1,4 +1,4 @@
 from .pgsql import PGSQLService
-from .rustfs import rustfs_client
+from .rustfs import gallery_url, rustfs_client
 
-__all__ = ["rustfs_client", "PGSQLService"]
+__all__ = ["rustfs_client", "gallery_url", "PGSQLService"]

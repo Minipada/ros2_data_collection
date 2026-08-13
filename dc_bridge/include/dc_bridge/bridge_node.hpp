@@ -92,6 +92,11 @@ private:
   uploader::RetentionConfig retention_config_;
   std::vector<Storage> files_storages_;
 
+  // Thumbnails (#256) — the configured generator binary, kept for the uploader worker's
+  // "couldn't generate any previews" warning, which is the only place a failed preview
+  // is observable (it never fails the upload itself).
+  std::string thumbnail_binary_;
+
   // Raw / generic-subscription mode (#227) — created only when `raw.enabled` is true.
   // Its Records go out through the same Forwarder as the Measurement Records above,
   // under the `dc.raw.<topic>` Tag namespace routed to `raw.destination`.

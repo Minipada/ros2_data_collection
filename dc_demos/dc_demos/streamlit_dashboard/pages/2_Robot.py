@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from backend import PGSQLService, rustfs_client
+from backend import PGSQLService, gallery_url
 from config import Backend, Storage, config
 from lib import Section, resample
 from pages import Header, Sidebar
@@ -264,16 +264,19 @@ class CameraImages(Section):
 
                     raw_tab, rotated_tab, inspected_tab = st.tabs(["Raw", "Rotated", "Inspected"])
 
+                    # These three tabs are gallery grids — the case the Uploader's
+                    # optional thumbnails (#256) exist for. `gallery_url` serves the
+                    # `.thumb.jpg` preview when one was uploaded and the full-size File
+                    # otherwise, so the grid stays correct whether or not
+                    # `files.thumbnails` is enabled on the Bridge.
                     with raw_tab:
                         if self.storage == Storage.RUSTFS:
                             if len(df_images_camera_raw):
                                 cols = raw_tab.columns(3)
                                 for i in range(len(df_images_camera_raw)):
                                     cols[i % 3].image(
-                                        image=rustfs_client.get_presigned_url(
-                                            "GET",
-                                            config.RUSTFS_BUCKET,
-                                            df_images_camera_raw.loc[i, "Raw remote path"],
+                                        image=gallery_url(
+                                            df_images_camera_raw.loc[i, "Raw remote path"]
                                         ),
                                         caption=df_images_camera_raw.loc[i, "Date"],
                                     )
@@ -285,10 +288,8 @@ class CameraImages(Section):
                                 cols = rotated_tab.columns(3)
                                 for i in range(len(df_images_camera_rotated)):
                                     cols[i % 3].image(
-                                        image=rustfs_client.get_presigned_url(
-                                            "GET",
-                                            config.RUSTFS_BUCKET,
-                                            df_images_camera_rotated.loc[i, "Rotated remote path"],
+                                        image=gallery_url(
+                                            df_images_camera_rotated.loc[i, "Rotated remote path"]
                                         ),
                                         caption=df_images_camera_raw.loc[i, "Date"],
                                     )
@@ -300,12 +301,8 @@ class CameraImages(Section):
                             if len(df_images_camera_inspected):
                                 for i in range(len(df_images_camera_inspected)):
                                     cols[i % 3].image(
-                                        image=rustfs_client.get_presigned_url(
-                                            "GET",
-                                            config.RUSTFS_BUCKET,
-                                            df_images_camera_inspected.loc[
-                                                i, "Rotated remote path"
-                                            ],
+                                        image=gallery_url(
+                                            df_images_camera_inspected.loc[i, "Rotated remote path"]
                                         ),
                                         caption=df_images_camera_inspected.loc[i, "Date"],
                                     )
