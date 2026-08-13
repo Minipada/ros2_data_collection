@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <chrono>
+#include <thread>
+
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement_server.hpp"
 #include "dc_util/json_utils.hpp"
@@ -60,7 +63,7 @@ public:
   bool callback_active_{ false };
 };
 
-TEST_F(MeasurementMapTest, NoMapDataYieldsEmptyRecordWithoutCrashing)
+TEST_F(MeasurementMapTest, NoMapDataProducesNoPublish)
 {
   // Keep saves under the test's scratch dir rather than the real $HOME default, and keep
   // map_saver_cli's own wait for /map short in case it is actually installed.
@@ -73,12 +76,20 @@ TEST_F(MeasurementMapTest, NoMapDataYieldsEmptyRecordWithoutCrashing)
 
   startLifecycleNode();
 
-  while (!callback_active_)
+  // With no /map data ever published, every collect() cycle returns an empty StringStamped, and
+  // Measurement::publish() (measurement.hpp) drops empty messages outright (logs a WARN, never
+  // calls data_pub_->publish()) rather than publishing "{}" -- so the callback can never fire.
+  // Each real collect() cycle here costs ~1.3s (the map_saver_cli subprocess spawn + its 1s
+  // save_map_timeout), so the poll window is longer than the other plugins' 300ms to actually
+  // exercise a couple of cycles rather than trivially passing before the first one completes.
+  auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(4);
+  while (std::chrono::steady_clock::now() < deadline)
   {
     rclcpp::spin_some(ms_node_->get_node_base_interface());
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
   }
 
-  EXPECT_TRUE(data_json_.empty());
+  EXPECT_FALSE(callback_active_);
 }
 
 int main(int argc, char** argv)
