@@ -4227,6 +4227,63 @@ either would need the E2E harness (`tools/e2e/`) rather than a `colcon test` gte
 All 12 items of the #254 checklist (camera on the sibling branch/PR, these 11 here)
 are now covered; combined, both PRs should close #254 once merged.
 
+### #254 follow-up: real CI run on PR #329 (run 31653852372) — 6 failures, fixed
+
+The prediction above ("no local colcon, CI is the real gate") paid off: the first
+real CI run of these 11 tests found 6 failures the sandbox-only pre-commit pass
+couldn't have caught, since nothing loaded these plugin `.so`s before. Fixed in a
+follow-up commit on the same branch/PR (not a new PR, since the tests themselves
+were correct — the bugs were in the plugin build/CMakeLists and in one test's wrong
+assumption about a framework internal):
+
+- **cmd_vel and map dlopen-failed**: `undefined symbol: typeinfo for
+  YAML::BadConversion`. Neither plugin's `.so` actually linked yaml-cpp —
+  `yaml_cpp_vendor` (already in the shared `dependencies` list) only guarantees the
+  system package is installed via rosdep, it doesn't itself re-export a linkable
+  CMake target for `ament_target_dependencies` to pick up. Fixed with a separate
+  `find_package(yaml-cpp REQUIRED)` and `target_link_libraries(...,
+  yaml-cpp::yaml-cpp)` added to every measurement plugin (matching the existing
+  `nlohmann_json::nlohmann_json` / `nlohmann_json_schema_validator` explicit
+  `target_link_libraries` calls already in this file, which — in hindsight — were
+  working around the exact same class of gap, just for a different vendor
+  dependency, before this session ever touched the file).
+- **ip_camera dlopen-failed**: `undefined symbol: av_log_set_level` (libavutil, via
+  libavformat). `ffmpeg` is a `package.xml` `<depend>` but the CMakeLists never
+  actually linked it — headers happened to resolve at compile time (probably via
+  some other package's transitive include path), but the `.so` itself never got
+  `libavformat`/`libavutil` on its own `DT_NEEDED` list, so it built "successfully"
+  (shared libraries permit unresolved symbols at link time) and only failed at
+  dlopen. Fixed with `pkg_search_module(AVFORMAT REQUIRED libavformat)` /
+  `pkg_search_module(AVUTIL REQUIRED libavutil)`, linked into
+  `dc_ip_camera_measurement` specifically.
+- **storage's `MissingMandatoryPathDisablesTheMeasurement` test crashed the whole
+  binary** (exit code 255, `[FATAL] Can not get 'storage.path' param value"`):
+  wrong assumption carried over from the camera/network findings. Not every
+  onConfigure() failure is a catchable `std::runtime_error` — a genuinely missing
+  *mandatory* parameter goes through `dc_util::get_param_or_fatal()`, which calls
+  `exit(-1)` directly rather than throwing, so it takes the whole process down
+  (including the sibling test case that had already passed and reported `[ OK ]`
+  moments earlier in the same run). Removed the test; a real regression test for
+  that path would need a gtest death test in a suite of its own, out of scope here.
+- **position and distance_traveled's tf-broadcast happy-path tests hung** —
+  `canTransform`'s "frame does not exist" error repeated continuously for 250+
+  seconds in the CI log before the job presumably hit some outer timeout. Likely
+  cause: `tf2_ros::TransformListener` here spins on its *own* background thread
+  (`MeasurementServer`'s `on_configure()` constructs it from just a `Buffer&`, with
+  no explicit node/executor, so it defaults to spinning itself), and the tests'
+  retry loop was a tight `while(...) { broadcast(); spin_some(); }` with no yield —
+  plausible CPU starvation of that background thread on a constrained CI runner,
+  though unconfirmed without being able to attach a debugger to a real run. Added a
+  5ms `sleep_for` between iterations and, regardless of whether that fully fixes
+  the root cause, a 10-second deadline that fails the assertion with a clear
+  message (`ASSERT_LT` against a `steady_clock` deadline) instead of hanging the
+  whole CI job again if it doesn't.
+
+**Not done**: could not re-run `colcon test` locally to confirm these fixes before
+pushing (same sandbox constraint as every entry in this file) — the fix commit is
+informed reasoning from reading the CI log carefully, not verified execution.
+Watching the next CI run on PR #329 to confirm.
+
 ## #255: Test coverage epic (condition plugins) — remaining 13 plugins + list_string_equal
 
 **Context**: The `double_equal` item landed separately (see the entry above) and merged to
