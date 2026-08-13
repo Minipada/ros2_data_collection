@@ -2,6 +2,9 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_broadcaster.h>
 
+#include <chrono>
+#include <thread>
+
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement_server.hpp"
 #include "dc_util/json_utils.hpp"
@@ -86,14 +89,21 @@ TEST_F(MeasurementPositionTest, PublishesPoseFromTransform)
 
   // The very first collect() cycles may fire before the transform below is in the tf buffer,
   // yielding an empty Record ("{}"), which still gets published; keep broadcasting and
-  // resetting until a Record carrying "x" actually shows up.
+  // resetting until a Record carrying "x" actually shows up. tf2_ros::TransformListener spins
+  // on its own background thread (MeasurementServer never passed it an explicit node/executor,
+  // so it defaults to one); a short sleep between spins here gives that thread real scheduling
+  // opportunities instead of this loop busy-spinning a core out from under it.
   const double yaw = 1.5707963267948966;  // pi / 2
   bool got_position = false;
+  auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
   while (!got_position)
   {
+    ASSERT_LT(std::chrono::steady_clock::now(), deadline)
+        << "never observed a Record with \"x\" -- tf broadcast likely never reached the buffer";
     broadcastMapToBaseLink(2.0, 3.0, yaw);
     callback_active_ = false;
     rclcpp::spin_some(ms_node_->get_node_base_interface());
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
     if (callback_active_ && data_json_.contains("x"))
     {
       got_position = true;
