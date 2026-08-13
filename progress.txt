@@ -4131,6 +4131,102 @@ string_match) plus `list_string_equal` are untouched; following #254's precedent
 PR for this session uses "Contributes to #255" rather than "Closes #255" so the epic
 stays open for them.
 
+## #254: Test coverage epic (measurement plugins) — remaining 11 plugins
+
+**Read**: Continuation of the #254 epic (see the earlier "camera plugin" entry above,
+which covers the epic's background/rationale and is on a sibling branch/PR since it
+was done first). This session does the remaining 11 checklist items — cmd_vel,
+distance_traveled, ip_camera, memory, map, network, permissions, position, speed,
+storage, tcp_health — in a separate branch/worktree cut from `origin/jazzy` (not
+stacked on the unmerged camera branch), so this PR doesn't depend on the camera one
+merging first.
+
+**Added**: one `dc_measurements/test/test_measurement_<plugin>.cpp` per plugin,
+registered in `CMakeLists.txt`'s `tests` list, all following the same lifecycle-node
+pattern as the camera suite (and `test_measurement_diagnostics.cpp` before it):
+synthetic input published/broadcast on the plugin's subscribed topic or tf, output
+topic asserted against.
+
+- **cmd_vel** / **speed**: publish a `Twist` / `Odometry` with linear x=3,y=4, assert
+  the echoed `linear`/`angular` fields and `computed` (`sqrt(x²+y²)` = 5).
+- **memory**: no external input; asserts `used` is a 0–100 percentage (mirrors
+  `test_measurement_os.cpp`'s bounds check).
+- **position**: broadcasts a `map`→`base_link` tf via `tf2_ros::TransformBroadcaster`
+  at a known (x, y, yaw) and asserts the Record matches; a second test asserts an
+  empty `{}` Record (not a crash/hang) when no transform is ever published.
+- **distance_traveled**: same tf-broadcast pattern, asserting `distance_traveled` =
+  straight-line distance from the origin on the first fix (state starts at (0, 0)),
+  plus the same no-transform-yields-empty-Record test.
+- **storage**: asserts `free`/`capacity`/`free_percent` for `path=/tmp` are sane
+  (`0 <= free <= capacity`, `0 <= free_percent <= 100`); a second test asserts that
+  omitting the mandatory `path` parameter disables the measurement (no publish, no
+  crash) rather than propagating the exception.
+- **permissions**: creates a real scratch file, `chmod 644`s it, asserts `exists`,
+  `uid`/`gid` (against `getuid()`/`getgid()`), `user` (against `getpwuid()`), and
+  `permissions` in both `"int"` (`"644"`) and `"rwx"` (`"rw-r--r--"`) formats.
+- **tcp_health**: opens a real listening socket on an OS-assigned free port (via
+  `boost::asio`, binding to port 0) to assert `active=true`; a second test releases
+  that port before configuring the plugin to assert `active=false`.
+- **network**: only asserts the parts of the Record that are deterministic on any
+  host — `interfaces` contains `"lo"`, and `ping`/`online` have the right JSON types —
+  since whether the ICMP ping itself succeeds depends on `CAP_NET_RAW`/root privileges
+  and real network reachability, both of which vary by CI/sandbox environment; a
+  second test asserts an invalid `ping_address` disables the measurement rather than
+  crashing.
+- **map**: `Map::collect()` shells out to `ros2 run nav2_map_server map_saver_cli`,
+  which is not a `dc_measurements` rosdep and isn't guaranteed installed, and even if
+  it is, needs a live `/map` topic to save from. Only the deterministic path is
+  tested: no `/map` data published means `map_saver_cli` (if present) times out
+  quickly (`save_map_timeout=1.0`) or (if absent) the shell command fails
+  immediately — either way `collect()` degrades to an empty Record instead of
+  crashing or hanging the node.
+- **ip_camera**: `IpCamera::onConfigure()` spawns a detached background `ffmpeg`
+  process and `collect()` picks up finished HLS segments from disk; a real
+  happy-path test would need an actual video source. `input` is pointed at a
+  nonexistent local path so ffmpeg fails immediately (no hang, no real video), and
+  the test asserts no Record is ever published while the storage directory stays
+  empty.
+
+**Found** (documented in-line as code comments in the relevant test, same as the
+camera entry's `draw_det_barcodes` finding):
+- `DistanceTraveled::onConfigure()` (`distance_traveled.cpp`) declares
+  `transform_tolerance` but reads back `transform_timeout` via the non-throwing
+  `get_parameter(name, out)` overload, without ever declaring it — a pre-existing bug
+  already flagged in a `NOTE` comment in that file. Left undeclared,
+  `transform_timeout_` (a `float` member with no default initializer) keeps whatever
+  garbage happened to be on the stack: undefined behaviour, not a deterministic
+  default. The test declares `distance_traveled.transform_timeout` explicitly to
+  sidestep the UB rather than assert on it.
+- `IpCamera::onConfigure()`'s parameter validation for `save_path` — intended to
+  require the value start with `%` (a strftime format) — is inverted in a way that
+  makes the plugin's own default value (`"ffmpeg_%Y-%m-%dT%H:%M:%S"`, which does
+  *not* start with `%`) fail validation and throw, silently disabling the
+  measurement via the base class's catch-and-disable path. With no override, the
+  `ip_camera` measurement never activates at all under its own shipped defaults. The
+  test overrides `save_path` to work around this and exercise the intended
+  "ffmpeg produced no segment yet" path instead. Both of these are pre-existing bugs
+  outside this issue's scope (test coverage only) — worth their own follow-up
+  issues, same as the `transform_tolerance`/`transform_timeout` one already flagged
+  in-repo.
+
+**Not done / left for follow-up**: same sandbox constraint as every prior entry — no
+local `colcon`/ROS install here, so `colcon test` could not be run directly; CI
+(`tools/e2e/scripts/test.sh`) is the real gate. Verified via `pre-commit`
+(`clang-format`, applied cleanly) and a manual read-through of each plugin's
+`onConfigure()`/`collect()` against the base `Measurement`/`MeasurementServer`
+classes' parameter-default and publish/empty-message-drop behaviour (established
+while writing the camera suite) to reason through each test's expected outcome.
+`black` again reformatted the unrelated `tools/e2e/scripts/verify_zero_loss.py` as a
+side effect of running pre-commit against the whole repo — reverted before
+committing, same as every prior entry. `map` and `ip_camera` only cover the
+"no data yet" idle path, not a real successful map-save or video-segment happy path
+— genuinely infeasible to exercise deterministically in a sandboxed unit test
+(no live `/map` publisher, no live camera stream, and `map_saver_cli`'s
+availability in the real CI container is unconfirmed); a real happy-path test for
+either would need the E2E harness (`tools/e2e/`) rather than a `colcon test` gtest.
+All 12 items of the #254 checklist (camera on the sibling branch/PR, these 11 here)
+are now covered; combined, both PRs should close #254 once merged.
+
 ## #255: Test coverage epic (condition plugins) — remaining 13 plugins + list_string_equal
 
 **Context**: The `double_equal` item landed separately (see the entry above) and merged to
