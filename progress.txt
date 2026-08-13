@@ -4130,3 +4130,115 @@ list_bool_equal, list_integer_equal, list_double_equal, moving, same_as_previous
 string_match) plus `list_string_equal` are untouched; following #254's precedent, the
 PR for this session uses "Contributes to #255" rather than "Closes #255" so the epic
 stays open for them.
+
+## #255: Test coverage epic (condition plugins) — remaining 13 plugins + list_string_equal
+
+**Context**: The `double_equal` item landed separately (see the entry above) and merged to
+`jazzy` before this session continued. Once merged, this worktree's branch was reset onto
+fresh `origin/jazzy` (a new branch, `feature/255-condition-plugins-remaining`) to avoid
+duplicating already-merged commits, and work continued from there rather than one-task-per-run:
+the user explicitly asked for the whole epic ("we need to test all, no?"), overriding
+`CLAUDE.md`'s default one-task-per-run convention for this interactive session.
+
+**Read**: The remaining 13 checklist items (bool_equal, double_inferior, double_superior,
+exist, integer_equal, integer_inferior, integer_superior, list_bool_equal, list_double_equal,
+list_integer_equal, moving, same_as_previous, string_match) plus `list_string_equal` (called
+out in the issue body as missing from the original #158–#171 list). Read every plugin's
+source/header before writing its test, plus `dc_core/condition.hpp`, `dc_measurements/
+condition.hpp`, and `measurement.hpp`'s `isConditionOn()`/`isGateArmed()`/`publish()` (already
+read for the `double_equal` session) to confirm `getState(msg)` always receives the *gated
+Measurement's own* just-collected Record, not an independent input.
+
+**Verified for real, not just read-through**: this machine has `localhost/dc-workspace:latest`
+(and `dc-e2e:latest`), the same Podman image `tools/e2e/scripts/build.sh`/`test.sh` build/use
+for CI, already built (~24h old at session start). Rather than relying on a manual read-through
+(the constraint every prior test-coverage session in this log hit — no local colcon/ROS
+install), this session mounted the current worktree over `/root/ws/src/ros2_data_collection`
+inside a container from that image and ran real `colcon build --packages-select
+dc_measurements` + `colcon test --packages-select dc_measurements` + `colcon test-result
+--all --verbose`, redirecting output to files on the host (`/tmp/.../dc-test-logs/`) instead of
+piping through `tail`, which was tried first and silently truncated colcon's carriage-return-
+heavy progress output into something misleading. Each full cycle (mounting invalidates every
+file's mtime, forcing a nearly-full rebuild of `dc_measurements` even for a one-line change)
+took 15–27 minutes; this session ran it three times as tests and fixes iterated, landing at
+**26/26 `dc_measurements` tests passing, 0 failures** on the final run.
+
+**Found — real, previously-undiscovered production bugs, not test artifacts** (all confirmed
+by the container run actually failing/hanging before the fix, and passing after):
+
+- `condition_plugin.xml`: `ListStringEqual`'s and `StringMatch`'s `<library path>` didn't match
+  their actual built library name (`dc_list_bool_string_condition` vs the real
+  `dc_list_string_equal_condition`; `dc_str_match_condition` vs the real
+  `dc_string_match_condition`). pluginlib could never load either — both conditions were 100%
+  non-functional in any real deployment. A systematic diff of every CMake `add_library` name
+  against every XML `<library path>` confirmed these were the only two mismatches. Fixed both.
+- `integer_equal.cpp`/`integer_inferior.cpp`/`integer_superior.cpp`: checked `flat_json[key]
+  .type() != json::value_t::number_integer`, but nlohmann::json parses *non-negative* integer
+  literals — the overwhelmingly common case — as `number_unsigned`, not `number_integer`; only
+  negative integers ever satisfied the check. `list_integer_equal.cpp` already used the correct
+  `is_number_integer()` (which covers both representations); switched the other three to match.
+- `list_bool_equal.cpp`/`list_integer_equal.cpp`/`list_double_equal.cpp`/`list_string_equal
+  .cpp`: all looked up their key via `data_json.flatten()` then `flat_json.contains("/key")`.
+  `flatten()` explodes JSON arrays into indexed keys (`/key/0`, `/key/1`, ...), so an
+  array-valued `/key` — the *one* value type these conditions exist to compare — could never be
+  found; every "list equals" condition was completely non-functional for its sole purpose.
+  Replaced with `json::json_pointer` lookup (`contains(ptr)`/`at(ptr)`) directly on the
+  unflattened JSON, which resolves nested paths the same way flatten()'s keys did while leaving
+  array values intact.
+- `exist.cpp`: `key_w_prefix = "/" + key_ + "/"` (trailing slash) only matches a flattened key
+  that has *descendants* under that path; a plain scalar leaf like `{"level": 5.5}` flattens to
+  exactly `/level` (no trailing slash), so `Exist` could never detect existence of an ordinary
+  top-level scalar field — only of a path with nested children underneath it. Added an
+  exact-match fallback (`x.key() == key_exact || x.key().rfind(key_w_prefix, 0) == 0`) alongside
+  the existing prefix check.
+- `list_integer_equal.cpp`/`list_double_equal.cpp` (fixed in this session before the container
+  run even started, from reading the source): the `order_matters_=false` "reset to inactive"
+  branch read `else if (!order_matters_ && data == value_)` — a duplicate of the `if`'s
+  condition instead of its negation (`data != value_`) — making it unreachable dead code; once
+  matched, the condition stayed stuck `active_=true` forever regardless of later Records. Fixed
+  to `!=`, confirmed the sibling `list_bool_equal.cpp`/`list_string_equal.cpp` already had it
+  right.
+
+**Found and deliberately left alone**: `dc_conditions::BoolEqual` has the same class of bug
+(`value_` is `double` despite the "value" parameter being declared `PARAMETER_BOOL`) — but
+`bool_equal.cpp`'s own NOTE comment says this was deliberately deferred past #178 ("worth its
+own follow-up") rather than fixed inline, so this session respected that and did not fix it
+either. `test_measurement_bool_equal.cpp` instead documents the actual, verified behavior: a
+direct pluginlib-loaded `configure()` throws `rclcpp::exceptions::InvalidParameterTypeException`
+(confirmed by the container run's exact error: `parameter 'bool_eq.value' has invalid type:
+expected [double] got [bool]`); through the full `MeasurementServer` lifecycle, the same
+exception is instead caught by `rclcpp_lifecycle`'s transition machinery and converted to a
+failed `configure()` transition rather than propagating (also confirmed empirically — the first
+container run's assumption that it *would* propagate was wrong and had to be corrected once the
+real log showed "Callback returned ERROR during the transition: configure" with no thrown
+exception reaching the test). A maintainer should open the dedicated follow-up issue the NOTE
+already calls for.
+
+**Added**: 14 new test files under `dc_measurements/test/` (one per remaining plugin +
+`list_string_equal`), registered alphabetically in `CMakeLists.txt`. Every file follows
+`test_measurement_double_equal.cpp`'s pattern (a `dummy` Measurement gated by `if_all_conditions`,
+`init_max_measurements: -1` + `condition_max_measurements: 0` to route every collection through
+the condition check instead of the unconditional init-publish path) with 2–4 tests per plugin
+covering match/mismatch/missing-key/type-strictness as applicable to that plugin's own
+semantics (superior/inferior `include_value` boundary, list `order_matters` ordered vs.
+sorted-unordered comparison, `moving`'s hysteresis counter needing the *full* band swing to
+flip back — not just `count_hysteresis` messages from a neutral start, a bug in this session's
+own first draft of that test, caught and fixed before the final container run). Two files use
+direct pluginlib loading instead of the dummy-Measurement harness where the dummy's static
+`record` parameter can't produce what the test needs: `list_integer_equal`'s and
+`list_double_equal`'s regression tests need two *different* Records fed to the *same* Condition
+instance over time (to prove the sticky-active fix), and `bool_equal`'s only observable behavior
+is a `configure()`-time failure, not a Record-driven activation outcome.
+
+**Not done**: `same_as_previous`'s "an actually-changed Record deactivates it again" transition
+isn't covered — a Dummy Measurement's `record` param is read once at `onConfigure()` and never
+re-read per poll, so there's no existing Measurement plugin whose output can be made to change
+between polls without a deeper harness change; only "first collection is always suppressed" and
+"a Record that never changes stays active from the second collection on" are covered. Flagged
+in the test file's own header comment rather than left silent.
+
+**Verified**: `pre-commit` (`clang-format` — clean on every changed/new file; `codespell` clean)
+plus the real container build+test run described above as the primary gate (stronger than any
+prior session in this log, which were all constrained to read-through + `clang-format` only).
+`black` reformatted `tools/e2e/scripts/verify_zero_loss.py` again as a side effect of running
+pre-commit against the whole repo — reverted before committing, same as every prior entry.
