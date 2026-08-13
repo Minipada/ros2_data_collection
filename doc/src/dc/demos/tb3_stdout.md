@@ -14,11 +14,14 @@ Since RViz is pretty verbose, using 2 terminal windows will help reading the JSO
 In each, terminal, source your environment and setup turtlebot configuration:
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-export TURTLEBOT3_MODEL=waffle
 ```
+
+Nothing else has to be exported. Nav2's own `nav2_minimal_tb3_sim` ships the world, the
+robot and its `ros_gz_bridge` config, and puts them on `GZ_SIM_RESOURCE_PATH` itself —
+the Gazebo Classic `GAZEBO_MODEL_PATH` and `TURTLEBOT3_MODEL` variables are gone along
+with Classic.
 
 ## Start Navigation
 
