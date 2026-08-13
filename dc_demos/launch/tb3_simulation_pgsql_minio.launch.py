@@ -13,7 +13,6 @@ def generate_launch_description():
     # Get the launch directory
     demos_dir = get_package_share_directory("dc_demos")
     dc_bringup_dir = get_package_share_directory("dc_bringup")
-    nav2_bringup_dir = get_package_share_directory("nav2_bringup")
 
     # Data Collection
     dc_params_file = LaunchConfiguration("dc_params_file")
@@ -25,42 +24,6 @@ def generate_launch_description():
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
     group_node = LaunchConfiguration("group_node")
-
-    declare_slam_cmd = DeclareLaunchArgument(
-        "slam", default_value="False", description="Whether run a SLAM"
-    )
-
-    declare_map_yaml_cmd = DeclareLaunchArgument(
-        "map",
-        default_value=os.path.join(nav2_bringup_dir, "maps", "turtlebot3_world.yaml"),
-        description="Full path to map file to load",
-    )
-
-    declare_use_namespace_cmd = DeclareLaunchArgument(
-        "use_namespace",
-        default_value="False",
-        description="Whether to apply a namespace to the navigation stack",
-    )
-
-    declare_simulator_cmd = DeclareLaunchArgument(
-        "headless", default_value="True", description="Whether to execute gzclient"
-    )
-
-    declare_rviz_config_file_cmd = DeclareLaunchArgument(
-        "rviz_config_file",
-        default_value=os.path.join(nav2_bringup_dir, "rviz", "nav2_default_view.rviz"),
-        description="Full path to the RVIZ config file to use",
-    )
-
-    declare_world_cmd = DeclareLaunchArgument(
-        "world",
-        # TODO(orduno) Switch back once ROS argument passing has been fixed upstream
-        #              https://github.com/ROBOTIS-GIT/turtlebot3_simulations/issues/91
-        # default_value=os.path.join(get_package_share_directory('turtlebot3_gazebo'),
-        # worlds/turtlebot3_worlds/waffle.model')
-        default_value=os.path.join(nav2_bringup_dir, "worlds", "world_only.model"),
-        description="Full path to world model file to load",
-    )
 
     # DC
     declare_namespace_cmd = DeclareLaunchArgument(
@@ -107,15 +70,6 @@ def generate_launch_description():
         "log_level", default_value="info", description="log level"
     )
 
-    declare_use_simulator_cmd = DeclareLaunchArgument(
-        "use_simulator",
-        default_value="True",
-        description="Whether to start the simulator",
-    )
-
-    declare_use_rviz_cmd = DeclareLaunchArgument(
-        "use_rviz", default_value="True", description="Whether to start RVIZ"
-    )
     declare_group_node = DeclareLaunchArgument(
         "group_node", default_value="False", description="Start group_node"
     )
@@ -137,12 +91,19 @@ def generate_launch_description():
         }.items(),
     )
 
+    # This launch file starts DC only -- Nav2 and the simulator are launched
+    # separately (see the demo page). It used to also declare slam / map / world /
+    # headless / use_simulator / use_rviz / rviz_config_file / use_namespace, none
+    # of which it ever read: they were advertised by `--show-args` as if they
+    # controlled something, and their defaults pointed at
+    # nav2_bringup/worlds/world_only.model and nav2_bringup/maps/turtlebot3_world.yaml,
+    # both of which Jazzy's nav2_bringup no longer ships (#279).
+
     # Create the launch description and populate
     ld = LaunchDescription()
 
     # Declare the launch options
     ld.add_action(declare_namespace_cmd)
-    ld.add_action(declare_use_namespace_cmd)
     ld.add_action(declare_use_sim_time_cmd)
     ld.add_action(declare_dc_params_file_cmd)
     ld.add_action(declare_autostart_cmd)
@@ -151,15 +112,7 @@ def generate_launch_description():
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
 
-    ld.add_action(declare_slam_cmd)
-    ld.add_action(declare_map_yaml_cmd)
-    ld.add_action(declare_simulator_cmd)
-    ld.add_action(declare_use_simulator_cmd)
-    ld.add_action(declare_use_rviz_cmd)
-    ld.add_action(declare_world_cmd)
     ld.add_action(declare_group_node)
-
-    ld.add_action(declare_rviz_config_file_cmd)
 
     # Declare the launch options
     ld.add_action(dc_bringup_cmd)
