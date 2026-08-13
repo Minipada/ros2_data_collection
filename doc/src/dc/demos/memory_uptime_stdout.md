@@ -16,7 +16,7 @@ ros2 launch dc_demos group_memory_uptime_stdout.launch.py
 [component_container_isolated-1] [{"memory":{"used":71.82553863525391},"date":1677673417.869207,"uptime":{"time":96906},"run_id":"221"}]
 ```
 
-This launchfile is a wrapper of [dc_bringup/launch/bringup.launch.py](https://github.com/Minipada/ros2_data_collection/blob/humble/dc_bringup/launch/dc_bringup.launch.py) which loads a [custom yaml configuration](https://github.com/Minipada/ros2_data_collection/blob/humble/dc_demos/params/group_memory_uptime_stdout.yaml)
+This launchfile is a wrapper of [dc_bringup/launch/bringup.launch.py](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_bringup/launch/dc_bringup.launch.py) which loads a [custom yaml configuration](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/group_memory_uptime_stdout.yaml)
 
 ```admonish info
 Note that here the group node is started. It is one parameter in the launchfile to enable it. In the [uptime demo](./uptime_stdout.md), it is disabled by default because it is not used.
