@@ -4891,3 +4891,52 @@ Both issues turned out to be already fixed, or nearly so, by the work above:
   `<pose>0.069 -0.047 0.407 …</pose>`) while the URDF places them at y = ±0.12 — a
   pre-existing mismatch between what renders the images and what publishes the frames, and
   a candidate for #51's alignment symptom. Not touched here.
+
+## Untracked Jazzy leftovers, fixed alongside #279 (no issue of their own)
+
+Found by auditing what else the Gazebo Harmonic port left behind — none of these had an
+issue, and all are the same failure mode #279 hit: a path into a package Jazzy
+reorganised, failing silently at runtime rather than at build time.
+
+- **The three `tb3_simulation_*` launch files declared eight arguments they never read**
+  (`slam`, `map`, `world`, `headless`, `use_simulator`, `use_rviz`, `rviz_config_file`,
+  `use_namespace`). These files start DC only — Nav2 and the simulator are launched
+  separately per the demo page — but `--show-args` advertised them as if they controlled
+  something, and two of their defaults pointed at `nav2_bringup/worlds/world_only.model`
+  and `nav2_bringup/maps/turtlebot3_world.yaml`, neither of which Jazzy's `nav2_bringup`
+  still ships (the worlds moved to `nav2_minimal_tb3_sim`, the map is now
+  `tb3_sandbox.yaml`). All eight removed; the files now advertise the eleven they use.
+- **The two AWS-warehouse demos could not be fixed mechanically.** Their docs ran Gazebo
+  Classic against `aws_robomaker_small_warehouse_world`, which has no Jazzy release at
+  all, and their Camera measurement named `/intel_realsense_r200_depth/image_raw` — a
+  topic that cannot exist on Jazzy, because nav2's sandbox waffle carries a 320x240
+  **depth-only** sensor with no `<topic>` and no RGB camera. Asked which world they
+  should run on; the call was `dc_simulation`'s warehouse, which this branch has just
+  fixed and verified and which vendors the same AWS RoboMaker props. Both demos now
+  point at `tb3_qrcodes.launch.py use_dc:=False` and at
+  `/left_intel_realsense_r200_depth/image_raw`, which was measured carrying 1280x720
+  `rgb8` frames with essentially every byte non-zero. Their Camera measurement runs with
+  `draw_det_barcodes: false` and `save_raw_img: true`, so it emits a Record every poll
+  regardless of what is in view — unlike the qrcodes demo's, which only emits on a
+  detection.
+- **Docs**: `tb3_stdout.md`, `tb3_aws_minio_pgsql.md` and `tb3_aws_influxdb.md` sourced
+  `/opt/ros/humble` and exported `GAZEBO_MODEL_PATH`/`GAZEBO_RESOURCE_PATH`/
+  `TURTLEBOT3_MODEL`, none of which exist post-Classic; `uptime_stdout.md` and
+  `memory_uptime_stdout.md` linked source files on the frozen `humble` branch (all five
+  link targets verified to exist at the `jazzy` paths).
+- **`dc_services` and `dc_simulation` were still `package format="2"`.**
+
+**Not done, deliberately**: the Python pins (`requirements.txt` / `pyproject.toml`) are
+2023-era — numpy 1.24, opencv 4.7, pillow 9.4, pydantic 1.10, streamlit 1.21. pydantic
+1.x is the one that matters, and it is fine today precisely because Noble ships
+`python3-pydantic` 1.10.14, which is what `dc_services` now resolves against; moving to
+pydantic 2 means rewriting `draw_image.py`'s models. Bumping the rest means regenerating
+`poetry.lock` through a `poetry-requirements` hook that is broken in this environment.
+Left for a deliberate dependency-refresh pass.
+
+**Verified**: all five launch files load under `ros2 launch --show-args` in the workspace
+image; `/left_intel_realsense_r200_depth/image_raw` confirmed live from
+`warehouse.launch.py`; every rewritten `blob/jazzy` doc link resolves to a file that
+exists. `pre-commit` clean on all changed files bar the environment's pre-existing
+`pycln`/`poetry-requirements` breakage and the `verify_zero_loss.py` black side effect,
+reverted as always.

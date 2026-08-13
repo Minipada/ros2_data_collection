@@ -187,7 +187,10 @@ measurement_server:
       init_max_measurements: 0
       polling_interval: 3000
       node_name: "dc_measurement_camera"
-      cam_topic: "/intel_realsense_r200_depth/image_raw"
+      # dc_simulation's warehouse robot. Nav2's own sandbox waffle, which this
+      # demo used to run against, carries a 320x240 depth-only sensor and no RGB
+      # camera at all on Jazzy -- there was no topic here to subscribe to (#279).
+      cam_topic: "/left_intel_realsense_r200_depth/image_raw"
       cam_name: "Intel Realsense"
       enable_validator: true
       draw_det_barcodes: false

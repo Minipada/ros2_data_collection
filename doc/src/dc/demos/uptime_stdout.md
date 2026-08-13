@@ -17,7 +17,7 @@ At the end, the data is displayed:
 [component_container_isolated-1] [{"date":1677668926.700422,"time":92415,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}]
 ```
 
-This launchfile is a wrapper of [dc_bringup/launch/bringup.launch.py](https://github.com/Minipada/ros2_data_collection/blob/humble/dc_bringup/launch/dc_bringup.launch.py) which loads a [custom yaml configuration](https://github.com/Minipada/ros2_data_collection/blob/humble/dc_demos/params/uptime_stdout.yaml)
+This launchfile is a wrapper of [dc_bringup/launch/bringup.launch.py](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_bringup/launch/dc_bringup.launch.py) which loads a [custom yaml configuration](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/uptime_stdout.yaml)
 
 ## Configuration
 ### Measurement
@@ -54,7 +54,7 @@ measurement_server:
 
 **uptime.polling_interval (Optional)**: Interval to which data is collected in milliseconds
 
-**uptime.enable_validator (Optional)**: Will validate the data against a JSON schema. This file is located in the [dc_measurements package](https://github.com/Minipada/ros2_data_collection/tree/humble/dc_measurements/plugins/measurements/json). You can provide your own using the `json_schema_path` parameter, which we will explore later on
+**uptime.enable_validator (Optional)**: Will validate the data against a JSON schema. This file is located in the [dc_measurements package](https://github.com/Minipada/ros2_data_collection/tree/jazzy/dc_measurements/plugins/measurements/json). You can provide your own using the `json_schema_path` parameter, which we will explore later on
 
 **uptime.debug (Optional)**: More verbose output
 

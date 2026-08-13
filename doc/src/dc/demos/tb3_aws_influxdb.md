@@ -59,45 +59,42 @@ cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/tb3_simulation_influxdb_si
 `dc_params_file`'s `custom_config_files` (see below) points at this path.
 
 ### Setup simulation environment
-In the terminal 1, source your environment, setup turtlebot configuration:
+In the terminal 1, source your environment:
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-export GAZEBO_RESOURCE_PATH=${PWD}/src/aws-robomaker-small-warehouse-world/
-export TURTLEBOT3_MODEL=waffle
-source /usr/share/gazebo/setup.bash
 ```
 
-Verify the gazebo world can be loaded properly:
-
-```bash
-gazebo /opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/no_roof_small_warehouse/no_roof_small_warehouse.world
-```
-
-Gazebo will start with the warehouse environment. You can close it now.
+Nothing else has to be exported. `dc_simulation` puts its own models and worlds on
+`GZ_SIM_RESOURCE_PATH` through its environment hook.
 
 ```admonish info
-
-I believe requiring the source along with those export are needed because of [this issue](https://github.com/aws-robotics/aws-robomaker-small-warehouse-world/issues/22)
+This demo used to run `aws_robomaker_small_warehouse_world` under Gazebo Classic. That
+package has no Jazzy release — its own jazzy branch still hard-depends on `gazebo_ros`,
+which was never published for Jazzy. The warehouse now comes from `dc_simulation`
+instead, which vendors the same AWS RoboMaker props (shelves, clutter, trash cans) into
+a gz-sim world of its own.
 ```
 
 ## Terminal 1: Start Navigation
 
-Then, in the same terminal (1), start the Turtlebot launchfile:
+Then, in the same terminal (1), start the simulation and Nav2. DC comes up separately in
+terminal 2, so turn it off here:
 
 ```bash
-ros2 launch nav2_bringup tb3_simulation_launch.py \
-    world:=/opt/ros/humble/share/aws_robomaker_small_warehouse_world/worlds/no_roof_small_warehouse/no_roof_small_warehouse.world \
-    map:=/opt/ros/humble/share/aws_robomaker_small_warehouse_world/maps/005/map.yaml \
+ros2 launch dc_demos tb3_qrcodes.launch.py \
     headless:=False \
-    x_pose:=3.45 \
-    y_pose:=2.15 \
-    yaw:=3.14
+    use_dc:=False
 ```
 
-RViz and Gazebo will start: now you see the robot in Gazebo, and the map on RViz.
+RViz and gz-sim will start: now you see the robot in the warehouse, and the map on RViz.
+AMCL sets the initial pose itself, so there is no need to click "2D Pose Estimate".
+
+```admonish warning
+The warehouse world is heavy — 317 model instances. Expect a slow start and a real-time
+factor well under 1 without a GPU; see `dc_simulation/README.md` for measured numbers.
+```
 
 ![RViz](../../images/demos-tb3_aws_minio_pgsql-rviz-1.png)
 ![Gazebo](../../images/demos-tb3_aws_minio_pgsql-gz-1.png)
