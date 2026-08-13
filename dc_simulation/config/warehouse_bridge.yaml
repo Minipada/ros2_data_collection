@@ -44,8 +44,13 @@
   gz_type_name: "gz.msgs.LaserScan"
   direction: GZ_TO_ROS
 
+# JointStatePublisher's <topic> in waffle.model overrides gz-sim's default
+# /world/<world>/model/<model>/joint_state. gz advertises that default name anyway but
+# never publishes on it, so bridging it produced a permanently silent /joint_states
+# (#279/#324). Bridging the plugin's own topic also drops this file's only dependency
+# on the world and model names, which renaming either used to break silently.
 - ros_topic_name: "joint_states"
-  gz_topic_name: "/world/warehouse/model/turtlebot3_waffle/joint_state"
+  gz_topic_name: "/joint_states"
   ros_type_name: "sensor_msgs/msg/JointState"
   gz_type_name: "gz.msgs.Model"
   direction: GZ_TO_ROS

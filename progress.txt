@@ -1819,20 +1819,25 @@ first) and pasting back the console output. Two things worth recording:
   variants, not just the 8 used in `qrcodes.world`, for consistency) — same treatment
   as the placeholder-model fixes above: a missing/misplaced asset the migration's
   stricter loader surfaced, not a gazebo_ros-specific issue.
-- **Investigated, not a bug in our content**: `[Err] [UserCommands.cc:928] Error Code
-  2: Msg: collision with name[collision] already exists` (×2, un-tagged — i.e. from the
-  server's own log stream, not the `[GUI]`-tagged one). Reproduced this deliberately
-  across four fresh container runs to isolate the trigger: **server-only** (`gz sim -s
-  -r`) loads of the exact same `qrcodes.world` — both in the original #268 verification
-  pass and again here — are consistently clean, zero `[Err]` lines. Runs **with the GUI**
-  attached (`gz sim -r`, which is what `warehouse.launch.py` uses by default and what
-  the user's own run used) consistently reproduce the same two errors, matching what the
-  user saw. Not chased further into gz-sim's own C++ (would need instrumenting
-  gz-sim itself, not this repo) — but confirmed non-fatal either way: the world loads,
-  physics runs, the robot spawns, and topics/bridge all work identically regardless of
-  whether these two lines print. Recorded here so a future session doesn't re-diagnose
-  from scratch — the fix, if one is ever wanted, is in gz-sim's `UserCommands`/GUI-attach
-  path, not in `dc_simulation`'s own SDF content.
+- **CORRECTED BY #279/#324 — the paragraph below was wrong, and is kept only so the
+  wrong conclusion is visibly retracted rather than silently replaced.** `[Err]
+  [UserCommands.cc:928] Error Code 2: Msg: collision with name[collision] already
+  exists` is *not* a GUI-attach quirk of gz-sim and it is *not* non-fatal: it is
+  `dc_simulation/worlds/waffle.model` declaring two `<collision name="collision">`
+  blocks inside each of `left_camera_link` and `right_camera_link` — a copy-paste
+  duplicate that is illegal SDF. gz-sim 8.11 rejects the whole spawn over it, so the
+  robot was never in the world at all and `gz model --list` showed only `ground_plane`,
+  `warehouse` and the props. The claim "the robot spawns, and topics/bridge all work
+  identically" was never verified against `gz model --list` or a `/cmd_vel` round trip;
+  it was inferred from the world loading. Both duplicates are removed in #279.
+  ~~Investigated, not a bug in our content: … Reproduced this deliberately across four
+  fresh container runs to isolate the trigger: server-only (`gz sim -s -r`) loads of the
+  exact same `qrcodes.world` are consistently clean, zero `[Err]` lines. Runs with the
+  GUI attached consistently reproduce the same two errors. Not chased further into
+  gz-sim's own C++ — but confirmed non-fatal either way: the world loads, physics runs,
+  the robot spawns, and topics/bridge all work identically. The fix, if one is ever
+  wanted, is in gz-sim's `UserCommands`/GUI-attach path, not in `dc_simulation`'s own
+  SDF content.~~
 
 ### #271 - tools/e2e: aws-sdk-cpp clone pulls unneeded submodules + full workspace
 layer invalidates on every source change
@@ -4798,18 +4803,75 @@ publish. Detection itself is *not* yet demonstrated, and one blocker is now visi
 the pipeline up (see below), so #51 keeps its "several consecutive runs" acceptance
 criterion and stays open, with a much narrower search space.
 
+### Correction: the "Camera plugin receives nothing" finding was wrong
+
+A first pass through this concluded that `dc_measurements`' Camera plugin never received
+images, on the strength of a "Message empty from measurement right_camera" warning
+repeating at the polling rate while the topic was demonstrably publishing. **That was a
+misdiagnosis**, and it is recorded here because the misleading log line is the trap.
+
+Reproduced away from the simulator entirely — plain `rclpy` publisher into
+`dc_bringup` + `qrcodes_stdout.yaml`, no gz-sim — then instrumented `camera.cpp` with
+temporary logging in `cameraCb` and `collect()`. The result:
+
+    DBG[right_camera] subscribed node=measurement_server resolved=/right_intel_realsense_r200_depth/image_raw
+    DBG[left_camera] cameraCb fired, 921600 bytes
+    DBG[right_camera] collect() last_data_=921600 bytes
+
+The subscription fires and `collect()` sees the image. "Message empty" is not about the
+image at all — it is `measurement.hpp` reporting that `collect()` returned an empty
+**Record**, which for a Camera with `detection_modules: ["barcode"]`,
+`save_raw_img: false` and `save_rotated_img: false` is exactly what happens on every
+frame with no barcode in view. Nothing is added to `data_json`, so `collect()` returns an
+empty message by design. Both the earlier sim run (robot parked at its spawn pose,
+nothing in front of it) and the blank synthetic frames were legitimately empty.
+
+Proven positively by publishing the demo's own QR-code texture
+(`models/qrcode_0001/meshes/qrcode_0001.png`) on both camera topics: a full Record came
+out the far end of dc_bridge/Vector —
+
+    {"camera_name":"right_camera", ...
+     "inspected":{"barcode":[{"data":"0001","type":"QRCode","top":220,"left":245,
+                              "width":210,"height":210}]},
+     "local_paths":{"inspected":"/root/dc_data/r2d2/.../right_camera/inspected/....jpg"}}
+
+— with the inspected image written to disk. The camera path works end to end: bridge ->
+Camera measurement -> ZXing decode -> draw_image service -> Record -> Vector.
+
+The one real defect here is the log line, which fires once per poll for an entirely
+normal condition and reads like a broken pipeline. It is now throttled to once per 10 s
+and reworded ("No data collected from measurement X (nothing to report, or it is not
+receiving input)").
+
+### Also fixed, from #324 and #325 (same files, same class of bug)
+
+Both issues turned out to be already fixed, or nearly so, by the work above:
+
+- **#324 — the robot never spawned at all.** The duplicate `<collision name="collision">`
+  in each camera link, removed above, is illegal SDF; gz-sim 8.11 rejects the whole spawn
+  over it. progress.txt's #268 entry had recorded this error as a harmless GUI-attach
+  quirk of gz-sim and asserted "the robot spawns" without ever checking
+  `gz model --list`; that entry is corrected in place, as #324 asks.
+  All its acceptance criteria now verified: zero `collision with name` errors in the
+  launch log, `gz model --list` contains `turtlebot3_waffle`, and a `/cmd_vel`
+  round trip moves the robot **0.679 m**.
+- **`/joint_states` was permanently silent** — found while checking #324's topic-rate
+  criterion. `waffle.model`'s JointStatePublisher sets `<topic>joint_states</topic>`,
+  overriding gz-sim's default `/world/<world>/model/<model>/joint_state`; gz advertises
+  that default anyway but never publishes on it, and the bridge was listening to exactly
+  that. Bridging `/joint_states` instead also removes this config's only dependence on
+  the world and model names. `/odom` 3.1 Hz, `/tf` 3.0 Hz, `/joint_states` 85.8 Hz,
+  `/imu` 16.3 Hz.
+- **#325 — headless rendering works, and always did once gz-sim stopped aborting.** The
+  lidar near-clip fix above is what was killing the server. In the CI container, with no
+  GPU and no X server, ogre2 falls back to headless mode by itself: `/scan` gives 360
+  beams, all finite and in range, 0.40-11.74 m; both cameras give 1280x720 rgb8 frames
+  with essentially every byte non-zero. The real cost is speed, now documented with
+  measured numbers in a new `dc_simulation/README.md`, along with the three gz-sim traps
+  this port hit (nested `<static>`, zero lidar near clip, duplicate collision names).
+
 ### Left open deliberately
 
-- **`dc_measurements`' Camera plugin receives nothing from a topic that is demonstrably
-  publishing.** With DC enabled, `measurement_server` subscribes to
-  `/right_intel_realsense_r200_depth/image_raw` (confirmed: it is the topic's only
-  subscriber, RELIABLE on both ends), the bridge publishes it at a steady 5 Hz sim rate
-  (confirmed by `ros2 topic echo`: stamps 85.0, 85.2, 85.4, 85.6…), and yet
-  `camera.cpp`'s `cameraCb` never fires — `collect()` keeps finding `last_data_.data`
-  empty and logs "Message empty from measurement right_camera" indefinitely. This is
-  independent of the topic *rename* (the params already named these topics) and sits in
-  `dc_measurements`, not in the demo's launch path; it is the next thing #51 should look
-  at.
 - **`dc_services` needed `pydantic`, `cv_bridge` and `opencv` declared.** `draw_image` died
   on `ModuleNotFoundError: No module named 'pydantic'` in the workspace image, and every
   Camera measurement with `draw_det_barcodes: true` then blocked on "Waiting for draw image
@@ -4817,6 +4879,10 @@ criterion and stays open, with a much narrower search space.
   which the image does not install — it resolves dependencies through rosdep. Declared all
   three in `dc_services/package.xml`; `python3-pydantic` resolves to Noble's 1.10.14, which
   satisfies the `^1.10.4` pin, and `draw_image` then starts and initialises its service.
+- **`dc_description`'s URDF pointed at `turtlebot3_gazebo` meshes**, the same
+  Classic-package-with-no-Jazzy-release problem `waffle.model` had, so RViz rendered a
+  robot with no geometry. Repointed at `nav2_minimal_tb3_sim`'s `turtlebot3_model` and
+  declared the dependency; all three mesh URIs now resolve.
 - **`dc_demos/params/tb3_simulation_*.yaml`** still name `/intel_realsense_r200_depth/image_raw`,
   which nav2's own bridge config does not bridge at all. Those demos run nav2's sandbox
   world, not the warehouse, so they are outside #279; noting it because the same class of

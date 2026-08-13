@@ -470,7 +470,14 @@ public:
     }
     else
     {
-      RCLCPP_WARN_STREAM(logger_, "Message empty from measurement " << measurement_name_);
+      // Not necessarily a fault: a Measurement that found nothing to report
+      // returns an empty message on purpose -- Camera does exactly that on every
+      // frame with no barcode in view, which is most frames of the QR-code demo.
+      // Throttled and worded accordingly, because at the polling rate this used
+      // to read like a broken pipeline and sent #279 chasing one that was fine.
+      RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
+                                  "No data collected from measurement "
+                                      << measurement_name_ << " (nothing to report, or it is not receiving input)");
     }
   }
 
