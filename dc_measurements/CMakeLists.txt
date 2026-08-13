@@ -35,6 +35,23 @@ pkg_search_module(UUID REQUIRED uuid)
 # the shared `dependencies` list/foreach below and linked directly to dc_camera_measurement.
 find_package(ZXing REQUIRED)
 
+# yaml_cpp_vendor (already in `dependencies` above) only guarantees a system yaml-cpp is
+# installed via rosdep; it doesn't itself re-export a linkable CMake target, so anything that
+# calls into yaml-cpp's `.as<T>()` conversions (which can throw YAML::BadConversion) needs the
+# real `yaml-cpp` package found separately for its `yaml-cpp::yaml-cpp` target -- discovered via
+# #254's test suite dlopen-ing cmd_vel/map for the first time and hitting `undefined symbol:
+# typeinfo for YAML::BadConversion` at pluginlib load time (nlohmann_json/nlohmann_json_schema_validator
+# below hit the same class of gap previously, hence their own redundant target_link_libraries).
+find_package(yaml-cpp REQUIRED)
+
+# ffmpeg (already a package.xml <depend>, providing headers for ip_camera.cpp's libavformat
+# calls) has no ament package/CMake config of its own -- discovered the same way as yaml-cpp
+# above, via #254's test suite dlopen-ing ip_camera for the first time and hitting
+# `undefined symbol: av_log_set_level` (from libavutil, pulled in transitively by libavformat)
+# at pluginlib load time.
+pkg_search_module(AVFORMAT REQUIRED libavformat)
+pkg_search_module(AVUTIL REQUIRED libavutil)
+
 dc_package()
 
 set(library_name measurement_server_core)
@@ -190,11 +207,15 @@ foreach(measurement_plugin ${dc_measurement_plugin_libs})
     ${measurement_plugin}
     nlohmann_json::nlohmann_json
     nlohmann_json_schema_validator
+    yaml-cpp::yaml-cpp
     ${UUID_LIBRARIES}
   )
   target_compile_definitions(${measurement_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
 target_link_libraries(dc_camera_measurement ZXing::ZXing)
+target_include_directories(dc_ip_camera_measurement PRIVATE ${AVFORMAT_INCLUDE_DIRS} ${AVUTIL_INCLUDE_DIRS})
+target_link_directories(dc_ip_camera_measurement PRIVATE ${AVFORMAT_LIBRARY_DIRS} ${AVUTIL_LIBRARY_DIRS})
+target_link_libraries(dc_ip_camera_measurement ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES})
 foreach(condition_plugin ${dc_condition_plugin_libs})
   ament_target_dependencies(${condition_plugin} ${dependencies})
   target_compile_definitions(${condition_plugin} PRIVATE BT_PLUGIN_EXPORT)

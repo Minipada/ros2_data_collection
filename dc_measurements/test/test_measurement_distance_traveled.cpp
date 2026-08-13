@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 #include <tf2_ros/transform_broadcaster.h>
 
+#include <chrono>
+#include <thread>
+
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement_server.hpp"
 #include "dc_util/json_utils.hpp"
@@ -87,13 +90,22 @@ TEST_F(MeasurementDistanceTraveledTest, PublishesDistanceFromOriginOnFirstFix)
   // last_x_/last_y_ start at (0, 0), so the first successful transform lookup reports the
   // straight-line distance from the origin. Keep re-broadcasting and resetting until a Record
   // carrying "distance_traveled" shows up (earlier collect() cycles may fire before the
-  // transform is in the tf buffer, publishing an empty "{}" Record instead).
+  // transform is in the tf buffer, publishing an empty "{}" Record instead). tf2_ros::
+  // TransformListener spins on its own background thread (MeasurementServer never passed it an
+  // explicit node/executor, so it defaults to one); a short sleep between spins here gives that
+  // thread real scheduling opportunities instead of this loop busy-spinning a core out from
+  // under it.
   bool got_distance = false;
+  auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
   while (!got_distance)
   {
+    ASSERT_LT(std::chrono::steady_clock::now(), deadline)
+        << "never observed a Record with \"distance_traveled\" -- tf broadcast likely never "
+           "reached the buffer";
     broadcastMapToBaseLink(3.0, 4.0);
     callback_active_ = false;
     rclcpp::spin_some(ms_node_->get_node_base_interface());
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
     if (callback_active_ && data_json_.contains("distance_traveled"))
     {
       got_distance = true;
