@@ -4052,3 +4052,81 @@ remaining 11 checklist items (cmd_vel, distance_traveled, ip_camera, memory, map
 network, permissions, position, speed, storage, tcp_health) are untouched; the PR for
 this session uses "Contributes to #254" rather than "Closes #254" so the epic stays
 open for them.
+
+## #255: Test coverage epic (condition plugins) — double_equal
+
+**Read**: Issue #255 consolidates the individually-closed #158–#171 into one 14-item
+checklist of `dc_measurements/plugins/conditions/` plugins with no tests yet (plus
+`list_string_equal.cpp`, called out as missing from the original list). The issue
+directs testing "external behaviour only: given a Record and a condition config,
+assert the activation outcome" rather than white-box unit-testing `getState()`
+directly. Per `CLAUDE.md`'s one-task-per-run convention and #254's precedent, this
+session does one item — `double_equal`, the first in the list.
+
+**Found**: `Condition::getState()` is invoked by `Measurement::isConditionOn()` /
+`isGateArmed()` (`measurement.hpp`) with the *Measurement's own* just-collected
+`StringStamped` (its Record, before tags/nesting/flatten are applied) — so a Condition
+like `DoubleEqual` that reads a key out of `msg.data` is actually inspecting the gated
+Measurement's own output, not some independent input topic (unlike `moving`, which
+reads Odometry via its own subscription and is what `test_measurement_gate_condition.cpp`
+already covers). This made the `dc_measurements/Dummy` plugin's static `record` param
+an ideal fixture: it deterministically republishes a fixed JSON payload every poll, so
+the Record content given to the Condition is exactly what the test declares.
+
+**Found (the load-bearing gotcha)**: `if_all_conditions`/`if_any_conditions` are only
+ever consulted from the "Infinite measurements on condition" / "Trigger publish with
+maximum" branches of `Measurement::publish()` — both of which are gated behind the
+"Init publish" branch running first. With the default `init_max_measurements=0`
+("infinite init publishes"), that branch **always** fires and publishing never falls
+through to the condition check at all, so `if_all_conditions` would silently appear to
+do nothing in a naively-configured test. Real configs (`dc_demos/params/
+qrcodes_minio_pgsql.yaml`) always pair `if_all_conditions`/`if_none_conditions` with
+`init_max_measurements: -1` (disables the init path outright) and
+`condition_max_measurements: 0` or a positive cap — the test fixture follows the same
+pairing, which is also now the reusable pattern for testing any other list/scalar
+condition plugin the same way.
+
+**Also found**: `DoubleEqual::getState()` is type-strict, not just numeric — it checks
+`flat_json[key].type() != json::value_t::number_float` before comparing, so a Record
+field written as a bare JSON integer (`{"level": 5}`, `number_unsigned`/`number_integer`
+in nlohmann::json) never matches a configured double value even when numerically equal
+(`5 == 5.0`). Captured as its own test
+(`IntegerLiteralInRecordNeverMatchesDespiteNumericEquality`) since it's a real footgun
+for anyone hand-writing a `dummy.record` or a Measurement's JSON output expecting
+`double_equal` to treat integers and floats interchangeably.
+
+**Added**: `dc_measurements/test/test_measurement_double_equal.cpp`, registered in
+`CMakeLists.txt`'s `tests` list (alphabetically, after `test_measurement_diagnostics`).
+Follows `test_measurement_gate_condition.cpp`'s node/parameter-override setup pattern
+(condition_plugins supplied via `NodeOptions().parameter_overrides()` since it's read
+in the `MeasurementServer` constructor itself) but drives activation via
+`if_all_conditions` instead of `gate_condition`, since `if_all_conditions` is
+re-evaluated every poll and doesn't have gate_condition's one-way latch semantics —
+simpler to reason about for a Condition whose input (the fixed dummy Record) never
+changes within a test. Four tests:
+- `RecordValueMatchingConfiguredValueActivatesCondition`: record `{"level": 5.5}`,
+  configured `value: 5.5` — collection proceeds and keeps proceeding on every poll.
+- `RecordValueDifferingFromConfiguredValueNeverActivates`: `value: 3.0` against the
+  same record — nothing is ever published.
+- `MissingKeyInRecordNeverActivates`: record has no `level` key — `DoubleEqual` logs a
+  warning and reports inactive rather than throwing.
+- `IntegerLiteralInRecordNeverMatchesDespiteNumericEquality`: the type-strictness
+  gotcha above.
+
+**Not done / left for follow-up**: no local `colcon`/ROS install in this sandbox (same
+constraint as #242/#243/#254), so `colcon test` could not be run directly; CI
+(`tools/e2e/scripts/test.sh`) is the real gate. Verified via `pre-commit`
+(`clang-format` — no changes needed) and a manual read-through of
+`double_equal.cpp`/`.hpp`, `condition.hpp` (both `dc_core` and `dc_measurements`
+versions), `measurement.hpp`'s `publish()`/`isConditionOn()`/`isGateArmed()`, and
+`node_utils.hpp`'s `declare_and_get` (confirmed pre-declaring a parameter in the test
+before a plugin's own `get_*_type_param` call is safe — `declare_parameter_if_not_declared`
+is idempotent, same pattern `test_measurement_gate_condition.cpp` already relies on).
+`black` reformatted an unrelated file (`tools/e2e/scripts/verify_zero_loss.py`) as a
+side effect of running pre-commit against the whole repo — reverted before committing,
+same as prior entries. The remaining 13 checklist items (bool_equal, double_superior,
+double_inferior, exist, integer_equal, integer_inferior, integer_superior,
+list_bool_equal, list_integer_equal, list_double_equal, moving, same_as_previous,
+string_match) plus `list_string_equal` are untouched; following #254's precedent, the
+PR for this session uses "Contributes to #255" rather than "Closes #255" so the epic
+stays open for them.
