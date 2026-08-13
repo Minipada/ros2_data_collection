@@ -4552,3 +4552,91 @@ left alone: `pycln` and the two `poetry-requirements` hooks are broken in this e
 flags `dc_bringup/launch/dc_bringup.launch.py` and `tools/e2e/scripts/workload_generator.py`
 on this branch. `black` reformatted `tools/e2e/scripts/verify_zero_loss.py` again as a
 whole-repo side effect — reverted before committing, same as every prior entry.
+
+## #272: dc_demos Streamlit dashboard — flat-column ORM instead of a single JSON blob
+
+**Read**: the issue, `dc_demos/dc_demos/streamlit_dashboard/**` (config, `models/robot_data.py`,
+`backend/{pgsql,rustfs}.py`, `lib/{pgsql,common,section}.py`, all five `pages/*.py`),
+`dc_bridge/src/render.cpp`'s postgres sink + `render_normalize_source`,
+`tools/infrastructure/docker/config/postgresql/init.sql`, the demo Grafana dashboards, both
+pgsql demo params files, `dc_group/dc_group/group_server.py`, and the JSON-building code of
+every Measurement the dashboard reads (`camera/map/speed/cmd_vel/distance_traveled/position/
+cpu/memory/os/uptime/tcp_health.cpp`).
+
+**The bug**: `RobotData` still declared `time DateTime` + `data JSON`, the DC 1.x embedded
+Fluent Bit `out_pgsql` shape, and every query pathed into `RobotData.data[...]` JSONB. DC 2.0
+writes through Vector's built-in `postgres` sink, which maps each **top-level key** of a
+Record onto an **existing column of the same name** and creates nothing itself. There is no
+`data` column, so *every* query in `backend/pgsql.py` was dead against a real demo database.
+
+**Rewritten**:
+
+- `models/robot_data.py` — flat-column model mirroring `init.sql` column-for-column, grouped
+  by the Measurement that populates each one. Two columns are mapped under different
+  attribute names on purpose: `time` -> `uptime` (it is the uptime Measurement's
+  seconds-since-boot, *not* the Record timestamp — precisely the confusion that produced
+  this bug) and `id` -> `machine_id` (shadows a builtin; flake8 A003/VNE003).
+- The timestamp. The demos set `time_key: "date"` and leave `time_format` at its
+  `epoch_nanos` default, so the Record timestamp is a bigint of nanoseconds, not a
+  `DateTime`. Added `RECORD_TIME` (`to_timestamp(date / 1e9)`, cast back to a naive local
+  `timestamp` so the pages keep comparing it against the naive datetimes the sidebar builds)
+  — the same conversion the demo's Grafana dashboards use — and `to_epoch_nanos()` for the
+  reverse. Filters run on the raw `date` column (exact, index-friendly); only selected/
+  aggregated values go through `RECORD_TIME`.
+- `backend/pgsql.py` — all 12 queries onto flat columns. `get_last_map` also had a broken
+  correlated subquery (`.alias()` on a discarded value, then `RobotData.time ==
+  subquery_last.c.max_time`); it is now a real `scalar_subquery()`. `remote_paths` traversal
+  is factored into one `remote_path(storage, key)` helper that uses `.astext`, so the map and
+  camera pages get plain object paths rather than JSON-quoted strings.
+- `lib/pgsql.py` — dropped `DatetimeEncoder`/`json_serializer`, dead once nothing round-trips
+  a JSON blob (the dashboard only ever SELECTs).
+- `pages/2_Robot.py` — the camera gallery indexed filtered frames with `.loc[i]` for
+  `i in range(len(...))`, which `KeyError`s the moment any row is filtered out (the index is
+  the parent frame's), and the Inspected tab read the *Rotated* column while the Rotated tab
+  captioned from the *Raw* frame. Replaced the three near-duplicate blocks with one
+  `display_gallery()` that iterates rows.
+
+**Schema**: `init.sql` gained `computed` (twist magnitude — emitted by both speed.cpp and
+cmd_vel.cpp as standalone Records, told apart by `name`; nested under the `speed`/`cmd_vel`
+jsonb columns instead when the Records go through a Group) plus `average`/`processes` for the
+CPU panel. Without them the sink silently drops those keys and the Robot/System pages chart
+nothing. The header comment's "CPU fields are intentionally not enumerated" note was updated
+to name what genuinely stays unlisted (`sorted`, `linear`/`angular`, `x`/`y`/`yaw`).
+
+**Which demo the dashboard reads — documented in the model's docstring**:
+`tb3_simulation_pgsql_minio.yaml`, whose Measurements map one-to-one onto the dashboard's
+pages and each reach Postgres as their own Record. `qrcodes_minio_pgsql.yaml` ships a merged
+Group Record whose top-level keys are its members' `group_key`s and which carries no
+top-level `robot_name`/`run_id` at all (`nested_data` defaults true, and custom keys land
+nested under each member) — it cannot drive the robot/run selectors, so it is not a target;
+the Grafana dashboards cover it.
+
+**Verified for real, against live services** (not read-through): a `postgres:16-alpine`
+container created from the *actual* demo `init.sql`, seeded by a script that reproduces the
+JSON each Measurement plugin emits and then inserts it the way the sink does (top-level keys
+onto same-named columns, everything else dropped) — 62 Records, two robots, two runs, two
+maps. All 33 query assertions pass in both filter modes (run-id and time-range): correct row
+counts and values, real `datetime`s out of `RECORD_TIME`, the *newest* of the two maps from
+`get_last_map`, unquoted object paths, and `[]`/`None`/`-1` for a robot with no data.
+
+Then every page Section was rendered against that database plus a live MinIO holding the
+Files the Records point at (Streamlit 1.21 predates `streamlit.testing`, so the module was
+swapped for a recording stub and the Section classes driven directly — everything below the
+UI is the real thing, including the presigned URLs and the thumbnail probe). All 8 Sections
+render: OS 4 metrics, Memory/CPU/Speed/TCPServerHealth their charts (two, one per server),
+Robot its 2 metrics, Map three working download buttons whose bytes really came out of the
+store plus the image, and CameraImages 4 gallery tiles — 2 of them served as `.thumb.jpg`
+previews and 2 falling back to the original, so both sides of #256's optional-thumbnail path
+are exercised. The Rotated/Inspected tabs correctly show "No data": that demo runs the camera
+with `save_rotated_img`/`save_detections_img` false.
+
+**Not done, deliberately**: the issue asks whether the Streamlit dashboard is still wanted at
+all now that #251 ships Grafana over the same data, and notes deleting it would be less work.
+That is a product call, not one to make unilaterally — this fixes it as the checklist asks.
+Nothing in the repo depends on it either way (no launch file, no docs reference).
+
+**Verified**: `pre-commit` — `flake8` clean on all five changed Python files (including the
+pre-existing `E231` on `2_Robot.py:88`, fixed in passing), `black`/`isort`/`codespell` clean.
+Pre-existing, unrelated failures left alone: `pycln` and the two `poetry-requirements` hooks
+are broken in this environment. `black` reformatted `tools/e2e/scripts/verify_zero_loss.py`
+again as a whole-repo side effect — reverted before committing, same as every prior entry.
