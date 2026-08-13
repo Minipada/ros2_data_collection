@@ -45,14 +45,6 @@ amcl:
     initial_pose.z: 0.0
     initial_pose.yaw: 1.570796
 
-amcl_map_client:
-  ros__parameters:
-    use_sim_time: True
-
-amcl_rclcpp_node:
-  ros__parameters:
-    use_sim_time: True
-
 bt_navigator:
   ros__parameters:
     use_sim_time: True
@@ -65,45 +57,17 @@ bt_navigator:
     # nav2_bt_navigator/navigate_to_pose_w_replanning_and_recovery.xml
     # nav2_bt_navigator/navigate_through_poses_w_replanning_and_recovery.xml
     # They can be set here or via a RewrittenYaml remap from a parent launch file to Nav2.
-    plugin_lib_names:
-      - nav2_compute_path_to_pose_action_bt_node
-      - nav2_compute_path_through_poses_action_bt_node
-      - nav2_smooth_path_action_bt_node
-      - nav2_follow_path_action_bt_node
-      - nav2_back_up_action_bt_node
-      - nav2_spin_action_bt_node
-      - nav2_wait_action_bt_node
-      - nav2_clear_costmap_service_bt_node
-      - nav2_is_stuck_condition_bt_node
-      - nav2_goal_reached_condition_bt_node
-      - nav2_goal_updated_condition_bt_node
-      - nav2_globally_updated_goal_condition_bt_node
-      - nav2_is_path_valid_condition_bt_node
-      - nav2_initial_pose_received_condition_bt_node
-      - nav2_reinitialize_global_localization_service_bt_node
-      - nav2_rate_controller_bt_node
-      - nav2_distance_controller_bt_node
-      - nav2_speed_controller_bt_node
-      - nav2_truncate_path_action_bt_node
-      - nav2_goal_updater_node_bt_node
-      - nav2_recovery_node_bt_node
-      - nav2_pipeline_sequence_bt_node
-      - nav2_round_robin_node_bt_node
-      - nav2_transform_available_condition_bt_node
-      - nav2_time_expired_condition_bt_node
-      - nav2_distance_traveled_condition_bt_node
-      - nav2_single_trigger_bt_node
-      - nav2_is_battery_low_condition_bt_node
-      - nav2_navigate_through_poses_action_bt_node
-      - nav2_navigate_to_pose_action_bt_node
-      - nav2_remove_passed_goals_action_bt_node
-      - nav2_planner_selector_bt_node
-      - nav2_controller_selector_bt_node
-      - nav2_goal_checker_selector_bt_node
-
-bt_navigator_rclcpp_node:
-  ros__parameters:
-    use_sim_time: True
+    #
+    # plugin_lib_names is deliberately left unset: the Humble-era list this demo
+    # used to carry names BT node libraries that no longer exist on Jazzy (for
+    # instance nav2_goal_reached_condition_bt_node), and bt_navigator throws
+    # while loading a missing library rather than skipping it. Jazzy's built-in
+    # default list already covers every node the two default trees use (#279).
+    navigators: ["navigate_to_pose", "navigate_through_poses"]
+    navigate_to_pose:
+      plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
+    navigate_through_poses:
+      plugin: "nav2_bt_navigator::NavigateThroughPosesNavigator"
 
 controller_server:
   ros__parameters:
@@ -113,7 +77,7 @@ controller_server:
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.3
-    progress_checker_plugin: "progress_checker"
+    progress_checker_plugins: ["progress_checker"]
     goal_checker_plugins: ["general_goal_checker"] # "precise_goal_checker"
     controller_plugins: ["FollowPath"]
 
@@ -185,10 +149,6 @@ controller_server:
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
 
-controller_server_rclcpp_node:
-  ros__parameters:
-    use_sim_time: True
-
 local_costmap:
   local_costmap:
     ros__parameters:
@@ -246,12 +206,6 @@ local_costmap:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
       always_send_full_costmap: True
-  local_costmap_client:
-    ros__parameters:
-      use_sim_time: True
-  local_costmap_rclcpp_node:
-    ros__parameters:
-      use_sim_time: True
 
 global_costmap:
   global_costmap:
@@ -287,17 +241,19 @@ global_costmap:
         cost_scaling_factor: 3.0
         inflation_radius: 0.55
       always_send_full_costmap: True
-  global_costmap_client:
-    ros__parameters:
-      use_sim_time: True
-  global_costmap_rclcpp_node:
-    ros__parameters:
-      use_sim_time: True
 
 map_server:
   ros__parameters:
     use_sim_time: True
-    yaml_filename: "qrcodes.yaml"
+    # yaml_filename is deliberately absent. nav2_bringup's
+    # localization_launch.py supplies it from the `map` launch argument as an
+    # extra wildcard-scoped ("/**") parameter layered on top of this file, and a
+    # node-name-scoped ("map_server:") entry here takes precedence over that
+    # wildcard whatever the layering order -- so anything set here is what
+    # map_server really loads. The relative "qrcodes.yaml" this used to carry
+    # resolved against the process CWD and aborted the whole localization
+    # bringup; an empty string is no better, it just activates map_server with
+    # no map at all (#279).
 
 map_saver:
   ros__parameters:
@@ -313,41 +269,44 @@ planner_server:
     use_sim_time: True
     planner_plugins: ["GridBased"]
     GridBased:
-      plugin: "nav2_navfn_planner/NavfnPlanner"
+      plugin: "nav2_navfn_planner::NavfnPlanner"
       tolerance: 0.1
       use_astar: false
       allow_unknown: true
 
-planner_server_rclcpp_node:
-  ros__parameters:
-    use_sim_time: True
-
 smoother_server:
   ros__parameters:
     use_sim_time: True
-    plugin: "nav2_smoother::SimpleSmoother"
-    tolerance: 1.0e-10
-    do_refinement: True
-    max_its: 1000
-    w_data: 0.2
-    w_smooth: 0.3
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      do_refinement: True
+      max_its: 1000
+      w_data: 0.2
+      w_smooth: 0.3
 
-recoveries_server:
+behavior_server:
   ros__parameters:
-    costmap_topic: local_costmap/costmap_raw
-    footprint_topic: local_costmap/published_footprint
+    use_sim_time: True
+    local_costmap_topic: local_costmap/costmap_raw
+    global_costmap_topic: global_costmap/costmap_raw
+    local_footprint_topic: local_costmap/published_footprint
+    global_footprint_topic: global_costmap/published_footprint
     cycle_frequency: 10.0
-    recovery_plugins: ["spin", "backup", "wait"]
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "wait"]
     spin:
-      plugin: "nav2_behaviors/Spin"
+      plugin: "nav2_behaviors::Spin"
     backup:
-      plugin: "nav2_behaviors/BackUp"
+      plugin: "nav2_behaviors::BackUp"
+    drive_on_heading:
+      plugin: "nav2_behaviors::DriveOnHeading"
     wait:
-      plugin: "nav2_behaviors/Wait"
-    global_frame: odom
+      plugin: "nav2_behaviors::Wait"
+    local_frame: odom
+    global_frame: map
     robot_base_frame: base_link
     transform_tolerance: 0.1
-    use_sim_time: true
     simulate_ahead_time: 2.0
     max_rotational_vel: 1.0
     min_rotational_vel: 0.4
@@ -366,3 +325,76 @@ waypoint_follower:
       plugin: "nav2_waypoint_follower::WaitAtWaypoint"
       enabled: True
       waypoint_pause_duration: 200
+
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: True
+    smoothing_frequency: 20.0
+    scale_velocities: False
+    feedback: "OPEN_LOOP"
+    # x, y, theta -- matched to controller_server's FollowPath limits
+    max_velocity: [0.26, 0.0, 1.0]
+    min_velocity: [-0.26, 0.0, -1.0]
+    max_accel: [2.5, 0.0, 3.2]
+    max_decel: [-2.5, 0.0, -3.2]
+    odom_topic: "odom"
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0
+
+collision_monitor:
+  ros__parameters:
+    use_sim_time: True
+    base_frame_id: "base_footprint"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "cmd_vel_smoothed"
+    cmd_vel_out_topic: "cmd_vel"
+    state_topic: "collision_monitor_state"
+    transform_tolerance: 0.2
+    source_timeout: 1.0
+    base_shift_correction: True
+    stop_pub_timeout: 2.0
+    polygons: ["FootprintApproach"]
+    FootprintApproach:
+      type: "polygon"
+      action_type: "approach"
+      footprint_topic: "/local_costmap/published_footprint"
+      time_before_collision: 1.2
+      simulation_time_step: 0.1
+      min_points: 6
+      visualize: False
+      enabled: True
+    observation_sources: ["scan"]
+    scan:
+      type: "scan"
+      topic: "scan"
+      min_height: 0.15
+      max_height: 2.0
+      enabled: True
+
+# opennav_docking is a Jazzy addition to navigation_launch.py's lifecycle_nodes.
+# This demo never docks, but the node still has to construct and configure or
+# lifecycle_manager aborts the entire navigation bringup. Both blocks below are
+# mandatory for that: without dock_plugins it fails to configure ("An error
+# occurred while getting the dock plugins!"), and without a docks list it throws
+# InvalidParameterValueException on 'docks' at construction and dies outright.
+# nav2's own nav2_params.yaml leaves docks commented out and hits exactly that,
+# so the placeholder dock here follows nav2_multirobot_params_1.yaml, which
+# spells out the shape the parser wants (#279).
+docking_server:
+  ros__parameters:
+    use_sim_time: True
+    controller_frequency: 50.0
+    dock_plugins: ["simple_charging_dock"]
+    simple_charging_dock:
+      plugin: "opennav_docking::SimpleChargingDock"
+      docking_threshold: 0.05
+      staging_x_offset: -0.7
+      use_external_detection_pose: false
+      use_battery_status: false
+      use_stall_detection: false
+    docks: ["home_dock"]
+    home_dock:
+      type: "simple_charging_dock"
+      frame: map
+      pose: [0.0, 0.0, 0.0]

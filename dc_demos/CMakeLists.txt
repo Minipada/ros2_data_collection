@@ -30,10 +30,12 @@ install(
 # Install Python modules
 ament_python_install_package(${PROJECT_NAME})
 
-# Install Python executables
+# Install Python executables. RENAME drops the .py so the demo is run as
+# `ros2 run dc_demos qrcodes_waypoint_follower`, the usual ROS 2 spelling.
 install(PROGRAMS
   ${PROJECT_NAME}/qrcodes_waypoint_follower.py
   DESTINATION lib/${PROJECT_NAME}
+  RENAME qrcodes_waypoint_follower
 )
 
 include_directories(

@@ -18,6 +18,7 @@ def generate_launch_description():
     dc_description_dir = get_package_share_directory("dc_description")
     dc_bringup_dir = get_package_share_directory("dc_bringup")
     nav2_bringup_dir = get_package_share_directory("nav2_bringup")
+    nav2_launch_dir = os.path.join(nav2_bringup_dir, "launch")
 
     # Data Collection
     dc_params_file = LaunchConfiguration("dc_params_file")
@@ -37,12 +38,14 @@ def generate_launch_description():
     map_yaml_file = LaunchConfiguration("map")
     rviz_config_file = LaunchConfiguration("rviz_config_file")
     use_simulator = LaunchConfiguration("use_simulator")
-    use_robot_state_pub = LaunchConfiguration("use_robot_state_pub")  # Should always be false
+    use_robot_state_pub = LaunchConfiguration("use_robot_state_pub")
     use_rviz = LaunchConfiguration("use_rviz")
     slam = LaunchConfiguration("slam")
     use_namespace = LaunchConfiguration("use_namespace")
     headless = LaunchConfiguration("headless")
     world = LaunchConfiguration("world")
+    robot_name = LaunchConfiguration("robot_name")
+    robot_sdf = LaunchConfiguration("robot_sdf")
     x_pose = LaunchConfiguration("x_pose", default="-16.679400")
     y_pose = LaunchConfiguration("y_pose", default="-15.300200")
     z_pose = LaunchConfiguration("z_pose", default="0.01")
@@ -67,12 +70,14 @@ def generate_launch_description():
     )
 
     declare_simulator_cmd = DeclareLaunchArgument(
-        "headless", default_value="True", description="Whether to execute gzclient"
+        "headless",
+        default_value="True",
+        description="Whether to run gz-sim server-only (no GUI)",
     )
 
     declare_use_robot_state_pub_cmd = DeclareLaunchArgument(
         "use_robot_state_pub",
-        default_value="False",
+        default_value="True",
         description="Whether to start the robot state publisher.",
     )
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
@@ -91,7 +96,7 @@ def generate_launch_description():
     declare_robot_sdf_cmd = DeclareLaunchArgument(
         "robot_sdf",
         default_value=os.path.join(sim_dir, "worlds", "waffle.model"),
-        description="Full path to robot sdf file to spawn the robot in gazebo",
+        description="Full path to robot sdf file to spawn the robot in gz-sim",
     )
     declare_nav2_params_file_cmd = DeclareLaunchArgument(
         "nav2_params_file",
@@ -169,6 +174,7 @@ def generate_launch_description():
     remappings = [("/tf", "tf"), ("/tf_static", "tf_static")]
 
     start_robot_state_publisher_cmd = Node(
+        condition=IfCondition(use_robot_state_pub),
         package="robot_state_publisher",
         executable="robot_state_publisher",
         name="robot_state_publisher",
@@ -203,10 +209,35 @@ def generate_launch_description():
         }.items(),
     )
 
+    # The simulator half runs dc_simulation's own gz-sim bringup rather than
+    # nav2_bringup's tb3_simulation_launch.py. That launch file spawns
+    # nav2_minimal_tb3_sim's gz_waffle.sdf.xacro into nav2's own sandbox world
+    # with nav2's own ros_gz_bridge config -- a robot with one camera, nav2's
+    # topic names and none of the QR-code warehouse's props. Delegating to it
+    # meant this demo never ran against the robot/world/bridge #268 ported, and
+    # made the declared robot_sdf argument below unusable (it was never
+    # forwarded). warehouse.launch.py takes world, robot_sdf, robot_name and the
+    # full spawn pose, so all three now line up (#279).
+    warehouse_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(sim_dir, "launch", "warehouse.launch.py")),
+        condition=IfCondition(use_simulator),
+        launch_arguments={
+            "headless": headless,
+            "world": world,
+            "robot_name": robot_name,
+            "robot_sdf": robot_sdf,
+            "x_pose": x_pose,
+            "y_pose": y_pose,
+            "z_pose": z_pose,
+            "roll": roll,
+            "pitch": pitch,
+            "yaw": yaw,
+        }.items(),
+    )
+
+    # Nav2 itself (map_server + AMCL + planner/controller/behaviors/BT).
     nav2_bringup_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(nav2_bringup_dir, "launch", "tb3_simulation_launch.py")
-        ),
+        PythonLaunchDescriptionSource(os.path.join(nav2_launch_dir, "bringup_launch.py")),
         launch_arguments={
             "map": map_yaml_file,
             "params_file": nav2_params_file,
@@ -218,18 +249,16 @@ def generate_launch_description():
             "use_composition": use_composition,
             "use_respawn": use_respawn,
             "log_level": log_level,
-            "rviz_config_file": rviz_config_file,
-            "use_simulator": use_simulator,
-            "use_rviz": use_rviz,
-            "headless": headless,
-            "world": world,
-            "x_pose": x_pose,
-            "y_pose": y_pose,
-            "z_pose": z_pose,
-            "roll": roll,
-            "pitch": pitch,
-            "yaw": yaw,
-            "use_robot_state_pub": use_robot_state_pub,
+        }.items(),
+    )
+
+    rviz_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(nav2_launch_dir, "rviz_launch.py")),
+        condition=IfCondition(use_rviz),
+        launch_arguments={
+            "namespace": namespace,
+            "use_namespace": use_namespace,
+            "rviz_config": rviz_config_file,
         }.items(),
     )
 
@@ -266,6 +295,8 @@ def generate_launch_description():
     # Declare the launch options
     ld.add_action(dc_bringup_cmd)
     ld.add_action(start_robot_state_publisher_cmd)
+    ld.add_action(warehouse_cmd)
     ld.add_action(nav2_bringup_cmd)
+    ld.add_action(rviz_cmd)
 
     return ld

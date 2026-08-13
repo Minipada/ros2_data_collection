@@ -33,7 +33,7 @@
         <pose>-0.064 0 0 0 0 0</pose>
         <geometry>
           <mesh>
-            <uri>model://turtlebot3_common/meshes/waffle_base.dae</uri>
+            <uri>model://turtlebot3_model/meshes/waffle_base.dae</uri>
             <scale>0.001 0.001 0.001</scale>
           </mesh>
         </geometry>
@@ -45,6 +45,11 @@
         <always_on>true</always_on>
         <update_rate>200</update_rate>
         <topic>imu</topic>
+        <!-- Without gz_frame_id, gz-sensors stamps messages with the scoped
+             sensor name ("turtlebot3_waffle/imu_link/tb3_imu"), which is not a
+             TF frame, and every tf2 MessageFilter downstream drops the message.
+             The name has to match the link in dc_description's URDF. -->
+        <gz_frame_id>imu_link</gz_frame_id>
         <imu>
           <angular_velocity>
             <x>
@@ -118,7 +123,7 @@
         <pose>-0.064 0 0.121 0 0 0</pose>
         <geometry>
           <mesh>
-            <uri>model://turtlebot3_common/meshes/lds.dae</uri>
+            <uri>model://turtlebot3_model/meshes/lds.dae</uri>
             <scale>0.001 0.001 0.001</scale>
           </mesh>
         </geometry>
@@ -130,6 +135,10 @@
         <pose>-0.064 0 0.15 0 0 0</pose>
         <update_rate>5</update_rate>
         <topic>scan</topic>
+        <!-- AMCL and both costmaps' obstacle_layer run the LaserScan through a
+             tf2 MessageFilter; the scan frame must be the URDF's base_scan link
+             or every scan is silently discarded. -->
+        <gz_frame_id>base_scan</gz_frame_id>
         <lidar>
           <scan>
             <horizontal>
@@ -140,7 +149,12 @@
             </horizontal>
           </scan>
           <range>
-            <min>0.00000</min>
+            <!-- Not 0: gz-rendering feeds this straight to Ogre as the GPU-ray
+                 frustum's near clip distance, and Ogre throws
+                 "Near clip distance must be greater than zero", which aborts
+                 gz sim outright. Same value nav2_minimal_tb3_sim's gz_waffle
+                 uses (#279). -->
+            <min>0.00001</min>
             <max>20.0</max>
             <resolution>0.015000</resolution>
           </range>
@@ -204,7 +218,7 @@
         <pose>0.0 0.144 0.023 0 0 0</pose>
         <geometry>
           <mesh>
-            <uri>model://turtlebot3_common/meshes/tire.dae</uri>
+            <uri>model://turtlebot3_model/meshes/tire.dae</uri>
             <scale>0.001 0.001 0.001</scale>
           </mesh>
         </geometry>
@@ -262,7 +276,7 @@
         <pose>0.0 -0.144 0.023 0 0 0</pose>
         <geometry>
           <mesh>
-            <uri>model://turtlebot3_common/meshes/tire.dae</uri>
+            <uri>model://turtlebot3_model/meshes/tire.dae</uri>
             <scale>0.001 0.001 0.001</scale>
           </mesh>
         </geometry>
@@ -366,6 +380,7 @@
         <update_rate>5</update_rate>
         <pose>0.064 -0.047 0.107 0 0 1.57</pose>
         <topic>left_camera</topic>
+        <gz_frame_id>camera_left_depth_optical_frame</gz_frame_id>
         <camera name="left_realsense_depth_camera">
           <image>
             <width>1280</width>
@@ -378,15 +393,6 @@
           </clip>
         </camera>
       </sensor>
-
-      <collision name="collision">
-        <pose>0 0.047 -0.005 0 0 0</pose>
-        <geometry>
-          <box>
-            <size>0.008 0.130 0.022</size>
-          </box>
-        </geometry>
-      </collision>
     </link>
 
     <link name="right_camera_link">
@@ -418,6 +424,7 @@
         <update_rate>5</update_rate>
         <pose>0.064 -0.047 0.107 0 0 -1.57</pose>
         <topic>right_camera</topic>
+        <gz_frame_id>camera_right_depth_optical_frame</gz_frame_id>
         <camera name="right_realsense_depth_camera">
           <image>
             <width>1280</width>
@@ -430,15 +437,6 @@
           </clip>
         </camera>
       </sensor>
-
-      <collision name="collision">
-        <pose>0 0.047 -0.005 0 0 0</pose>
-        <geometry>
-          <box>
-            <size>0.008 0.130 0.022</size>
-          </box>
-        </geometry>
-      </collision>
     </link>
 
     <joint name="base_joint" type="fixed">
@@ -473,6 +471,16 @@
     <joint name='caster_back_left_joint' type='ball'>
       <parent>base_link</parent>
       <child>caster_back_left_link</child>
+    </joint>
+
+    <!-- imu_link carried no joint at all (pre-existing, inherited from the
+         Gazebo Classic model): under gz-sim's DART physics that made it a
+         free-falling body detached from the robot. Attached here at the same
+         offset dc_description's URDF uses. -->
+    <joint name="imu_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>imu_link</child>
+      <pose>0.0 0 0.068 0 0 0</pose>
     </joint>
 
     <joint name="lidar_joint" type="fixed">

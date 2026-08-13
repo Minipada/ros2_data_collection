@@ -93,6 +93,11 @@
         </surface>
       </collision>
     </link>
-    <static>0</static>
+    <!-- Warehouse scenery: never moves, and gz-sim does not propagate the
+         <static> of the wrapper <model> in qrcodes.world down into this
+         included nested model, so without this every instance is simulated as
+         a free rigid body. At 176 pallets and bags that alone took the world
+         from ~0.27 to ~0.007 real-time factor (#279, feeds #52). -->
+    <static>1</static>
   </model>
 </sdf>
