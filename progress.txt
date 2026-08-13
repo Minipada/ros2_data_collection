@@ -4640,3 +4640,188 @@ pre-existing `E231` on `2_Robot.py:88`, fixed in passing), `black`/`isort`/`code
 Pre-existing, unrelated failures left alone: `pycln` and the two `poetry-requirements` hooks
 are broken in this environment. `black` reformatted `tools/e2e/scripts/verify_zero_loss.py`
 again as a whole-repo side effect — reverted before committing, same as every prior entry.
+
+## #279: dc_demos' Nav2 QR-codes waypoint-follower demo — ported onto #268's gz-sim port
+
+**Read**: the issue, #268 (its parent port) and #51/#52 (the two pre-existing bugs #279's
+checklist asks to re-check), `dc_demos/launch/tb3_qrcodes{,_minio_pgsql}.launch.py`,
+`dc_demos/dc_demos/qrcodes_waypoint_follower.py`, `dc_demos/params/qrcodes_{nav,stdout,
+minio_pgsql}.yaml`, `dc_simulation/{launch/warehouse.launch.py,config/warehouse_bridge.yaml,
+worlds/{qrcodes.world,waffle.model},maps/qrcodes.yaml,models/**}`,
+`dc_description/urdf/turtlebot3_waffle_qrcodes.xacro`, and on the Jazzy side
+`nav2_bringup`'s `tb3_simulation_launch.py` / `bringup_launch.py` / `localization_launch.py` /
+`navigation_launch.py` / `params/nav2_params.yaml`, `nav2_minimal_tb3_sim`'s
+`spawn_tb3.launch.py` + `gz_waffle.sdf.xacro` + `turtlebot3_waffle_bridge.yaml`, and
+`opennav_docking`'s `utils.hpp`.
+
+### 1. The launch path: `tb3_simulation_launch.py` -> `warehouse.launch.py` + `bringup_launch.py`
+
+Answering the issue's first question: Jazzy's `nav2_bringup/tb3_simulation_launch.py` *is*
+gz-sim-based, but it is a **different** gz-sim integration from #268's. It xacro-expands
+`nav2_minimal_tb3_sim`'s own world, spawns *its* `gz_waffle.sdf.xacro`, and starts *its*
+`turtlebot3_waffle_bridge.yaml` — a robot with one camera, nav2's topic names, and no
+camera bridged at all. The demo passed `world:=qrcodes.world` but, per the issue, never
+forwarded the `robot_sdf` it declared, so on this branch it was driving nav2's waffle
+around the QR-code world with none of #268's sensors/DiffDrive/bridge reaching ROS.
+
+`tb3_qrcodes.launch.py` now includes `dc_simulation/launch/warehouse.launch.py` (world,
+`robot_sdf`, `robot_name`, full spawn pose, `headless`, gated on `use_simulator`) for the
+simulator half and `nav2_bringup/launch/bringup_launch.py` + `rviz_launch.py` for Nav2 and
+RViz. That fixes the `robot_sdf` pass-through by construction rather than by adding one
+more dict entry. `use_robot_state_pub` used to be documented "should always be false"
+because it governed *nav2's* robot_state_publisher; it now gates this file's own (which
+publishes `dc_description`'s two-camera URDF) and defaults True.
+
+`warehouse.launch.py` gained `roll`/`pitch`/`yaw` spawn arguments (`-R`/`-P`/`-Y` to
+`ros_gz_sim create`) — the demo spawns at yaw 1.570796 and had no way to say so — plus an
+explicit `use_sim_time: False` on the bridge (it is the node that *publishes* `/clock`) and
+`nav2_minimal_tb3_sim`'s `models/` on `GZ_SIM_RESOURCE_PATH`.
+
+### 2. Five bugs that stopped the demo dead, each found by running it
+
+- **gz sim aborted on startup.** `waffle.model`'s lidar had `<range><min>0.00000`.
+  gz-rendering hands that straight to Ogre as the GPU-ray frustum's near clip, and Ogre
+  throws `InvalidParametersException: Near clip distance must be greater than zero`, which
+  kills the server. Now `0.00001`, the value `nav2_minimal_tb3_sim`'s `gz_waffle` uses.
+- **Every sensor message was undeliverable.** None of the ported sensors set
+  `<gz_frame_id>`, so gz-sensors stamped them with the scoped sensor name
+  (`turtlebot3_waffle/base_scan/hls_lfcd_lds`), which is not a TF frame — AMCL and both
+  costmaps' `obstacle_layer` run `/scan` through a tf2 `MessageFilter` and would have
+  dropped all of it. Added `base_scan`, `imu_link` and
+  `camera_{left,right}_depth_optical_frame`, all names taken from the URDF.
+- **map_server never loaded the map.** `qrcodes_nav.yaml` set
+  `map_server.yaml_filename: "qrcodes.yaml"`. `localization_launch.py` supplies the real
+  path from the `map` launch argument as a *wildcard*-scoped extra parameter, and a
+  node-name-scoped entry wins over a wildcard one regardless of layering order — so the
+  relative name is what map_server actually got, it resolved against the process CWD, and
+  `lifecycle_manager_localization` aborted the whole bringup. Verified both ways in a
+  container: with the key present it fails; with `""` map_server activates *with no map*;
+  only with the key absent does the launch argument reach it.
+- **docking_server crashed and took the navigation bringup with it.** Jazzy's
+  `navigation_launch.py` adds `route_server`, `velocity_smoother`, `collision_monitor` and
+  `docking_server` to `lifecycle_nodes`. `opennav_docking` throws
+  `InvalidParameterValueException` on `docks` at construction if no dock is declared —
+  nav2's own `nav2_params.yaml` leaves `docks` commented out and hits this too. Added a
+  `docking_server` block with `dock_plugins` and the placeholder dock
+  `nav2_multirobot_params_1.yaml` spells out.
+- **The camera topics did not exist under the names every consumer uses.** #268's bridge
+  config documents its intent as "the same ROS topic names the Classic plugins used", but
+  the cameras were bridged as `left_camera/image_raw` while `qrcodes_{stdout,minio_pgsql}.yaml`,
+  `qrcodes.rviz` and the demo docs all name `/{left,right}_intel_realsense_r200_depth/…`.
+  Renamed in `warehouse_bridge.yaml` (the ROS side only) so nothing downstream changes.
+
+### 3. `qrcodes_nav.yaml` ported from its Humble shape to Jazzy
+
+`recoveries_server` -> `behavior_server` (the old block reached no node at all, so every
+recovery silently ran on nav2's defaults) with `nav2_behaviors::`-style plugin names and
+the split `local_`/`global_costmap_topic` keys; `progress_checker_plugin` ->
+`progress_checker_plugins`; `smoother_server`'s flat plugin config -> `smoother_plugins` +
+a `simple_smoother` block; `nav2_navfn_planner/NavfnPlanner` -> `::`; the Humble
+`plugin_lib_names` list dropped (it names BT node libraries that no longer exist, and
+bt_navigator throws on a missing one instead of skipping it) in favour of `navigators`;
+`velocity_smoother` and `collision_monitor` blocks added for the new
+`controller_server -> cmd_vel_nav -> velocity_smoother -> cmd_vel_smoothed ->
+collision_monitor -> cmd_vel` chain, with the smoother's limits matched to DWB's; and the
+dead Foxy-era `*_rclcpp_node` / `*_client` blocks removed.
+
+### 4. `qrcodes_waypoint_follower`
+
+The result handling sat inside `while rclpy.ok():`, which re-entered with the task already
+complete and reprinted the result forever instead of exiting. It now runs the pass once,
+shuts down, and returns non-zero if the pass did not succeed. Added the `#!/usr/bin/env
+python3` it never had (without it the installed program cannot exec) and a CMake `RENAME`
+so the AC's `ros2 run dc_demos qrcodes_waypoint_follower` — no `.py` — is the real name.
+
+### 5. The world was ~150x too slow to simulate, and it was not the meshes
+
+The first end-to-end attempt ran at **0.0074 real-time factor** — 7 physics steps per second
+of a 1 ms step — which makes a 60-waypoint pass a ~30-hour proposition. Measured, rather
+than guessed, by bisecting the world in a container: dropping the 240 pallet/bag/QR-code
+prop instances took it to 1.09; removing their collision geometry only reached 0.017;
+`SceneBroadcaster` was not involved (0.0077 without it).
+
+The cause is that gz-sim does **not** propagate the `<static>1</static>` of the wrapper
+`<model>` in `qrcodes.world` into the `<include>`d nested model. `models/europallet`
+and `models/europallet_10` declared no `<static>` at all and `models/bag` declared
+`<static>0</static>`, so 176 pieces of warehouse scenery were simulated as free rigid
+bodies. Declaring them static in their own `model.sdf` — which `models/qrcode_*` already
+did — takes the bare world from 0.0074 to **0.265** and the full demo (gz-sim + both RGBD
+cameras + Nav2) to **~0.20** on 8 CPUs with software rendering.
+
+### Verified for real, by running the demo end to end
+
+In a container from `localhost/dc-workspace:latest` with this worktree bind-mounted over
+`/root/ws/src/ros2_data_collection` (`colcon build --packages-select dc_simulation
+dc_description dc_demos dc_services`), gz-sim headless on llvmpipe:
+
+- `ros2 launch dc_demos tb3_qrcodes.launch.py headless:=True use_rviz:=False` brings up
+  gz-sim, the ported robot, Nav2 and DC with **no errors and no dead processes**. Both
+  lifecycle managers report "Managed nodes are active" — localization (`map_server`,
+  `amcl`) and all ten navigation nodes including Jazzy's new `route_server`,
+  `velocity_smoother`, `collision_monitor` and `docking_server`.
+- `/scan` arrives as `frame_id: base_scan`, the cameras as
+  `/{left,right}_intel_realsense_r200_depth/image_raw` at 5 Hz with
+  `frame_id: camera_{left,right}_depth_optical_frame`, and `/tf` carries the full
+  `map -> odom -> base_footprint -> …` tree. AMCL activates against `qrcodes.pgm` and
+  publishes `/amcl_pose` at the demo's initial pose (-23.911, -13.888).
+- **`ros2 run dc_demos qrcodes_waypoint_follower` completed the whole pass**:
+  nav2's own waypoint_follower logged "Completed all 60 waypoints requested", the script
+  printed "Goal succeeded!" and exited 0, ending at (-11.840, 15.354) — the last row-3
+  waypoint (-11.85, 15.45) within its 0.1 m goal tolerance. **Zero** aborted or failed
+  goals and **zero** recovery behaviours over the entire run. 483 s of simulated time in
+  4010 s of wall clock (RTF 0.198, ~63 min).
+
+**Verified**: `pre-commit` — `flake8`, `black`, `isort`, `codespell`, `xmllint`, the yaml
+checks, the ROS package-metadata checks and the doc build all clean on every changed file.
+Pre-existing, unrelated failures left alone: `pycln` and the two `poetry-requirements`
+hooks are broken in this environment. `black` reformatted
+`tools/e2e/scripts/verify_zero_loss.py` again as a whole-repo side effect — reverted before
+committing, same as every prior entry.
+
+### #51 and #52, re-checked as the issue asks
+
+**#52 (slow) — measured and largely attributed, still open.** The nested-`<static>` finding
+above is the dominant term and is fixed here: the world alone went 0.0074 -> 0.265 RTF, a
+36x improvement, for a three-line change. What remains is per-entity cost, not collision
+cost: with everything static, dropping the 240 prop instances still buys another 4x
+(0.265 -> 1.09), so the 317 model instances themselves are now the ceiling. #52's own
+checklist (time-to-first-Record, documenting an expected startup time) is untouched and it
+stays open; the numbers here should save it the bisection.
+
+**#51 (misalignment / detection fails) — root cause identified for this branch, still
+open.** #51's first listed suspect was "the robot description actually used by the spawned
+robot (see #279)", and that is exactly what was wrong: the demo was spawning
+`nav2_minimal_tb3_sim`'s single-camera `gz_waffle` with nav2's own bridge, which bridges no
+camera at all, so `/{left,right}_intel_realsense_r200_depth/image_raw` did not exist on
+this branch and no image ever reached a Camera measurement. Both topics now exist and
+publish. Detection itself is *not* yet demonstrated, and one blocker is now visible with
+the pipeline up (see below), so #51 keeps its "several consecutive runs" acceptance
+criterion and stays open, with a much narrower search space.
+
+### Left open deliberately
+
+- **`dc_measurements`' Camera plugin receives nothing from a topic that is demonstrably
+  publishing.** With DC enabled, `measurement_server` subscribes to
+  `/right_intel_realsense_r200_depth/image_raw` (confirmed: it is the topic's only
+  subscriber, RELIABLE on both ends), the bridge publishes it at a steady 5 Hz sim rate
+  (confirmed by `ros2 topic echo`: stamps 85.0, 85.2, 85.4, 85.6…), and yet
+  `camera.cpp`'s `cameraCb` never fires — `collect()` keeps finding `last_data_.data`
+  empty and logs "Message empty from measurement right_camera" indefinitely. This is
+  independent of the topic *rename* (the params already named these topics) and sits in
+  `dc_measurements`, not in the demo's launch path; it is the next thing #51 should look
+  at.
+- **`dc_services` needed `pydantic`, `cv_bridge` and `opencv` declared.** `draw_image` died
+  on `ModuleNotFoundError: No module named 'pydantic'` in the workspace image, and every
+  Camera measurement with `draw_det_barcodes: true` then blocked on "Waiting for draw image
+  service to appear...". `pydantic` was only ever in `requirements.txt`/`pyproject.toml`,
+  which the image does not install — it resolves dependencies through rosdep. Declared all
+  three in `dc_services/package.xml`; `python3-pydantic` resolves to Noble's 1.10.14, which
+  satisfies the `^1.10.4` pin, and `draw_image` then starts and initialises its service.
+- **`dc_demos/params/tb3_simulation_*.yaml`** still name `/intel_realsense_r200_depth/image_raw`,
+  which nav2's own bridge config does not bridge at all. Those demos run nav2's sandbox
+  world, not the warehouse, so they are outside #279; noting it because the same class of
+  break is now fixed on the qrcodes side.
+- The two cameras sit at the same point in `waffle.model` (both links carry
+  `<pose>0.069 -0.047 0.407 …</pose>`) while the URDF places them at y = ±0.12 — a
+  pre-existing mismatch between what renders the images and what publishes the frames, and
+  a candidate for #51's alignment symptom. Not touched here.

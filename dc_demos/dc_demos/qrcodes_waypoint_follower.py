@@ -1,4 +1,7 @@
+#!/usr/bin/env python3
 """Follow waypoints using the ROS 2 Navigation Stack (Nav2)."""
+import sys
+
 import rclpy
 from geometry_msgs.msg import Point, Pose, PoseStamped, Quaternion
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
@@ -19,8 +22,13 @@ def main():
     initial_pose.header.stamp = navigator.get_clock().now().to_msg()
     initial_pose.pose.position.x = -23.910843605740368
     initial_pose.pose.position.y = -13.887905581663327
-    initial_pose.pose.orientation.z = 0.7071068967259818
-    initial_pose.pose.orientation.w = 0.7248122257854975
+    # yaw 1.570796, the same pose qrcodes_nav.yaml's amcl initial_pose.* carries.
+    # The value transcribed here used to be (z=0.7071068967, w=0.7248122258),
+    # whose norm is 1.012 -- AMCL answers a non-unit quaternion with "Received
+    # initialpose message is malformed. Rejecting.", so this call did nothing and
+    # the demo silently relied on amcl's set_initial_pose instead (#279).
+    initial_pose.pose.orientation.z = 0.7071067811865476
+    initial_pose.pose.orientation.w = 0.7071067811865476
     navigator.setInitialPose(initial_pose)
     # Wait for navigation to fully activate. Use this line if autostart is set to true.
     navigator.waitUntilNav2Active()
@@ -91,35 +99,40 @@ def main():
     navigator.followWaypoints(goal_poses)
 
     i = 0
-    while rclpy.ok():
-        while not navigator.isTaskComplete():
-            # Do something with the feedback
-            i = i + 1
-            feedback = navigator.getFeedback()
-            if feedback and i % 5 == 0:
-                print(
-                    "Executing current waypoint: "
-                    + str(feedback.current_waypoint + 1)
-                    + "/"
-                    + str(len(goal_poses))
-                )
-                now = navigator.get_clock().now()
+    while not navigator.isTaskComplete():
+        # Do something with the feedback
+        i = i + 1
+        feedback = navigator.getFeedback()
+        if feedback and i % 5 == 0:
+            print(
+                "Executing current waypoint: "
+                + str(feedback.current_waypoint + 1)
+                + "/"
+                + str(len(goal_poses))
+            )
+            now = navigator.get_clock().now()
 
-                # Some navigation timeout to demo cancellation
-                if now - nav_start > Duration(seconds=100000000.0):
-                    navigator.cancelTask()
+            # Some navigation timeout to demo cancellation
+            if now - nav_start > Duration(seconds=100000000.0):
+                navigator.cancelTask()
 
-        # Do something depending on the return code
-        result = navigator.getResult()
-        if result == TaskResult.SUCCEEDED:
-            print("Goal succeeded!")
-        elif result == TaskResult.CANCELED:
-            print("Goal was canceled!")
-        elif result == TaskResult.FAILED:
-            print("Goal failed!")
-        else:
-            print("Goal has an invalid return status!")
+    # Do something depending on the return code
+    result = navigator.getResult()
+    if result == TaskResult.SUCCEEDED:
+        print("Goal succeeded!")
+    elif result == TaskResult.CANCELED:
+        print("Goal was canceled!")
+    elif result == TaskResult.FAILED:
+        print("Goal failed!")
+    else:
+        print("Goal has an invalid return status!")
+
+    # The pass is over once every waypoint has been visited. This used to sit
+    # inside a `while rclpy.ok():` loop, which re-entered with the task already
+    # complete and reprinted the result forever instead of exiting (#279).
+    rclpy.shutdown()
+    return 0 if result == TaskResult.SUCCEEDED else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -50,37 +50,46 @@
   gz_type_name: "gz.msgs.Model"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "left_camera/image_raw"
+# The two RGBD cameras. gz-sim derives its topic names from the sensor's
+# <topic> ("left_camera" -> /left_camera/image, /left_camera/depth_image,
+# /left_camera/camera_info), but the ROS side has to keep the names the Classic
+# libgazebo_ros_camera.so plugins published under -- <camera_name>/image_raw,
+# <camera_name>/camera_info and <camera_name>/depth/image_raw, with camera_name
+# = {left,right}_intel_realsense_r200_depth. dc_demos' qrcodes_*.yaml
+# cam_topic entries, the qrcodes.rviz displays and the demo docs all name those
+# topics, so renaming them here instead would break every consumer (#279).
+
+- ros_topic_name: "left_intel_realsense_r200_depth/image_raw"
   gz_topic_name: "/left_camera/image"
   ros_type_name: "sensor_msgs/msg/Image"
   gz_type_name: "gz.msgs.Image"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "left_camera/camera_info"
+- ros_topic_name: "left_intel_realsense_r200_depth/camera_info"
   gz_topic_name: "/left_camera/camera_info"
   ros_type_name: "sensor_msgs/msg/CameraInfo"
   gz_type_name: "gz.msgs.CameraInfo"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "left_camera/depth/image_raw"
+- ros_topic_name: "left_intel_realsense_r200_depth/depth/image_raw"
   gz_topic_name: "/left_camera/depth_image"
   ros_type_name: "sensor_msgs/msg/Image"
   gz_type_name: "gz.msgs.Image"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "right_camera/image_raw"
+- ros_topic_name: "right_intel_realsense_r200_depth/image_raw"
   gz_topic_name: "/right_camera/image"
   ros_type_name: "sensor_msgs/msg/Image"
   gz_type_name: "gz.msgs.Image"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "right_camera/camera_info"
+- ros_topic_name: "right_intel_realsense_r200_depth/camera_info"
   gz_topic_name: "/right_camera/camera_info"
   ros_type_name: "sensor_msgs/msg/CameraInfo"
   gz_type_name: "gz.msgs.CameraInfo"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "right_camera/depth/image_raw"
+- ros_topic_name: "right_intel_realsense_r200_depth/depth/image_raw"
   gz_topic_name: "/right_camera/depth_image"
   ros_type_name: "sensor_msgs/msg/Image"
   gz_type_name: "gz.msgs.Image"

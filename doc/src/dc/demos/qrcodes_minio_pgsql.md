@@ -2,18 +2,20 @@
 
 In this example, we add a robot and start collecting robot data to PostgreSQL, and maps and scanned QR codes to RustFS as image files.
 
-You will also need 2 terminal windows, to:
+You will also need 3 terminal windows, to:
 
-1. Run the Nav2 turtlebot3 launchfile: it starts localization, navigation and RViz
+1. Run the simulation + Nav2 launchfile: it starts gz-sim, localization, navigation and RViz
 2. Run DC
+3. Drive the robot past the QR codes
 
-Since RViz is pretty verbose, using 3 terminal windows will help reading the JSON printed on the terminal window.
+Keeping them separate helps reading the JSON printed on the DC terminal, which
+RViz and gz-sim would otherwise drown out.
 
-| Terminal | Description                                     |
-| -------- | ----------------------------------------------- |
-| RViz     | Start it independently because of its verbosity |
-| Nav2     | Localization and navigation                     |
-| DC       | Data collection                                 |
+| Terminal | Description                                        |
+| -------- | -------------------------------------------------- |
+| Nav2     | gz-sim, localization, navigation and RViz          |
+| DC       | Data collection                                     |
+| Run      | Waypoint follower driving past every QR-coded pallet |
 
 ## Setup RustFS and PostgreSQL
 
@@ -31,47 +33,41 @@ Vector's `postgres` sink maps each top-level key of a Record's JSON payload onto
 
 ## Setup the ROS environment
 
-In each, terminal, source your environment and setup turtlebot configuration:
+In each terminal, source your environment:
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
-export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/aws_robomaker_small_warehouse_world/models/
-export TURTLEBOT3_MODEL=waffle
 ```
 
-## Start RVIZ
-
-```bash
-ros2 run rviz2 rviz2 -d ${PWD}/install/dc_simulation/share/dc_simulation/rviz/qrcodes.rviz
-```
+Nothing else has to be exported. `dc_simulation`'s environment hook puts its own
+`models/` and `worlds/` on `GZ_SIM_RESOURCE_PATH`, and `warehouse.launch.py` adds
+`nav2_minimal_tb3_sim`'s models (where the TurtleBot3 meshes live now — the
+Gazebo Classic `turtlebot3_gazebo` package has no Jazzy release).
 
 ## Start Navigation
 
-Then, start the Turtlebot launchfile with custom parameters to start the QRcode world:
+`dc_demos`' own launch file brings up gz-sim with the QR-code warehouse world,
+spawns `dc_simulation`'s TurtleBot3-Waffle with its `ros_gz_bridge`, and starts
+Nav2 (`map_server` + AMCL + planners) against `dc_simulation/maps/qrcodes.yaml`.
+It also starts DC, which this demo drives separately, so turn that off here:
 
 ```bash
-ros2 launch nav2_bringup tb3_simulation_launch.py \
+ros2 launch dc_demos tb3_qrcodes.launch.py \
     headless:=False \
-    x_pose:="-16.679400" \
-    y_pose:="-15.300200" \
-    z_pose:="0.01" \
-    roll:="0.00" \
-    pitch:="0.00" \
-    yaw:="1.570796" \
-    robot_sdf:="${PWD}/install/dc_simulation/share/dc_simulation/worlds/waffle.model" \
-    map:="${PWD}/install/dc_simulation/share/dc_simulation/maps/qrcodes.yaml" \
-    world:="${PWD}/install/dc_simulation/share/dc_simulation/worlds/qrcodes.world" \
-    nav2_params_file:="${PWD}/install/dc_simulation/share/dc_demos/params/qrcodes_nav.yaml" \
-    dc_params_file:="${PWD}/install/dc_simulation/share/dc_demos/params/qrcodes_minio_pgsql.yaml" \
-    rviz_config_file:="${PWD}/install/dc_simulation/share/dc_simulation/rviz/qrcodes.rviz" \
-    use_rviz:=False
+    use_dc:=False
 ```
 
-RViz and Gazebo will start: you should now see the robot in Gazebo, and the map on RViz.
+gz-sim and RViz will start: you should see the robot in the warehouse, and the
+map in RViz. AMCL sets the demo's initial pose itself (`set_initial_pose` in
+`qrcodes_nav.yaml`), so there is no need to click "2D Pose Estimate" — wait until
+the laser scan lines up with the map before starting the run below.
 
-Set the robot position using the "2D Pose Estimate" button.
+```admonish warning
+The warehouse world is heavy: 317 model instances, most of them the QR-coded
+pallets themselves. Expect a slow start and a real-time factor well under 1 on a
+machine without a GPU. See [#52](https://github.com/Minipada/ros2_data_collection/issues/52).
+```
 
 ## Start DC
 
@@ -82,6 +78,16 @@ ros2 launch dc_demos tb3_qrcodes_minio_pgsql.launch.py
 ```
 
 With this, all data will be transmitted
+
+## Drive the robot past the QR codes
+
+In a fourth terminal, run the waypoint follower. It sends the robot down each
+aisle, stopping in front of every QR-coded pallet so both cameras can read them,
+and exits once the pass is complete:
+
+```bash
+ros2 run dc_demos qrcodes_waypoint_follower
+```
 
 ## Understanding the configuration
 

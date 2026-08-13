@@ -8,6 +8,10 @@
   <license>MPL-2.0</license>
 
   <exec_depend>dc_description</exec_depend>
+  <!-- Ships the TurtleBot3 meshes worlds/waffle.model's visuals reference
+       (model://turtlebot3_model). turtlebot3_gazebo, which used to provide
+       them, has no Jazzy release. -->
+  <exec_depend>nav2_minimal_tb3_sim</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>
   <exec_depend>ros_gz_sim</exec_depend>
   <exec_depend>rclpy</exec_depend>
