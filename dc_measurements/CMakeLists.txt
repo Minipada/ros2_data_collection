@@ -268,16 +268,30 @@ install(DIRECTORY plugins/measurements/json
 )
 
 set(tests
+  test_measurement_bool_equal
   test_measurement_camera
   test_measurement_diagnostics
   test_measurement_double_equal
+  test_measurement_double_inferior
+  test_measurement_double_superior
   test_measurement_driving_type
   test_measurement_dummy
+  test_measurement_exist
   test_measurement_gate_condition
+  test_measurement_integer_equal
+  test_measurement_integer_inferior
+  test_measurement_integer_superior
+  test_measurement_list_bool_equal
+  test_measurement_list_double_equal
+  test_measurement_list_integer_equal
+  test_measurement_list_string_equal
+  test_measurement_moving
   test_measurement_os
   test_measurement_parameters
   test_measurement_random
+  test_measurement_same_as_previous
   test_measurement_serial_interface
+  test_measurement_string_match
   test_measurement_thermal
   test_measurement_uptime
 )
