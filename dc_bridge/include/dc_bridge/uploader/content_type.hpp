@@ -15,6 +15,10 @@ std::string sniff(const std::string& buf);
 /// Whether a sniffed content type is a video — the gate for ffprobe duration probing.
 bool is_video(const std::string& content_type);
 
+/// Whether a sniffed content type is an image. Together with is_video, the gate for
+/// optional thumbnail generation (#256).
+bool is_image(const std::string& content_type);
+
 }  // namespace dc_bridge::content_type
 
 #endif  // DC_BRIDGE__UPLOADER__CONTENT_TYPE_HPP_

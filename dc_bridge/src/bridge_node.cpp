@@ -262,6 +262,13 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
   const auto files_multipart_part_size = declare_optional_int(this, "files.multipart_part_size_bytes");
   const std::string metadata_destination = this->declare_parameter<std::string>("files.metadata_destination", "");
 
+  // files.thumbnails.* (#256): opt-in derived previews next to each uploaded image/video
+  // File. Off by default; see dc_bridge/uploader/thumbnail.hpp for why generation shells
+  // out to ffmpeg rather than linking a decoder.
+  const bool files_thumbnails = this->declare_parameter<bool>("files.thumbnails.enabled", false);
+  thumbnail_binary_ = this->declare_parameter<std::string>("files.thumbnails.ffmpeg_binary", "ffmpeg");
+  const auto files_thumbnail_max_dim = declare_optional_int(this, "files.thumbnails.max_dimension");
+
   // files.retention.* (#267): default off (0/absent = unlimited, Humble parity) —
   // declared unconditionally like the files.* params above, whether or not a
   // `receives: files` destination even exists.
@@ -320,8 +327,14 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
       ucfg.multipart_part_size_bytes =
           static_cast<std::uint64_t>(std::max<std::int64_t>(1, *files_multipart_part_size));
     }
+    ucfg.thumbnails.enabled = files_thumbnails;
+    if (files_thumbnail_max_dim)
+    {
+      ucfg.thumbnails.max_dimension = static_cast<std::uint32_t>(std::max<std::int64_t>(1, *files_thumbnail_max_dim));
+    }
     uploader_ = std::make_unique<uploader::Uploader>(std::move(ucfg), std::move(storages),
-                                                     uploader::ffprobe_duration_prober(files_ffprobe));
+                                                     uploader::ffprobe_duration_prober(files_ffprobe),
+                                                     uploader::ffmpeg_thumbnail_generator(thumbnail_binary_));
     // The durable intent queue (#265): sibling to the Uploader's own
     // <data_dir>/uploader multipart-resume state, replayed on every startup so a Bridge
     // restart never forgets a pending upload.
@@ -665,6 +678,16 @@ void BridgeNode::run_uploader_worker(std::string forward_host, std::uint16_t for
                     "uploader: group '%s': %zu file(s), %zu verified, %zu missing, %zu deleted, complete=%d",
                     item->tag.c_str(), summary.files, summary.verified, summary.missing, summary.deleted,
                     static_cast<int>(summary.group_complete));
+      }
+      // Previews are best-effort and never fail an upload (#256), so a File the operator
+      // asked to have one and didn't get is only visible here. Warn rather than info:
+      // silently shipping galleries with no previews is the failure mode worth surfacing.
+      if (summary.thumbnails_failed > 0)
+      {
+        RCLCPP_WARN(this->get_logger(),
+                    "uploader: group '%s': %zu thumbnail(s) generated, %zu could not be generated (is `%s` on PATH?) — "
+                    "the Files themselves uploaded normally",
+                    item->tag.c_str(), summary.thumbnails, summary.thumbnails_failed, thumbnail_binary_.c_str());
       }
     }
     catch (const std::exception& e)

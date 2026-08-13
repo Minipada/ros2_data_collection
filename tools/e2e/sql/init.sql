@@ -56,6 +56,10 @@ CREATE TABLE IF NOT EXISTS dc_files (
   deleted boolean,
   content_type text,
   size bigint,
+  -- The File's derived preview (#256), when files.thumbnails is enabled — nullable, and
+  -- always NULL with the feature off (its default) or for a File no preview can be
+  -- derived from.
+  thumbnail_path text,
   file_count integer,
   complete boolean,
   updated_at double precision

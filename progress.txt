@@ -4463,3 +4463,92 @@ plus the real container build+test run described above as the primary gate (stro
 prior session in this log, which were all constrained to read-through + `clang-format` only).
 `black` reformatted `tools/e2e/scripts/verify_zero_loss.py` again as a side effect of running
 pre-commit against the whole repo — reverted before committing, same as every prior entry.
+
+## #256: Uploader — optional thumbnail/preview generation for uploaded images and videos
+
+**Read**: the issue, `dc_bridge/{include/dc_bridge,src}/uploader/*` (uploader, status, group,
+content_type, multipart, intent_queue, retention), `dc_bridge/src/bridge_node.cpp`'s
+`files.*` parameter block and uploader worker loop, `doc/src/dc/destinations.md`'s Uploader
+sections, and the demo dashboard's camera gallery
+(`dc_demos/dc_demos/streamlit_dashboard/pages/2_Robot.py` + `backend/`).
+
+**Built**: `files.thumbnails` — opt-in, off by default. When enabled, the Uploader derives a
+small JPEG preview from each image/video File and uploads it next to the original as
+`<remote_path>.thumb.jpg`, recording it in that File's `file_status` Record as
+`thumbnail_path` (`s3://bucket/key`, same shape as `remote_path`; field absent when there is
+no preview, so the Humble column set is unaffected).
+
+New `uploader/thumbnail.{hpp,cpp}`: `ThumbnailConfig` (`enabled`, `max_dimension`), a
+`ThumbnailGenerator` `std::function` seam mirroring the existing `DurationProber`,
+`ffmpeg_thumbnail_generator`, `thumbnailable()`, `thumbnail_remote_path()`,
+`thumbnail_scratch_path()`. `content_type::is_image()` added alongside the existing
+`is_video()`. `Uploader::ensure_thumbnail()` is called from `upload_and_verify_file`'s
+`Verified` branch only, and `ProcessSummary` gained `thumbnails`/`thumbnails_failed`
+counters, surfaced by a new `RCLCPP_WARN` in the uploader worker (a failed preview is
+otherwise invisible, since it never fails the upload). ROS params:
+`files.thumbnails.enabled` / `.max_dimension` / `.ffmpeg_binary`.
+
+**Decode dependency — the deliberate choice the issue asks for**: shell out to the **ffmpeg
+CLI** (argv, never `sh -c`), the same way `ffprobe_duration_prober` already probes durations.
+Reasons, written up in `thumbnail.hpp`'s header comment: it is not a new dependency *class*
+(the Bridge already needs the ffmpeg toolchain at runtime for `files.ffprobe_binary`, and
+`ffmpeg`/`ffprobe` ship in one package); one tool covers both stills and video first-frames,
+where a C++ image library (OpenCV/libvips/ImageMagick) would cover stills only and still
+leave video needing ffmpeg; and it stays off `dc_bridge_core`'s link line, which is
+deliberately dependency-light and gtested against in-memory fakes — plus a malformed camera
+file that crashes a decoder kills a child process, not the Bridge. `dc_bridge/package.xml`
+now declares `<exec_depend>ffmpeg</exec_depend>` (a standard upstream rosdep key — verified
+against rosdistro `base.yaml`; no `rosdep/dc.yaml` entry needed), which also closes the gap
+where the existing ffprobe use was never declared at all.
+
+**How the durability/retention acceptance criteria are met — by ordering, not by new rules**:
+
+- Generation runs strictly *after* the File is verified on that Destination. Every failure
+  path (no ffmpeg, undecodable File, store rejects the put, verification mismatch) is
+  swallowed and returns "no preview" — it never throws, retries, delays or fails the primary
+  upload, and never adds to `failures`, so it cannot turn a successful upload into a retried
+  `UploadError`.
+- Local previews are scratch files under `<state_dir>/thumbs/`, removed by an RAII guard
+  before `process_record` returns on every exit path. So a preview never joins the
+  un-uploaded pool retention (#267) measures, and can never outlive its original. The
+  converse orphan case is closed by the same ordering: retention only ever sheds *un-uploaded*
+  intents, and an un-uploaded File never had a preview derived from it.
+- Remote previews are idempotent by object key: a replayed intent after a Bridge restart
+  (#265) finds the thumbnail already on the store via a plain `head` and neither re-decodes
+  nor re-uploads it — while still reporting `thumbnail_path` on the replayed status row.
+
+**Demo dashboard**: new `backend/rustfs.py::gallery_url()` — presigned URL for the
+`.thumb.jpg` preview when one exists, else the full-size original (cached `stat_object`
+probe). The three camera gallery grids in `pages/2_Robot.py` use it; the expanded map view
+still loads the full image deliberately. Thumbnails enabled in
+`dc_demos/params/{qrcodes_minio_pgsql,tb3_simulation_pgsql_minio}.yaml`. The fallback means
+the demo is unaffected if ffmpeg isn't installed. `tools/e2e/sql/init.sql`'s `dc_files` gained
+a nullable `thumbnail_path text` column; `dc_bringup/params/dc_params.yaml` and
+`doc/src/dc/destinations.md` document the option (new "Thumbnails" section).
+
+**Verified for real**: built and tested in a container from `localhost/dc-workspace:latest`
+(the same image `tools/e2e/scripts/build.sh` uses), worktree bind-mounted over
+`/root/ws/src/ros2_data_collection` — `colcon build --packages-select dc_bridge` +
+`colcon test` + `colcon test-result --all --verbose`: **156 tests, 0 failures, 0 skipped, 0
+compiler warnings**. 17 of those are new (10 in `uploader_test.cpp` driving the Uploader's
+thumbnail path through a fake generator: off-by-default, upload+record, generation failure,
+store rejection, images/videos only, replay reuse, per-Destination, no local residue, no
+preview for a File that never uploads, no preview for a missing File; 7 in a new
+`thumbnail_test.cpp` for the pure helpers).
+
+Notably the image already ships ffmpeg, so `FfmpegGeneratorProducesABoundedJpegAndNeverUpscales`
+— which builds a 40x20 PGM, generates a preview, and parses the output JPEG's SOF marker —
+**ran for real rather than skipping**, confirming the actual ffmpeg argument vector: 40x20
+under a 10px bound comes back 10x5 (longest side bounded, aspect preserved) and under a
+4096px bound comes back 40x20, not upscaled. The same command line was also checked by hand
+against a 1920x1080 JPEG (-> 320x180, 58 kB -> 9 kB), an 800x1200 PNG (-> 213x320), a 64x48
+PGM (unchanged), and a 640x480 MP4 (-> 320x240 first frame). The test `GTEST_SKIP()`s where
+ffmpeg is absent, since ffmpeg is an `exec_depend`, not a build dependency.
+
+**Verified**: `pre-commit` — `clang-format` clean on every changed/new C++ file, `flake8`
+clean on both changed Python files, `black`/`isort` clean. Pre-existing, unrelated failures
+left alone: `pycln` and the two `poetry-requirements` hooks are broken in this environment
+(missing `pyproject.toml` in the hook's own venv / no `poetry` module), and `flake8` still
+flags `dc_bringup/launch/dc_bringup.launch.py` and `tools/e2e/scripts/workload_generator.py`
+on this branch. `black` reformatted `tools/e2e/scripts/verify_zero_loss.py` again as a
+whole-repo side effect — reverted before committing, same as every prior entry.

@@ -82,10 +82,22 @@ DurationProber ffprobe_duration_prober(const std::string& ffprobe_binary)
   };
 }
 
-Uploader::Uploader(UploaderConfig config, std::vector<Storage> storages, DurationProber duration_prober)
-  : config_(std::move(config)), storages_(std::move(storages)), duration_prober_(std::move(duration_prober))
+Uploader::Uploader(UploaderConfig config, std::vector<Storage> storages, DurationProber duration_prober,
+                   ThumbnailGenerator thumbnail_generator)
+  : config_(std::move(config))
+  , storages_(std::move(storages))
+  , duration_prober_(std::move(duration_prober))
+  , thumbnail_generator_(std::move(thumbnail_generator))
 {
   std::filesystem::create_directories(config_.state_dir);
+  if (config_.thumbnails.enabled)
+  {
+    // Scratch space for previews on their way to the store. A sibling of the multipart
+    // resume state rather than a directory next to the originals: these are transient
+    // and must never be mistaken for collected data (the retention sweep in #267 only
+    // ever looks at Files an intent references, which this is not).
+    std::filesystem::create_directories(config_.state_dir + "/thumbs");
+  }
   for (const auto& s : storages_)
   {
     storage_names_.insert(s.name);
@@ -236,6 +248,76 @@ Uploader::EnsureOutcome Uploader::ensure_uploaded(const Storage& storage, const 
   throw std::runtime_error(last_err);
 }
 
+std::optional<std::string> Uploader::ensure_thumbnail(const FileRef& file, const FileMeta& meta, const Storage& st,
+                                                      const std::string& remote_path)
+{
+  if (!config_.thumbnails.enabled || !thumbnail_generator_ || !thumbnailable(meta.content_type))
+  {
+    return std::nullopt;
+  }
+
+  const std::string thumb_path = thumbnail_remote_path(remote_path);
+  const std::string key = st.object_key(thumb_path);
+
+  // Every step below is best-effort: a preview is a decoration on an upload that has
+  // already succeeded, so nothing here may throw, retry, or be reported as a failure of
+  // the File itself. One catch-all around the lot rather than per-step handling — there
+  // is exactly one response to any of these going wrong, which is "no preview".
+  try
+  {
+    // Idempotent by object key: a replayed intent after a Bridge restart (#265), or a
+    // second Destination-level pass over the same File, finds the preview already there
+    // and neither re-decodes nor re-uploads it.
+    if (st.store->head(key))
+    {
+      return thumb_path;
+    }
+
+    const std::string scratch = thumbnail_scratch_path(config_.state_dir + "/thumbs", st.name, key);
+    // The scratch file leaves no residue whichever way this exits — including the throw
+    // paths below — so a preview never joins the on-disk pool retention measures (#267)
+    // and can never outlive the original it was derived from.
+    struct ScratchGuard
+    {
+      const std::string& path;
+      ~ScratchGuard()
+      {
+        std::error_code ec;
+        std::filesystem::remove(path, ec);
+      }
+    } guard{ scratch };
+
+    if (!thumbnail_generator_(file.local_path, scratch, config_.thumbnails.max_dimension))
+    {
+      return std::nullopt;
+    }
+    std::ifstream in(scratch, std::ios::binary);
+    if (!in.good())
+    {
+      return std::nullopt;
+    }
+    std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    if (bytes.empty())
+    {
+      return std::nullopt;  // ffmpeg exited 0 but produced nothing decodable.
+    }
+    st.store->put(key, bytes);
+
+    // Verified the same way the primary upload is (head + size), so a `thumbnail_path`
+    // in a status row always names an object that is actually there.
+    const auto verified = st.store->head(key);
+    if (!verified || *verified != bytes.size())
+    {
+      return std::nullopt;
+    }
+    return thumb_path;
+  }
+  catch (const std::exception&)
+  {
+    return std::nullopt;
+  }
+}
+
 Uploader::FileOutcome Uploader::upload_and_verify_file(const FileGroup& group, const FileRef& file, const EmitFn& emit,
                                                        std::vector<std::string>& failures)
 {
@@ -250,9 +332,22 @@ Uploader::FileOutcome Uploader::upload_and_verify_file(const FileGroup& group, c
       switch (ensure_uploaded(st, file, meta, remote_path))
       {
         case EnsureOutcome::Verified:
+        {
+          // Strictly after the File is verified on this Destination — a preview must
+          // never delay or be attempted ahead of the data it derives from (#256).
+          const std::optional<std::string> thumb = ensure_thumbnail(file, *meta, st, remote_path);
+          if (thumb)
+          {
+            outcome.thumbnails += 1;
+          }
+          else if (config_.thumbnails.enabled && thumbnailable(meta->content_type))
+          {
+            outcome.thumbnails_failed += 1;
+          }
           emit_once(emit, "uploaded|" + file.local_path + "|" + st.name,
-                    status::uploaded_row(group, file, st, remote_path, *meta));
+                    status::uploaded_row(group, file, st, remote_path, *meta, thumb));
           break;
+        }
         case EnsureOutcome::VerifiedRemoteOnly:
           break;
         case EnsureOutcome::MissingLocal:
@@ -358,6 +453,8 @@ ProcessSummary Uploader::process_record(const nlohmann::json& payload, const std
   for (const auto& file : group.files)
   {
     const FileOutcome outcome = upload_and_verify_file(group, file, emit, failures);
+    summary.thumbnails += outcome.thumbnails;
+    summary.thumbnails_failed += outcome.thumbnails_failed;
     if (outcome.missing)
     {
       summary.missing += 1;

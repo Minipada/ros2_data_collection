@@ -22,6 +22,7 @@
 #include "dc_bridge/uploader/group.hpp"
 #include "dc_bridge/uploader/object_store.hpp"
 #include "dc_bridge/uploader/status.hpp"
+#include "dc_bridge/uploader/thumbnail.hpp"
 
 namespace dc_bridge::uploader
 {
@@ -37,6 +38,8 @@ struct UploaderConfig
   std::uint64_t multipart_part_size_bytes = 8ULL * 1024 * 1024;
   std::uint32_t max_attempts = 3;
   std::chrono::milliseconds retry_backoff{ 500 };
+  /// Optional derived previews (#256); disabled by default.
+  ThumbnailConfig thumbnails;
 
   UploaderConfig(std::string state_dir_, bool delete_when_sent_)
     : delete_when_sent(delete_when_sent_), state_dir(std::move(state_dir_))
@@ -51,6 +54,12 @@ struct ProcessSummary
   std::size_t missing = 0;
   std::size_t deleted = 0;
   bool group_complete = false;
+  /// Previews uploaded and previews that couldn't be produced (#256). Counted rather
+  /// than thrown: a failed preview is not an upload failure, but an operator who turned
+  /// the feature on and gets no previews still needs to see that from the Bridge's own
+  /// log line rather than by diffing the object store.
+  std::size_t thumbnails = 0;
+  std::size_t thumbnails_failed = 0;
 };
 
 /// Thrown by process_record when a Record couldn't be fully processed. `Incomplete` is
@@ -88,7 +97,10 @@ using EmitFn = std::function<void(const nlohmann::json& row)>;
 class Uploader
 {
 public:
-  Uploader(UploaderConfig config, std::vector<Storage> storages, DurationProber duration_prober);
+  /// `thumbnail_generator` may be empty when `config.thumbnails.enabled` is false (the
+  /// default) — nothing will ask it for a preview.
+  Uploader(UploaderConfig config, std::vector<Storage> storages, DurationProber duration_prober,
+           ThumbnailGenerator thumbnail_generator = {});
 
   /// Processes one Record payload: uploads+verifies every File it references on every
   /// configured storage, emits status/metadata Records via `emit`, and (if
@@ -114,10 +126,18 @@ private:
   {
     bool verified_everywhere;
     bool missing;
+    std::size_t thumbnails = 0;
+    std::size_t thumbnails_failed = 0;
   };
 
   FileOutcome upload_and_verify_file(const FileGroup& group, const FileRef& file, const EmitFn& emit,
                                      std::vector<std::string>& failures);
+  /// Derives, uploads and verifies `file`'s preview on `storage`, returning its remote
+  /// path (before key_prefix) on success. Called only once the File itself is verified
+  /// there. Never throws and never reports failure to the caller as anything but
+  /// nullopt — a preview must not be able to fail the upload it decorates (#256).
+  std::optional<std::string> ensure_thumbnail(const FileRef& file, const FileMeta& meta, const Storage& storage,
+                                              const std::string& remote_path);
   bool delete_verified_file(const FileGroup& group, const FileRef& file, const EmitFn& emit,
                             std::vector<std::string>& failures);
   void emit_group_complete(const FileGroup& group, const EmitFn& emit);
@@ -132,6 +152,7 @@ private:
   std::vector<Storage> storages_;
   std::set<std::string> storage_names_;
   DurationProber duration_prober_;
+  ThumbnailGenerator thumbnail_generator_;
   std::mutex emitted_mutex_;
   std::set<std::string> emitted_;
 };

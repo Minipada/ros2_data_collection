@@ -122,4 +122,9 @@ bool is_video(const std::string& content_type)
   return content_type.rfind("video/", 0) == 0;
 }
 
+bool is_image(const std::string& content_type)
+{
+  return content_type.rfind("image/", 0) == 0;
+}
+
 }  // namespace dc_bridge::content_type

@@ -37,6 +37,14 @@
   <depend>aws_sdk_vendor</depend>
 
   <exec_depend>vector_vendor</exec_depend>
+  <!-- The Uploader's media toolchain, used as subprocesses rather than linked (see
+       include/dc_bridge/uploader/thumbnail.hpp for why): `ffprobe` for the `duration`
+       column on video Files (ADR-0005) and `ffmpeg` for the optional thumbnails of
+       #256. One package provides both. Neither is needed to *build* dc_bridge, and
+       both are optional at runtime — a missing binary degrades to "no duration" / "no
+       thumbnail", never to a failed upload — but declaring it is what makes an
+       ordinary `rosdep install` produce a Bridge with both features working. -->
+  <exec_depend>ffmpeg</exec_depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
 

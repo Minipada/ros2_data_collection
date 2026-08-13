@@ -84,6 +84,16 @@ dc_bridge:
     #   retention:
     #     max_bytes: 10737418240  # 10 GiB cap on the un-uploaded Files pool
     #     max_age_days: 30        # optional; whichever limit is hit first
+    #   # Thumbnails (#256): upload a small JPEG preview next to each image/video File
+    #   # (`<remote_path>.thumb.jpg`) and record it in the status Record's
+    #   # `thumbnail_path`, so gallery views load previews instead of full-size camera
+    #   # Files. Off by default. Generation shells out to ffmpeg and is best-effort:
+    #   # it runs only after the File itself is verified and can never fail, delay or
+    #   # retry the upload — at worst there is no preview.
+    #   thumbnails:
+    #     enabled: true
+    #     max_dimension: 320        # bound on the preview's longest side, in pixels
+    #     ffmpeg_binary: "ffmpeg"   # override if it isn't on PATH
     #
     # Raw topic collection (#227): subscribe to topics dc_bridge was never compiled
     # against (rclcpp::GenericSubscription + runtime introspection, as `ros2 bag record
