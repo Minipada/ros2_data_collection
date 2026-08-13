@@ -19,12 +19,17 @@ bool Exist::getState(dc_interfaces::msg::StringStamped msg)
   {
     json data_json = json::parse(msg.data);
     json flat_json = data_json.flatten();
-    std::string key_w_prefix = std::string("/") + key_ + "/";
+    std::string key_exact = std::string("/") + key_;
+    std::string key_w_prefix = key_exact + "/";
 
+    // A flattened key matches "key_" either exactly (key_ is itself a scalar leaf, e.g.
+    // {"level": 5.5} with key_="level" flattens to exactly "/level") or as a "key_/..." prefix
+    // (key_ names an object/array with descendants). Checking the prefix alone misses the
+    // exact-match case entirely, since flatten() never emits "/level/" for a leaf value.
     bool found = false;
     for (auto& x : flat_json.items())
     {
-      if (x.key().rfind(key_w_prefix, 0) == 0)
+      if (x.key() == key_exact || x.key().rfind(key_w_prefix, 0) == 0)
       {
         found = true;
         break;

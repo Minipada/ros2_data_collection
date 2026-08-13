@@ -30,7 +30,10 @@ bool IntegerSuperior::getState(dc_interfaces::msg::StringStamped msg)
     return active_;
   }
 
-  if (flat_json[key_w_prefix].type() != json::value_t::number_integer)
+  // is_number_integer(), not a strict type()==number_integer check: nlohmann::json parses
+  // non-negative integer literals (the common case) as number_unsigned, not number_integer, and
+  // is_number_integer() is the one that correctly treats both as "an integer".
+  if (!flat_json[key_w_prefix].is_number_integer())
   {
     RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not an integer");
     active_ = false;

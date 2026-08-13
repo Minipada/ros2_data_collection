@@ -87,7 +87,7 @@
         </class>
     </library>
 
-    <library path="dc_list_bool_string_condition">
+    <library path="dc_list_string_equal_condition">
         <class name="dc_conditions/ListStringEqual" type="dc_conditions::ListStringEqual" base_class_type="dc_core::Condition">
             <description>
                 dc_condition_list_string_equal
@@ -111,7 +111,7 @@
         </class>
     </library>
 
-    <library path="dc_str_match_condition">
+    <library path="dc_string_match_condition">
         <class name="dc_conditions/StringMatch" type="dc_conditions::StringMatch" base_class_type="dc_core::Condition">
             <description>
                 dc_condition_string_match
