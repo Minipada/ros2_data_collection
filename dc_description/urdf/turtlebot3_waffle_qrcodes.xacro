@@ -2,19 +2,43 @@
 <robot name="turtlebot3_waffle"
   xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <xacro:property name="ground_base_distance" value="1.300"/>
+  <!-- base_link sits 10 mm above base_footprint (see base_joint below). This used
+       to be a "ground_base_distance" of 1.300 m, borrowed from a much taller
+       robot: every camera offset below is expressed relative to the ground and
+       then rebased onto base_link, so a 1.3 m error put both cameras 0.6 m
+       underground in TF (#51). -->
+  <xacro:property name="base_link_z" value="0.010"/>
 
-  <xacro:property name="base_link_x" value="0.0"/>
-  <xacro:property name="base_link_y" value="0.0"/>
-  <xacro:property name="base_link_z" value="${ground_base_distance}"/>
+  <!-- Optical centre of each inspection camera, measured from base_footprint.
+       These must match the two rgbd_camera sensors in
+       dc_simulation/worlds/waffle.model: the SDF is what renders the images, this
+       URDF is what publishes camera_{left,right}_depth_optical_frame, and until
+       #51 the two described different cameras: pointing different ways, at
+       different heights, in different places. -->
+  <xacro:property name="camera_x" value="0.0"/>
+  <xacro:property name="camera_y" value="0.02"/>
+  <xacro:property name="camera_z" value="0.539"/>
 
-  <xacro:property name="camera_right_x" value="${0.0 - base_link_x}"/>
-  <xacro:property name="camera_right_y" value="${-0.12 - base_link_y}"/>
-  <xacro:property name="camera_right_z" value="${0.665 - base_link_z}"/>
+  <!-- realsense2_description's sensor_d455 macro does not put the optical origin
+       (camera_*_link) on the frame it is attached to: it offsets it by this much
+       in its own bottom-screw axes. Undo that below so the optical origin lands
+       on camera_{x,y,z} exactly. -->
+  <xacro:property name="d455_offset_x" value="0.01115"/>
+  <xacro:property name="d455_offset_y" value="0.0475"/>
+  <xacro:property name="d455_offset_z" value="0.0145"/>
 
-  <xacro:property name="camera_left_x" value="${0.0 - base_link_x}"/>
-  <xacro:property name="camera_left_y" value="${0.12 - base_link_y}"/>
-  <xacro:property name="camera_left_z" value="${0.690 - base_link_z}"/>
+  <!-- The sensor_d455 macro is instantiated with a further +pi/2 yaw, so a frame
+       joint of 0 makes a camera look along +Y (the robot's left) and one of pi
+       makes it look along -Y (its right). Both frame joints used to carry -pi/2,
+       which the macro's +pi/2 cancelled: in TF, both cameras looked straight
+       ahead while the simulated pair looked sideways (#51). -->
+  <xacro:property name="camera_left_x" value="${camera_x + d455_offset_y}"/>
+  <xacro:property name="camera_left_y" value="${camera_y - d455_offset_x}"/>
+  <xacro:property name="camera_left_z" value="${camera_z - base_link_z - d455_offset_z}"/>
+
+  <xacro:property name="camera_right_x" value="${camera_x - d455_offset_y}"/>
+  <xacro:property name="camera_right_y" value="${-camera_y + d455_offset_x}"/>
+  <xacro:property name="camera_right_z" value="${camera_z - base_link_z - d455_offset_z}"/>
 
 
   <!-- Init colour -->
@@ -237,7 +261,7 @@
   <joint name="camera_right_frame_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_right_frame_link"/>
-    <origin xyz="${camera_right_x} ${camera_right_y} ${camera_right_z}" rpy="0 0 ${-pi/2}"/>
+    <origin xyz="${camera_right_x} ${camera_right_y} ${camera_right_z}" rpy="0 0 ${pi}"/>
   </joint>
 
   <xacro:arg name="use_nominal_extrinsics" default="true"/>
@@ -251,7 +275,7 @@
   <joint name="camera_left_frame_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_left_frame_link"/>
-    <origin xyz="${camera_left_x} ${camera_left_y} ${camera_left_z}" rpy="0 0 ${-pi/2}"/>
+    <origin xyz="${camera_left_x} ${camera_left_y} ${camera_left_z}" rpy="0 0 0"/>
   </joint>
 
   <xacro:arg name="use_nominal_extrinsics" default="true"/>

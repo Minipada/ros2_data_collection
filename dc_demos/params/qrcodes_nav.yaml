@@ -39,9 +39,12 @@ amcl:
     z_short: 0.05
     scan_topic: scan
     set_initial_pose: True
-    # Obtained after setting pose on RVIZ and checking /amcl_pose topic
-    initial_pose.x: -23.910843605740368
-    initial_pose.y: -13.887905581663327
+    # The spawn pose tb3_qrcodes.launch.py uses, (-16.6794, -15.3002) in the
+    # world frame, carried into the map frame by its (-7.300, +1.425) offset.
+    # It used to be (-23.910844, -13.887906), "obtained after setting pose on
+    # RVIZ and checking /amcl_pose", which is 69 mm out in x (#51).
+    initial_pose.x: -23.9794
+    initial_pose.y: -13.8752
     initial_pose.z: 0.0
     initial_pose.yaw: 1.570796
 
@@ -92,11 +95,29 @@ controller_server:
     #  xy_goal_tolerance: 0.25
     #  yaw_goal_tolerance: 0.25
     #  stateful: True
+    # This demo's goals are camera stations, not just places to be, so the
+    # tolerance has to fit what the lens can still read from there (#51).
+    #
+    # The cameras are 60-degree-FOV, so at a standoff d the frame is
+    # +/- d*tan(30) wide, and a code is readable while
+    #
+    #     |lateral error| + d*tan(|yaw error|) + 0.181 <= d*tan(30)
+    #
+    # where 0.181 m is half the rendered width of a QR symbol on a pallet. The
+    # tightest station is aisle 2, where the pallet rows are 1.49 m apart and the
+    # robot can only ever be d = 0.73 m off either wall:
+    #
+    #     0.1 + 0.73*tan(0.1) + 0.181 = 0.354 <= 0.73*tan(30) = 0.422   OK
+    #     0.1 + 0.73*tan(0.2) + 0.181 = 0.429 <= 0.422                  false
+    #
+    # Hence 0.1 rad, not the 0.2 this carried. Yaw is the expensive term because
+    # it scales with the standoff, and a diff-drive robot turning on the spot
+    # settles well inside 0.1 rad; xy stays at 0.1 m, which costs nothing.
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
       xy_goal_tolerance: 0.1
-      yaw_goal_tolerance: 0.2
+      yaw_goal_tolerance: 0.1
     # DWB parameters
     FollowPath:
       plugin: "dwb_core::DWBLocalPlanner"

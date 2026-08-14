@@ -78,3 +78,37 @@ Two smaller sharp edges in the same family:
   Classic tolerated it; gz-sim rejects the entire spawn with
   `Error Code 2: Msg: collision with name[collision] already exists`, and the robot
   simply never appears in the world.
+- A `<sensor>`'s `<pose>` is relative to its parent `<link>`, so a link pose and a sensor
+  pose **add**. Writing the mounting point in both is the mistake behind
+  [#51](https://github.com/Minipada/ros2_data_collection/issues/51): it put both cameras
+  at twice their intended offset, and nothing complains, because a camera pointed 8
+  degrees off still renders a perfectly good picture of the wrong thing.
+
+## Camera geometry, and why the demo cares about millimetres
+
+The QR-code demo is an inspection run: the robot stops in front of a pallet so that a
+camera can read the code on it. That only works if the code lands inside the frame, and
+the aisles leave very little room to be wrong in. The numbers, all measured by rendering
+a code from a known pose and reading back the bounding box ZXing reports:
+
+| Quantity | Value |
+|---|---|
+| Camera optical centres (from `base_footprint`) | `(0, ±0.02, 0.539)` m, looking ±Y |
+| Horizontal FOV | 1.047 rad — sdformat's default, no `<horizontal_fov>` is declared |
+| Frame at standoff *d* | ±*d*·tan(30°) wide, ±*d*·tan(18°) tall |
+| QR symbol as rendered | 0.362 × 0.292 m, centred 0.539 m above the floor |
+| Standoffs the demo drives | 0.97 m (aisle 1), 0.73 m (aisle 2), 0.98 m (aisle 3) |
+
+Aisle 2 is the binding case: its two pallet rows are 1.49 m apart, so the robot can never
+be more than ~0.73 m off either wall. A code stays readable while
+
+```
+|lateral error| + d·tan(|yaw error|) + 0.181 <= d·tan(30°)
+```
+
+which at *d* = 0.73 m leaves about 0.24 m for the goal tolerance to spend, and yaw is the
+expensive half because it scales with the standoff. `dc_demos`' `qrcodes_nav.yaml`
+therefore stops at 0.1 m / 0.1 rad, not the 0.2 rad it used to, and
+`tools/sim/scripts/lint_launch_files.py` re-derives the whole inequality from the world,
+the robot model, the waypoints and the nav params on every run, so the four cannot drift
+apart again without CI saying so. The measured worst-case margin is 55 mm.

@@ -17,22 +17,28 @@
 # depend on a simulator.
 #
 # Slow by nature: the warehouse is 317 model instances and CI has no GPU, so the world
-# runs well under real time (see dc_simulation/README.md for measured factors). All four
-# stages together are about twenty minutes, which ci.yaml's `sim` job runs on every PR.
-# Only the full 60-waypoint pass is too slow for that, and that is what the daily
-# .github/workflows/sim.yaml runs.
+# runs well under real time (see dc_simulation/README.md for measured factors), and
+# `detect` slows it further by running the DC pipeline alongside. ci.yaml's `sim` job runs
+# every stage on each PR with a handful of waypoints; only the full 60-waypoint pass is
+# too slow for that, and that is what the daily .github/workflows/sim.yaml runs.
 #
 # Env vars (all optional):
 #   DC_SIM_IMAGE            prebuilt workspace image to run (default dc-workspace:latest).
 #                           Both CI jobs set this to the image they built or pulled.
 #   DC_SIM_WAYPOINTS        waypoints the follower must reach before the run is
-#                           considered good (default 6). Each costs roughly a minute and
-#                           a half of wall clock. A handful proves planning, control,
-#                           localization and the goal checker all work; 60 is the full
-#                           pass through every QR-coded pallet, which the daily job runs.
+#                           considered good (default 6). A handful proves planning,
+#                           control, localization, the goal checker and -- with `detect`
+#                           -- QR-code reading all work; 60 is the full pass through every
+#                           QR-coded pallet, which the daily job runs.
 #   DC_SIM_WAYPOINT_TIMEOUT seconds to allow for that progress (default 2700).
-#   DC_SIM_STAGES           space-separated subset of: lint sim nav waypoints
-#                           (default: all four).
+#   DC_SIM_STAGES           space-separated subset of: lint sim nav waypoints detect
+#                           (default: all five). `detect` is a modifier on
+#                           `waypoints`: it brings the DC pipeline up with the
+#                           demo and additionally asserts that a QR code was
+#                           actually read at the stations the robot visited,
+#                           which is the only check that fails when the cameras
+#                           and the waypoints drift apart (#51). It costs one
+#                           extra process, not an extra run.
 #   DC_SIM_KEEP             "true" to leave the last stage's container up for inspection.
 set -euo pipefail
 
@@ -44,7 +50,7 @@ RUN_DIR="$SIM_DIR/.run"
 IMAGE="${DC_SIM_IMAGE:-dc-workspace:latest}"
 WAYPOINTS="${DC_SIM_WAYPOINTS:-6}"
 WAYPOINT_TIMEOUT="${DC_SIM_WAYPOINT_TIMEOUT:-2700}"
-STAGES="${DC_SIM_STAGES:-lint sim nav waypoints}"
+STAGES="${DC_SIM_STAGES:-lint sim nav waypoints detect}"
 KEEP="${DC_SIM_KEEP:-false}"
 CONTAINER=""
 
@@ -58,8 +64,8 @@ has_stage() { [[ " $STAGES " == *" $1 "* ]]; }
 [[ "$WAYPOINT_TIMEOUT" =~ ^[0-9]+$ ]] || fail "DC_SIM_WAYPOINT_TIMEOUT must be a number, got '$WAYPOINT_TIMEOUT'"
 for stage in $STAGES; do
   case "$stage" in
-    lint | sim | nav | waypoints) ;;
-    *) fail "unknown stage '$stage' in DC_SIM_STAGES (want: lint sim nav waypoints)" ;;
+    lint | sim | nav | waypoints | detect) ;;
+    *) fail "unknown stage '$stage' in DC_SIM_STAGES (want: lint sim nav waypoints detect)" ;;
   esac
 done
 
@@ -148,10 +154,13 @@ if has_stage sim; then
 fi
 
 # --- stage: simulation + Nav2 ---------------------------------------------------------
-if has_stage nav || has_stage waypoints; then
+if has_stage nav || has_stage waypoints || has_stage detect; then
   start_stack nav
-  log "launching tb3_qrcodes.launch.py (simulation + Nav2, DC off)"
-  rbg "$SOURCE && ros2 launch dc_demos tb3_qrcodes.launch.py headless:=True use_rviz:=False use_dc:=False > /tmp/qrcodes.log 2>&1"
+  # `detect` needs the measurement/bridge half of the demo running; the other stages do
+  # not, and leaving it out keeps them cheaper on a runner with no GPU.
+  if has_stage detect; then USE_DC=True; else USE_DC=False; fi
+  log "launching tb3_qrcodes.launch.py (simulation + Nav2, DC $USE_DC)"
+  rbg "$SOURCE && ros2 launch dc_demos tb3_qrcodes.launch.py headless:=True use_rviz:=False use_dc:=$USE_DC > /tmp/qrcodes.log 2>&1"
 
   wait_for "Nav2 to activate" 1800 \
     'grep -aq "lifecycle_manager_navigation.*Managed nodes are active" /tmp/qrcodes.log' \
@@ -163,7 +172,11 @@ if has_stage nav || has_stage waypoints; then
 fi
 
 # --- stage: waypoint following --------------------------------------------------------
-if has_stage waypoints; then
+if has_stage waypoints || has_stage detect; then
+  if has_stage detect; then
+    log "recording every QR code the demo reads"
+    rbg "$SOURCE && python3 /opt/sim/verify_sim.py record > /tmp/codes.log 2>&1"
+  fi
   log "running qrcodes_waypoint_follower until it reaches waypoint $WAYPOINTS/60"
   rbg "$SOURCE && ros2 run dc_demos qrcodes_waypoint_follower > /tmp/waypoints.log 2>&1; echo EXIT=\$? >> /tmp/waypoints.log"
 
@@ -208,6 +221,46 @@ if has_stage waypoints; then
   aborted=$(count_in_container 'grep -acE "Goal was aborted|Goal failed|Failed to make progress" /tmp/qrcodes.log')
   [ "${aborted:-0}" -eq 0 ] || fail "$aborted navigation failures in the Nav2 log"
   log "no aborted or failed navigation goals"
+fi
+
+# --- stage: QR-code detection ---------------------------------------------------------
+# Navigating the aisles perfectly while reading nothing is exactly the failure #51
+# describes, and every other stage here passes while it happens: the robot spawns, the
+# cameras publish, Nav2 reaches every goal. Only counting decoded codes catches it.
+if has_stage detect; then
+  log "checking the demo actually read the codes it drove up to"
+
+  # One station is one stop in front of one pallet, and the Camera measurements report
+  # once per stop (condition_max_measurements: 1 against the `moving` condition), so the
+  # count tracks the stations visited. Asserting on `reached - 1` rather than `reached`
+  # leaves room for the station the robot is standing at when the poll loop above breaks
+  # out, and for the first goal, which it drives to from the spawn pose across the
+  # warehouse rather than from a pallet.
+  want=$((reached - 1))
+  [ "$want" -ge 1 ] || want=1
+
+  # Poll rather than read once. The loop above breaks the instant nav2 reports it is
+  # working on the next waypoint, which is a second or two before the Camera measurement
+  # at the station behind it has polled, decoded and published — reading the count there
+  # and then would be a race, not an assertion.
+  #
+  # Count QRCode reads specifically. Two things make a looser count worthless: ZXing's
+  # default options try every symbology, and a run of this check duly read a "51" off the
+  # warehouse shelving before reaching the first pallet; and if the recorder died on
+  # import, its traceback would read as a pile of successful detections.
+  reads=0
+  waited=0
+  while [ "$waited" -lt 180 ]; do
+    reads=$(count_in_container 'grep -ac "format=QRCode" /tmp/codes.log')
+    reads="${reads:-0}"
+    [ "$reads" -ge "$want" ] && break
+    sleep 15
+    waited=$((waited + 15))
+  done
+
+  codes=$(rin 'grep -a "format=QRCode" /tmp/codes.log | grep -ao "code=[0-9]*" | sort -u | tr "\n" " "' 2>/dev/null || true)
+  log "$reads QR codes read over $reached stations: ${codes:-none}"
+  [ "$reads" -ge "$want" ] || fail "only $reads QR codes read, wanted at least $want (see $RUN_DIR/sim.log)"
 fi
 
 log "simulation check passed (stages: $STAGES)"

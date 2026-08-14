@@ -10,7 +10,9 @@ Usage:
     verify_sim.py topics       # sensors and odometry carry usable data
     verify_sim.py cmd_vel      # publishing a Twist actually moves the robot
     verify_sim.py nav          # AMCL is localized against the static map
+    verify_sim.py record       # log every QR code the demo reads, until killed
 """
+import json
 import math
 import sys
 
@@ -245,13 +247,64 @@ def check_nav(node, report):
 
 CHECKS = {"topics": check_topics, "cmd_vel": check_cmd_vel, "nav": check_nav}
 
+MEASUREMENTS = ["/dc/measurement/right_camera", "/dc/measurement/left_camera"]
+
+
+class Recorder(Node):
+    """Prints one line per QR code the demo reads, with the pose it read it from.
+
+    Deliberately reads the Measurement topics rather than grepping the launch log: the
+    log also carries each Measurement's JSON *schema*, which mentions "barcode" without
+    any code ever having been seen, and a check that counts those can never fail.
+    """
+
+    def __init__(self):
+        super().__init__("verify_sim_recorder")
+        from geometry_msgs.msg import PoseWithCovarianceStamped
+
+        from dc_interfaces.msg import StringStamped
+
+        self.pose = None
+        self.create_subscription(PoseWithCovarianceStamped, "/amcl_pose", self._on_pose, 10)
+        for topic in MEASUREMENTS:
+            self.create_subscription(
+                StringStamped, topic, lambda m, t=topic: self._on_record(t, m), 10
+            )
+
+    def _on_pose(self, msg):
+        pose = msg.pose.pose
+        yaw = 2.0 * math.atan2(pose.orientation.z, pose.orientation.w)
+        self.pose = (round(pose.position.x, 3), round(pose.position.y, 3), round(yaw, 3))
+
+    def _on_record(self, topic, msg):
+        try:
+            data = json.loads(msg.data)
+        except ValueError:
+            return
+        for barcode in data.get("inspected", {}).get("barcode", []):
+            # The format matters as much as the payload. ZXing's default options try
+            # every symbology, 1-D ones included, and warehouse scenery obliges: a run
+            # of this check read a "51" off the shelving before it reached the first
+            # pallet. Only a QRCode read means the demo saw what it came for.
+            print(
+                f"{topic} pose={self.pose} format={barcode.get('type', '?')} "
+                f"code={barcode['data']}",
+                flush=True,
+            )
+
 
 def main():
-    if len(sys.argv) != 2 or sys.argv[1] not in CHECKS:
-        print(f"usage: {sys.argv[0]} {{{'|'.join(CHECKS)}}}", file=sys.stderr)
+    if len(sys.argv) != 2 or sys.argv[1] not in list(CHECKS) + ["record"]:
+        print(f"usage: {sys.argv[0]} {{{'|'.join(list(CHECKS) + ['record'])}}}", file=sys.stderr)
         return 2
     stage = sys.argv[1]
     rclpy.init()
+    if stage == "record":
+        try:
+            rclpy.spin(Recorder())
+        except KeyboardInterrupt:
+            pass
+        return 0
     node = Verifier()
     report = Report()
     print(f"[verify_sim] {stage}")

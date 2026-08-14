@@ -182,6 +182,226 @@ def check_bridge_config(report):
         )
 
 
+# --- QR-code alignment ------------------------------------------------------------------
+#
+# The demo's waypoints are camera stations: the robot stops there so that a camera can
+# read the QR code on the pallet in front of it. Nothing in the repo used to relate the
+# two, so the stations drifted out of the cameras' field of view and stayed there for
+# years (#51) -- a failure invisible to every other check, because the robot navigates
+# perfectly and the cameras publish perfectly good pictures of the wrong thing.
+#
+# The numbers below are measured, not assumed: rendering a code from a known pose and
+# reading back the bounding box ZXing reports for it gives
+CODE_CENTRE_Z = 0.539  # height of the symbol's centre above the floor, m
+CODE_HALF_W = 0.181  # half the symbol's rendered width, m
+CODE_HALF_H = 0.146  # half its rendered height, m
+# The map frame is the world frame shifted by this much. Measured off qrcodes.pgm: the
+# four pallet blocks sit at map x -18.100/-16.800/-14.300/-13.000 against world
+# -10.8/-9.5/-7.0/-5.7, and the first pallet row at map y -10.475 against world -11.9.
+WORLD_TO_MAP = (-7.300, 1.425)
+# sdformat's default when a <camera> declares no <horizontal_fov>, which neither of
+# waffle.model's does.
+DEFAULT_HFOV = 1.047
+
+
+def read_camera_poses():
+    """Where waffle.model's two inspection cameras sit, relative to base_footprint.
+
+    An SDF <sensor> pose is relative to its parent <link>, so both have to be composed --
+    the bug this check exists for was exactly that composition being overlooked, leaving
+    both cameras 133 mm ahead of the point the waypoints aim at.
+
+    Returns:
+        {"left": (x, y, z, yaw), "right": ...}, metres and radians.
+    """
+    import xml.etree.ElementTree as ElementTree
+
+    share = Path(get_package_share_directory("dc_simulation"))
+    model = ElementTree.parse(share / "worlds" / "waffle.model").getroot().find("model")
+    poses = {}
+    for side in ("left", "right"):
+        link = model.find(f'link[@name="{side}_camera_link"]')
+        # The link's own <pose>, not <inertial>'s or <collision>'s: find() only looks at
+        # direct children, which is the whole point of using it here.
+        base = [float(v) for v in link.find("pose").text.split()]
+        rel = [float(v) for v in link.find("sensor").find("pose").text.split()]
+        # Both poses are yaw-only in this model, so composing them is an addition.
+        poses[side] = (
+            base[0] + rel[0],
+            base[1] + rel[1],
+            base[2] + rel[2],
+            base[5] + rel[5],
+        )
+    return poses
+
+
+def read_code_planes():
+    """The QR-coded pallet faces in qrcodes.world, as (map x, facing, {y}).
+
+    Returns:
+        A list of (plane_x, normal_x, ys): the face's x in the map frame, the direction
+        its codes look along x (+1 or -1), and the set of y values it carries.
+    """
+    share = Path(get_package_share_directory("dc_simulation"))
+    world = re.sub(r"<!--.*?-->", "", (share / "worlds" / "qrcodes.world").read_text(), flags=re.S)
+    planes = {}
+    for _, body in re.findall(r'<model name="([^"]+)">(.*?)</model>', world, re.S):
+        uri = re.search(r"<uri>model://(qrcode_[^<]+)</uri>", body)
+        pose = re.search(r"<pose>([^<]+)</pose>", body)
+        if not uri or not pose:
+            continue
+        values = [float(v) for v in pose.group(1).split()]
+        plane_x = round(values[0] + WORLD_TO_MAP[0], 4)
+        # yaw 0 means the code looks along +x, pi means -x.
+        normal = 1 if abs(values[5]) < 1.0 else -1
+        planes.setdefault((plane_x, normal), set()).add(round(values[1] + WORLD_TO_MAP[1], 4))
+    return [(x, n, ys) for (x, n), ys in sorted(planes.items())]
+
+
+def read_goal_tolerance():
+    """The controller's active goal checker tolerances, as (xy, yaw)."""
+    import yaml
+
+    params = Path(get_package_share_directory("dc_demos")) / "params" / "qrcodes_nav.yaml"
+    controller = yaml.safe_load(params.read_text())["controller_server"]["ros__parameters"]
+    checker = controller[controller["goal_checker_plugins"][0]]
+    return checker["xy_goal_tolerance"], checker["yaw_goal_tolerance"]
+
+
+def check_map_offset(report):
+    """WORLD_TO_MAP still describes the world and map the demo actually loads.
+
+    Every number in check_qr_alignment is expressed in the map frame, so a wrong offset
+    would make the whole check agree with itself and with nothing else. The demo states
+    the same relation twice from opposite ends -- tb3_qrcodes.launch.py spawns the robot
+    at a world pose, and qrcodes_nav.yaml hands AMCL the map pose of that same spot --
+    so the two have to differ by exactly WORLD_TO_MAP.
+
+    Args:
+        report: collects pass/fail for the exit status.
+    """
+    import math
+
+    import yaml
+
+    launch = (
+        Path(get_package_share_directory("dc_demos")) / "launch" / "tb3_qrcodes.launch.py"
+    ).read_text()
+    spawn = {}
+    for axis in ("x", "y"):
+        match = re.search(rf'"{axis}_pose", default="(-?[\d.]+)"', launch)
+        if match:
+            spawn[axis] = float(match.group(1))
+
+    params = Path(get_package_share_directory("dc_demos")) / "params" / "qrcodes_nav.yaml"
+    amcl = yaml.safe_load(params.read_text())["amcl"]["ros__parameters"]
+
+    report.check(len(spawn) == 2, "found the demo's spawn pose", str(spawn))
+    if len(spawn) != 2:
+        return
+    error = math.hypot(
+        spawn["x"] + WORLD_TO_MAP[0] - amcl["initial_pose.x"],
+        spawn["y"] + WORLD_TO_MAP[1] - amcl["initial_pose.y"],
+    )
+    report.check(
+        error < 0.05,
+        "map/world offset matches the demo's own spawn and initial poses",
+        f"{round(error, 4)} m apart",
+    )
+
+
+def check_qr_alignment(report):
+    """Every camera station keeps its QR code in frame across the whole goal tolerance.
+
+    This is the check that was missing when #51 was filed. It relates the four things
+    that have to agree and never did -- the camera's mounting in waffle.model, the
+    stations in qrcodes_waypoint_follower.py, the pallet layout in qrcodes.world and the
+    goal tolerance in qrcodes_nav.yaml -- and fails if a code can leave the frame at a
+    pose Nav2 is allowed to stop at.
+
+    Worst case is on the boundary of the tolerance circle, where shortening the standoff
+    and sliding the code sideways trade off against each other; the closed form for that
+    minimum is below. Yaw is the expensive term at these standoffs because it costs
+    d*tan(yaw), so it grows with the very distance that buys the margin.
+
+    Args:
+        report: collects pass/fail for the exit status.
+    """
+    import math
+
+    from dc_demos.qrcodes_waypoint_follower import camera_stations
+
+    cameras = read_camera_poses()
+    planes = read_code_planes()
+    xy_tol, yaw_tol = read_goal_tolerance()
+    report.check(bool(planes), "found QR-coded pallet faces", f"{len(planes)} faces")
+
+    half_w_angle = DEFAULT_HFOV / 2.0
+    # 1280x720, so the vertical half-angle follows from the horizontal one.
+    half_h_angle = math.atan(math.tan(half_w_angle) * 720.0 / 1280.0)
+
+    worst = None
+    unseen = []
+    for station_x, station_y, yaw in camera_stations():
+        seen = False
+        for side, (cx, cy, cz, cyaw) in cameras.items():
+            # Camera position and viewing direction in the map frame.
+            wx = station_x + cx * math.cos(yaw) - cy * math.sin(yaw)
+            wy = station_y + cx * math.sin(yaw) + cy * math.cos(yaw)
+            look = yaw + cyaw
+            look_x = math.cos(look)
+            if abs(look_x) < 0.9:  # not looking across the aisle at all
+                continue
+            for plane_x, normal, ys in planes:
+                standoff = (plane_x - wx) * look_x
+                # In front of this camera, facing it, and near enough to be its pallet.
+                if standoff <= 0 or standoff > 1.5 or normal * look_x > 0:
+                    continue
+                target_y = min(ys, key=lambda y: abs(y - station_y))
+                if abs(target_y - station_y) > 0.5:
+                    continue
+                seen = True
+                # Worst case over the goal tolerance. The position error is a vector of
+                # length up to xy_tol: its component across the aisle shortens the
+                # standoff (a smaller frame), its component along the aisle slides the
+                # code towards the edge, and the two trade off around the circle. With
+                # slack = tan(hfov/2) - tan(yaw_tol), the horizontal budget at offset
+                # angle phi is (d - r*cos phi)*slack - r*|sin phi|, whose minimum over
+                # phi is d*slack - r*hypot(slack, 1). Vertically only the standoff
+                # matters, so the worst case there is simply the nearest it may stop.
+                slack = math.tan(half_w_angle) - math.tan(yaw_tol)
+                margin_w = (
+                    standoff * slack
+                    - xy_tol * math.hypot(slack, 1.0)
+                    - abs(target_y - wy)
+                    - CODE_HALF_W
+                )
+                margin_h = (
+                    (standoff - xy_tol) * math.tan(half_h_angle)
+                    - abs(CODE_CENTRE_Z - cz)
+                    - CODE_HALF_H
+                )
+                margin = min(margin_w, margin_h)
+                if worst is None or margin < worst[0]:
+                    worst = (margin, side, station_x, station_y, round(standoff, 3))
+        if not seen:
+            unseen.append((station_x, station_y))
+
+    report.check(
+        not unseen,
+        "every camera station faces a QR-coded pallet",
+        f"{len(unseen)} do not, first at {unseen[0]}" if unseen else "",
+    )
+    if worst is not None:
+        margin, side, at_x, at_y, standoff = worst
+        report.check(
+            margin > 0,
+            "QR codes stay in frame across the goal tolerance",
+            f"worst margin {round(margin, 3)} m ({side} camera at ({at_x}, {at_y}), "
+            f"standoff {standoff} m, tolerance {xy_tol} m / {yaw_tol} rad)",
+        )
+
+
 def main():
     report = Report()
     print("[lint] launch files")
@@ -190,6 +410,9 @@ def main():
     check_sdf(report)
     print("[lint] bridge config vs demo params")
     check_bridge_config(report)
+    print("[lint] QR-code alignment")
+    check_map_offset(report)
+    check_qr_alignment(report)
     return report.finish()
 
 

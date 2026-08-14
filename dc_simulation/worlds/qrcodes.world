@@ -30,8 +30,11 @@
     <!--
       Gazebo Classic resolved "model://ground_plane" and "model://sun"
       against its bundled model database; gz-sim ships neither as a
-      resolvable model:// uri (see #268), so they're defined inline instead
-      -- the standard gz-sim convention (e.g. its own example worlds).
+      resolvable model:// uri (see #268), so they're defined inline instead,
+      the standard gz-sim convention (e.g. its own example worlds).
+      (A literal double hyphen is illegal inside an XML comment and makes the
+      world unreadable to every strict XML parser; libsdformat's TinyXML2 is the
+      lenient exception, which is why this went unnoticed.)
     -->
     <model name="ground_plane">
       <static>true</static>
