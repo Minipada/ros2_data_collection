@@ -4940,3 +4940,69 @@ image; `/left_intel_realsense_r200_depth/image_raw` confirmed live from
 exists. `pre-commit` clean on all changed files bar the environment's pre-existing
 `pycln`/`poetry-requirements` breakage and the `verify_zero_loss.py` black side effect,
 reverted as always.
+
+## A daily simulation job in CI (#279 follow-on)
+
+The simulation and demo layer had no CI coverage at all, which is why every bug above
+survived: `colcon build` compiles `dc_simulation` and `dc_demos` but none of the bugs
+live in compiled code — they are SDF, launch files, bridge configs and nav params. Those
+two packages contribute zero of the workspace's gtests. And the E2E harness contains no
+reference to gz-sim, the warehouse or any demo (`grep -rln` over `tools/e2e/` returns
+nothing): it feeds the pipeline a synthetic `workload_generator.py` precisely so its
+zero-loss proof does not depend on a simulator. A demo whose robot never spawned passed
+CI for two weeks.
+
+**`tools/sim/scripts/run.sh`** drives the check in four stages against the workspace
+image, each selectable via `DC_SIM_STAGES`:
+
+- `lint` — seconds, no simulator. Every launch file in `dc_demos`/`dc_simulation`/
+  `dc_bringup` loads under `--show-args` *and* every path-shaped default it advertises
+  exists; `gz sdf -k` validates every world and model; every `cam_topic` the qrcodes
+  params name is present in the bridge config.
+- `sim` — `warehouse.launch.py` headless: the robot appears in `gz model --list`, all
+  seven bridged topics carry data, `/scan` is in-range and non-degenerate, both camera
+  frames are non-black, and a `Twist` on `/cmd_vel` actually moves the robot.
+- `nav` — `tb3_qrcodes.launch.py`: both lifecycle managers reach "Managed nodes are
+  active", `/map` is served, and AMCL broadcasts `map -> odom`.
+- `waypoints` — the real follower, asserting *progress* (`DC_SIM_WAYPOINTS`, default 6)
+  rather than completion, plus zero aborted or failed Nav2 goals. The full 60-waypoint
+  pass is an hour-plus, so it stays a manual `workflow_dispatch` with `waypoints=60`.
+
+**`.github/workflows/sim.yaml`** runs all four daily at 03:17 UTC (off the hour — GitHub
+queues heavily at :00) with a `workflow_dispatch` for the full pass. It builds its own
+workspace image against its own cache ref, because a scheduled run has no upstream job to
+depend on, and sharing `ci.yaml`'s cache would overwrite the coverage-instrumented
+workspace layer with an uninstrumented one every morning. The `lint` stage is *also*
+wired into `ci.yaml`'s existing `colcon-test` job, since it costs seconds and covers the
+dead-path and invalid-SDF classes on every PR rather than a day later.
+
+**Verified — including that the checks fail when they should**, which matters more than
+that they pass:
+
+- `lint` against a clean tree: all pass. With #324's duplicate `<collision>` deliberately
+  reintroduced into `waffle.model`: `FAIL … Error Code 2: Msg: collision with
+  name[collision] already exists`, and the world still passes. With
+  `models/europallet` moved aside: `FAIL qrcodes.world … Unable to find
+  uri[model://europallet]`, and the model still passes.
+- `sim`: robot spawned in 15 s, all 16 topic assertions pass, `/cmd_vel` moved the robot
+  1.94 m.
+- `nav`: `/map` 1100x1100 @ 0.05 m/px, `map->odom` broadcast, both managers active in 45 s.
+- `waypoints`: reached waypoint 3/60 in 270 s with zero navigation failures; whole run
+  exits 0.
+- Bad input rejected up front: `DC_SIM_WAYPOINTS=abc` and `DC_SIM_STAGES="lint bogus"`
+  both fail immediately with a readable message rather than a bash arithmetic error
+  twenty minutes in.
+
+Two bugs in my own harness, found by running it rather than reading it: `gz sdf -k`
+exits 0 even when it reports an error (so the return code says nothing, and the real
+signal is the `Error Code N:` lines), and it resolves `model://` through `SDF_PATH` — not
+the `GZ_SIM_RESOURCE_PATH` the env hook sets — so without that every `<include>` reported
+"Unable to find uri" and the world check was pure noise. Separately, `set -euo pipefail`
+plus a `grep` that legitimately matches nothing killed the waypoint poll silently on its
+first iteration.
+
+**One correction to an earlier claim in this file**: the `nav` stage originally asserted
+`/amcl_pose` publishes. It does not, for a robot sitting still after bringup — AMCL emits
+it on a filter update and `update_min_d` is 0.25 m. The assertion is now `map -> odom`,
+which AMCL re-broadcasts continuously and which every costmap and the planner chain
+actually depend on.

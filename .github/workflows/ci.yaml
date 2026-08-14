@@ -158,6 +158,19 @@ jobs:
           IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
         run: ./tools/e2e/scripts/test.sh "$PWD/coverage"
 
+      # The static half of the daily simulation check (.github/workflows/sim.yaml),
+      # pulled forward to every PR because it costs seconds and covers a class of bug
+      # `colcon test` structurally cannot see: launch files, SDF and bridge configs are
+      # data, so a launch default pointing at a file Jazzy deleted, a model with two
+      # identically-named collisions, or a camera topic nothing bridges all compile and
+      # test perfectly while the demo is dead (#279, #324). The stages that need a
+      # running simulator stay in the daily job — they take tens of minutes.
+      - name: Lint launch files, SDF and the bridge config
+        env:
+          DC_SIM_IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
+          DC_SIM_STAGES: lint
+        run: ./tools/sim/scripts/run.sh
+
       - name: Stop the test-dependency stores
         if: always()
         env:

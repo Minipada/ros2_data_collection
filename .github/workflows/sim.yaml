@@ -1,0 +1,99 @@
+# Daily simulation check (#279).
+#
+# ci.yaml covers the code; nothing covers the simulation. `colcon build` and `colcon
+# test` never look at SDF, launch files, bridge configs or nav params — that layer is
+# data, not code — and the E2E harness deliberately feeds the pipeline a synthetic
+# workload so its zero-loss proof doesn't depend on a simulator. The result was a demo
+# whose robot never spawned passing CI for two weeks (#324), alongside a lidar that
+# aborted the server, a bridge on a dead topic, and a nav params file still full of
+# Humble-era keys (#279, #325).
+#
+# Not on push: the warehouse is 317 model instances and CI has no GPU, so it runs well
+# under real time (see dc_simulation/README.md). Daily is the right cadence — nothing
+# here changes often, and a failure a day after the fact is still far better than two
+# weeks.
+#
+# The waypoint stage asserts *progress*, not completion: reaching a handful of waypoints
+# proves planning, control, localization and the goal checker all work, where the full
+# 60-waypoint pass is an hour-plus even on a fast machine. Run the whole thing by hand
+# with workflow_dispatch and waypoints=60 when you want the real proof.
+
+name: Simulation
+
+on:
+  schedule:
+    # 03:17 UTC daily. Off the hour on purpose: GitHub's scheduler queues heavily at
+    # :00 and delays are common, which matters for a job that already takes a while.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      waypoints:
+        description: "Waypoints the follower must reach (60 = the full pass, ~1h+)"
+        required: false
+        default: "6"
+      stages:
+        description: "Subset of: lint sim nav waypoints"
+        required: false
+        default: "lint sim nav waypoints"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sim:
+    runs-on: ubuntu-latest
+    # Generously above the ~40 min a green run takes on a 4-core runner, so a slow day
+    # fails on an assertion rather than on the clock.
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Log in to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Compute image refs
+        id: refs
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          IMAGE="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
+          {
+            echo "workspace_ref=$IMAGE/dc-workspace:sim-${{ github.sha }}"
+            echo "cache_ref=$IMAGE/dc-workspace-cache-sim"
+          } >> "$GITHUB_OUTPUT"
+
+      # Built here rather than pulled: a scheduled run has no upstream job to depend on,
+      # and the :<sha> image ci.yaml pushes only exists for commits CI actually ran.
+      # Its own cache ref, not ci.yaml's: build.sh's CACHE_REF is both --cache-from and
+      # --cache-to, and this job builds with CCOV=false, so sharing would keep
+      # overwriting the cached workspace layer with an uninstrumented one and cost
+      # ci.yaml a rebuild every morning. No coverage here — this measures behaviour.
+      - name: Build the DC workspace image
+        env:
+          IMAGE_TAG: ${{ steps.refs.outputs.workspace_ref }}
+          CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
+          CCOV: "false"
+        run: ./tools/e2e/scripts/build.sh
+
+      - name: Run the simulation check
+        env:
+          DC_SIM_IMAGE: ${{ steps.refs.outputs.workspace_ref }}
+          DC_SIM_WAYPOINTS: ${{ inputs.waypoints || '6' }}
+          DC_SIM_STAGES: ${{ inputs.stages || 'lint sim nav waypoints' }}
+        run: ./tools/sim/scripts/run.sh
+
+      - name: Upload simulation logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-logs
+          path: tools/sim/.run/**
+          if-no-files-found: ignore
