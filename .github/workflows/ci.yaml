@@ -11,6 +11,7 @@
 # doesn't yet; here the images exist purely for CI-internal reuse + traceability.
 #
 #   build-workspace ─┬─▶ colcon-test        (pull dc-workspace, colcon test + coverage)
+#                    ├─▶ sim               (pull dc-workspace, simulation smoke check)
 #                    └─▶ build-e2e-image ─▶ e2e   (pull dc-e2e, zero-loss harness)
 #
 # No CI-only build/test scripts: every step calls the same tools/e2e/scripts/build.sh /
@@ -158,19 +159,6 @@ jobs:
           IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
         run: ./tools/e2e/scripts/test.sh "$PWD/coverage"
 
-      # The static half of the daily simulation check (.github/workflows/sim.yaml),
-      # pulled forward to every PR because it costs seconds and covers a class of bug
-      # `colcon test` structurally cannot see: launch files, SDF and bridge configs are
-      # data, so a launch default pointing at a file Jazzy deleted, a model with two
-      # identically-named collisions, or a camera topic nothing bridges all compile and
-      # test perfectly while the demo is dead (#279, #324). The stages that need a
-      # running simulator stay in the daily job — they take tens of minutes.
-      - name: Lint launch files, SDF and the bridge config
-        env:
-          DC_SIM_IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
-          DC_SIM_STAGES: lint
-        run: ./tools/sim/scripts/run.sh
-
       - name: Stop the test-dependency stores
         if: always()
         env:
@@ -184,6 +172,57 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage/cpp.info
           flags: cpp-jazzy
+
+  # The simulation and demo layer is structurally invisible to the two jobs above:
+  # `colcon build` compiles dc_simulation and dc_demos, but their content is SDF, launch
+  # files, bridge configs and nav params -- data, not code -- and neither package has a
+  # single gtest. The e2e harness deliberately feeds the pipeline a synthetic workload so
+  # its zero-loss proof doesn't depend on a simulator. The result was a demo whose robot
+  # never spawned passing CI for two weeks (#324), next to a lidar that aborted the
+  # server and a nav params file still full of Humble-era keys (#279, #325).
+  #
+  # All four stages run here rather than only nightly: together they are roughly the
+  # length of the e2e job, and a broken demo is worth catching in review rather than the
+  # next morning. Only the *full* 60-waypoint pass is too slow for a PR, and that is what
+  # .github/workflows/sim.yaml runs daily.
+  sim:
+    needs: build-workspace
+    runs-on: ubuntu-latest
+    # Roughly 20 minutes when green on a 4-core runner; the headroom is for a contended
+    # runner, since the world already runs well under real time without a GPU.
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Log in to ghcr.io (to pull the workspace image)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Pull the workspace image
+        run: podman pull "${{ needs.build-workspace.outputs.workspace_ref }}"
+
+      - name: Simulation smoke check
+        env:
+          DC_SIM_IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
+          # Three waypoints is enough to prove planning, control, localization and the
+          # goal checker all work end to end -- each one costs about a minute and a half
+          # of wall clock here, and the daily job covers the full pass.
+          DC_SIM_WAYPOINTS: "3"
+        run: ./tools/sim/scripts/run.sh
+
+      - name: Upload simulation logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-logs
+          path: tools/sim/.run/**
+          if-no-files-found: ignore
 
   build-e2e-image:
     needs: build-workspace
