@@ -1,22 +1,16 @@
 # Daily simulation check (#279).
 #
-# ci.yaml covers the code; nothing covers the simulation. `colcon build` and `colcon
-# test` never look at SDF, launch files, bridge configs or nav params — that layer is
-# data, not code — and the E2E harness deliberately feeds the pipeline a synthetic
-# workload so its zero-loss proof doesn't depend on a simulator. The result was a demo
-# whose robot never spawned passing CI for two weeks (#324), alongside a lidar that
-# aborted the server, a bridge on a dead topic, and a nav params file still full of
-# Humble-era keys (#279, #325).
+# ci.yaml's `sim` job already runs the whole simulation check on every PR -- lint, the
+# headless sim, Nav2, and the waypoint follower far enough to prove planning, control,
+# localization and the goal checker all work. That is roughly twenty minutes and belongs
+# in review.
 #
-# Not on push: the warehouse is 317 model instances and CI has no GPU, so it runs well
-# under real time (see dc_simulation/README.md). Daily is the right cadence — nothing
-# here changes often, and a failure a day after the fact is still far better than two
-# weeks.
-#
-# The waypoint stage asserts *progress*, not completion: reaching a handful of waypoints
-# proves planning, control, localization and the goal checker all work, where the full
-# 60-waypoint pass is an hour-plus even on a fast machine. Run the whole thing by hand
-# with workflow_dispatch and waypoints=60 when you want the real proof.
+# What does *not* fit in a PR is the real thing: all 60 waypoints, three aisles, every
+# QR-coded pallet. That took 63 minutes of wall clock for 8 minutes of simulated time on
+# an 8-core machine with no GPU (RTF 0.198 -- see dc_simulation/README.md), so expect
+# appreciably longer on a runner. Once a day is the right cadence for it: it is the only
+# check that exercises the demo the way the documentation tells a user to run it, and
+# nothing in this layer changes often enough to need it per-push.
 
 name: Simulation
 
@@ -28,9 +22,9 @@ on:
   workflow_dispatch:
     inputs:
       waypoints:
-        description: "Waypoints the follower must reach (60 = the full pass, ~1h+)"
+        description: "Waypoints the follower must reach (60 = the full pass)"
         required: false
-        default: "6"
+        default: "60"
       stages:
         description: "Subset of: lint sim nav waypoints"
         required: false
@@ -43,9 +37,11 @@ concurrency:
 jobs:
   sim:
     runs-on: ubuntu-latest
-    # Generously above the ~40 min a green run takes on a 4-core runner, so a slow day
-    # fails on an assertion rather than on the clock.
-    timeout-minutes: 180
+    # The full pass was 63 min on 8 cores; a 4-core runner roughly doubles that, and the
+    # earlier stages and the image build come on top. Generous on purpose so a contended
+    # runner fails on an assertion rather than on the clock -- but well inside GitHub's
+    # 6-hour job ceiling, so a genuinely hung run still gets killed.
+    timeout-minutes: 300
     permissions:
       contents: read
       packages: write
@@ -83,10 +79,13 @@ jobs:
           CCOV: "false"
         run: ./tools/e2e/scripts/build.sh
 
-      - name: Run the simulation check
+      - name: Run the full simulation pass
         env:
           DC_SIM_IMAGE: ${{ steps.refs.outputs.workspace_ref }}
-          DC_SIM_WAYPOINTS: ${{ inputs.waypoints || '6' }}
+          DC_SIM_WAYPOINTS: ${{ inputs.waypoints || '60' }}
+          # The follower needs the whole pass to finish inside this; run.sh gives up on
+          # it rather than waiting for the job timeout, so the failure names the stage.
+          DC_SIM_WAYPOINT_TIMEOUT: "14400"
           DC_SIM_STAGES: ${{ inputs.stages || 'lint sim nav waypoints' }}
         run: ./tools/sim/scripts/run.sh
 
