@@ -213,7 +213,8 @@ jobs:
           files: coverage/cpp.info
           flags: cpp-jazzy
 
-  # The simulation and demo layer is structurally invisible to the two jobs above:
+  # The simulation and demo layer is structurally invisible to the workspace build above
+  # and the e2e harness below:
   # `colcon build` compiles dc_simulation and dc_demos, but their content is SDF, launch
   # files, bridge configs and nav params -- data, not code -- and neither package has a
   # single gtest. The e2e harness deliberately feeds the pipeline a synthetic workload so
@@ -221,16 +222,18 @@ jobs:
   # never spawned passing CI for two weeks (#324), next to a lidar that aborted the
   # server and a nav params file still full of Humble-era keys (#279, #325).
   #
-  # All four stages run here rather than only nightly: together they are roughly the
+  # All five stages run here rather than only nightly: together they are roughly the
   # length of the e2e job, and a broken demo is worth catching in review rather than the
   # next morning. Only the *full* 60-waypoint pass is too slow for a PR, and that is what
   # .github/workflows/sim.yaml runs daily.
   sim:
     needs: build-workspace
     runs-on: ubuntu-latest
-    # Roughly 20 minutes when green on a 4-core runner; the headroom is for a contended
-    # runner, since the world already runs well under real time without a GPU.
-    timeout-minutes: 90
+    # The world already runs well under real time without a GPU, and `detect` puts two
+    # 1280x720 RGBD streams and a barcode decoder on top of the same three waypoints, so
+    # this is generous on purpose: better a slow green than a job that fails on the clock
+    # and says nothing about the demo.
+    timeout-minutes: 120
     permissions:
       contents: read
       packages: read
@@ -250,10 +253,16 @@ jobs:
       - name: Simulation smoke check
         env:
           DC_SIM_IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
-          # Three waypoints is enough to prove planning, control, localization and the
-          # goal checker all work end to end -- each one costs about a minute and a half
-          # of wall clock here, and the daily job covers the full pass.
+          # Three waypoints is enough to prove planning, control, localization, the goal
+          # checker and QR-code detection all work end to end. The daily job covers the
+          # full 60-station pass; this one only has to catch a demo that broke.
           DC_SIM_WAYPOINTS: "3"
+          # run.sh's default is 2700 s, sized for the stages before `detect` existed.
+          # Driving the same waypoints with the DC pipeline up is appreciably slower --
+          # the controller runs on sim time and gz-sim advances it whether or not a
+          # CPU-starved ROS graph keeps up, so the robot really does move more slowly in
+          # *simulated* time. Give it the job's headroom rather than have it give up.
+          DC_SIM_WAYPOINT_TIMEOUT: "4200"
         run: ./tools/sim/scripts/run.sh
 
       - name: Upload simulation logs (on failure)

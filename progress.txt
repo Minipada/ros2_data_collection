@@ -5176,3 +5176,228 @@ more than that once buildah's own layer commit is added on top) — two local at
 both failed with "no space left on device" after the full ~20-minute compile. All
 verification after that point was via real CI runs, which is slower per round-trip but
 was the only environment with enough disk to actually exercise the design.
+
+## #51: robot misaligned with the QR codes, detection fails
+
+**Read**: the issue, #279 (its blocker, which closed and named the suspects to check in
+order), `dc_demos/dc_demos/qrcodes_waypoint_follower.py`, `dc_demos/params/qrcodes_nav.yaml`,
+`dc_demos/params/qrcodes_stdout.yaml`, `dc_demos/launch/tb3_qrcodes.launch.py`,
+`dc_simulation/{worlds/{qrcodes.world,waffle.model},maps/qrcodes.{pgm,yaml},models/qrcode_*}`,
+`dc_description/urdf/turtlebot3_waffle_qrcodes.xacro`,
+`dc_measurements/plugins/{measurements/camera.cpp,conditions/moving.cpp}`,
+`dc_measurements/include/dc_measurements/measurement.hpp`, and `tools/sim/scripts/*`.
+
+### The symptom, reproduced away from Nav2
+
+Nav2's goal checker is allowed to stop the robot anywhere within `xy_goal_tolerance` and
+`yaw_goal_tolerance` of a waypoint. So rather than run the demo and hope to catch a bad
+stop, the robot was teleported (`gz service /world/warehouse/set_pose`) to a grid of poses
+across that whole envelope and a frame taken from each camera at each one, then decoded
+with the same call `dc_measurements`' Camera plugin makes (`ZXing::ReadBarcodes` with
+default options, in a 20-line C++ tool linked against the same libraries).
+
+135 poses -- three aisles x (dx, dy) in {-0.1, 0, 0.1} x dyaw in {-0.2, ..., 0.2}:
+
+| Aisle | Poses whose facing camera decoded the code |
+|---|---|
+| 1 (open, west side) | 38/45 |
+| 2 (between two pallet rows) | **18/45** |
+| 3 (open, east side) | 32/45 |
+
+Every failure is the same one: the code runs off the edge of the frame. In aisle 2 the
+right camera missed even at `dx=-0.1, dy=0, dyaw=0` -- a pose Nav2 considers a perfect
+arrival.
+
+### Root cause: three errors that all push the code the same way
+
+Measured from the renders, a QR symbol on a pallet is 0.362 x 0.292 m and
+its centre sits 0.539 m above the floor. The cameras have no `<horizontal_fov>`, so they
+get sdformat's default 1.047 rad; at a standoff *d* the frame is +/- *d*·tan(30°) wide.
+A code is readable while
+
+    |lateral error| + d·tan(|yaw error|) + 0.181 <= d·tan(30°)
+
+**1. The cameras were not where anything thought they were (the "description" term).**
+`waffle.model` had `<pose>0.069 -0.047 0.407</pose>` on each camera link *and*
+`<pose>0.064 -0.047 0.107 0 0 ±1.57</pose>` on the sensor inside it. An SDF `<sensor>`
+pose is relative to its parent link, so those add: both cameras sat at the same point,
+133 mm ahead of `base_footprint` and 94 mm to the right of it. The waypoints aim
+`base_footprint` at the pallet, so that 133 mm put the code 130-140 mm off the image
+centre before any navigation error at all. Measured on the renders: 176 px of a 240 px
+margin in aisle 1, all of it on one side.
+
+`dc_description`'s URDF disagreed with all of it, in every axis. Its
+`ground_base_distance` was **1.300 m**, borrowed from a much taller robot, and every
+camera offset is expressed from the ground and rebased onto `base_link`, so both cameras
+were 0.6 m *underground* in TF. Both frame joints also carried `rpy="0 0 -pi/2"`, which
+the `sensor_d455` macro's own `+pi/2` cancels, so in TF both cameras looked straight
+ahead while the simulated pair looked sideways. None of this reaches the barcode
+decoder -- `camera.cpp` never touches TF -- but it is what RViz draws and what any
+downstream consumer of `camera_*_depth_optical_frame` would believe.
+
+**2. The waypoints were not square to the wall, or centred on the pallets (the "world
+layout" term).** `z_orientation`/`w_orientation` were `(0.7071068967, 0.7248122258)` and
+`(-0.7023745033, 0.7118075984)`: norms 1.0126 and 1.0000, i.e. headings of 88.6° and
+-89.2° rather than ±90°. #279 found and fixed exactly this transcription error in the
+*initial* pose ten lines above, and left the sixty goal poses alone. `rows_y0` was
+-10.45 against pallet centres at -10.475. And `rows_x` stood the robot 0.65 m off the
+codes in aisle 3 (where the aisle is wide open and there was no reason to be that close)
+and 0.05 m off centre in aisle 2 (where it is not).
+
+**3. The tolerance was never sized against the lens (the "tolerance" term).**
+`yaw_goal_tolerance: 0.2` is 11.5°, which at a 0.73 m standoff slides the code 0.15 m
+across the frame -- on its own, more than the margin aisle 2 has.
+
+The map/world relation needed to say any of this is not written down anywhere, so it was
+measured: the four pallet blocks sit at map x -18.100/-16.800/-14.300/-13.000 in
+`qrcodes.pgm` against world -10.8/-9.5/-7.0/-5.7, and the first pallet row at map y
+-10.475 against world -11.9, giving **x_map = x_world - 7.300, y_map = y_world + 1.425**
+exactly. That number is now in the waypoint follower's header comment and in the lint.
+
+### The fix
+
+- `waffle.model`: both cameras onto the robot's centre line, back to back at
+  (0, ±0.02, 0.539) looking ±Y, sensor poses zeroed so the link pose *is* the mounting
+  point. The 1.107 m inertial pose and the +0.047 m collision offset in the same links,
+  both artefacts of the same absolute-vs-relative mix-up, went with them.
+- `turtlebot3_waffle_qrcodes.xacro`: `base_link_z` 1.300 -> 0.010, camera offsets
+  rewritten from the same (0, ±0.02, 0.539), the `sensor_d455` macro's internal
+  (0.01115, 0.0475, 0.0145) offset undone so `camera_*_link` lands exactly there, and
+  the frame joints changed to 0 / pi so the left camera looks left and the right right.
+  Verified by walking the expanded URDF: both optical origins at (0, ±0.02, 0.539) with
+  optical +Z along base ±Y, matching the SDF sensor for sensor.
+- `qrcodes_waypoint_follower.py`: exact ±90° quaternions, `rows_y0` -10.475,
+  `rows_x` [-19.6, -15.55, -11.5] (0.97 m from camera to code in both open aisles,
+  0.73 m either side in the closed one, which is the most its 1.49 m allows). The three near-identical row comprehensions collapsed into one
+  `camera_stations()` returning (x, y, yaw) tuples, so the lint below can import the
+  stations instead of reimplementing them.
+- `qrcodes_nav.yaml`: `yaw_goal_tolerance` 0.2 -> 0.1, with the inequality above written
+  out next to it. `xy_goal_tolerance` stays at 0.1: it is the cheap half.
+- The AMCL seed pose, in both `qrcodes_nav.yaml` and the follower, was
+  (-23.910844, -13.887906) and commented "obtained after setting pose on RVIZ and
+  checking /amcl_pose" -- a hand-placed estimate, 69 mm out in x from where the launch
+  file actually spawns the robot. Now the spawn pose carried through the offset exactly,
+  (-23.9794, -13.8752), which also gives the lint a way to check the offset constant
+  against numbers the demo already states (`check_map_offset`): the launch file gives the
+  spawn pose in the world frame and the params give the same spot in the map frame, so
+  the two must differ by exactly WORLD_TO_MAP.
+
+### Verified
+
+**The static check first, because it is the one that has to fail.** A new
+`check_qr_alignment` in `tools/sim/scripts/lint_launch_files.py` re-derives the whole
+inequality from the four files that have to agree -- camera mounting out of
+`waffle.model`, stations out of `qrcodes_waypoint_follower`, pallet faces out of
+`qrcodes.world`, tolerances out of `qrcodes_nav.yaml` -- and reports the worst-case
+margin over the tolerance circle in closed form (`d*k - r*hypot(k, 1)` with
+`k = tan(hfov/2) - tan(yaw_tol)`; the naive version that subtracts the full xy tolerance
+from the standoff *and* adds it laterally is 47 mm pessimistic).
+
+    as shipped                    PASS   worst margin  0.055 m
+    pre-fix camera mounting only  FAIL   worst margin -0.113 m
+    pre-fix waypoint rows only    FAIL   worst margin -0.017 m
+    pre-fix yaw tolerance only    FAIL   worst margin -0.016 m
+
+Each of the three fixes is individually load-bearing, and the check catches each on its
+own.
+
+**Then the renders, on the boundary of the envelope**, which is where the worst case
+actually lives: 8 directions around the `xy_goal_tolerance` circle x dyaw in
+{-0.1, 0, +0.1}, per aisle. **72/72 decode**, against 88/135 for the same geometry
+before the fix.
+
+**Then the demo itself**, `tb3_qrcodes.launch.py headless:=True use_rviz:=False
+use_dc:=True` -- the real thing, Nav2 driving and the DC pipeline running -- with
+`ros2 run dc_demos qrcodes_waypoint_follower`. Through the whole of aisle 1, 20 stations:
+
+    20 Records carrying a decoded barcode, one per station
+    10 x "0002" and 10 x "0004", exactly the two codes that wall carries
+    0 aborted or failed goals, 0 recovery behaviours
+
+The pass was stopped after aisle 1 rather than run to 60. This machine was at load 26 on
+8 cores with the user's own tooling taking ~3 of them, the run held a real-time factor of
+0.11, and 60 stations at ~62 s of simulated time each would have been most of a day. The
+remaining two aisles are covered instead by the all-station sweep below, which exercises
+the same geometry at every one of the 60 stations in a fraction of the time.
+
+**And every station, since one live pass could not reach them all.** The same teleport
+harness, over all 60 camera stations, three poses each: the nominal pose and the two
+worst points on the tolerance circle (the closed-form worst offset, `0.1*k/hypot(k,1)`
+across the aisle and `0.1/hypot(k,1)` along it, paired with `dyaw = +/-0.1` so each
+camera gets the combination that pushes its code towards the edge rather than away).
+
+    180/180 (station, pose) cases decode on every camera that faces a coded pallet
+    aisle 1: 0002, 0004      aisle 2: 0001, 0003, 0005, 0007      aisle 3: 0006, 0008
+
+All eight codes the world carries, from every station the demo stops at, anywhere Nav2
+is allowed to leave the robot.
+
+**Regression guard.** `tools/sim/scripts/run.sh` gained a `detect` stage: a modifier on
+`waypoints` that brings the DC pipeline up with the demo and asserts that codes really
+come back, via a new `verify_sim.py record` that reads the Measurement topics. It reads
+the topics rather than grepping the launch log on purpose -- the log also carries each
+Measurement's JSON *schema*, which contains the word "barcode" without any code ever
+having been seen, and a check that counts those can never fail.
+
+The stage was exercised by running `tools/sim/scripts/run.sh` itself, the way CI calls it,
+against an image built from this branch. **The first run failed, which is the point**:
+that image was missing `python3-pydantic`, so `dc_services`' `draw_image` never started,
+every Camera measurement sat in "Waiting for draw image service to appear...", and no
+Record was ever published. Zero codes over two stations, and the stage said so and exited
+non-zero -- while every other stage in the same run passed, the robot spawned, Nav2
+localized, and both goals succeeded with no navigation failures. That is exactly the
+shape of #51: a demo that looks healthy from every angle except the one that matters.
+(The real workspace image resolves that dependency through rosdep; `dc_services`'
+`package.xml` has declared it since #279. It was the throwaway image that was short.)
+
+With the dependency in place the stage goes green, reading the codes aisle 1 carries at
+the stations it stops at:
+
+    /dc/measurement/right_camera pose=(-19.655, -10.534, 1.169) format=QRCode code=0002
+    /dc/measurement/right_camera pose=(-19.637,  -9.435, 1.536) format=QRCode code=0002
+
+**It also caught a false positive, which changed the check.** One of those two reads was
+the string `51`, decoded before the robot reached the first pallet. ZXing's default
+`ReaderOptions` try every symbology, 1-D ones included, and warehouse shelving obliges.
+So the recorder now logs the barcode's `type` alongside its payload and the stage counts
+`format=QRCode` reads only -- a check that accepts "some barcode, any barcode" would pass
+on scenery. The false positive itself is *not* fixed here: `detection_modules:
+["barcode"]` means all symbologies on purpose, and narrowing that is a product decision
+for the Camera plugin, not something to slip into #51. Worth its own issue.
+
+That first run also showed up a race in the assertion as first written: it read the code
+count once, immediately after the waypoint loop breaks -- and that loop breaks the instant
+nav2 reports it is working on the next waypoint, a second or two before the measurement at
+the station behind it has polled, decoded and published. It now polls for up to 180 s and
+breaks as soon as the count is reached, which can only turn a flaky failure into a pass,
+never the reverse.
+
+It goes into `ci.yaml`'s per-PR `sim` job (three waypoints) and is deliberately **not**
+in `sim.yaml`'s daily default. That job's 63-minute envelope was measured with DC off,
+its budget is already 4 hours inside a 5-hour job, and running two 1280x720 RGBD streams
+through ZXing alongside 60 navigation goals is the kind of load that turns that into a
+timeout. The daily job still gets the geometric check, which covers all 60 stations
+analytically; `detect` is one `workflow_dispatch` input away when it is wanted.
+
+### One thing that is *not* a regression, and one that is worth knowing
+
+The tighter `yaw_goal_tolerance` costs no measurable navigation time. Measured by
+flipping it live, mid-pass, with `ros2 param set` so nothing else changed. The seven
+goals after the initial approach, at 0.1 rad, took 66, 67, 73, 75, 72, 64 and 59 s of
+*simulated* time each; the two after the flip, at 0.2 rad, took 62 and 62 s. A diff-drive robot rotating on the spot settles well inside 0.1 rad, as
+expected.
+
+What *is* slow is the pass with DC running: ~62 s of simulated time per 1.3 m hop here
+against the ~8 s/waypoint (483 s for 60) #279 measured with `use_dc:=False`. Real-time
+factor was 0.11 against #279's 0.198, on a machine at load 26 with 8 cores. The
+controller runs on `use_sim_time`, and gz-sim advances simulated time whether or not
+ROS keeps up, so a starved `controller_server` really does make the robot slower *in
+simulated time*, not merely in wall clock. Worth having on the record for #52, and the
+reason the daily job keeps DC off.
+
+### Also fixed, found by the tooling above
+
+`qrcodes.world` had a literal `--` inside an XML comment, which is illegal and makes the
+file unreadable to every strict XML parser; libsdformat's TinyXML2 is the lenient
+exception, which is why it survived. `check_qr_alignment` parses `waffle.model` with
+ElementTree and tripped over the same thing in a comment of its own.

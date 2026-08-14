@@ -26,7 +26,7 @@ on:
         required: false
         default: "60"
       stages:
-        description: "Subset of: lint sim nav waypoints"
+        description: "Subset of: lint sim nav waypoints detect"
         required: false
         default: "lint sim nav waypoints"
 
@@ -86,6 +86,14 @@ jobs:
           # The follower needs the whole pass to finish inside this; run.sh gives up on
           # it rather than waiting for the job timeout, so the failure names the stage.
           DC_SIM_WAYPOINT_TIMEOUT: "14400"
+          # No `detect` by default: this job's measured 63-minute envelope was taken
+          # with the DC pipeline off, and running two 1280x720 RGBD streams through
+          # ZXing alongside 60 navigation goals is exactly the kind of extra load that
+          # turns a 4-hour budget into a timeout. Detection is guarded per-PR instead
+          # (ci.yaml's sim job, three waypoints), and by the geometric check in the
+          # `lint` stage, which covers all 60 stations analytically on every run.
+          # Pass "lint sim nav waypoints detect" by hand to exercise it over the full
+          # pass.
           DC_SIM_STAGES: ${{ inputs.stages || 'lint sim nav waypoints' }}
         run: ./tools/sim/scripts/run.sh
 

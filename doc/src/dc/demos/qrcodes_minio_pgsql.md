@@ -89,6 +89,22 @@ and exits once the pass is complete:
 ros2 run dc_demos qrcodes_waypoint_follower
 ```
 
+```admonish info
+The waypoints are camera stations, not just places to be, and the aisles are narrow
+enough that the difference matters: a code is only readable while
+
+    |lateral error| + standoff * tan(|yaw error|) + 0.181 <= standoff * tan(30°)
+
+where 0.181 m is half a rendered QR symbol and 30° is half the cameras' field of view.
+The tightest station has a 0.73 m standoff, which is why `qrcodes_nav.yaml` stops the
+robot within 0.1 m and 0.1 rad rather than Nav2's more usual tolerances. If you move the
+waypoints, the pallets or the cameras, re-run `./tools/sim/scripts/run.sh` — its `lint`
+stage re-derives that inequality from the world, the robot model, the waypoints and the
+nav params, and its `detect` stage checks that codes really do come back. See
+[dc_simulation's README](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_simulation/README.md)
+for the measured geometry.
+```
+
 ## Understanding the configuration
 
 ```admonish info
