@@ -1,27 +1,48 @@
-# Full DC workspace (every dc_* package, all C++) — the shared base both Jazzy CI
-# (.github/workflows/ci.yaml, `colcon test` run directly against this image) and the
-# zero-loss E2E harness (#249, Containerfile.e2e — a thin `FROM` layer adding the
-# harness's own runtime bits) build from. Built once, reused as-is by CI so its test
-# image doesn't carry anything harness-only.
+# Full DC workspace (every dc_* package, all C++) — three stages:
+# - `cacher`: extracts just the package manifests (package.xml) from the full source
+#   tree, so `toolchain`'s COPY --from below keys its own cache on dependency lists
+#   alone, not on every source edit — without having to hardcode one COPY per package.
+# - `toolchain`: ROS 2 + system packages + pre-built aws-sdk-cpp + full-workspace
+#   rosdep install. Stays a cache hit across ordinary source changes.
+# - `workspace`: inherits toolchain, COPYs the full source, then one `colcon build` +
+#   `colcon test`. The compiler's object-file cache (ccache) comes from a
+#   `RUN --mount=type=cache` mount, which persists across builds independently of the
+#   layer it's attached to — so a change to one file only recompiles that file's
+#   translation unit, not the whole workspace. That mount lives under buildah's own
+#   $TMPDIR/buildah-cache/<id>, entirely separate from --cache-from/--cache-to's
+#   registry export (which only carries *layers*, not cache-mount content — verified
+#   against two live CI runs, not assumed); on a fresh runner it survives only if the
+#   caller points $TMPDIR somewhere it persists itself, which is what CI's
+#   BUILDAH_TMPDIR (build.sh) + actions/cache does. Local dev gets no such
+#   persistence unless it does the same.
+#
+# CI and local dev build this exact same Containerfile the exact same way
+# (./tools/e2e/scripts/build.sh) — no bind-mounted host cache dirs, no podman-cp,
+# no separate finalize step producing the shippable image.
+#
+# `--packages-skip aws_sdk_vendor` on the workspace stage's build/test: its build/ and
+# install/ trees are already part of the toolchain stage this stage is FROM (built
+# once, in its own layer — see below), so skipping it here avoids re-running its
+# ~20-minute ExternalProject source build on every image, not just every source change.
 #
 # Plain ROS 2 + C++: no separate language toolchain, no source-built message repos.
 # dc_bridge builds with rosdep + colcon like every other dc_* package.
-#
-# Single stage on purpose: the build keeps everything it produces (no slim runtime to
-# `COPY --from` a subset into), so there's nothing for a second stage to earn. CI's
-# `--cache-from`/`--cache-to` (a registry-backed build cache — see ci.yaml) still gets
-# full value: Podman caches each RUN layer independently, so the apt/toolchain layer
-# below (no DC source) is a near-permanent cache hit; `aws_sdk_vendor` (its own layer,
-# #271) is a cache hit unless it or rosdep/ change; only the full-workspace
-# rosdep+colcon layer invalidates on a code change elsewhere.
 
 ARG ROS_DISTRO=jazzy
 
-FROM docker.io/library/ros:${ROS_DISTRO}-ros-base
+# --- cacher: nothing but the package manifests, so this stage's own frequent cache
+# invalidation (it COPYs the whole repo) costs nothing — it does no compilation, and
+# only its OUTPUT's content (not whether this stage itself was a cache hit) determines
+# whether the toolchain stage's COPY --from below stays a cache hit.
+FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS cacher
+WORKDIR /root/ws
+COPY . src/ros2_data_collection
+RUN mkdir -p /tmp/manifests && \
+    find src/ros2_data_collection -name package.xml | xargs cp --parents -t /tmp/manifests
+
+FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS toolchain
 
 ARG APT_CACHEBUST=unknown
-# ARG, not ENV: only affects this build's CMAKE_CXX_FLAGS below, not the running image.
-ARG CCOV=false
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Daily apt cache-bust (see CLAUDE.md "Containers: Podman, not Docker"): a date-valued
@@ -43,18 +64,20 @@ RUN echo "apt cache bust: ${APT_CACHEBUST}" && \
 
 WORKDIR /root/ws
 
-# aws_sdk_vendor built in its own layer, isolated from the rest of the workspace (#271):
-# `COPY <path>` keys Podman's layer cache on that path's own content, so copying only
-# `aws_sdk_vendor/` (plus the rosdep source it needs registered) here means this layer —
-# and its ~20-minute aws-sdk-cpp ExternalProject source build — stays a cache hit for a
-# source change anywhere *else* in the repo, instead of invalidating on every commit like
-# the old single `COPY . ` + one `RUN` layer did. The full-workspace build below reuses
-# this layer's already-built install/ via `colcon build --packages-skip aws_sdk_vendor`.
+# aws_sdk_vendor built in its own layer, isolated from the rest of the toolchain stage
+# (#271): `COPY <path>` keys Podman's layer cache on that path's own content, so
+# copying only `aws_sdk_vendor/` (plus the rosdep source it needs registered) here
+# means this layer — and its ~20-minute aws-sdk-cpp ExternalProject source build —
+# stays a cache hit for a source change anywhere *else* in the repo, instead of
+# invalidating on every commit like a single `COPY . ` + one `RUN` layer would.
+# The full-workspace build later reuses this layer's already-built install/ via
+# `colcon build --packages-skip aws_sdk_vendor`.
 #
 # rosdep/dc.yaml is registered as a local rosdep source so `rosdep install` resolves
 # tomlplusplus / msgpack-cxx (header-only C++ libs dc_bridge uses that upstream
-# rosdistro has no key for — see dc_bridge/package.xml). It's registered here, not in the
-# full-workspace layer below, so `rosdep update`'s index fetch only happens once.
+# rosdistro has no key for — see dc_bridge/package.xml). It's registered here, in the
+# `toolchain` stage, rather than beside the full-workspace rosdep install below, so
+# `rosdep update`'s index fetch only happens once.
 COPY rosdep src/ros2_data_collection/rosdep
 COPY aws_sdk_vendor src/ros2_data_collection/aws_sdk_vendor
 RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
@@ -68,19 +91,71 @@ RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
     colcon build --packages-select aws_sdk_vendor --event-handlers desktop_notification- status- && \
     rm -rf /var/lib/apt/lists/*
 
+# Full-workspace rosdep install for system (apt) dependencies — nav2_common,
+# cv_bridge, ffmpeg, etc. — baked into this image, not left to a later stage that
+# would never persist them into the final shippable image. `COPY --from=cacher` pulls
+# in every package.xml the `cacher` stage found (see above) in one instruction, so this
+# layer's cache key is the manifests' own content — it invalidates only when a
+# dependency list changes, not on an ordinary source edit.
+COPY --from=cacher /tmp/manifests/src ./src
+RUN apt-get -q update && \
+    DEBIAN_FRONTEND=noninteractive \
+    rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
+    rm -rf /var/lib/apt/lists/*
+
+# --- workspace: full source + colcon build + colcon test, in one image both CI and
+# local dev build the same way (./tools/e2e/scripts/build.sh) ---
+FROM toolchain AS workspace
+
+# ARG scope resets at every `FROM`, even `FROM toolchain AS workspace` — without this
+# redeclaration, `--build-arg CCOV=true` would silently never reach this stage's RUN
+# below (CCOV would just read as unset/false here), producing a plain Release build
+# with no error. This exact bug was found and fixed earlier in this branch's history.
+ARG CCOV=false
+
 COPY . src/ros2_data_collection
 
-RUN apt-get -q update && \
+# The ccache mount persists across builds independently of this RUN's own layer cache
+# (which still invalidates on every source change, since COPY . above does) — so a
+# change to one file only recompiles that file's translation units; ccache serves the
+# rest from its mount, *provided* $TMPDIR points somewhere that persists between
+# invocations (buildah stores the mount under $TMPDIR/buildah-cache/dc-ccache — not
+# part of the image, not covered by --cache-from/--cache-to, which only carry
+# layers). CI arranges that via build.sh's BUILDAH_TMPDIR + an actions/cache step;
+# a plain local build gets no such persistence.
+#
+# colcon test-result doesn't accept --packages-skip (unlike colcon build/test) and
+# doesn't need it — it only scans build/ subdirectories that exist, and
+# aws_sdk_vendor's build/ dir is a vendored third-party dependency with no tests of
+# its own. colcon test's own exit code and colcon test-result's are captured
+# separately (rather than letting a test failure abort the RUN early) so the coverage
+# report below still runs even when a test fails. The combined result is written to
+# /root/ws/TEST_RESULT rather than failing the RUN/build itself: a failing `RUN` means
+# podman never tags an image at all, so the caller (ci.yaml) would have nothing to
+# `podman run` the coverage data out of. ci.yaml checks TEST_RESULT itself, after
+# extracting coverage, and only pushes the image when it reads 0.
+RUN --mount=type=cache,id=dc-ccache,target=/root/.ccache \
+    apt-get -q update && \
     DEBIAN_FRONTEND=noninteractive \
     rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
     # shellcheck disable=SC1091
     . /opt/ros/jazzy/setup.sh && \
     if [ "$CCOV" = "true" ]; then \
-      CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS='-Wall -Wextra --coverage -O0 -fno-omit-frame-pointer' -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_SHARED_LINKER_FLAGS=--coverage"; \
+      CMAKE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS='-Wall -Wextra --coverage -O0 -fno-omit-frame-pointer' -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_SHARED_LINKER_FLAGS=--coverage"; \
     else \
-      CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release"; \
+      CMAKE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release"; \
     fi && \
     eval colcon build --packages-skip aws_sdk_vendor --cmake-args "$CMAKE_ARGS" --event-handlers desktop_notification- status- && \
+    ccache -s && \
+    # shellcheck disable=SC1091
+    . install/setup.bash && \
+    ( colcon test --packages-skip aws_sdk_vendor --event-handlers desktop_notification- status- ; echo $? > /tmp/test_exit ) && \
+    ( colcon test-result --verbose ; echo $? > /tmp/result_exit ) && \
+    ( src/ros2_data_collection/tools/code_coverage_report.bash ci || echo "warning: coverage report generation produced no data (non-coverage build?)" >&2 ) && \
+    mkdir -p coverage && \
+    ( [ -f lcov/total_coverage.info ] && cp lcov/total_coverage.info coverage/cpp.info || true ) && \
+    TEST_EXIT=$(cat /tmp/test_exit) && RESULT_EXIT=$(cat /tmp/result_exit) && \
+    if [ "$TEST_EXIT" -ne 0 ] || [ "$RESULT_EXIT" -ne 0 ]; then echo "colcon test reported failures" >&2; echo 1 > TEST_RESULT; else echo 0 > TEST_RESULT; fi && \
     rm -rf /var/lib/apt/lists/*
 
 ENV ROS_UNDERLAY=/root/ws/install

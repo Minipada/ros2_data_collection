@@ -21,11 +21,20 @@ hard assertion — the script exits non-zero (and, by default, tears the stack d
 dumping the `dc` container log to `tools/e2e/.run/`) on any violation. Set
 `DC_E2E_KEEP=true` to leave a failed stack running for interactive debugging instead.
 
-The images are the **same artifacts CI builds** — there's no CI-only build path. In CI
-each image is built and pushed by its own job, and `run.sh` is handed the prebuilt
-`dc-e2e` image via `DC_E2E_IMAGE` so it runs that exact artifact instead of rebuilding
-(`DC_WORKSPACE_IMAGE` similarly reuses a prebuilt workspace base). `build.sh` /
-`test.sh` / `run.sh` are the same plain scripts a developer runs locally.
+The images are the **same artifacts CI builds**, built the **same way** — there's no
+CI-only build path. In CI each image is built and pushed by its own job, and `run.sh`
+is handed the prebuilt `dc-e2e` image via `DC_E2E_IMAGE` so it runs that exact artifact
+instead of rebuilding (`DC_WORKSPACE_IMAGE` similarly reuses a prebuilt workspace
+base). `build.sh` / `test.sh` / `run.sh` are the same plain scripts a developer runs
+locally, and CI's `build-workspace` job (`ci.yaml`) calls `build.sh` directly — it adds
+two things a local build doesn't need: `CACHE_REF`, a registry ref `build.sh` passes to
+`podman build --cache-from/--cache-to` so a cold GitHub-hosted runner still starts from
+warm *layers* (the rarely-changing apt/toolchain/aws_sdk_vendor ones) rather than
+podman's otherwise local-only layer cache; and `BUILDAH_TMPDIR`, which relocates the
+`workspace` stage's `ccache` mount (see `Containerfile` below) into a directory
+`actions/cache` persists between runs — that mount lives entirely outside
+`--cache-from`/`--cache-to`'s reach (verified: it carries only layers, never
+cache-mount content).
 
 By default the induced outage is the PRD's full 10 minutes
 (`DC_E2E_OUTAGE_SECONDS=600`); override it for faster local iteration, e.g.:
@@ -151,11 +160,28 @@ below.
 ## Layout
 
 - `Containerfile` — builds the full DC workspace (every `dc_*` package, all C++ since
-  ADR-0007). Single stage: an apt/toolchain `RUN` (no DC source — rarely changes, so it
-  stays a build-cache hit) followed by the `rosdep install`/`colcon build` `RUN` (`ARG
-  CCOV` gates coverage-instrumented compiler flags). Jazzy CI (`ci.yaml`) builds and uses
-  **only** this image — `colcon test` runs directly against it, no harness-specific files
-  needed.
+  ADR-0007), in three stages: `cacher` (extracts just the `package.xml` manifests from
+  the full source tree, so `toolchain`'s own dependency-install layer keys its cache on
+  dependency lists, not on every source edit, without hardcoding one `COPY` per
+  package), `toolchain` (apt/rosdep + a full-workspace rosdep install off those
+  manifests + pre-built `aws_sdk_vendor` — rarely changes, so it stays a build-cache
+  hit), and `workspace` (inherits `toolchain`, `COPY`s full source, runs `rosdep
+  install`/`colcon build`/`colcon test`; `ARG CCOV` gates coverage-instrumented
+  compiler flags). The `workspace` stage's compile/test step uses a
+  `RUN --mount=type=cache` ccache mount, which persists independently of that RUN's own
+  layer (so it survives even though the layer itself invalidates on every source
+  change) — but only if `$TMPDIR` points somewhere that itself persists between
+  builds, since buildah stores the mount under `$TMPDIR/buildah-cache/<id>`, entirely
+  outside `--cache-from`/`--cache-to`'s reach (verified: it round-trips only layers
+  through the registry, never cache-mount content). CI arranges that persistence via
+  `scripts/build.sh`'s `BUILDAH_TMPDIR` + an `actions/cache` step in `ci.yaml` — so a
+  change to one file recompiles that file's translation units, not the whole
+  workspace, on a fresh runner too. `colcon test`
+  failing doesn't fail the `podman build` itself (see the Containerfile's own
+  comments) — it's recorded in the image's `/root/ws/TEST_RESULT` instead, so the image
+  still gets tagged and its `coverage/cpp.info` is still extractable even when a test
+  fails; `ci.yaml` checks `TEST_RESULT` after extracting coverage and only pushes the
+  image when it reads `0`.
 - `Containerfile.e2e` — a thin `FROM <workspace image>` layer adding just the harness's
   own runtime bits (the synthetic workload generator, its params, the entrypoint).
   Never built by CI. Its build context is `tools/e2e/` itself, not the repo root — it
@@ -188,12 +214,17 @@ below.
   place the `mcap` library is installed), invoked by `run.sh` as a one-off container on
   the `dc_e2e_data` volume, the same pattern used to extract the workload ledger and the
   NDJSON passthrough's output.
-- `scripts/build.sh` — builds `Containerfile` (the shared workspace image: handles the
-  `.dockerignore` dance below, the coverage `ARG`, and an optional registry-backed
-  `--cache-from`/`--cache-to`). Used by both `run.sh` and `ci.yaml`.
+- `scripts/build.sh` — builds `Containerfile` end to end (handles the `.dockerignore`
+  dance below, the coverage `ARG`, `--network host` so the `workspace` stage's `colcon
+  test` can reach the test-dependency stores, an optional registry-backed
+  `--cache-from`/`--cache-to` for layers, and an optional `BUILDAH_TMPDIR` to relocate
+  the ccache `RUN --mount=type=cache` mount somewhere the caller can persist across
+  runs). The one build path for local dev and CI alike; set `TARGET=toolchain` to
+  build only the `toolchain` stage instead, for debugging.
 - `scripts/test.sh` — runs `colcon test` (C++ gtest) plus coverage against an
-  already-built workspace image. Used by both a developer locally and CI's `colcon-test`
-  job.
+  already-built workspace image, for a developer who wants to re-run tests without a
+  full rebuild. CI doesn't call this — `colcon test` is part of the `workspace` stage's
+  own build step (see `Containerfile` above).
 - `scripts/run.sh` — the one-command harness orchestrator described above. Builds the
   workspace + `dc-e2e` images locally, or runs a prebuilt `dc-e2e` image when handed one
   via `DC_E2E_IMAGE` (as CI's `e2e` job does).

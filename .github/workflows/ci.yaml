@@ -10,13 +10,23 @@
 # :<branch> ref is added only once the repo publishes runnable images for others, which it
 # doesn't yet; here the images exist purely for CI-internal reuse + traceability.
 #
-#   build-workspace ─┬─▶ colcon-test        (pull dc-workspace, colcon test + coverage)
-#                    ├─▶ sim               (pull dc-workspace, simulation smoke check)
-#                    └─▶ build-e2e-image ─▶ e2e   (pull dc-e2e, zero-loss harness)
+#   build-workspace (build + colcon test + coverage) ─┬─▶ sim               (pull dc-workspace, simulation smoke check)
+#                                                      └─▶ build-e2e-image ─▶ e2e   (pull dc-e2e, zero-loss harness)
 #
-# No CI-only build/test scripts: every step calls the same tools/e2e/scripts/build.sh /
-# test.sh / run.sh a developer runs locally. run.sh drives the harness with plain podman
-# (no compose), so nothing extra is installed on the runner.
+# e2e calls the same tools/e2e/scripts/run.sh a developer runs locally, driving the
+# harness with plain podman (no compose) so nothing extra is installed on the runner;
+# build-e2e-image builds/pushes the E2E image directly via `podman build` (no shared
+# script — it's a single `podman build -f Containerfile.e2e` + push, nothing a local
+# dev script would add over). build-workspace runs the exact same
+# tools/e2e/scripts/build.sh a developer runs locally — `colcon test` happens as part
+# of that same build (see the Containerfile's `workspace` stage), so CI no longer
+# calls a separate test.sh. CI adds two things local dev doesn't need: CACHE_REF
+# (registry-backed --cache-from/--cache-to), which round-trips podman's *layer* cache
+# through ghcr.io so a cold GitHub-hosted runner still starts warm on the
+# rarely-changing apt/toolchain/aws_sdk_vendor layers; and BUILDAH_TMPDIR, which
+# relocates the workspace stage's ccache `RUN --mount=type=cache` mount (buildah
+# stores this under $TMPDIR/buildah-cache/<id>, a mechanism --cache-from/--cache-to
+# does not touch at all) into a directory `actions/cache` persists across runs.
 
 name: CI
 
@@ -84,42 +94,12 @@ jobs:
             echo "cache_ref=$IMAGE/dc-workspace-cache"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build the DC workspace image (coverage-instrumented)
-        env:
-          IMAGE_TAG: ${{ steps.refs.outputs.workspace_ref }}
-          CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
-          CCOV: "true"
-        run: ./tools/e2e/scripts/build.sh
-
-      - name: Push the workspace image
-        env:
-          REF: ${{ steps.refs.outputs.workspace_ref }}
-        run: |
-          for attempt in 1 2 3; do
-            podman push "$REF" && exit 0
-            echo "push $REF attempt $attempt failed; retrying in 10s"; sleep 10
-          done
-          exit 1
-
-  colcon-test:
-    needs: build-workspace
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Verify podman
-        run: podman --version
-
-      # Only this job uses compose (for the stable test stores); the harness job is native
-      # podman. `podman compose` shells out to a host-side provider — it can't be baked
-      # into an image the way podman itself manages containers, since the provider has to
-      # run on the runner to drive the runner's podman. ~/.local is cached (keyed on the
-      # pinned version) so `pip install` below is a fast no-op against the cache instead of
-      # a fresh PyPI fetch on every run; pinning the provider avoids the docker-compose
-      # cli-plugin, which needs a Podman API socket that isn't running here.
+      # `podman compose` shells out to a host-side provider — it can't be baked into an
+      # image the way podman itself manages containers, since the provider has to run
+      # on the runner to drive the runner's podman. ~/.local is cached (keyed on the
+      # pinned version) so `pip install` below is a fast no-op against the cache instead
+      # of a fresh PyPI fetch on every run; pinning the provider avoids the
+      # docker-compose cli-plugin, which needs a Podman API socket that isn't running here.
       - name: Cache podman-compose
         uses: actions/cache@v4
         with:
@@ -130,15 +110,10 @@ jobs:
           pip install --user "podman-compose==1.5.0"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Log in to ghcr.io (to pull the workspace image)
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
-
-      - name: Pull the workspace image
-        run: podman pull "${{ needs.build-workspace.outputs.workspace_ref }}"
-
-      # Stable dependencies (up for the whole job, no outage/restart) — a declarative
-      # compose file, unlike the harness which drives its own stores with native podman.
+      # colcon test runs as part of the image build below (the Containerfile's
+      # `workspace` stage), not a separate colcon-test job pulling a pushed image — the
+      # test-dependency stores need to already be up and reachable via --network host
+      # by the time that build step's `colcon test` runs.
       - name: Start the test-dependency stores (dc_bridge's store-backed tests hard-fail, never skip — see dc_bridge/README.md)
         env:
           PODMAN_COMPOSE_PROVIDER: podman-compose
@@ -154,16 +129,81 @@ jobs:
             docker.io/amazon/aws-cli:latest \
             --endpoint-url http://127.0.0.1:9000 s3 mb s3://dc-records
 
-      - name: colcon test (C++ gtest) + coverage
+      # buildah stores a `RUN --mount=type=cache` mount's content under
+      # $TMPDIR/buildah-cache/<id>, entirely separate from --cache-from/--cache-to's
+      # registry export (verified: --cache-to only carries layers, never cache-mount
+      # content — a real gap found by comparing two live runs' `ccache -s` output, not
+      # assumed). BUILDAH_TMPDIR below (see build.sh) relocates it into this cached
+      # directory instead, so the workspace stage's ccache mount actually survives
+      # between runs on GitHub's otherwise-ephemeral runners. Caching the parent dir,
+      # not `.../buildah-cache` itself: buildah names it `buildah-cache-<uid>`
+      # (confirmed via a diagnostic run — `buildah-cache-1001` on this runner user),
+      # a detail not worth hardcoding.
+      - name: Cache the ccache RUN --mount=type=cache content
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/buildah-tmp
+          key: buildah-ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            buildah-ccache-${{ runner.os }}-
+
+      # Same script a developer runs locally (./tools/e2e/scripts/build.sh) — builds,
+      # rosdep-installs, colcon builds, and colcon tests the whole workspace in one
+      # `podman build`. CACHE_REF round-trips podman's layer cache (the rarely-changing
+      # apt/toolchain/aws_sdk_vendor layers) through the registry; BUILDAH_TMPDIR
+      # points the workspace stage's ccache mount at the actions/cache-managed
+      # directory above — together they mean a cold runner still starts warm, both for
+      # layers that didn't change and for object files ccache has already compiled. A
+      # failing `colcon test` does NOT fail this `podman build` (see the Containerfile's
+      # `workspace` stage) — it's recorded in the image's own /root/ws/TEST_RESULT
+      # instead, so the image still gets tagged and its coverage data is still
+      # extractable below even when tests fail.
+      - name: Build + test the DC workspace (coverage-instrumented)
         env:
-          IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
-        run: ./tools/e2e/scripts/test.sh "$PWD/coverage"
+          IMAGE_TAG: ${{ steps.refs.outputs.workspace_ref }}
+          CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
+          BUILDAH_TMPDIR: ${{ runner.temp }}/buildah-tmp
+          CCOV: "true"
+        run: ./tools/e2e/scripts/build.sh
 
       - name: Stop the test-dependency stores
         if: always()
         env:
           PODMAN_COMPOSE_PROVIDER: podman-compose
         run: podman compose -f tools/e2e/compose.test.yaml down
+
+      # Extracted via a short-lived container reading the already-built image, not a
+      # bind mount during the build — coverage/cpp.info and TEST_RESULT are both just
+      # files colcon/the Containerfile's RUN wrote into the image's own filesystem.
+      - name: Extract C++ coverage and test result
+        if: always()
+        env:
+          REF: ${{ steps.refs.outputs.workspace_ref }}
+        run: |
+          mkdir -p coverage
+          podman run --rm --entrypoint bash -v "${{ github.workspace }}/coverage:/out:Z" "$REF" -c '
+            [ -f /root/ws/coverage/cpp.info ] && cp /root/ws/coverage/cpp.info /out/ || true
+            cp /root/ws/TEST_RESULT /out/TEST_RESULT
+          '
+
+      - name: Fail the job if colcon test reported failures
+        if: always()
+        run: |
+          if [ "$(cat coverage/TEST_RESULT)" != "0" ]; then
+            echo "colcon test reported failures" >&2
+            exit 1
+          fi
+
+      - name: Push the workspace image
+        if: success()
+        env:
+          REF: ${{ steps.refs.outputs.workspace_ref }}
+        run: |
+          for attempt in 1 2 3; do
+            podman push "$REF" && exit 0
+            echo "push $REF attempt $attempt failed; retrying in 10s"; sleep 10
+          done
+          exit 1
 
       - name: Upload C++ coverage
         if: always()

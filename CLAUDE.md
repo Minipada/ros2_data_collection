@@ -45,13 +45,26 @@ pip3 install -r requirements.txt   # or `poetry install`
 pre-commit run --all-files   # flake8, doc build, yaml/json/xml checks, etc. — see .pre-commit-config.yaml
 ```
 
-CI (`.github/workflows/ci.yaml`) builds the shared DC workspace image
-(`tools/e2e/Containerfile`) with Podman and runs `colcon test` (C++ gtest across every
-package) against it — see "Containers: Podman, not Docker" below. `tools/e2e/scripts/build.sh` /
-`test.sh` are the same scripts CI calls, runnable locally too. Note: `ci.yaml` on the
-`humble` branch is a *different* file (that branch's own tree, `industrial_ci` inside
-Docker) — same filename, unrelated content, since each branch keeps its own
-`.github/workflows/`.
+CI (`.github/workflows/ci.yaml`) builds the DC workspace with Podman and runs `colcon
+test` (C++ gtest across every package) against it — see "Containers: Podman, not
+Docker" below. Its `build-workspace` job runs the exact same `tools/e2e/scripts/build.sh`
+a developer runs locally, so CI and local dev build `tools/e2e/Containerfile` the same
+way; `colcon test` is part of that same build (the Containerfile's `workspace` stage),
+so CI no longer calls `test.sh` directly. CI adds two things local dev doesn't need:
+`CACHE_REF`, a registry ref `build.sh` passes to `podman build --cache-from`/
+`--cache-to` so the rarely-changing apt/toolchain/aws_sdk_vendor *layers* stay warm
+on a cold GitHub-hosted runner (podman's layer cache is otherwise local to one
+machine); and `BUILDAH_TMPDIR`, which relocates the `workspace` stage's ccache
+`RUN --mount=type=cache` mount into a directory `actions/cache` persists between
+runs — that mount lives under buildah's own `$TMPDIR`, a mechanism
+`--cache-from`/`--cache-to` does not touch at all (verified against two live CI runs:
+the mount showed a 0% hit rate under `--cache-to`/`--cache-from` alone). Together
+they mean a change to one source file only recompiles that file's translation units,
+not the whole workspace, on a cold runner too — no bind mounts, no separate
+incremental-build script. Note: `ci.yaml` on the `humble` branch is a *different*
+file (that branch's own tree, `industrial_ci` inside Docker) — same filename,
+unrelated content, since each
+branch keeps its own `.github/workflows/`.
 
 ## Containers: Podman, not Docker
 

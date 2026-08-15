@@ -4,7 +4,7 @@
 # tools/e2e/scripts/run.sh), these just need to be *up* for the duration of the test run,
 # which is exactly what a declarative compose file is for.
 #
-# Bring them up (locally or in CI's colcon-test job) with:
+# Bring them up (locally or in CI's build-workspace job) with:
 #   podman compose -f tools/e2e/compose.test.yaml up -d
 # then create the bucket the tests use and run tools/e2e/scripts/test.sh.
 #
