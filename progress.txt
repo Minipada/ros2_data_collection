@@ -4469,6 +4469,91 @@ prior session in this log, which were all constrained to read-through + `clang-f
 `black` reformatted `tools/e2e/scripts/verify_zero_loss.py` again as a side effect of running
 pre-commit against the whole repo — reverted before committing, same as every prior entry.
 
+### CI incremental workspace build — stop full recompiles on any source change (PR #333)
+
+**Problem**: CI's `build-workspace` job recompiled the *entire* DC workspace on every
+push, no matter how small the change — a single test file edit paid the same cost as a
+from-scratch build, because the whole thing was one Containerfile layer (`COPY . +
+colcon build`): any changed file busted that layer's cache and forced `colcon build`
+to start from nothing.
+
+**Fix**: split the Containerfile into a `toolchain` stage (apt/rosdep/`aws_sdk_vendor`,
+registry-cached via `CACHE_REF` — unaffected by DC source changes at all) and a
+`workspace` stage built incrementally in CI via a new driver
+(`tools/e2e/scripts/ci_build_test.sh`) that runs `colcon build`/`colcon test` against a
+bind-mounted `build/`/`ccache`, restored between runs by `actions/cache` instead of
+recompiled from zero. The bind-mounted result is then assembled into a normal,
+mount-free shippable image via a narrow-context `podman build`/`COPY`
+(`tools/e2e/Containerfile.finalize`) rather than `podman commit`.
+
+**Two gotchas found by direct testing, not by reading docs, that shaped the design**:
+1. `podman commit` was considered and rejected for finalizing the image: it would
+   require manually reconstructing `ENTRYPOINT`/`CMD`, and unlike a plain `podman
+   build` it isn't `hadolint`-able and doesn't match the existing narrow-context
+   `Containerfile.e2e` pattern. (An earlier design also worried `podman commit` would
+   silently drop a bind-mounted `install/` — it only captures a container's own
+   writable layer — but the final design extracts `install/` via `podman cp` instead
+   of bind-mounting it, so that specific concern doesn't apply as stated; the two
+   reasons above are why `podman build`/`COPY` — `Containerfile.finalize` — was kept
+   regardless.)
+2. A fresh checkout (`actions/checkout`, same as a plain `git checkout`) stamps every
+   file's mtime to "now" at checkout time, which defeats colcon/CMake's mtime-based
+   staleness detection — every file looks simultaneously newer than its build outputs,
+   forcing a full rebuild regardless of caching. Fixed with a new
+   `tools/e2e/scripts/normalize_git_mtimes.sh`, run before the incremental build, that
+   rewrites each tracked file's mtime to its last commit's timestamp so only files
+   actually changed since the cached build look stale to colcon.
+
+**Five real bugs found and fixed via actual CI runs** (all in Containerfile/script
+content, not implementer typos — each confirmed by a real CI failure before the fix and
+a real CI pass after):
+1. `ARG CCOV` needed redeclaring in the `workspace` stage — `ARG` scope resets at every
+   `FROM`, so the coverage flag silently stopped propagating once the stage was split.
+2. `/opt/ros/jazzy/setup.sh` needed `set +u`/`set -u` bracketing around its sourcing —
+   it references unset variables, which is fine under a normal shell but fatal under
+   `set -u`.
+3. Bind-mounting `install/` masked the toolchain image's own pre-built `aws_sdk_vendor`
+   install (the bind mount shadows whatever was baked into the image at that path).
+   Fixed by extracting `install/` via `podman cp` after the build instead of
+   bind-mounting it.
+4. `colcon test` (not just `colcon build`) also needed `--packages-skip aws_sdk_vendor`,
+   since its `build/` dir is masked by the same `COLCON_BUILD_DIR` bind mount and looks
+   unbuilt from inside the container. `colcon test-result`, however, does **not** accept
+   `--packages-skip` at all — confirmed empirically, it errors on the flag — so the skip
+   only belongs on `colcon test`, not on `test-result`.
+5. The biggest one: the `toolchain` stage's `rosdep install` was scoped to only
+   `aws_sdk_vendor`'s `package.xml`, not the full workspace's (`COPY --parents` isn't
+   supported by this podman/buildah version, so all 16 `dc_*` `package.xml` files are
+   `COPY`'d in individually instead). System/apt dependencies like `nav2_common` were
+   therefore only ever installed in the ephemeral CI *build* container — discarded when
+   that container was removed — and never made it into the final shippable image,
+   causing `dc_bringup`'s launch to fail at runtime with `ModuleNotFoundError: No
+   module named 'nav2_common'`. Fixed by running `rosdep install` for the full
+   workspace in the `toolchain` stage.
+
+**Verified via two consecutive full-green real CI runs** (`build-workspace` +
+`build-e2e-image` + `e2e`, all passing both times) on Minipada/ros2_data_collection,
+branch `feature/ci-incremental-workspace-build`, PR #333: run 31741041974 and run
+31743266810. `colcon build`'s own summary went from "16 packages finished [1min 13s]"
+(a cold run that also freshly installed `nav2_common` et al. into the toolchain image
+for the first time) to "16 packages finished [46.4s]" (a subsequent run touching only
+two doc/comment files, no source) — but the `build-workspace` job's overall
+wall-clock only improved from ~14.5 minutes to ~11m38s, a far more modest gain than the
+compile-time number alone suggests, because most of the job's wall-clock is fixed-cost
+330-gtest test *execution* (unaffected by compile caching) plus registry round-trips
+(pulling/pushing image layers, `actions/cache`) rather than compilation, which was
+never the dominant cost at this codebase's size. The real, durable fix is architectural
+rather than a timing number: the `toolchain` layer (apt/rosdep/`aws_sdk_vendor`) no
+longer needs to rebuild or reinstall anything when an unrelated source file changes —
+confirmed by the `CACHE_REF`-backed toolchain build completing as a registry cache hit
+on both of the two consecutive full-green runs above.
+
+**Not done**: same residual risks flagged at plan time — GitHub Actions' repo-wide 10GB
+cache limit with LRU eviction could let concurrent PRs' `build/`/`ccache` caches evict
+each other under load (monitor via the Actions cache usage UI; not a blocker today),
+and rootful-vs-rootless podman bind-mount UID/GID mapping on `ubuntu-latest` was only
+verifiable via the real CI runs above, not locally.
+
 ## #256: Uploader — optional thumbnail/preview generation for uploaded images and videos
 
 **Read**: the issue, `dc_bridge/{include/dc_bridge,src}/uploader/*` (uploader, status, group,
@@ -5027,3 +5112,67 @@ Four bugs in my own harness, every one found by running it rather than reading i
 it on a filter update and `update_min_d` is 0.25 m. The assertion is now `map -> odom`,
 which AMCL re-broadcasts continuously and which every costmap and the planner chain
 actually depend on.
+
+### CI incremental workspace build — replace the bind-mount design with cache mounts
+
+The bind-mount design earlier in this file (`ci_build_test.sh` driving a container
+against host-cached `build/`/`ccache` dirs, `podman cp` to extract `install/`, a
+separate `Containerfile.finalize` to bake it onto the toolchain image) worked — 4 green
+CI runs, merged — but was hard to follow and diverged from what a developer runs
+locally. Asked to justify it against alternatives (industrial_ci, Nav2's
+colcon-cache/CircleCI approach, humble's own `docker/`+`industrial_ci` pipeline), the
+honest answer was that it was more machinery than the problem needed.
+
+**What replaced it.** `tools/e2e/Containerfile` is now three stages: `cacher` (extracts
+just `package.xml` manifests via `find | cp --parents`, so `toolchain`'s dependency
+layer keys its cache on dependency lists rather than one hardcoded `COPY` per package),
+`toolchain` (unchanged apt/rosdep/aws_sdk_vendor), and `workspace` (plain `COPY .` +
+`colcon build` + `colcon test` in one `RUN --mount=type=cache` for ccache). CI and local
+dev now build this file the identical way via `build.sh` — no bind mounts, no `podman
+cp`, no separate finalize image, no separate `colcon-test` job. `colcon test` failing
+doesn't fail the `podman build` (a failing `RUN` means no image gets tagged at all,
+which would make its `coverage/cpp.info` unextractable) — it's recorded in the image's
+own `/root/ws/TEST_RESULT`, and `ci.yaml` extracts coverage first, checks `TEST_RESULT`
+after, and only pushes on `0`. Deleted `ci_build_test.sh`,
+`in_container_build_test.sh`, `normalize_git_mtimes.sh`, `Containerfile.finalize`.
+
+**The mechanism was already in this repo's own history.** `RUN --mount=type=cache` was
+never used anywhere in jazzy's Containerfile history, but humble's own
+`docker/source/Dockerfile` used exactly this for ccache the whole time — it just never
+got carried forward when jazzy's CI was built from scratch as a Docker/industrial_ci
+replacement rather than a port-forward of what already worked.
+
+**A real bug in my own "empirical validation," found only by comparing two live CI
+runs' `ccache -s` output, not by re-reading the code:** earlier local testing (a
+busybox Containerfile, built from a completely separate `--root`/`--runroot` podman
+storage location) seemed to prove `--cache-from`/`--cache-to` round-trips a
+`RUN --mount=type=cache` mount's content through a registry, same as it does image
+layers. It doesn't — buildah stores a cache mount under `$TMPDIR/buildah-cache-<uid>`,
+entirely outside `--cache-from`/`--cache-to`'s reach (confirmed against podman/buildah
+docs, not just this repo's behavior). The busybox test never isolated `$TMPDIR`, only
+podman's storage root, so it was measuring same-machine `buildah-cache` reuse and
+calling it cross-machine persistence. On a real CI run this showed up as `ccache -s`
+reporting 0/177 hits on a "warm" second run — real evidence contradicting the earlier
+claim, caught by checking rather than trusting the prior validation.
+
+**The fix**, verified over four more CI round-trips (each one a single-file source
+change, to force a real recompile and catch a hit-rate regression rather than trusting
+green wall-clock time alone): `build.sh` accepts `BUILDAH_TMPDIR` to relocate `$TMPDIR`
+for the build; `ci.yaml` points it at a directory under `runner.temp` and caches that
+directory with `actions/cache` — GitHub's own proven cross-run mechanism, the same one
+the old bind-mount design used for ccache, just now backing the cache-mount path
+instead of a bind-mounted host directory. One more bug surfaced along the way: buildah
+names the cache directory `buildah-cache-<uid>` (`buildah-cache-1001` on GitHub's
+runner user), not plain `buildah-cache` — found by adding a temporary diagnostic step
+rather than guessing again, since guessing had already cost one wasted round-trip.
+Final state: `ccache -s` shows real hits (170/354, 48%) on a single-file change, and
+the `colcon build` step itself dropped from 8m25s (cold) to 58.6s (warm). A later
+`e2e` job failure (`startup latency 12.3s exceeds the 10s gate`) turned out to be a
+runner-contention flake, confirmed by re-running just that job to green.
+
+Local verification was largely infeasible this round: the machine's 5.9GB free disk
+couldn't fit even the `toolchain` stage's `aws_sdk_vendor` build (which alone needs
+more than that once buildah's own layer commit is added on top) — two local attempts
+both failed with "no space left on device" after the full ~20-minute compile. All
+verification after that point was via real CI runs, which is slower per round-trip but
+was the only environment with enough disk to actually exercise the design.
