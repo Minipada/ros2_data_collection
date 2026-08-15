@@ -5273,6 +5273,10 @@ exactly. That number is now in the waypoint follower's header comment and in the
   stations instead of reimplementing them.
 - `qrcodes_nav.yaml`: `yaw_goal_tolerance` 0.2 -> 0.1, with the inequality above written
   out next to it. `xy_goal_tolerance` stays at 0.1: it is the cheap half.
+- `waffle.model` again: both cameras now **declare** `<horizontal_fov>1.047</horizontal_fov>`
+  rather than inheriting it. Same value, so nothing renders differently; the point is that
+  the lint reads it instead of assuming it. Widening it was tried and reverted -- see the
+  section below.
 - The AMCL seed pose, in both `qrcodes_nav.yaml` and the follower, was
   (-23.910844, -13.887906) and commented "obtained after setting pose on RVIZ and
   checking /amcl_pose" -- a hand-placed estimate, 69 mm out in x from where the launch
@@ -5401,3 +5405,66 @@ reason the daily job keeps DC off.
 file unreadable to every strict XML parser; libsdformat's TinyXML2 is the lenient
 exception, which is why it survived. `check_qr_alignment` parses `waffle.model` with
 ElementTree and tripped over the same thing in a comment of its own.
+
+### The field of view: investigated, widened, measured, reverted
+
+The fix above leaves a 55 mm worst-case margin, and 55 mm is thinner than it looks: the
+goal checker compares AMCL's *estimate* of the pose against the goal, so localization
+error lands on top of the tolerance and none of it appears in that budget. The only lever
+that widens the budget without moving pallets is the lens.
+
+**Neither camera declared `<horizontal_fov>`**, so both inherited sdformat's fallback of
+1.047 rad. That was never a decision, and 60 degrees is narrower than any camera on the
+market -- including both cameras this robot claims to be. Checked rather than assumed:
+
+- R200 (what the SDF sensors are named for): ~77 degrees colour, ~70 degrees depth/IR.
+- D455 (what `dc_description` instantiates, via `realsense2_description`'s `sensor_d455`
+  macro): ~90 degrees colour, ~87 degrees depth. Worth knowing for realism that Intel has
+  since exited the depth-camera market entirely, so neither is purchasable new; the D400
+  series was the de-facto standard for short-range RGB-D in robotics until then.
+
+**Nothing to reuse.** `realsense2_description` on Jazzy is URDF and meshes only -- no gz
+sensor definition for any model, and `grep -r horizontal_fov` over the whole package
+returns nothing. The only gz camera sensors in the entire ROS install are nav2's own:
+`nav2_minimal_tb3_sim`'s `gz_waffle` (its realsense, 1.047) and
+`nav2_minimal_tb4_description`'s OAK-D (1.25). So declaring it is done by hand, but
+declaring it *is* the neighbouring convention.
+
+**77 degrees was chosen and implemented** -- the R200's colour FOV, which is the stream
+this demo reads (`image_raw`), and self-consistent with the name the model carries. Not
+the D455's 87 that a first pass suggested, because `intel_realsense_r200` is not a label
+on the sensor, it is the **ROS topic name** across every demo params file, the bridge
+config, the RViz config and the docs, deliberately preserved through the Classic-to-gz
+port. It took the worst-case margin from 55 mm to 134 mm and flipped the binding axis from
+horizontal to vertical.
+
+**Then it was reverted, on the evidence.** Re-running the all-station sweep at 77 degrees
+turned up a miss the 60-degree configuration does not have: aisle 1, station 9, the `wB`
+corner -- `dx -0.043, dy -0.090, dyaw -0.1`, which sits exactly on the tolerance circle
+and is therefore a pose Nav2 is allowed to stop in. The code is fully in frame,
+unobstructed, about 300x240 px, and ZXing returns nothing.
+
+Three measurements pinned it down:
+
+- **Not framing.** The rendered image shows the whole symbol with clear margin on every
+  side.
+- **Not resolution.** Rendering the same view at 1920x1080 (about 450 px of code) fails
+  too, while merely upscaling the 1280x720 frame 1.5x with cubic interpolation -- which
+  adds no information at all -- decodes it.
+- **It is the lens.** The same pose, same container, same everything, re-rendered at
+  1.047: `OK QRCode '0002' box=225,196 409x330`.
+
+So something about the wider view defeats ZXing's detector rather than starving it of
+pixels, and the wider lens trades a deterministic geometric margin for a stochastic decode
+one -- a much worse property for a demo whose acceptance criterion is "detection succeeds
+on every QR code". The narrower lens is measured good at all 180 station/pose cases, all
+72 envelope-boundary cases and a 20-station live pass; the wider one is not. Measurement
+wins over realism until someone works out why.
+
+What survives from the exercise, and is worth keeping: **the value is now declared** rather
+than silently inherited, and `check_qr_alignment` **reads** it out of `waffle.model`
+instead of assuming sdformat's default. The check and the simulator can no longer disagree
+about the one number the whole inequality turns on -- which would have been the same class
+of bug as #51 itself. The old constant survives only as the documented fallback for a model
+that stops declaring one. The 77-degree experiment is written up in `waffle.model` and
+`dc_simulation/README.md` so nobody repeats it without knowing how it ends.

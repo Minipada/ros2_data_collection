@@ -199,8 +199,10 @@ CODE_HALF_H = 0.146  # half its rendered height, m
 # four pallet blocks sit at map x -18.100/-16.800/-14.300/-13.000 against world
 # -10.8/-9.5/-7.0/-5.7, and the first pallet row at map y -10.475 against world -11.9.
 WORLD_TO_MAP = (-7.300, 1.425)
-# sdformat's default when a <camera> declares no <horizontal_fov>, which neither of
-# waffle.model's does.
+# sdformat's fallback when a <camera> declares no <horizontal_fov>. Both of
+# waffle.model's do declare one, and read_camera_poses() reads it -- this is only the
+# floor for a model that stopped saying, and 60 degrees is narrower than any real
+# camera, so a silent fall back to it should be visible in the margin.
 DEFAULT_HFOV = 1.047
 
 
@@ -212,7 +214,7 @@ def read_camera_poses():
     both cameras 133 mm ahead of the point the waypoints aim at.
 
     Returns:
-        {"left": (x, y, z, yaw), "right": ...}, metres and radians.
+        {"left": (x, y, z, yaw, hfov), "right": ...}, metres and radians.
     """
     import xml.etree.ElementTree as ElementTree
 
@@ -224,13 +226,18 @@ def read_camera_poses():
         # The link's own <pose>, not <inertial>'s or <collision>'s: find() only looks at
         # direct children, which is the whole point of using it here.
         base = [float(v) for v in link.find("pose").text.split()]
-        rel = [float(v) for v in link.find("sensor").find("pose").text.split()]
+        sensor = link.find("sensor")
+        rel = [float(v) for v in sensor.find("pose").text.split()]
+        # Read the lens rather than assume it: the whole check turns on the frame being
+        # the width the simulator actually renders.
+        fov = sensor.find("camera").find("horizontal_fov")
         # Both poses are yaw-only in this model, so composing them is an addition.
         poses[side] = (
             base[0] + rel[0],
             base[1] + rel[1],
             base[2] + rel[2],
             base[5] + rel[5],
+            DEFAULT_HFOV if fov is None else float(fov.text),
         )
     return poses
 
@@ -336,15 +343,14 @@ def check_qr_alignment(report):
     xy_tol, yaw_tol = read_goal_tolerance()
     report.check(bool(planes), "found QR-coded pallet faces", f"{len(planes)} faces")
 
-    half_w_angle = DEFAULT_HFOV / 2.0
-    # 1280x720, so the vertical half-angle follows from the horizontal one.
-    half_h_angle = math.atan(math.tan(half_w_angle) * 720.0 / 1280.0)
-
     worst = None
     unseen = []
     for station_x, station_y, yaw in camera_stations():
         seen = False
-        for side, (cx, cy, cz, cyaw) in cameras.items():
+        for side, (cx, cy, cz, cyaw, hfov) in cameras.items():
+            half_w_angle = hfov / 2.0
+            # 1280x720, so the vertical half-angle follows from the horizontal one.
+            half_h_angle = math.atan(math.tan(half_w_angle) * 720.0 / 1280.0)
             # Camera position and viewing direction in the map frame.
             wx = station_x + cx * math.cos(yaw) - cy * math.sin(yaw)
             wy = station_y + cx * math.sin(yaw) + cy * math.cos(yaw)
