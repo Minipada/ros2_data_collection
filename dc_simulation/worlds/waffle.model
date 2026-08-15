@@ -402,6 +402,26 @@
         <topic>left_camera</topic>
         <gz_frame_id>camera_left_depth_optical_frame</gz_frame_id>
         <camera name="left_realsense_depth_camera">
+          <!-- Declared rather than inherited. The value is sdformat's own fallback,
+               so this changes nothing about what renders; what it changes is that
+               the number is visible, and that
+               tools/sim/scripts/lint_launch_files.py reads it instead of assuming
+               it. nav2's own gz_waffle declares the same 1.047, and the TB4's OAK-D
+               declares 1.25.
+
+               Widening it was tried and reverted (#51). 60 degrees is narrower than
+               the real cameras this robot is named for: an R200 is about 77 degrees
+               in colour, the D455 dc_description instantiates about 90. Widening to
+               77 does buy framing margin, 55 mm to 134 mm at the tightest station.
+               It costs more than it buys: at 77 degrees the code at aisle 1
+               station 9 stops decoding at a pose Nav2 is allowed to stop in, and it
+               is not a resolution problem, because rendering the same view at
+               1920x1080 fails too while merely upscaling the 1280x720 frame decodes
+               fine. Something about the wider view defeats ZXing's detector here.
+               The narrower lens is measured good at every station and the wider one
+               is not, so measurement wins over realism until someone works out why.
+               See dc_simulation/README.md. -->
+          <horizontal_fov>1.047</horizontal_fov>
           <image>
             <width>1280</width>
             <height>720</height>
@@ -446,6 +466,26 @@
         <topic>right_camera</topic>
         <gz_frame_id>camera_right_depth_optical_frame</gz_frame_id>
         <camera name="right_realsense_depth_camera">
+          <!-- Declared rather than inherited. The value is sdformat's own fallback,
+               so this changes nothing about what renders; what it changes is that
+               the number is visible, and that
+               tools/sim/scripts/lint_launch_files.py reads it instead of assuming
+               it. nav2's own gz_waffle declares the same 1.047, and the TB4's OAK-D
+               declares 1.25.
+
+               Widening it was tried and reverted (#51). 60 degrees is narrower than
+               the real cameras this robot is named for: an R200 is about 77 degrees
+               in colour, the D455 dc_description instantiates about 90. Widening to
+               77 does buy framing margin, 55 mm to 134 mm at the tightest station.
+               It costs more than it buys: at 77 degrees the code at aisle 1
+               station 9 stops decoding at a pose Nav2 is allowed to stop in, and it
+               is not a resolution problem, because rendering the same view at
+               1920x1080 fails too while merely upscaling the 1280x720 frame decodes
+               fine. Something about the wider view defeats ZXing's detector here.
+               The narrower lens is measured good at every station and the wider one
+               is not, so measurement wins over realism until someone works out why.
+               See dc_simulation/README.md. -->
+          <horizontal_fov>1.047</horizontal_fov>
           <image>
             <width>1280</width>
             <height>720</height>

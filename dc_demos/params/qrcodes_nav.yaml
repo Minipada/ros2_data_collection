@@ -98,7 +98,7 @@ controller_server:
     # This demo's goals are camera stations, not just places to be, so the
     # tolerance has to fit what the lens can still read from there (#51).
     #
-    # The cameras are 60-degree-FOV, so at a standoff d the frame is
+    # The cameras are 60-degree FOV, so at a standoff d the frame is
     # +/- d*tan(30) wide, and a code is readable while
     #
     #     |lateral error| + d*tan(|yaw error|) + 0.181 <= d*tan(30)
@@ -112,7 +112,14 @@ controller_server:
     #
     # Hence 0.1 rad, not the 0.2 this carried. Yaw is the expensive term because
     # it scales with the standoff, and a diff-drive robot turning on the spot
-    # settles well inside 0.1 rad; xy stays at 0.1 m, which costs nothing.
+    # settles well inside 0.1 rad -- measured at no cost in navigation time (see
+    # progress.txt); xy stays at 0.1 m, which costs nothing.
+    #
+    # Worth knowing that this budget is not the whole error: the goal checker
+    # compares AMCL's *estimate* of the pose against the goal, so localization
+    # error lands on top of whatever is set here and appears nowhere above. That
+    # is the argument for a wider lens, which was tried and reverted for breaking
+    # decoding -- see dc_simulation/README.md.
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"

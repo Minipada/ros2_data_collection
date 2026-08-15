@@ -94,7 +94,7 @@ a code from a known pose and reading back the bounding box ZXing reports:
 | Quantity | Value |
 |---|---|
 | Camera optical centres (from `base_footprint`) | `(0, ±0.02, 0.539)` m, looking ±Y |
-| Horizontal FOV | 1.047 rad — sdformat's default, no `<horizontal_fov>` is declared |
+| Horizontal FOV | 1.047 rad (60°) — declared, see below |
 | Frame at standoff *d* | ±*d*·tan(30°) wide, ±*d*·tan(18°) tall |
 | QR symbol as rendered | 0.362 × 0.292 m, centred 0.539 m above the floor |
 | Standoffs the demo drives | 0.97 m (aisle 1), 0.73 m (aisle 2), 0.98 m (aisle 3) |
@@ -106,9 +106,32 @@ be more than ~0.73 m off either wall. A code stays readable while
 |lateral error| + d·tan(|yaw error|) + 0.181 <= d·tan(30°)
 ```
 
-which at *d* = 0.73 m leaves about 0.24 m for the goal tolerance to spend, and yaw is the
-expensive half because it scales with the standoff. `dc_demos`' `qrcodes_nav.yaml`
-therefore stops at 0.1 m / 0.1 rad, not the 0.2 rad it used to, and
-`tools/sim/scripts/lint_launch_files.py` re-derives the whole inequality from the world,
-the robot model, the waypoints and the nav params on every run, so the four cannot drift
-apart again without CI saying so. The measured worst-case margin is 55 mm.
+`tools/sim/scripts/lint_launch_files.py` re-derives that inequality — and its vertical
+twin — from the world, the robot model, the waypoints and the nav params on every run, so
+the four cannot drift apart again without CI saying so. The worst case over the goal
+tolerance is **55 mm**.
+
+### Why the field of view is 60°, and why widening it did not work
+
+Neither camera used to declare `<horizontal_fov>`, so both inherited sdformat's fallback
+of 1.047 rad. Both declare it now. The value is unchanged, so nothing renders
+differently; what changed is that the number is visible and the lint reads it rather than
+assuming it — the check and the simulator can no longer disagree about the one number the
+whole inequality turns on.
+
+60° is narrower than the real cameras this robot is named for. The SDF sensors are named
+for an **R200** (~77° colour, ~70° depth); `dc_description` instantiates a **D455**
+(~90° colour, ~87° depth) via `realsense2_description`. Nothing upstream helps: that
+package is URDF and meshes only, with no gz sensor definition and no `horizontal_fov`
+anywhere, for any model. The only gz camera sensors in the ROS install are nav2's own
+`gz_waffle` (1.047) and the TB4's OAK-D (1.25).
+
+Widening to the R200's 77° was tried, because 55 mm of margin is thinner than it looks —
+the goal checker compares AMCL's *estimate* against the goal, so localization error lands
+on top of the tolerance and never appears in that budget. It takes the worst case from
+55 mm to 134 mm. **It was reverted anyway**: at 77° the code at aisle 1 station 9 stops
+decoding at a pose Nav2 is allowed to stop in, one the 60° lens reads without trouble.
+That is not a resolution effect — the same view rendered at 1920×1080 also fails, while
+simply upscaling the 1280×720 frame 1.5× decodes it — so something about the wider view
+defeats ZXing's detector rather than starving it of pixels. Until that is understood, the
+lens that is measured good at every station wins over the one that is more realistic.
