@@ -5468,3 +5468,102 @@ about the one number the whole inequality turns on -- which would have been the 
 of bug as #51 itself. The old constant survives only as the documented fallback for a model
 that stops declaring one. The 77-degree experiment is written up in `waffle.model` and
 `dc_simulation/README.md` so nobody repeats it without knowing how it ends.
+
+## #52 - QR-codes demo takes too long to load, re-measured on gz-sim and worked through
+
+#279's investigation had already fixed the dominant term (the nested-`<static>` bug, 36x)
+and left #52 open with its own checklist untouched: measure time-to-first-Record, attribute
+the cost, trim or lazy-load whatever still dominates, document the expected startup time.
+This picks that up, measured rather than guessed throughout, in a container from
+`localhost/dc-workspace:latest` with this worktree bind-mounted over
+`/root/ws/src/ros2_data_collection` (the same setup #279 used), on the same 8-core,
+no-GPU box.
+
+### Measured: bringup is fast, reaching the first Record is not
+
+`ros2 launch dc_demos tb3_qrcodes.launch.py headless:=True use_dc:=True`, timestamped
+against the log lines each stage itself emits: `lifecycle_manager_localization` reports
+"Managed nodes are active" in 3-8 s, the robot's `ros_gz_sim create` entity-creation
+succeeds in 15-25 s, and `lifecycle_manager_navigation` reports all ten managed nodes
+active in 30-40 s. All three vary more between runs than between world-file versions
+(background load on a shared dev box), but the headline holds across every run: **the
+whole pipeline is up and Nav2 is ready to take a goal in under a minute**. That is not
+where #52's "too long" comes from.
+
+It comes from what happens next. `qrcodes_stdout.yaml`'s Camera measurement only produces
+a non-empty Record when ZXing actually decodes a barcode in frame (`collect()` returns an
+empty message on every poll otherwise, by design -- see the #279 write-up above on
+"Message empty from measurement X", which is misleading but correct). The robot is parked
+at its spawn pose, facing nothing, until `qrcodes_waypoint_follower` drives it to the
+first station, so time-to-first-Record is bringup time plus however long the first
+approach leg takes at whatever real-time factor the demo is running at. Watching a live
+run confirm it: 5 minutes of wall clock (reached waypoint 5/60) produced zero Records,
+consistent with #279's own measured ~62 s of simulated time per 1.3 m hop at RTF 0.11 with
+DC running -- the first leg, being the longest (spawn to the first aisle), is worse than
+that. **The real-time factor during navigation, not gz-sim's one-time bringup, is what
+"too long to load" actually means for this demo.**
+
+### Attributed: model-instance count and the DC/Nav2 compute load are two separate costs,
+### and only one of them is still fixable in the world file
+
+Sampled `/clock` against wall clock for 30 s at a time (steady state, well past bringup),
+matching `dc_simulation/README.md`'s existing methodology:
+
+| Configuration | RTF |
+|---|---|
+| World + robot + both RGBD cameras, no Nav2, no DC (original 318-instance world) | 0.107-0.141 |
+| World + robot + both RGBD cameras, no Nav2, no DC (238-instance world, see below) | 0.178-0.183 |
+| Full demo, idle at spawn, Nav2 + DC both running (either world) | 0.11-0.12 |
+
+The first two rows isolate the world's own cost and show a real, repeatable ~40-50% gain
+from cutting model-instance count further (see next section). The third row is the
+finding that matters most for #52: **once Nav2 and DC are both in the loop, the two
+world-file versions are indistinguishable** -- both idle at ~0.11-0.12, matching #279's
+own "pass with DC running" figure of 0.11 against its DC-off 0.198. Nav2's
+planner/costmap/AMCL loop and DC's per-frame ZXing decode across two 1280x720 streams,
+together, now cost more than the entire remaining world. Trimming the world further would
+help a bare-simulator user (e.g. #51-style alignment debugging with `warehouse.launch.py`
+alone) but would not move the needle on the demo's actual wall-clock time to first Record
+-- that lever is in Nav2/DC's own compute cost, which is a different, larger piece of
+work than this issue scoped.
+
+### Trimmed: pallet+bag merged into one entity per station, QR code deliberately left alone
+
+`qrcodes.world` wrapped every station's pallet (`europallet`) and the bag sitting on it
+(`bag`) in two separate top-level `<model>` entities at the identical pose -- an artifact
+of how the file was generated, not something gz-sim needs. Merged the pair into one
+`<model>` with two sibling `<include>`s (see `europallet_bag_1_1` for the pattern), which
+takes `grep -c '<model name=' dc_simulation/worlds/qrcodes.world` from 318 to 238 with
+**zero** change to collision geometry, visual meshes, or absolute pose -- every relative
+offset was computed from the original file's own numbers (parent pose = the europallet's
+original absolute pose; the bag's local pose is 0 or a pure yaw flip, verified across all
+80 stations before writing the merge; both confirmed by `tools/sim/scripts/
+lint_launch_files.py` passing unchanged, including the #51 alignment check's exact worst-
+margin figure, 0.055 m, before and after).
+
+The QR-code models (`europallet_bag_q_*`) were deliberately left unmerged. Folding them in
+too would take the count to 158 instead of 238 -- a further, real win -- but
+`lint_launch_files.py`'s `read_code_planes()` currently reads a QR code's absolute pose
+straight off its wrapping `<model>`'s own `<pose>` via a regex, on the assumption that the
+two are the same; merging the QR code into a parent whose pose differs (the europallet's)
+would silently break that assumption rather than raise an error, because the regex would
+still find *a* `<pose>` tag, just the wrong one. That is exactly the failure class #51's
+whole check exists to catch, so it is left as a documented follow-up (in the world file's
+own comment and in `dc_simulation/README.md`) rather than bundled with a change to the one
+check built specifically to prevent that class of regression.
+
+**Verified**: `gz sdf -k` reports the merged world as valid SDF; `lint_launch_files.py`
+passes every check unchanged, including bridge-config and alignment; the bare-world RTF
+gain (0.11-0.14 -> 0.18) was measured twice on each side of the change (four containers,
+alternating via `git stash` on just the world file to hold everything else constant).
+
+### Documented
+
+`dc_simulation/README.md`'s RTF table now carries all three configurations actually
+measured here (bare-robot no-Nav2-no-DC, full demo DC-off, full demo DC-on) plus the
+238-instance figure and the reasoning above for why the QR-code merge is a deliberate
+follow-up, not an oversight. `doc/src/dc/demos/qrcodes_minio_pgsql.md`'s existing warning
+admonition is reworded from "expect a slow start" to the concrete breakdown: bringup
+under a minute, first Record several minutes out, full 60-waypoint pass over an hour --
+so a user reads what "slow" actually means before they start the demo, not after they
+give up waiting.

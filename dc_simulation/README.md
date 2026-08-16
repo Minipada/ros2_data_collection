@@ -49,17 +49,47 @@ speed, and the cost is large enough to plan around:
 | Configuration | Real-time factor |
 |---|---|
 | Bare world, no robot | ~0.27 |
-| Full demo: world + robot + both RGBD cameras + Nav2 | ~0.20 |
-| World with the 240 pallet/bag/QR-code props removed | ~1.09 |
+| World + robot + both RGBD cameras, no Nav2, no DC | ~0.11 – 0.14 |
+| Full demo: world + robot + both RGBD cameras + Nav2, DC off | ~0.20 |
+| Full demo, DC running (camera measurements decoding every poll) | ~0.11 |
+| World with the 240 pallet/bag/QR-code props removed entirely | ~1.09 |
 
 (measured on 8 CPUs under software rendering; a full 60-waypoint pass of the QR-code
-demo took ~63 minutes of wall clock for ~8 minutes of simulated time.)
+demo took ~63 minutes of wall clock for ~8 minutes of simulated time with DC off.)
 
-The dominant cost is the **number of model instances**, not their meshes or collision
-geometry — 317 instances of 27 distinct models. Removing their collision geometry
-entirely only doubles the rate; removing the instances is what buys the 4x. See
-[#52](https://github.com/Minipada/ros2_data_collection/issues/52) if that matters for
-your use.
+The dominant cost with Nav2 and DC off is the **number of model instances**, not their
+meshes or collision geometry: `qrcodes.world` declared 318 top-level `<model>` entities
+of 27 distinct models (`grep -c '<model name=' dc_simulation/worlds/qrcodes.world`).
+Removing their collision geometry entirely only doubles the rate; removing the instances
+is what buys the 4x.
+
+#52 acted on that finding where it could be acted on for free: every QR-coded station
+wrapped its pallet (`europallet`) and the bag sitting on it (`bag`) in two separate
+top-level `<model>` entities at the same pose, purely because the world file was
+generated that way — nothing needs them to be separate gz-sim entities. Merging the pair
+into one top-level `<model>` with two sibling `<include>`s (see `europallet_bag_1_1` for
+an example) takes the file from 318 to 238 top-level instances with **zero** change to
+any collision geometry, visual mesh, or absolute pose — `tools/sim/scripts/
+lint_launch_files.py`'s QR-alignment check (#51) passes unchanged before and after,
+since every `qrcode_*` model is still its own top-level entity at its original pose. That
+alone measured ~0.11 → ~0.18 RTF for "world + robot + both RGBD cameras, no Nav2, no DC"
+— the QR-code models themselves (a further 80 entities) were deliberately left
+unmerged, because `lint_launch_files.py`'s `read_code_planes()` currently reads a QR
+code's absolute pose straight off its wrapping `<model>`'s own `<pose>`, and merging
+would require it to compose that with a nested `<include>`'s relative pose instead. That
+is a real further win — worth a follow-up — but changing the one check that exists
+specifically to catch #51-style regressions felt like the wrong thing to bundle into a
+world-file cleanup.
+
+**That gain does not show up once Nav2 and DC are both running.** With the full demo
+pipeline up and the robot merely parked at its spawn pose — no navigation, camera
+measurements still polling once a second — RTF sits at ~0.11 whether or not the props
+are merged: the same figure progress.txt records for "the pass with DC running" against
+#279's DC-off 0.198. Nav2's planners/costmaps and DC's per-frame ZXing decode (two
+1280x720 streams, every poll) are together the larger cost once they're both in the
+loop, and they swamp what the world-entity count buys on this box. See
+[#52](https://github.com/Minipada/ros2_data_collection/issues/52) for the full
+measurement writeup, including time-to-first-Record and where that time actually goes.
 
 One trap worth knowing, since it costs about 150x: gz-sim does **not** propagate a
 wrapper `<model>`'s `<static>` into an `<include>`d nested model. `qrcodes.world` wraps
