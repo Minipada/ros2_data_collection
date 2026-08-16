@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "dc_core/condition.hpp"
+#include "dc_core/condition_set.hpp"
 #include "dc_core/measurement.hpp"
 #include "dc_interfaces/msg/condition.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
@@ -186,46 +187,37 @@ public:
     }
   }
 
+  // Current state of one of the configured Conditions, as dc_core::ConditionSet asks for it.
+  // A name that is not a configured Condition reads as false rather than dereferencing a null
+  // plugin, which is what the previous conditions_[name]->getState(msg) did on a typo'd name.
+  bool getConditionState(const std::string& condition_name, const dc_interfaces::msg::StringStamped& msg)
+  {
+    auto condition_it = conditions_.find(condition_name);
+    if (condition_it == conditions_.end() || !condition_it->second)
+    {
+      RCLCPP_ERROR_STREAM(logger_, "Measurement " << measurement_name_ << ": '" << condition_name
+                                                  << "' is not a configured condition; treating it as false.");
+      return false;
+    }
+    return condition_it->second->getState(msg);
+  }
+
   bool isConditionOn(const dc_interfaces::msg::StringStamped& msg)
   {
-    bool all_conditions_res = true;
-    bool any_conditions_res = true;
-    bool none_conditions_res = true;
+    // The if_all/if_any/if_none composition itself lives in dc_core so the Trigger plugins can
+    // compose Conditions the same way (#284); only the state lookup is Measurement's own.
+    const auto outcome = condition_set_.evaluate(dc_core::ConditionStateLookup{
+        [&](const std::string& condition_name) { return getConditionState(condition_name, msg); } });
 
-    // "All" conditions ON enable
-    if (!if_all_conditions_.empty())
-    {
-      all_conditions_res =
-          std::all_of(if_all_conditions_.begin(), if_all_conditions_.end(),
-                      [&](const std::string& condition) { return conditions_[condition]->getState(msg); });
-    }
+    RCLCPP_DEBUG(logger_, "all_conditions_res=%d, any_conditions_res=%d, none_conditions_res=%d",
+                 outcome.if_all_satisfied, outcome.if_any_satisfied, outcome.if_none_satisfied);
 
-    // "Any" condition ON enable
-    if (!if_any_conditions_.empty())
-    {
-      // No "any" condition defined, activates
-      any_conditions_res =
-          std::any_of(if_any_conditions_.begin(), if_any_conditions_.end(),
-                      [&](const std::string& condition) { return conditions_[condition]->getState(msg); });
-    }
-
-    // All condition set to false condition ON enable
-    if (!if_none_conditions_.empty())
-    {
-      none_conditions_res =
-          std::all_of(if_none_conditions_.begin(), if_none_conditions_.end(),
-                      [&](const std::string& condition) { return !conditions_[condition]->getState(msg); });
-    }
-
-    RCLCPP_DEBUG(logger_, "all_conditions_res=%d, any_conditions_res=%d, none_conditions_res=%d", all_conditions_res,
-                 any_conditions_res, none_conditions_res);
-
-    return all_conditions_res && any_conditions_res && none_conditions_res;
+    return outcome.satisfied();
   }
 
   bool isAnyConditionSet()
   {
-    return (!if_all_conditions_.empty() || !if_any_conditions_.empty() || !if_none_conditions_.empty());
+    return !condition_set_.empty();
   }
 
   // Whether every collection should currently be held back by the gate condition.
@@ -579,9 +571,7 @@ public:
     custom_keys_ = custom_keys;
 
     condition_max_measurements_ = condition_max_measurements;
-    if_all_conditions_ = if_all_conditions;
-    if_any_conditions_ = if_any_conditions;
-    if_none_conditions_ = if_none_conditions;
+    condition_set_ = dc_core::ConditionSet(if_all_conditions, if_any_conditions, if_none_conditions);
 
     gate_condition_ = gate_condition;
     // No gate configured means collection is never held back.
@@ -694,9 +684,7 @@ protected:
 
   // Conditions
   std::map<std::string, std::shared_ptr<dc_core::Condition>> conditions_;
-  std::vector<std::string> if_all_conditions_;
-  std::vector<std::string> if_any_conditions_;
-  std::vector<std::string> if_none_conditions_;
+  dc_core::ConditionSet condition_set_;
   int condition_max_measurements_;
   int condition_counter_published_ = 0;
 
