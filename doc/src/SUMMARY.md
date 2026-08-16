@@ -58,6 +58,8 @@
   - [Moving](./dc/conditions/moving.md)
   - [Same as previous](./dc/conditions/same_as_previous.md)
   - [String match](./dc/conditions/string_match.md)
+- [Triggers](./dc/triggers.md)
+  - [Edge trigger](./dc/triggers/edge_trigger.md)
 - [Data validation](./dc/data_validation.md)
 - [Groups](./dc/groups.md)
 - [Raw topic collection](./dc/raw_topics.md)

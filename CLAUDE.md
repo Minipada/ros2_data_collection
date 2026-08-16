@@ -27,6 +27,7 @@ are already recorded there rather than in code comments.
 | `dc_core` | Headers for plugins core to the DC stack |
 | `dc_common` | Common support functionality used throughout the DC stack |
 | `dc_measurements` | Collect data with Measurement plugins |
+| `dc_triggers` | Trigger plugins and the broadcast node publishing FlushEvents |
 | `dc_group` | Group node — merges Records from several Measurements by time proximity |
 | `dc_services` | Collect uptime data |
 | `dc_lifecycle_manager` | Controller/manager for the DC system's lifecycle nodes |

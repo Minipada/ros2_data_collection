@@ -1,0 +1,9 @@
+<class_libraries>
+    <library path="dc_edge_trigger">
+        <class name="dc_triggers/EdgeTrigger" type="dc_triggers::EdgeTrigger" base_class_type="dc_core::Trigger">
+            <description>
+                dc_trigger_edge_trigger
+            </description>
+        </class>
+    </library>
+</class_libraries>
