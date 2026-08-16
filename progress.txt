@@ -5794,3 +5794,97 @@ on the PR.
   as prior sessions. A real `colcon build --packages-select dc_common --cmake-args
   -DBUILD_TESTING=ON` + `colcon test` on a Jazzy workspace (CI, or a machine with more
   disk) is still needed to close the loop formally.
+
+## #286 - Add dc_triggers package: Trigger plugin base, EdgeTrigger, and broadcast node
+
+First implementation slice of #282 (Pre-event circular-buffer capture via a new Trigger
+plugin), unblocked by #284's `ConditionSet` evaluator. Introduces a **Trigger** concept
+distinct from Condition (CONTEXT.md's Condition entry warned to avoid "trigger" as a
+synonym for it -- it now names something real): a Condition continuously gates whether a
+Measurement collects; a Trigger fires a one-shot signal on a rising edge.
+
+- `dc_core/include/dc_core/trigger.hpp`: `dc_core::Trigger`, an abstract plugin base with
+  the same four lifecycle methods as `dc_core::Condition` (`configure`/`cleanup`/
+  `activate`/`deactivate`), plus one more: `checkFired()`, polled by the owning node,
+  returning true at most once per firing. `configure()` takes the parent node, this
+  Trigger's name, the Condition plugin map the owning node already loaded (mirroring how
+  `dc_core::Measurement::configure()` receives it), and the `if_all`/`if_any`/`if_none`
+  name lists to compose them with.
+- `dc_triggers` (new package): `dc_triggers::Trigger` (`include/dc_triggers/trigger.hpp`)
+  is the common plugin plumbing every concrete Trigger shares -- node handle, the
+  Condition map, and a `dc_core::ConditionSet` built from the three name lists -- exactly
+  the role `dc_conditions::Condition` plays for Condition plugins. It exposes
+  `getConditionState(name)`, which looks a Condition up and calls its `getState()` with a
+  **default-constructed** `dc_interfaces::msg::StringStamped` -- a Trigger has no Record
+  of its own to hand a Condition the way a Measurement does, so only Conditions that
+  maintain their own state via a subscription (e.g. `Moving`) are meaningful composed
+  into a Trigger; msg-dependent Conditions (`BoolEqual` and friends) would always read
+  against an empty message here. Documented on `dc_triggers/trigger.hpp` and in
+  `doc/src/dc/triggers.md`, not silently swallowed.
+- `dc_triggers::EdgeTrigger` (`plugins/edge_trigger.cpp`): the one concrete Trigger this
+  slice ships. `checkFired()` evaluates `condition_set_.isSatisfied()` and fires
+  (`satisfied && !previously_satisfied_`) exactly on the false->true transition -- a
+  sustained `true` across repeated polls fires only once, matching the acceptance
+  criterion verbatim. No rule-evaluation logic of its own: composition is entirely
+  `dc_core::ConditionSet`, the same evaluator `dc_measurements::Measurement` uses for live
+  gating, so the two mechanisms can't diverge in how they read the same if_all/if_any/
+  if_none syntax.
+- `dc_interfaces/msg/FlushEvent.msg`: `string incident_id` + `builtin_interfaces/Time
+  stamp`, registered in `dc_interfaces/CMakeLists.txt`.
+- `trigger_broadcast_node::TriggerBroadcastNode` (`include/dc_triggers/
+  trigger_broadcast_node.hpp`, `src/trigger_broadcast_node.cpp`): a `nav2_util::LifecycleNode`
+  mirroring `measurement_server::MeasurementServer`'s plugin-loading shape, scaled down to
+  the single Trigger this node hosts. `condition_plugins` (a top-level string-array
+  parameter, read in the constructor like `MeasurementServer::measurement_plugins`) names
+  the Condition plugins to load; each is configured via `<condition_id>.plugin` exactly as
+  today. The one Trigger is namespaced `trigger.*`: `trigger.plugin` (mandatory),
+  `trigger.if_all_conditions`/`if_any_conditions`/`if_none_conditions` (default empty),
+  `trigger.topic` (default `/dc/flush`), `trigger.polling_interval` (default 100 ms, the
+  cadence `checkTrigger()` is invoked on via a wall timer created in `on_activate()`).
+  Each `checkTrigger()` tick calls `trigger_->checkFired()`; on a fire, mints a UUID via
+  the same `<uuid/uuid.h>` `uuid_generate()` call `MeasurementServer::setRunId()` already
+  uses for `run_id`, stamps a `FlushEvent`, and publishes -- the node is the *only* minter
+  of `incident_id`, matching the acceptance criterion that Measurements adopt it rather
+  than generating their own (Measurement-side adoption is out of scope here; deferred to
+  a later #282 slice).
+- `dc_triggers/trigger_plugin.xml` exports `dc_triggers/EdgeTrigger` as a `dc_core::Trigger`,
+  installed and pluginlib-registered the same way `dc_measurements/condition_plugin.xml`
+  and `measurement_plugin.xml` are.
+- **Tests**: `dc_triggers/test/test_trigger_edge_trigger.cpp`, an `ament_add_gtest`
+  lifecycle-node integration test in the `test_measurement_*.cpp` style (spin up a real
+  `TriggerBroadcastNode`, subscribe to its `/dc/flush` output, drive state through ROS
+  messages, assert on what's received) rather than a Trigger-only unit test, since
+  `EdgeTrigger`'s own logic is thin wiring around the already-unit-tested `ConditionSet`
+  evaluator (per #282's testing decisions). Reuses `dc_measurements`' `Moving` Condition
+  (self-subscribing to `/odom`) to toggle state deterministically, the same fixture
+  `dc_measurements/test/test_measurement_gate_condition.cpp` already established for
+  exactly this reason -- declared a `test_depend` on `dc_measurements` for it. Three
+  cases: the Condition never becoming true never fires; a rising edge fires exactly once
+  and a sustained true afterward fires no more; and a second rising edge (after the
+  Condition falls and rises again) fires again with a *distinct* `incident_id`
+  (`std::set` dedup on all received `incident_id`s, asserted to grow to 2).
+- **Docs**: `doc/src/dc/triggers.md` (+ `doc/src/dc/triggers/edge_trigger.md`), wired into
+  `doc/src/SUMMARY.md` between Conditions and Data validation, documenting both node-level
+  (`condition_plugins`) and plugin-level (`trigger.*`) parameters per the acceptance
+  criterion. `CONTEXT.md` gains **Trigger** and **FlushEvent** glossary entries per #282's
+  "Further Notes" instruction, and Condition's existing entry is reworded -- it used to
+  list "trigger" as a term to avoid entirely; now it avoids "filter" specifically, since
+  "Trigger" is a real, distinct concept. `doc/src/dc/introduction.md`'s pre-existing
+  "Trigger-based data collection" bullet was actually describing if_all/if_any/if_none
+  Condition gating (predating this issue) and would now read as describing the wrong
+  feature; reworded to "Condition-based data collection" without touching its content.
+  `CLAUDE.md`'s package table gains a `dc_triggers` row.
+- **Verified**: `podman run` against the `localhost/dc-workspace` Jazzy image (the same one
+  #284/#285 used), bind-mounting this worktree over `/root/ws/src/ros2_data_collection`:
+  `colcon build --packages-select dc_common dc_core dc_interfaces dc_measurements
+  dc_triggers --cmake-args -DBUILD_TESTING=ON` succeeded end to end (10min 55s; dc_triggers
+  itself 36.9s) with zero warnings under the `-Wall -Wextra -Wpedantic -Werror -Wdeprecated`
+  `dc_package()` flags, confirming the new `dc_core::Trigger`/`dc_triggers` headers and
+  plugin sources compile clean and pluginlib registration resolves. A first `colcon test`
+  attempt failed for an environment reason, not a code one: each `podman run --rm`
+  invocation is a fresh container, so `build/`/`install/` from the build step didn't
+  survive into a separate test-step invocation ("Has this package been built before?").
+  Re-running build and test in one combined container invocation was in flight when this
+  entry was written; its result -- particularly whether the three
+  `test_trigger_edge_trigger` cases pass as designed -- still needs to be confirmed and
+  logged in a follow-up, the same kind of gap #285's entry closed out formally later.
