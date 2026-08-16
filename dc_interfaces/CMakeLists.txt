@@ -17,6 +17,7 @@ endforeach()
 rosidl_generate_interfaces(
   ${PROJECT_NAME}
   "msg/Condition.msg"
+  "msg/FlushEvent.msg"
   "srv/DrawImage.srv"
   "srv/SaveImage.srv"
   "msg/StringStamped.msg"

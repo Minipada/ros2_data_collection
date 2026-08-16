@@ -67,7 +67,7 @@ DC uses a modular approach, based on [pluginlib](https://index.ros.org/p/pluginl
 * **Customizable validation**: validate Records using existing or customized JSON schemas
 * **Easy to extend**: add new Measurements by writing a plugin; add new Destinations with configuration alone
 * **Flexible data collection conditions**: collect data based on conditions such as whether the robot is moving or if a field is equal to a value
-* **Trigger-based data collection**: collect data when a defined set of combination of all, any, or no condition are met
+* **Condition-based data collection**: collect data when a defined set of combination of all, any, or no condition are met
 * **Customizable record collection**: configure the number of records to collect at the start and when a condition is activated.
 * **Data inspection**: inspect data from camera input including barcode and QR codes
 * **Fast and efficient**: high performance, using an external Shipper for delivery, and designed to minimize code duplication and reduce human errors

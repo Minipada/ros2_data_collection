@@ -10,7 +10,16 @@ _Avoid_: metric, sensor log, sample
 
 **Condition**:
 A boolean predicate on robot state that gates whether a Measurement's Records are collected.
-_Avoid_: trigger, filter
+_Avoid_: filter (as a synonym for Condition; "Trigger" is now a distinct DC concept, see below)
+
+**Trigger**:
+A plugin that fires a one-shot signal (a FlushEvent) on the false→true rising edge of a
+Condition composition, distinct from Condition's continuous gating. Used to release a
+Measurement's pre-event buffer around an incident (e.g. an emergency brake).
+
+**FlushEvent**:
+The message a Trigger broadcast node publishes when its Trigger fires, carrying a fresh
+`incident_id` that downstream Measurements adopt for that one event.
 
 **Group**:
 A merge of Records from several Measurements into one Record, based on time proximity.
