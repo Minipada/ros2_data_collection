@@ -139,7 +139,10 @@ TEST_F(TriggerEdgeTriggerTest, SecondRisingEdgeFiresAgainWithDistinctIncidentId)
   spinFor(polling_interval_ * 3);
   EXPECT_EQ(flush_count_, 1);
 
-  // Move again: a second rising edge fires a second, distinct incident.
+  // Move again: the two below-threshold messages above left moving_count_ at -1, so it takes
+  // two above-threshold messages (not one) to cross +count_hysteresis_ and re-fire the rising
+  // edge -- the counter is symmetric, unlike gate_condition's one-shot latch.
+  publishOdom(1.0);
   publishOdom(1.0);
   while (flush_count_ == 1)
   {
