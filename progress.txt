@@ -5567,3 +5567,53 @@ admonition is reworded from "expect a slow start" to the concrete breakdown: bri
 under a minute, first Record several minutes out, full 60-waypoint pass over an hour --
 so a user reads what "slow" actually means before they start the demo, not after they
 give up waiting.
+
+## #61 - QR-codes demo world renders too dark intermittently, re-verified on gz-sim
+
+Filed against Gazebo Classic (OGRE 1.x); #268 replaced the renderer wholesale with
+gz-sim/gz-rendering OGRE2 and rewrote `qrcodes.world` for SDF 1.10 in the process, so #61
+was re-scoped from a known bug to a verification task: confirm lighting is stable and
+barcode detection holds across repeated cold starts under the new renderer, and either
+close it on that evidence or characterise and fix whatever remains. #61's own blocker,
+#279 (porting the Nav2 demo off Classic), closed before this session, so the task was
+unblocked.
+
+**Evidence gathered**: five independent cold starts of `tb3_qrcodes.launch.py`'s full
+pipeline (gz-sim + Nav2 + DC), each starting from a freshly-started container/runner --
+
+- Two on GitHub-hosted CI runners, via the `sim` job `c80b376`/`8bcb071` wired up to run
+  by default (including its `detect` stage) on every PR: commit `41e24d0` read 6/6
+  QR codes over 6 stations reached; commit `2b03c78` (this branch's parent) read 5/6.
+- Three run locally against the same CI-built workspace image
+  (`ghcr.io/minipada/ros2_data_collection/dc-workspace:2b03c781e...`, pulled after
+  `podman image prune -f` freed space -- the box was at 92% disk usage and the first pull
+  attempt failed with "no space left on device"): 2/3, 2/3, and 3/4 stations, the last run
+  against the world-file change this entry documents, with `dc_simulation/{worlds,launch,
+  config}` and `dc_demos/{launch,params}` bind-mounted over the image's install paths so
+  the run actually exercised current source rather than the image's baked-in copies (a
+  first attempt without the `config` mount silently used a stale bridge config with the
+  pre-rename ROS topic names, which is why `left_intel_realsense_r200_depth/image_raw`
+  turned up missing at first).
+
+Every run's misses are all within the one-station gap `run.sh`'s own `detect` stage
+already treats as expected -- it asserts `reached - 1`, not `reached`, specifically
+because the goal-reached and camera-poll events race (see the script's own comment) --
+and no run produced a degenerate (all-black or otherwise uniform) camera frame. The old
+symptom does not reproduce under the ported renderer.
+
+**Fixed anyway, for the same reason `<horizontal_fov>` was made explicit**:
+`qrcodes.world`'s `<scene>` declared no `<ambient>`, silently relying on sdformat's own
+fallback (`0.4 0.4 0.4 1`, confirmed from `sdformat14`'s `scene.sdf` schema). Nothing
+in the file makes that value vary run to run -- no sky/time-of-day element, no light-
+flicker plugin, and the one `directional` sun has a fixed `<direction>` -- so it was
+never a plausible source of *intermittent* darkness, but leaving a load-bearing constant
+to an implicit fallback is exactly the class of bug #51 and the FOV fix both already
+called out in this file. `<ambient>0.4 0.4 0.4 1</ambient>` and
+`<background>0.7 0.7 0.7 1</background>` are now declared in `<scene>` at their
+unchanged (sdformat-default) values, with a comment recording the #61 investigation and
+its cold-start count. `lint_launch_files.py` (SDF validity, bridge config, QR alignment)
+passes unchanged against the edit.
+
+**Documented**: `dc_simulation/README.md` carries a new "Lighting: verified stable on
+gz-sim, #61" section with the cold-start count and the reasoning above. Closed with this
+evidence per the issue's own acceptance criteria, rather than left open.

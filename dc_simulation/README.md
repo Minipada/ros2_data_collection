@@ -165,3 +165,31 @@ That is not a resolution effect — the same view rendered at 1920×1080 also fa
 simply upscaling the 1280×720 frame 1.5× decodes it — so something about the wider view
 defeats ZXing's detector rather than starving it of pixels. Until that is understood, the
 lens that is measured good at every station wins over the one that is more realistic.
+
+## Lighting: verified stable on gz-sim, #61
+
+[#61](https://github.com/Minipada/ros2_data_collection/issues/61) was filed against
+Gazebo Classic (OGRE 1.x): the world rendered too dark intermittently, which broke QR
+detection. #268 replaced the renderer wholesale (OGRE 1.x → gz-sim/gz-rendering OGRE2),
+so this was re-scoped as a verification task rather than a known bug — either the old
+symptom is gone under the new renderer, or it presents differently and needs its own fix.
+
+**It does not reproduce.** Five independent cold starts of the full `tb3_qrcodes.launch.py`
+pipeline — two on GitHub-hosted CI runners (commits `41e24d0`, 6/6 stations decoded, and
+`2b03c78`, 5/6), three run locally against the same CI-built image (2/3, 2/3, and 3/4,
+the last against the world file this section documents) — each read a QR code at every
+station bar the one-station gap `tools/sim/scripts/run.sh`'s own `detect` stage already
+treats as expected (the goal-reached and camera-poll events race by design; see the
+script's own comment). No run produced a degenerate (all-black or otherwise all-uniform)
+camera frame.
+
+That is consistent with the world having no source of *intermittent* lighting to begin
+with: `qrcodes.world`'s `<scene>` carries a fixed `<ambient>`/`<background>` (now declared
+explicitly rather than left to sdformat's fallback — the same reasoning already applied to
+`<horizontal_fov>` above), a single `directional` sun at a fixed `<direction>`, no sky/
+time-of-day element and no light-flicker plugin. Nothing in the file varies frame to frame
+or run to run. Gazebo Classic's OGRE1 backend is a different renderer with its own
+initialization quirks; whatever produced the original symptom does not carry over.
+
+**Closed with this evidence** rather than left open per the issue's own acceptance
+criteria — reopen if a dark frame turns up again, with the run's log attached.
