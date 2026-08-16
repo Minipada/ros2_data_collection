@@ -5657,3 +5657,71 @@ One deliberate non-change: `group_memory_uptime_stdout` declares `use_sim_time` 
 lowercase `"false"` where every other demo uses `"False"`. Launch coerces both to the
 same boolean, but it is passed through verbatim (with a comment) so this refactor stays
 a provable no-op. Normalizing it is a one-line follow-up that should stand on its own.
+
+## #284 - Extract shared ConditionSet evaluator from Measurement
+
+`Measurement::isConditionOn()` inlined the whole `if_all`/`if_any`/`if_none` boolean
+composition: three `std::all_of`/`any_of` passes over three `std::vector<std::string>`
+members, each looking a Condition up in `conditions_` and calling `getState(msg)`. The
+EdgeTrigger plugin (#282) needs to compose Conditions exactly the same way, and copying
+40 lines of gating logic into a second plugin is how two implementations start drifting.
+
+`dc_core/include/dc_core/condition_set.hpp` now holds `dc_core::ConditionSet`, next to
+the `dc_core::Condition` base class it composes. It is header-only and deliberately
+ROS-free -- it includes `<algorithm>/<functional>/<map>/<string>/<vector>` and nothing
+else, so it can be unit-tested with no node, no `rclcpp::init()`, and no DDS traffic.
+It holds the three name lists and answers one question:
+
+- `evaluate(states)` / `isSatisfied(states)` take a `ConditionStates`
+  (`std::map<std::string, bool>`) -- the interface the issue asked for, and what a caller
+  that already collected every state up front wants.
+- `evaluate(lookup)` / `isSatisfied(lookup)` take a `ConditionStateLookup`
+  (`std::function<bool(const std::string&)>`) instead. Which Conditions get polled is
+  observable behavior, not an implementation detail: `dc_conditions::Condition::getState()`
+  publishes on `/dc/condition/<name>`, and `SameAsPrevious` advances its own state every
+  time it is polled. Building a full state map up front would poll Conditions the
+  short-circuit never reached, so `Measurement` passes a lookup and the call pattern is
+  preserved exactly.
+- `evaluate()` returns a `ConditionSetOutcome` with the per-group breakdown, because that
+  is what `isConditionOn()`'s existing `RCLCPP_DEBUG("all_conditions_res=%d,
+  any_conditions_res=%d, none_conditions_res=%d")` logs; `satisfied()` reduces it to the
+  single bool. `empty()` replaces the hand-rolled three-way emptiness test in
+  `isAnyConditionSet()`, and `names()` lists every named Condition once, in declaration
+  order, for callers that do want to build a state map (or validate names at configure
+  time).
+
+Two subtleties of the original are kept on purpose and are now written down in the
+header: each group short-circuits internally (if_all on the first false, if_any on the
+first true, if_none on the first true), but the three groups are *not* short-circuited
+against each other -- the original computed all three into locals before ANDing them, so
+a later group's Conditions were polled even when an earlier group had already objected.
+
+`Measurement` keeps one `dc_core::ConditionSet condition_set_` instead of the three
+vectors, `isAnyConditionSet()` is `!condition_set_.empty()`, and `isConditionOn()` is now
+the lookup plus the debug log. The lookup lives in a new `getConditionState()`, which is
+the one intentional behavior change: the old code did `conditions_[condition]->getState()`
+-- `std::map::operator[]` on a name that is not a configured Condition inserts a null
+`shared_ptr` and then dereferences it, i.e. a typo in `if_all_conditions` segfaulted the
+measurement server. It now logs an error and reads the name as false, matching what
+`gate_condition` already did (`conditions_.find()` + error + hold back), so an unknown
+name blocks `if_all`/`if_any` and satisfies `if_none`. `doc/src/dc/measurements.md` gained
+an admonition next to the existing `gate_condition` one stating how the three lists
+combine and what an unknown name does.
+
+**Tests**: `dc_core/test/test_condition_set.cpp`, wired into a new `BUILD_TESTING` block
+in `dc_core/CMakeLists.txt` (`ament_cmake_gtest`, the package's first test target, needing
+none of its ROS dependencies to link). Table-driven over the truth space of the three
+groups -- satisfied, unsatisfied, and named-but-missing, in isolation and in combination,
+plus names repeated across groups -- run through both the map and the lookup overload, and
+followed by dedicated tests for `empty()`, `names()` deduplication/order, the
+`ConditionSetOutcome` breakdown, and the two polling-order properties above (a group stops
+at the name that settles it; a later group is still evaluated after an earlier one
+objects). 61 test cases, all passing against the jazzy workspace image
+(`localhost/dc-workspace`, `colcon build --packages-select dc_core --cmake-args
+-DBUILD_TESTING=ON` + `colcon test`).
+
+`dc_measurements`' own suite (including the `condition_max_measurements_` gating tests and
+the 20-odd per-Condition tests that drive `if_all_conditions` end to end) is unchanged by
+this refactor and was left untouched; because `measurement.hpp` is included by every
+measurement and condition plugin, re-running it locally means a full cold rebuild of the
+package, which is also what CI's `build-workspace` job does on this PR.

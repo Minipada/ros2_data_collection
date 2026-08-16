@@ -90,6 +90,16 @@ exist among `condition_plugins`, collection is held back permanently and an erro
 logged.
 ```
 
+```admonish info title="How if_all/if_any/if_none_conditions combine"
+The three lists are evaluated on every collection and ANDed together: `if_all_conditions`
+objects unless every Condition it names is active, `if_any_conditions` unless at least one
+of its Conditions is active, and `if_none_conditions` unless every Condition it names is
+inactive. A list left empty never objects, so a Measurement naming no Condition at all
+always collects. A name that is not among `condition_plugins` reads as inactive and an
+error is logged: it blocks collection when listed in `if_all_conditions` or
+`if_any_conditions`, and is accepted by `if_none_conditions`.
+```
+
 ## Available plugins:
 
 | Name                                                     | Description                                                                                             |

@@ -25,6 +25,18 @@ install(
   DESTINATION include/
 )
 
+# condition_set.hpp is deliberately ROS-free, so its test needs no node, no rclcpp::init and none
+# of the dependencies above -- just the headers.
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+
+  ament_add_gtest(${PROJECT_NAME}_test_condition_set test/test_condition_set.cpp)
+  target_include_directories(${PROJECT_NAME}_test_condition_set PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+endif()
+
 ament_export_include_directories(include)
 ament_export_dependencies(${dependencies})
 
