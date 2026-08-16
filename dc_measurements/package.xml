@@ -10,6 +10,7 @@
   <buildtool_depend>ament_cmake_ros</buildtool_depend>
 
   <depend>cv_bridge</depend>
+  <depend>dc_common</depend>
   <depend>dc_core</depend>
   <depend>dc_interfaces</depend>
   <depend>dc_lifecycle_manager</depend>

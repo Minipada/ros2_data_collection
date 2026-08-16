@@ -52,6 +52,10 @@ public:
    * @param  run_id Unique ID of the current run
    * @param  run_id Whether Run Id is enabled
    * @param  custom_keys Vector of JSON with custom keys
+   * @param  buffer_duration_sec Seconds of history to buffer instead of publishing live; 0 (the
+   * default) disables buffering and preserves normal live publishing (#287)
+   * @param  flush_topic Topic to receive the FlushEvent that releases the buffered window,
+   * tagging each released Record with the event's incident_id, then resumes live publishing
    */
   virtual void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                          const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
@@ -68,7 +72,8 @@ public:
                          const bool& nest, const bool& flatten, const std::string& save_local_base_path,
                          const std::string& all_base_path, const std::string& all_base_path_expanded,
                          const std::string& save_local_base_path_expanded, const std::string& run_id,
-                         const bool& run_id_enabled, const std::vector<json>& custom_keys) = 0;
+                         const bool& run_id_enabled, const std::vector<json>& custom_keys,
+                         const double& buffer_duration_sec, const std::string& flush_topic) = 0;
 
   /**
    * @brief Method to cleanup resources used on shutdown.

@@ -76,6 +76,18 @@ Each measurement is collected through a node and has these configuration paramet
 | **gate_condition**             | Name of a Condition that must become true once before any collection is published; then latches open permanently and is never consulted again | str | N/A (optional) |
 | **include_measurement_name**   | Include measurement name in the JSON data                                                    | bool        | false                                |
 | **include_measurement_plugin** | Include measurement plugin name in the JSON data                                             | bool        | false                                |
+| **buffer_duration_sec**        | Seconds of history to buffer instead of publishing live; 0 disables buffering and preserves normal live publishing | float | 0 |
+| **flush_topic**                | Topic to receive the `FlushEvent` (see [Triggers](./triggers.md)) that releases the buffered window, tagging each Record with the event's `incident_id`, then resumes live publishing | str | "/dc/flush" |
+
+```admonish info title="buffer_duration_sec and flush_topic: pre-event circular-buffer capture"
+When `buffer_duration_sec` is set above 0, this Measurement stops publishing live: each
+collected sample is instead pushed into an in-memory ring buffer covering the last
+`buffer_duration_sec` seconds. On receiving a `FlushEvent` on `flush_topic` (published by a
+`dc_triggers` broadcast node when its Trigger fires), the whole buffered window is published
+at once, each Record tagged with the event's `incident_id`, and the Measurement then resumes
+live publishing for good — buffering does not re-arm. Post-roll capture, cooldown, and
+rate-limiting are not part of this behavior yet.
+```
 
 ```admonish info title="gate_condition vs. if_all/if_any/if_none_conditions"
 `gate_condition` is a one-shot arming latch, not a per-collection gate: it names a single

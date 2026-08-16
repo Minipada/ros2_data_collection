@@ -3,6 +3,7 @@ project(dc_measurements)
 
 set(dependencies
   cv_bridge
+  dc_common
   dc_core
   dc_interfaces
   dc_util
@@ -290,6 +291,7 @@ install(DIRECTORY plugins/measurements/json
 
 set(tests
   test_measurement_bool_equal
+  test_measurement_buffering
   test_measurement_camera
   test_measurement_cmd_vel
   test_measurement_diagnostics
