@@ -5617,3 +5617,43 @@ passes unchanged against the edit.
 **Documented**: `dc_simulation/README.md` carries a new "Lighting: verified stable on
 gz-sim, #61" section with the cold-start count and the reasoning above. Closed with this
 evidence per the issue's own acceptance criteria, rather than left open.
+
+## dc_demos launch files — one shared builder instead of nine copies (no issue of its own)
+
+Nine `dc_demos` launch files declared the same eight `dc_bringup` arguments by hand and
+forwarded them unchanged. `uptime_stdout.launch.py` and `uptime_custom_stdout.launch.py`
+differed by exactly one line (the params filename); `elasticsearch` and `mcap_recording`
+by one line plus their docstrings; the three `tb3_simulation_*` files by two.
+
+`dc_bringup.launch.py` was deliberately left alone despite being the longest launch file
+in the repo: ~120 of its lines are ADR-0003/0006/0009 rationale, and length is not the
+problem there.
+
+`dc_demos/dc_demos/launch_common.py` now holds `dc_demo_launch_description()`, and each
+demo passes what actually differs: its params file, and optionally `group_node` /
+`save_img_service` / `draw_img_service` / `use_composition` / `use_sim_time`, plus any
+extra actions of its own (only `tb3_qrcodes_minio_pgsql` has one, its robot state
+publisher). The three optional service arguments default to None meaning *not declared
+and not forwarded*, which is what a demo that never mentioned them did before —
+`dc_bringup`'s own default stays in charge. Same pattern as `nav2_common.launch`, which
+`dc_bringup.launch.py` already imports; `ament_python_install_package(dc_demos)` was
+already in CMakeLists.txt, so nothing needed wiring.
+
+1027 lines across the nine files becomes 161, plus the 114-line shared builder.
+`tb3_qrcodes.launch.py` (302 lines, the real Nav2 + simulator demo) is genuinely
+different and was left alone.
+
+**Verified**: a throwaway script loaded each file's `generate_launch_description()`
+before and after and compared them action for action — every declared argument's name,
+resolved default and description; the included launch file; every argument forwarded to
+it; and any extra actions. All nine render identically. Then, because the one real risk
+here is an installed launch file failing to import the installed helper, the new files
+were copied into the built workspace image's `share/dc_demos/launch` and the helper into
+its `site-packages`, and all nine were run through `ros2 launch ... --show-args`: each
+loads and advertises the same 11 arguments (8 own + `group_node`/`save_img_service`/
+`draw_img_service` picked up from the included `dc_bringup`) it did before.
+
+One deliberate non-change: `group_memory_uptime_stdout` declares `use_sim_time` with a
+lowercase `"false"` where every other demo uses `"False"`. Launch coerces both to the
+same boolean, but it is passed through verbatim (with a comment) so this refactor stays
+a provable no-op. Normalizing it is a one-line follow-up that should stand on its own.
