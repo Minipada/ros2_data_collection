@@ -153,6 +153,8 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   measurement_remote_prefixes_.resize(measurement_ids_.size());
   measurement_nested_.resize(measurement_ids_.size());
   measurement_flatten_.resize(measurement_ids_.size());
+  measurement_buffer_duration_sec_.resize(measurement_ids_.size());
+  measurement_flush_topic_.resize(measurement_ids_.size());
 
   measurement_if_all_conditions_.resize(measurement_ids_.size());
   measurement_if_any_conditions_.resize(measurement_ids_.size());
@@ -235,6 +237,10 @@ bool MeasurementServer::loadMeasurementPlugins()
         dc_util::get_str_array_type_param(node, measurement_ids_[i], "remote_prefixes", std::vector<std::string>());
     measurement_nested_[i] = dc_util::get_bool_type_param(node, measurement_ids_[i], "nested", false);
     measurement_flatten_[i] = dc_util::get_bool_type_param(node, measurement_ids_[i], "flatten", false);
+    measurement_buffer_duration_sec_[i] =
+        dc_util::get_double_type_param(node, measurement_ids_[i], "buffer_duration_sec", 0.0);
+    measurement_flush_topic_[i] =
+        dc_util::get_str_type_param(node, measurement_ids_[i], "flush_topic", std::string("/dc/flush"));
 
     measurement_if_all_conditions_[i] =
         dc_util::get_str_array_type_param(node, measurement_ids_[i], "if_all_conditions", std::vector<std::string>());
@@ -248,27 +254,28 @@ bool MeasurementServer::loadMeasurementPlugins()
 
     try
     {
-      RCLCPP_INFO_STREAM(get_logger(),
-                         "Creating measurement plugin "
-                             << measurement_ids_[i].c_str() << ": Type " << measurement_types_[i].c_str()
-                             << ", Group key: " << measurement_group_key_[i] << ", Polling interval: "
-                             << measurement_polling_interval_[i] << ", Debug: " << (int)measurement_debug_[i]
-                             << ", Validator enabled: " << (int)measurement_enable_validator_[i]
-                             << ", Schema path: " << measurement_json_schema_path_[i].c_str() << ", Tags: ["
-                             << dc_util::join(measurement_tags_[i], ",")
-                             << "], Init collect: " << (int)measurement_init_collect_[i]
-                             << ", Init Max measurement: " << measurement_init_max_measurements_[i]
-                             << ", Include measurement name: " << measurement_include_measurement_name_[i]
-                             << ", Include measurement plugin name: " << measurement_include_measurement_plugin_[i]
-                             << ", Remote keys: " << dc_util::join(measurement_remote_keys_[i])
-                             << ", Remote prefixes: " << dc_util::join(measurement_remote_prefixes_[i]) << ", Nest: "
-                             << (int)measurement_nested_[i] << ", Flatten: " << (int)measurement_flatten_[i]
-                             << ", Include measurement plugin name: " << measurement_include_measurement_plugin_[i]
-                             << ", Max measurement on condition: " << measurement_condition_max_measurements_[i]
-                             << ", If all condition: " << dc_util::join(measurement_if_all_conditions_[i], ",")
-                             << ", If any condition: " << dc_util::join(measurement_if_any_conditions_[i], ",")
-                             << ", If none condition: " << dc_util::join(measurement_if_none_conditions_[i], ",")
-                             << ", Gate condition: " << measurement_gate_condition_[i]);
+      RCLCPP_INFO_STREAM(
+          get_logger(),
+          "Creating measurement plugin "
+              << measurement_ids_[i].c_str() << ": Type " << measurement_types_[i].c_str()
+              << ", Group key: " << measurement_group_key_[i]
+              << ", Polling interval: " << measurement_polling_interval_[i] << ", Debug: " << (int)measurement_debug_[i]
+              << ", Validator enabled: " << (int)measurement_enable_validator_[i]
+              << ", Schema path: " << measurement_json_schema_path_[i].c_str() << ", Tags: ["
+              << dc_util::join(measurement_tags_[i], ",") << "], Init collect: " << (int)measurement_init_collect_[i]
+              << ", Init Max measurement: " << measurement_init_max_measurements_[i]
+              << ", Include measurement name: " << measurement_include_measurement_name_[i]
+              << ", Include measurement plugin name: " << measurement_include_measurement_plugin_[i]
+              << ", Remote keys: " << dc_util::join(measurement_remote_keys_[i])
+              << ", Remote prefixes: " << dc_util::join(measurement_remote_prefixes_[i])
+              << ", Nest: " << (int)measurement_nested_[i] << ", Flatten: " << (int)measurement_flatten_[i]
+              << ", Include measurement plugin name: " << measurement_include_measurement_plugin_[i]
+              << ", Max measurement on condition: " << measurement_condition_max_measurements_[i]
+              << ", If all condition: " << dc_util::join(measurement_if_all_conditions_[i], ",")
+              << ", If any condition: " << dc_util::join(measurement_if_any_conditions_[i], ",")
+              << ", If none condition: " << dc_util::join(measurement_if_none_conditions_[i], ",")
+              << ", Gate condition: " << measurement_gate_condition_[i] << ", Buffer duration sec: "
+              << measurement_buffer_duration_sec_[i] << ", Flush topic: " << measurement_flush_topic_[i]);
 
       measurements_.push_back(measurement_plugin_loader_.createUniqueInstance(measurement_types_[i]));
       measurements_.back()->configure(
@@ -280,7 +287,8 @@ bool MeasurementServer::loadMeasurementPlugins()
           measurement_if_all_conditions_[i], measurement_if_any_conditions_[i], measurement_if_none_conditions_[i],
           measurement_gate_condition_[i], measurement_remote_keys_[i], measurement_remote_prefixes_[i],
           measurement_nested_[i], measurement_flatten_[i], save_local_base_path_, all_base_path_,
-          all_base_path_expanded_, save_local_base_path_expanded_, run_id_, run_id_enabled_, custom_keys_);
+          all_base_path_expanded_, save_local_base_path_expanded_, run_id_, run_id_enabled_, custom_keys_,
+          measurement_buffer_duration_sec_[i], measurement_flush_topic_[i]);
     }
     catch (const pluginlib::PluginlibException& ex)
     {

@@ -5899,3 +5899,117 @@ Measurement collects; a Trigger fires a one-shot signal on a rising edge.
   `test_trigger_edge_trigger` cases passing, 0.80s). Confirmed via `gh pr view --json body`
   and `gh pr edit` that PR #342's description reflects these results rather than the
   in-flight state it was opened with.
+
+## #287 - Wire RecordRingBuffer into Measurement with basic flush-triggered release
+
+Second implementation slice of #282 (Pre-event circular-buffer capture via a new Trigger
+plugin), following #285's `RecordRingBuffer`/`FileScratchRing` and #286's `dc_triggers`
+package. Wires `dc_common::RecordRingBuffer` into `dc_measurements::Measurement`: an
+opt-in `buffer_duration_sec` parameter and a subscription to a configurable flush topic
+(default `/dc/flush`, consuming the `FlushEvent` #286 already ships) that together let a
+Measurement buffer its recent history in memory and release it, tagged with an
+`incident_id`, when a Trigger fires elsewhere in the system.
+
+- `dc_core/include/dc_core/measurement.hpp`: `dc_core::Measurement::configure()` gains two
+  trailing parameters, `buffer_duration_sec` (double) and `flush_topic` (string), appended
+  after the existing `custom_keys` parameter to minimize churn in the already-long
+  positional signature. `dc_measurements::Measurement` is the only class implementing this
+  interface, so the change is contained to that one override.
+- `dc_measurements/include/dc_measurements/measurement.hpp`: the substantive change.
+  - New members: `buffer_duration_sec_`, `buffering_active_` (true once
+    `buffer_duration_sec_ > 0`, latched false forever once a `FlushEvent` releases the
+    window), `flush_topic_`, `ring_buffer_` (`dc_common::RecordRingBuffer`), and
+    `flush_sub_` (subscription to `flush_topic_`).
+  - `configure()` sets these from the two new parameters; when `buffering_active_` starts
+    true, it constructs `ring_buffer_` with `buffer_duration_sec_` converted to a
+    `std::chrono::system_clock::duration` and subscribes `onFlushEvent()` to
+    `flush_topic_` (defaulting to `/dc/flush` if passed empty, mirroring how
+    `topic_output_` defaults when empty). `cleanup()` additionally resets `flush_sub_` and
+    `ring_buffer_` alongside the existing `data_pub_.reset()`.
+  - Extracted `enrichMsg()` from `publish()`'s existing pre-publish block (validation,
+    nesting/flattening, run_id, tags, measurement name/plugin, custom keys) with no
+    behavior change, so both `publish()` and the new `bufferSample()` apply identical
+    enrichment -- a Record released later from the buffer looks exactly like one published
+    live, modulo the `incident_id` `onFlushEvent()` adds afterward.
+  - `collectAndPublish()`: when `buffering_active_`, calls the new `bufferSample()` instead
+    of `publish()`; otherwise unchanged. `bufferSample()` enriches the sample, then
+    `ring_buffer_->push(msg.data, now)` followed by `ring_buffer_->evict(now)` to keep the
+    window bounded to `buffer_duration_sec_`. This is also what runs on activation's
+    `init_collect_` path, since that already goes through `collectAndPublish()` -- the
+    first sample buffers rather than publishing live, consistent with the rest of the
+    behavior.
+  - `onFlushEvent(FlushEvent)`: no-ops if buffering isn't active (handles a stray/duplicate
+    FlushEvent after release, or one before buffering was ever armed). Otherwise, for every
+    entry in `ring_buffer_->window()` (oldest first), parses the buffered JSON, sets
+    `incident_id` to the event's, republishes via `data_pub_->publish()` directly --
+    bypassing `publish()`'s gate/counter logic entirely, since a released buffered Record
+    was already unconditionally captured and shouldn't be re-filtered on the way out --
+    with `header.stamp` set from the entry's original buffered timestamp rather than now.
+    Then sets `buffering_active_ = false` and releases `ring_buffer_`, so every subsequent
+    `collectAndPublish()` tick takes the `publish()` branch: live publishing resumes
+    immediately and does not re-arm. Post-roll capture, cooldown, and rate-limiting are
+    explicitly out of scope for this slice per the issue, deferred to later #282 slices.
+  - New includes: `dc_common/record_ring_buffer.hpp`, `dc_interfaces/msg/flush_event.hpp`.
+- `dc_measurements/include/dc_measurements/measurement_server.hpp` +
+  `dc_measurements/src/measurement_server.cpp`: `MeasurementServer` reads
+  `<measurement_id>.buffer_duration_sec` (double, default 0.0, via the existing
+  `dc_util::get_double_type_param`) and `<measurement_id>.flush_topic` (string, default
+  `/dc/flush`) alongside every other per-measurement plugin parameter, resized/populated in
+  `loadMeasurementPlugins()` the same way as `nested`/`flatten`/etc., passed as the two new
+  trailing arguments to `configure()`, and logged in the existing per-plugin
+  `RCLCPP_INFO_STREAM` alongside the rest.
+- `dc_measurements/CMakeLists.txt` + `dc_measurements/package.xml`: added a `dc_common`
+  dependency (this package didn't need it before #287; `dc_common` is the header-only
+  package `RecordRingBuffer` lives in per #285).
+- **Regression safety for the acceptance criterion "buffer_duration_sec unset/zero
+  preserves today's behavior exactly"**: with the parameter defaulting to `0.0`,
+  `buffering_active_` is `false`, so `collectAndPublish()` takes the pre-existing
+  `publish(msg)` branch unconditionally -- verified both by inspection (no new branch is
+  reachable when the flag is false) and by the full pre-existing `dc_measurements` test
+  suite (37 other test files, none of which set the new parameters) passing unchanged, plus
+  an explicit new regression test (`ZeroBufferDurationPublishesLiveAsBefore`, see below).
+- **Tests**: new `dc_measurements/test/test_measurement_buffering.cpp` (registered in
+  `CMakeLists.txt`'s `tests` list), using the same `MeasurementServer` + `Dummy` plugin +
+  `rclcpp::spin_some` harness `test_measurement_gate_condition.cpp` established. Three
+  cases: `ZeroBufferDurationPublishesLiveAsBefore` (the regression case above, `init_collect`
+  true, expects a live Record with no `incident_id` and no buffering param set at all);
+  `BuffersSamplesSilentlyUntilFlush` (`buffer_duration_sec` 10s, several polling ticks pass
+  with nothing received on the output topic); and
+  `FlushEventReleasesBufferedWindowThenResumesLivePublishing`, the acceptance criterion's
+  lifecycle test verbatim -- samples accumulate silently, a `FlushEvent` with
+  `incident_id="incident-42"` published on `/dc/flush` causes every released Record to
+  carry that `incident_id`, and further polling ticks afterward publish additional Records
+  (live resumption) that do *not* carry `incident_id` (proving the tag only applies to the
+  released buffered window, not to subsequent live Records). Hit one real test bug during
+  verification: the initial version declared `dummy.init_collect` in the shared `SetUp()`
+  and then re-declared it with a different value inside the first test, which throws
+  ("parameter ... has already been declared") since ROS 2 parameter declaration isn't
+  idempotent across distinct values -- fixed by moving that declaration out of `SetUp()`
+  and only declaring it (or relying on the framework's own true default) per test that
+  actually needs a non-default value.
+- **Docs**: `doc/src/dc/measurements.md` gains `buffer_duration_sec` and `flush_topic` rows
+  in the Plugin parameters table plus an admonish block explaining the buffering/flush
+  behavior and linking to `triggers.md`. `CONTEXT.md`'s Trigger/FlushEvent glossary entries
+  (written during #286) already described this exact wiring ("downstream Measurements
+  adopt [incident_id] for that one event") and needed no changes.
+- **Verified**: `podman run` against the `localhost/dc-workspace` Jazzy image (same one
+  #284/#285/#286 used), bind-mounting this worktree over
+  `/root/ws/src/ros2_data_collection`. `colcon build --packages-select dc_common dc_core
+  dc_interfaces dc_measurements --cmake-args -DBUILD_TESTING=ON` succeeded end to end with
+  zero warnings under `-Wall -Wextra -Wpedantic -Werror -Wdeprecated`. `colcon test`
+  (combined build+test in one container invocation, per #286's finding that `build/`/
+  `install/` don't survive across separate `podman run --rm` invocations) initially caught
+  a real bug in the new test file (the `init_collect` double-declaration above, not
+  production code) -- caught immediately since the test failed loudly rather than hanging.
+  After the fix: **222 tests, 0 errors, 0 failures, 0 skipped** across `dc_common`,
+  `dc_core`, `dc_interfaces`, and `dc_measurements` combined (all 3 new
+  `test_measurement_buffering` cases passing, ~0.6s; the other 37 pre-existing
+  `dc_measurements` test files unaffected). `pre-commit run` on the changed files passed
+  `clang-format` (reformatted `measurement_server.cpp`'s wrapped `RCLCPP_INFO_STREAM` and a
+  couple of resize/param blocks to 120-col; no semantic change, re-verified compile+tests
+  afterward), `codespell`, XML lint, `ros2_ws_same_versions`/`ros2_ws_set_metadata`, doc
+  build; `black` incidentally reformatted the same unrelated pre-existing violation in
+  `tools/e2e/scripts/verify_zero_loss.py` already flagged and reverted in the #285/#286
+  session notes, reverted again here to keep this diff scoped; `poetry-requirements` failed
+  on the same pre-existing local environment gap (no `poetry` module) noted in every prior
+  session, unrelated to this change.

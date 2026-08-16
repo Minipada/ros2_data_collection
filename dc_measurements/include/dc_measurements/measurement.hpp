@@ -14,10 +14,12 @@
 #include <utility>
 #include <vector>
 
+#include "dc_common/record_ring_buffer.hpp"
 #include "dc_core/condition.hpp"
 #include "dc_core/condition_set.hpp"
 #include "dc_core/measurement.hpp"
 #include "dc_interfaces/msg/condition.hpp"
+#include "dc_interfaces/msg/flush_event.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
@@ -402,20 +404,29 @@ public:
     }
   }
 
+  // Applies the same enrichment publish() applies before publishing (validation, nesting/
+  // flattening, run_id, tags, measurement name/plugin, custom keys) without publishing --
+  // shared by publish() and bufferSample() so a Record released later from the ring buffer
+  // looks identical to one published live, modulo the incident_id onFlushEvent() adds (#287).
+  void enrichMsg(dc_interfaces::msg::StringStamped& msg)
+  {
+    // TODO pass the json, not the msg
+    validateJSON(msg);
+    nestedSample(msg);
+    flattenSample(msg);
+    addRunId(msg);
+    addTags(msg);
+    addMeasurementName(msg);
+    addMeasurementPluginName(msg);
+    addCustomKeys(msg);
+  }
+
   void publish(dc_interfaces::msg::StringStamped msg)
   {
     auto msg_copy = msg;
     if (!msg.data.empty() && msg.data != "null")
     {
-      // TODO pass the json, not the msg
-      validateJSON(msg);
-      nestedSample(msg);
-      flattenSample(msg);
-      addRunId(msg);
-      addTags(msg);
-      addMeasurementName(msg);
-      addMeasurementPluginName(msg);
-      addCustomKeys(msg);
+      enrichMsg(msg);
     }
     if (!msg.data.empty() && msg.data != "null")
     {
@@ -514,8 +525,64 @@ public:
     dc_interfaces::msg::StringStamped msg = collect();
     if (enabled_)
     {
-      publish(msg);
+      if (buffering_active_)
+      {
+        bufferSample(msg);
+      }
+      else
+      {
+        publish(msg);
+      }
     }
+  }
+
+  // While buffering is active, collectAndPublish() calls this instead of publish(): the sample
+  // is enriched exactly as a live Record would be, then pushed into ring_buffer_ instead of
+  // being published, and the buffer is evicted down to buffer_duration_sec_ relative to now (#287).
+  void bufferSample(dc_interfaces::msg::StringStamped msg)
+  {
+    if (msg.data.empty() || msg.data == "null")
+    {
+      return;
+    }
+    enrichMsg(msg);
+    auto now = std::chrono::system_clock::now();
+    ring_buffer_->push(msg.data, now);
+    ring_buffer_->evict(now);
+  }
+
+  // Releases the buffered window as Records tagged with the FlushEvent's incident_id, then
+  // turns buffering off for good -- re-arming and cooldown are separate follow-up slices, kept
+  // out of this one intentionally (#287).
+  void onFlushEvent(const dc_interfaces::msg::FlushEvent& event)
+  {
+    if (!buffering_active_ || !ring_buffer_)
+    {
+      return;
+    }
+
+    for (const auto& entry : ring_buffer_->window())
+    {
+      dc_interfaces::msg::StringStamped out;
+      out.group_key = group_key_;
+      out.header.stamp =
+          rclcpp::Time(std::chrono::duration_cast<std::chrono::nanoseconds>(entry.stamp.time_since_epoch()).count());
+      try
+      {
+        json data_json = json::parse(entry.json);
+        data_json["incident_id"] = event.incident_id;
+        out.data = data_json.dump(-1, ' ', true);
+      }
+      catch (json::parse_error& e)
+      {
+        RCLCPP_ERROR_STREAM(logger_, "Error parsing buffered Record JSON on FlushEvent release: " << entry.json);
+        continue;
+      }
+      data_pub_->publish(out);
+    }
+
+    buffering_active_ = false;
+    ring_buffer_.reset();
   }
 
   virtual dc_interfaces::msg::StringStamped collect() = 0;
@@ -534,7 +601,8 @@ public:
                  const std::vector<std::string>& remote_prefixes, const bool& nested, const bool& flatten,
                  const std::string& save_local_base_path, const std::string& all_base_path,
                  const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
-                 const std::string& run_id, const bool& run_id_enabled, const std::vector<json>& custom_keys) override
+                 const std::string& run_id, const bool& run_id_enabled, const std::vector<json>& custom_keys,
+                 const double& buffer_duration_sec, const std::string& flush_topic) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -587,6 +655,18 @@ public:
     collect_timer_ = node->create_wall_timer(
         std::chrono::milliseconds(polling_interval_), [this] { collectAndPublish(); }, client_cb_group_);
 
+    buffer_duration_sec_ = buffer_duration_sec;
+    buffering_active_ = buffer_duration_sec_ > 0.0;
+    flush_topic_ = flush_topic.empty() ? std::string("/dc/flush") : flush_topic;
+    if (buffering_active_)
+    {
+      ring_buffer_ =
+          std::make_shared<dc_common::RecordRingBuffer>(std::chrono::duration_cast<std::chrono::system_clock::duration>(
+              std::chrono::duration<double>(buffer_duration_sec_)));
+      flush_sub_ = node->create_subscription<dc_interfaces::msg::FlushEvent>(
+          flush_topic_, 10, std::bind(&Measurement::onFlushEvent, this, std::placeholders::_1));
+    }
+
     RCLCPP_INFO(logger_, "Done configuring %s", measurement_name_.c_str());
 
     if (json_schema_path_.empty())
@@ -618,6 +698,8 @@ public:
   void cleanup() override
   {
     data_pub_.reset();
+    flush_sub_.reset();
+    ring_buffer_.reset();
     onCleanup();
   }
 
@@ -703,6 +785,15 @@ protected:
 
   // Tags
   std::vector<std::string> tags_;
+
+  // Buffering: pre-event circular-buffer capture (#287). While buffering_active_, samples go
+  // into ring_buffer_ instead of being published; a FlushEvent on flush_topic_ releases the
+  // buffered window and turns buffering off for the lifetime of this Measurement instance.
+  double buffer_duration_sec_{ 0.0 };
+  bool buffering_active_{ false };
+  std::string flush_topic_;
+  std::shared_ptr<dc_common::RecordRingBuffer> ring_buffer_;
+  rclcpp::Subscription<dc_interfaces::msg::FlushEvent>::SharedPtr flush_sub_;
 };
 
 }  // namespace dc_measurements
