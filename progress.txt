@@ -5728,3 +5728,69 @@ done in the same image (16 min 13 s, no warnings under the `-Werror` `dc_package
 then `colcon test --packages-select dc_measurements` -- **134 tests, 0 errors, 0 failures,
 0 skipped**, across all 37 test binaries. CI's `build-workspace` job runs the same thing
 on the PR.
+
+### #285 - Add RecordRingBuffer and FileScratchRing utilities to dc_common
+
+- Added two generic, ROS-independent bounded time-window buffers to `dc_common`, the first
+  slice of pre-event circular-buffer capture (#282; a Trigger plugin wires these into
+  Measurements in later slices — out of scope here):
+  - `dc_common::RecordRingBuffer` (`dc_common/include/dc_common/record_ring_buffer.hpp`):
+    an in-memory ring of stamped Record JSON strings (`StampedRecord{ json, stamp }`).
+    `push()` inserts in ascending-stamp order (so out-of-order pushes still leave
+    `window()` time-ordered) but never evicts on its own; `evict(now)` drops entries
+    strictly older than the configured duration relative to a caller-supplied `now`
+    (age exactly equal to the window is kept — inclusive boundary). Keeping push and
+    evict separate matters because the window has to stay accurate relative to
+    wall-clock "now" even if the buffer sits idle between pushes, not just relative to
+    the last push.
+  - `dc_common::FileScratchRing` (`dc_common/include/dc_common/file_scratch_ring.hpp`):
+    the disk-backed analogue for Files. `stage()` copies a produced File into a private
+    scratch directory (created on construction) under a collision-free
+    `<epoch_ns>_<counter>_<original filename>` name and records it with a timestamp;
+    `evict(now)` deletes staged copies past the same duration/boundary rule as
+    `RecordRingBuffer`, from disk and from the window, tolerating a staged File already
+    missing on disk (replay-safe, mirroring `dc_bridge`'s retention sweep). `window()`
+    returns the current contents as an ordered `std::vector<ScratchedFile>` (path +
+    stamp), oldest first.
+  - Both are header-only, following the same "ROS-free utility, no node needed" pattern
+    already established by `dc_core/include/dc_core/condition_set.hpp` — `dc_common` had
+    no `include/`/`src/`/`test/` tree of its own before this (just the `dc_package()`
+    CMake macro), so this is also the first time it ships actual library code.
+- `dc_common/CMakeLists.txt`: switched `find_package(ament_cmake_core)` to the full
+  `find_package(ament_cmake)` (needed for `ament_export_include_directories` and
+  `ament_cmake_gtest`), and — since `dc_common` defines `dc_package()` itself and so can't
+  `find_package(dc_common)` on itself the way every other `dc_*` package does — pulled the
+  macro in directly via `include(cmake/dc_package.cmake)` before calling it, so the package
+  gets the same standard C++17/`-Wall -Wextra -Wpedantic -Werror` setup as everything else.
+  Installs and exports `include/`, and wires a `BUILD_TESTING` block running both new
+  suites through `ament_add_gtest`. `package.xml`: `buildtool_depend` bumped from
+  `ament_cmake_core` to `ament_cmake` to match, and added `test_depend ament_cmake_gtest`.
+- **Tests**: `dc_common/test/record_ring_buffer_test.cpp` (10 cases: empty-start, push not
+  auto-evicting, out-of-order push still time-ordered on read, evict dropping only what's
+  due, both inclusive/exclusive age boundaries, evict on an empty buffer, evict leaving
+  newer entries after dropping older ones, `window()` being a non-mutating read, repeated
+  evict calls converging) and `dc_common/test/file_scratch_ring_test.cpp` (10 cases,
+  mirroring the same shape plus disk-specific ones: constructor creates the scratch dir,
+  `stage()` copies rather than moves and leaves the source untouched, staging the same
+  source twice yields distinct staged paths, evict deleting from disk as well as the
+  window, evict tolerating an already-missing staged file, `stage()` throwing
+  `std::filesystem::filesystem_error` on a missing source) — both using explicit
+  `std::chrono::system_clock::time_point` values as the injected/fake clock (same
+  parameter-passing style `dc_bridge`'s `retention::sweep()` uses for its `now`), and the
+  File test using an RAII tmp-dir `Fixture` following `dc_bridge/test/retention_test.cpp`'s
+  pattern exactly, per the issue's acceptance criteria.
+- **Verified without `colcon`** (not installed in this sandbox, same gap noted in #242/#243):
+  compiled and ran both test files directly against the real headers with a standalone
+  `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -Wdeprecated -fPIC` (the exact flag set
+  `dc_package()` applies) and a locally-built `googletest` v1.15.2 static lib — both
+  binaries compiled warning-free and **all 20 tests passed**. `pre-commit run` on the
+  changed files passed `clang-format` (which reformatted a couple of lambda continuation
+  lines — re-verified compile+tests afterward), `codespell`, XML lint,
+  `ros2_ws_same_versions`/`ros2_ws_set_metadata`; `black` incidentally reformatted an
+  unrelated pre-existing violation in `tools/e2e/scripts/verify_zero_loss.py` (already
+  flagged in the #338 PR history as pre-existing on `origin/jazzy`, not from this change)
+  which was reverted to keep this diff scoped; `poetry-requirements` failed on a
+  pre-existing local environment gap (no `poetry` module) unrelated to this change, same
+  as prior sessions. A real `colcon build --packages-select dc_common --cmake-args
+  -DBUILD_TESTING=ON` + `colcon test` on a Jazzy workspace (CI, or a machine with more
+  disk) is still needed to close the loop formally.
