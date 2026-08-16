@@ -5884,7 +5884,18 @@ Measurement collects; a Trigger fires a one-shot signal on a rising edge.
   attempt failed for an environment reason, not a code one: each `podman run --rm`
   invocation is a fresh container, so `build/`/`install/` from the build step didn't
   survive into a separate test-step invocation ("Has this package been built before?").
-  Re-running build and test in one combined container invocation was in flight when this
-  entry was written; its result -- particularly whether the three
-  `test_trigger_edge_trigger` cases pass as designed -- still needs to be confirmed and
-  logged in a follow-up, the same kind of gap #285's entry closed out formally later.
+  Re-running build and test in one combined container invocation surfaced one real bug --
+  in the test, not the production code: `SecondRisingEdgeFiresAgainWithDistinctIncidentId`
+  published a single above-threshold Odometry message to re-arm `Moving` after it had
+  fallen back to inactive, copying the one-shot-latch assumption from
+  `test_measurement_gate_condition.cpp`. `Moving`'s hysteresis counter isn't a latch
+  though -- it's symmetric: the two below-threshold messages that flipped it back to
+  inactive left `moving_count_` at -1, so one more above-threshold message only reached 0,
+  one short of crossing `+count_hysteresis_` again. The test hung waiting for a second
+  `FlushEvent` that could never arrive, caught by `colcon test`'s 60s per-test timeout.
+  Fixed by publishing two above-threshold messages instead of one. Re-run after the fix:
+  `colcon test --packages-select dc_core dc_triggers` -- **66 tests, 0 errors, 0
+  failures** (`dc_core`'s existing 61 `ConditionSet` tests unaffected; all 3
+  `test_trigger_edge_trigger` cases passing, 0.80s). Confirmed via `gh pr view --json body`
+  and `gh pr edit` that PR #342's description reflects these results rather than the
+  in-flight state it was opened with.
