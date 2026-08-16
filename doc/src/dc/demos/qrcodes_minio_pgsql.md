@@ -64,9 +64,13 @@ map in RViz. AMCL sets the demo's initial pose itself (`set_initial_pose` in
 the laser scan lines up with the map before starting the run below.
 
 ```admonish warning
-The warehouse world is heavy: 317 model instances, most of them the QR-coded
-pallets themselves. Expect a slow start and a real-time factor well under 1 on a
-machine without a GPU. See [#52](https://github.com/Minipada/ros2_data_collection/issues/52).
+The warehouse world is heavy: 238 model instances, most of them the QR-coded
+pallets and the props stacked on them. Expect a slow start on a machine without a GPU:
+gz-sim, the robot and Nav2 come up in well under a minute, but with the real-time factor
+well under 1 (~0.11-0.2, see [dc_simulation's README](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_simulation/README.md)
+for the measured breakdown), reaching the first QR-coded pallet and getting the first
+Record out of the demo can take several minutes of wall clock, and the full 60-waypoint
+pass over an hour. See [#52](https://github.com/Minipada/ros2_data_collection/issues/52).
 ```
 
 ## Start DC
