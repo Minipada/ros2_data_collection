@@ -77,7 +77,23 @@
       <direction>-0.5 0.1 -0.9</direction>
     </light>
 
+    <!--
+      #61 was filed against Gazebo Classic (OGRE 1.x), where the world rendered too dark
+      intermittently -- and, tellingly, with no <ambient> declared here even then, so the
+      renderer's own fallback was silently doing the work. Declaring it is the same fix
+      already applied to <horizontal_fov> and robot_sdf elsewhere in this port: state the
+      value sdformat would otherwise supply invisibly, so it cannot drift out from under
+      the demo unnoticed. The value is unchanged -- sdformat 1.10's own default -- so this
+      does not alter what gets rendered.
+      Re-verified on gz-sim/ogre2 for #61: five independent cold starts (two on GitHub-
+      hosted CI runners, three local, the last against this exact file), each reading a
+      QR code at every station it stopped at bar the harness's own documented goal-
+      reached/camera-poll race, with no degenerate (all-black) camera frame in any run.
+      The old symptom does not reproduce under the ported renderer.
+    -->
     <scene>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
       <shadows>false</shadows>
     </scene>
 
