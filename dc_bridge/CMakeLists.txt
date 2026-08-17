@@ -87,10 +87,15 @@ install(TARGETS dc_bridge DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  # Header-only, ROS-free utilities (#285). Tests only: uploader_test stages a File the way an
+  # armed Measurement does (#290) to check the Files pipeline ingests a released one unchanged.
+  # dc_bridge itself needs no part of it — the Bridge is deliberately unaware of incident capture.
+  find_package(dc_common REQUIRED)
   # All gtests link only the aws-free core (uploader_test uses an in-memory ObjectStore).
   foreach(t forwarder supervisor render misc uploader intent_queue retention thumbnail raw_config)
     ament_add_gtest(${t}_test test/${t}_test.cpp)
     target_link_libraries(${t}_test dc_bridge_core)
+    ament_target_dependencies(${t}_test dc_common)
     target_compile_definitions(${t}_test PRIVATE
       DC_BRIDGE_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures/render")
   endforeach()

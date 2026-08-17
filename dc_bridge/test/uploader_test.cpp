@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include <atomic>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -14,6 +15,10 @@
 #include <set>
 #include <string>
 #include <vector>
+
+// The Measurement side of #290 stages Files with this; the test uses the real thing rather than
+// imitating it, so what the Bridge is handed here is exactly what a released Record carries.
+#include "dc_common/file_scratch_ring.hpp"
 
 using namespace dc_bridge;
 using namespace dc_bridge::uploader;
@@ -769,4 +774,42 @@ TEST(UploaderThumbnails, MissingLocalFileNeverAttemptsAPreview)
   EXPECT_EQ(summary.missing, 1u);
   EXPECT_TRUE(thumbs.sources->empty());
   EXPECT_EQ(summary.thumbnails_failed, 0u);
+}
+
+// #290: pre-event circular-buffer capture staged this File into a dc_common::FileScratchRing
+// while its Measurement was armed, released it minutes later when a Trigger fired, and published
+// a Record pointing at the staged copy. The claim this test pins down is that the Bridge needs no
+// change for that: the released Record is an ordinary Files Record — an old timestamp, an
+// incident_id it ignores, a local_path that happens to live in a scratch directory — and the
+// existing pipeline uploads it byte for byte under the remote key the Measurement computed at
+// collection time.
+TEST(Uploader, IncidentReleasedScratchFilesAreIngestedUnmodified)
+{
+  Fixture fx({ "minio" });
+  auto produced = fx.write_file("frame.jpg", JPEG_BYTES);
+
+  dc_common::FileScratchRing ring(fx.tmp / "scratch", std::chrono::seconds(30));
+  const auto collected_at = std::chrono::system_clock::now() - std::chrono::minutes(5);
+  auto staged = ring.stage(produced, collected_at);
+  auto payload = camera_payload(staged.string(), { "minio" });
+  // What measurement.hpp's publishIncidentRecord() adds on the way out; nothing in the Files
+  // pipeline knows or cares about it.
+  payload["incident_id"] = "incident-42";
+  // Releasing hands the staged copies to the Bridge: the ring stops tracking them, so its rolling
+  // eviction can no longer delete one out from under an upload in flight.
+  ASSERT_EQ(ring.release().size(), 1u);
+  ring.evict(std::chrono::system_clock::now());
+  ASSERT_TRUE(std::filesystem::exists(staged));
+
+  auto up = fx.uploader(true);  // delete_when_sent: the staged copy is the Bridge's to clean up
+  auto rows = std::make_shared<std::vector<json>>();
+
+  auto summary = up.process_record(payload, "dc.measurement.camera", collect_rows(rows));
+
+  EXPECT_EQ(summary.files, 1u);
+  EXPECT_EQ(summary.verified, 1u);
+  EXPECT_TRUE(summary.group_complete);
+  EXPECT_EQ(fx.stores[0]->object_bytes("cam/2026/img.jpg"), JPEG_BYTES);
+  EXPECT_EQ(rows_of_kind(*rows, "file_status")[0]["local_path"], staged.string());
+  EXPECT_FALSE(std::filesystem::exists(staged));
 }

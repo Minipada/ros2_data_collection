@@ -47,6 +47,10 @@
   <exec_depend>ffmpeg</exec_depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
+  <!-- Tests only (uploader_test, #290): dc_common's header-only FileScratchRing, so the Files
+       pipeline can be exercised against a File staged exactly the way an armed Measurement
+       stages it. The Bridge itself has no incident-capture code and depends on none of it. -->
+  <test_depend>dc_common</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

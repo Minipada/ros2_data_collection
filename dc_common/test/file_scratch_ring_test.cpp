@@ -183,6 +183,61 @@ TEST(FileScratchRing, EvictToleratesAStagedFileAlreadyMissingFromDisk)
   EXPECT_TRUE(ring.empty());
 }
 
+TEST(FileScratchRing, ReleaseHandsTheWindowOnWithoutDeletingAnything)
+{
+  // #290: the released Files belong to the Bridge's Files pipeline from here on, so release()
+  // must forget them without touching disk -- and a later evict() must not delete them either.
+  Fixture fx;
+  FileScratchRing ring(fx.scratch, std::chrono::seconds(10));
+  auto first = ring.stage(fx.write_source("first.jpg"), at(0));
+  auto second = ring.stage(fx.write_source("second.jpg"), at(1));
+
+  auto released = ring.release();
+
+  EXPECT_EQ(paths_of(released), std::vector<std::filesystem::path>({ first, second }));
+  EXPECT_TRUE(ring.empty());
+  EXPECT_TRUE(std::filesystem::exists(first));
+  EXPECT_TRUE(std::filesystem::exists(second));
+
+  ring.evict(at(10000));  // long past the window: the ring no longer knows about them.
+  EXPECT_TRUE(std::filesystem::exists(first));
+  EXPECT_TRUE(std::filesystem::exists(second));
+}
+
+TEST(FileScratchRing, ReleaseOnEmptyRingReturnsNothing)
+{
+  Fixture fx;
+  FileScratchRing ring(fx.scratch, std::chrono::seconds(10));
+  EXPECT_TRUE(ring.release().empty());
+  EXPECT_TRUE(ring.empty());
+}
+
+TEST(FileScratchRing, PurgeDeletesEveryStagedFileWhateverItsAge)
+{
+  Fixture fx;
+  FileScratchRing ring(fx.scratch, std::chrono::seconds(10));
+  auto old_path = ring.stage(fx.write_source("old.jpg"), at(0));
+  auto new_path = ring.stage(fx.write_source("new.jpg"), at(9));
+
+  ring.purge();  // no "now": nothing staged survives, however fresh.
+
+  EXPECT_TRUE(ring.empty());
+  EXPECT_FALSE(std::filesystem::exists(old_path));
+  EXPECT_FALSE(std::filesystem::exists(new_path));
+}
+
+TEST(FileScratchRing, PurgeToleratesAStagedFileAlreadyMissingFromDisk)
+{
+  Fixture fx;
+  FileScratchRing ring(fx.scratch, std::chrono::seconds(10));
+  auto staged = ring.stage(fx.write_source("gone.jpg"), at(0));
+  std::filesystem::remove(staged);
+
+  ring.purge();
+
+  EXPECT_TRUE(ring.empty());
+}
+
 TEST(FileScratchRing, StageThrowsWhenSourceFileDoesNotExist)
 {
   Fixture fx;
