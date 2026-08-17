@@ -79,6 +79,7 @@ Each measurement is collected through a node and has these configuration paramet
 | **buffer_duration_sec**        | Seconds of history to buffer instead of publishing live; 0 disables buffering and preserves normal live publishing | float | 0 |
 | **post_roll_duration_sec**     | Seconds to keep publishing live after a flush, still tagged with the same `incident_id`; 0 means pre-roll only | float | 0 |
 | **cooldown_sec**               | Seconds to ignore further `FlushEvent`s once post-roll ends, before buffering re-arms itself; 0 re-arms immediately | float | 0 |
+| **max_flush_rate_hz**          | Ceiling on how fast the buffered window is emitted once a flush releases it; 0 releases the whole window in one burst | float | 0 |
 | **flush_topic**                | Topic to receive the `FlushEvent` (see [Triggers](./triggers.md)) that releases the buffered window, tagging each Record with the event's `incident_id` | str | "/dc/flush" |
 
 ```admonish info title="buffer_duration_sec and friends: pre-event circular-buffer capture"
@@ -89,14 +90,19 @@ broadcast node when its Trigger fires) then drives one incident-capture cycle:
 
 1. **Buffering** — the default, armed state: samples accumulate in the ring buffer and nothing
    is published. Only in this state does a `FlushEvent` start a cycle.
-2. **Flushing** — the whole buffered window is published at once, oldest first, each Record
-   tagged with the event's `incident_id` and stamped with when it was *collected*, not when it
-   was released. The window is consumed, so the next incident releases its own history rather
-   than replaying this one.
-3. **PostRoll** — for `post_roll_duration_sec` after the flush, samples are published live as
-   they are collected, still tagged with the same `incident_id`, so the aftermath of the
-   incident is captured too. Left at its default 0, this phase is skipped entirely: pre-roll
-   only.
+2. **Flushing** — the buffered window is published oldest first, each Record tagged with the
+   event's `incident_id` and stamped with when it was *collected*, not when it was released.
+   With `max_flush_rate_hz` left at 0 the whole window goes out in one burst; set above 0, it is
+   emitted at no more than that many Records per second, so a robot recovering from an incident
+   does not also have to absorb the entire window at once. The window is consumed, so the next
+   incident releases its own history rather than replaying this one. Samples collected while a
+   rate-limited release is still draining are buffered, not published, and so become part of the
+   *next* incident's pre-roll.
+3. **PostRoll** — for `post_roll_duration_sec` after the release finishes, samples are published
+   live as they are collected, still tagged with the same `incident_id`, so the aftermath of the
+   incident is captured too. It runs from the end of the release, not from the `FlushEvent`, so
+   a rate-limited release does not eat into it. Left at its default 0, this phase is skipped
+   entirely: pre-roll only.
 4. **Cooldown** — for `cooldown_sec` after post-roll ends, further `FlushEvent`s are ignored, so
    a flapping Trigger cannot produce a flood of overlapping incidents. Samples are buffered
    again during this phase, so the next incident still gets a full pre-roll window.
@@ -104,8 +110,7 @@ broadcast node when its Trigger fires) then drives one incident-capture cycle:
 The Measurement then re-arms itself back to **Buffering** with no manual intervention — a
 second incident is captured exactly like the first. With both `post_roll_duration_sec` and
 `cooldown_sec` left at 0, a flush releases the pre-roll window and the Measurement is armed
-again immediately. Rate-limited release of the buffered window is not implemented yet: the
-whole window goes out in one burst.
+again immediately.
 ```
 
 ```admonish info title="gate_condition vs. if_all/if_any/if_none_conditions"

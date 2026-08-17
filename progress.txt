@@ -6150,3 +6150,94 @@ publish live for good" into the full per-Measurement state machine #282 specifie
   this host) and `pycln`/`flake8` on the pre-existing violation in
   `tools/e2e/scripts/verify_zero_loss.py`, which the hooks reformat repo-wide and which was
   reverted again here to keep this diff scoped, exactly as in the #285/#286/#287 sessions.
+
+## #289 - Rate-limit IncidentReleaser's buffered-window release
+
+Fourth implementation slice of #282 (Pre-event circular-buffer capture via a new Trigger
+plugin), on top of #285's `RecordRingBuffer`, #286's `dc_triggers`, #287's flush wiring and
+#288's `IncidentReleaser` state machine. Turns #288's burst release ("the whole window goes
+out in one `onFlush()`") into a paced one, so a robot recovering from whatever triggered the
+incident doesn't also have to push its entire pre-roll window through the Bridge at once.
+
+- **New parameter `max_flush_rate_hz`** (double, default 0.0 = unlimited, today's burst
+  behavior): read in `loadMeasurementPlugins()` via the existing
+  `dc_util::get_double_type_param`, resized/logged alongside the other three buffering
+  parameters, and threaded through `dc_core::Measurement::configure()` -- inserted after
+  `cooldown_sec` and before `flush_topic`, keeping all buffering parameters in one run, the
+  same placement rule #288 used (safe: `dc_measurements::Measurement` is still the only
+  implementor and `MeasurementServer` its only caller).
+- **`dc_measurements/include/dc_measurements/incident_releaser.hpp`**: `Flushing` stops being
+  a state the machine passes straight through and becomes one it can *sit in*.
+  - The constructor takes `max_flush_rate_hz` and stores it as a `release_interval_`
+    (`1/hz`, zero meaning "no limit").
+  - `onFlush()` no longer publishes the window in a loop: it moves `buffer_.window()` into a
+    `pending_` vector (plus a `pending_index_` cursor -- an index rather than a `pop_front` so
+    released Records aren't shuffled down one by one), clears the buffer as before, sets
+    `next_release_ = now` and calls the new `drainRelease(now)`.
+  - `drainRelease()` emits every pending Record that has come due (`now >= next_release_`,
+    advancing `next_release_` by one interval each time) and returns while any remain, leaving
+    the machine in `Flushing`; once the window is out it does what `onFlush()` used to do at
+    the end -- enter `PostRoll` or `enterCooldown()`. With no rate configured the loop runs to
+    completion in one call, so the unlimited path is byte-for-byte the old behavior.
+  - `tick()` drives the drain first, then the existing post-roll/cooldown expiries.
+  - **Rate semantics, deliberate**: the cap is on the emission rate *over time*, not on how
+    many Records a single `tick()` may emit. A coarse tick catches up on everything that came
+    due since the last one and no more. The alternative (at most one Record per tick) would
+    cap the drain at the caller's tick rate, which for a Measurement is its polling rate --
+    `max_flush_rate_hz` above the polling rate would then do nothing at all and every release
+    would take as long as the buffer window itself.
+  - **Post-roll now runs from the end of the release**, not from the `FlushEvent`, so a slow
+    drain doesn't eat the aftermath window it exists to capture. Samples collected *during* a
+    rate-limited release are buffered (as in every non-`PostRoll` state), so they become the
+    next incident's pre-roll rather than going out unattributed -- the safe choice over
+    appending them to `pending_`, which would never drain if collection outpaced the
+    configured rate.
+  - New `pendingReleaseCount()` accessor beside `bufferedCount()` for assertions.
+- **`dc_measurements/include/dc_measurements/measurement.hpp`**:
+  - When `max_flush_rate_hz > 0`, `configure()` creates a `release_timer_` wall timer at the
+    release interval whose callback just `tick()`s the releaser. Without it the drain would
+    only advance on the polling timer -- in bursts of `polling_interval / release_interval`
+    Records, and never faster than collection.
+  - `offerSample()` now `tick()`s the releaser even when the collected sample is empty/`null`,
+    so an idle or failing `collect()` can't stall a release in progress.
+  - New `releaser_mutex_` serializes the three paths that now reach the state machine
+    concurrently (polling timer, FlushEvent subscription, release timer -- `client_cb_group_`
+    is Reentrant). `cleanup()` resets `release_timer_` before the releaser and takes the lock
+    to reset it; the timer callback null-checks `releaser_` as well.
+- **Tests**:
+  - `test_incident_releaser.cpp` (10 -> 15 cases; `makeReleaser()` gained a defaulted
+    `max_flush_rate_hz` argument so the existing 10 are untouched): the acceptance criterion
+    (5 buffered Records at 2Hz -- one out with the flush, nothing before the interval elapses,
+    exactly one on it, a coarse tick catching up exactly the two that came due, same order and
+    original stamps throughout); a property check ticking every 50ms for 6s over a 20-Record
+    window at 4Hz asserting the count never exceeds `1 + elapsed * rate`; samples offered
+    mid-release being buffered and becoming the *next* incident's window while their `offer()`
+    drives the drain; post-roll starting when the release finishes and a `FlushEvent`
+    mid-release being ignored; and the default (no rate) still releasing in one burst.
+  - `test_measurement_buffering.cpp`: new `MaxFlushRateSpreadsALargeBufferedWindowOverTime` --
+    ~20 samples buffered at 50ms polling, released at 10Hz; asserts at most 8 Records in the
+    first 300ms (a burst would deliver all 20), that the whole window still comes out, that
+    every Record carries the incident_id, and -- via a new `arrivals_` vector of receive
+    timestamps and a `receivedSpanMs()` helper -- that n Records span at least 70% of
+    `(n-1) * 100ms`, which is the "did not burst" assertion proper (a burst spans ~0ms).
+- **Docs**: `doc/src/dc/measurements.md` gains a `max_flush_rate_hz` row; the Flushing and
+  PostRoll steps of the buffering admonish block now describe the paced release, where
+  mid-release samples go, and post-roll's new anchor; the "rate-limited release is not
+  implemented yet" sentence is gone.
+- **Verified**: `podman run` against `localhost/dc-workspace` (Jazzy) with this worktree
+  bind-mounted over `/root/ws/src/ros2_data_collection`, as in #284-#288. `colcon build
+  --packages-select dc_common dc_core dc_interfaces dc_measurements --cmake-args
+  -DBUILD_TESTING=ON` succeeded with zero warnings under `-Wall -Wextra -Wpedantic -Werror
+  -Wdeprecated`, then `colcon test` + `colcon test-result --all`: **241 tests, 0 errors, 0
+  failures, 0 skipped** (up from #288's 235: +5 `test_incident_releaser` cases, +1 lifecycle
+  case). The unit test was also compiled and run standalone (`g++ -std=c++17 -Wall -Wextra
+  -Wpedantic -Werror -I dc_measurements/include -I dc_common/include ... -lgtest`) inside the
+  same image -- seconds instead of the 12-minute colcon loop, which is the payoff of keeping
+  `IncidentReleaser` ROS-free.
+- `pre-commit run --files <changed>` passed `clang-format` (it reflowed the
+  `RCLCPP_INFO_STREAM` in `measurement_server.cpp` and one `EXPECT_EQ` in the new unit test;
+  both left as formatted), `codespell`, the mdbook doc build, XML lint,
+  `ros2_ws_same_versions`/`ros2_ws_set_metadata` and the rest. The only failures are the two
+  long-standing local-environment ones: `poetry-requirements` (no `poetry` module on this
+  host) and `black` on the pre-existing violation in `tools/e2e/scripts/verify_zero_loss.py`,
+  reverted again here to keep this diff scoped, exactly as in the #285-#288 sessions.

@@ -53,6 +53,19 @@ protected:
   void dummyDataCallback(const dc_interfaces::msg::StringStamped& msg)
   {
     received_.push_back(msg.data);
+    // When each Record actually landed, for the rate-limited release (#289).
+    arrivals_.push_back(std::chrono::steady_clock::now());
+  }
+
+  // Milliseconds between the first and the last Record received so far.
+  int receivedSpanMs() const
+  {
+    if (arrivals_.size() < 2)
+    {
+      return 0;
+    }
+    return static_cast<int>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(arrivals_.back() - arrivals_.front()).count());
   }
 
   void publishFlush(const std::string& incident_id)
@@ -112,6 +125,7 @@ protected:
 
 public:
   std::vector<std::string> received_;
+  std::vector<std::chrono::steady_clock::time_point> arrivals_;
 };
 
 // Acceptance criterion: buffer_duration_sec unset/zero preserves today's behavior exactly --
@@ -223,6 +237,44 @@ TEST_F(MeasurementBufferingTest, FullIncidentCycleBuffersFlushesPostRollsCoolsDo
   EXPECT_TRUE(spinUntil([this] { return countTaggedWith("incident-3") > 0; }, 1000))
       << "the Measurement should have re-armed itself after cooldown";
   EXPECT_EQ(countTaggedWith("incident-1"), at_rearm);
+}
+
+// Acceptance criterion (#289): a large buffered window is not burst-published when
+// max_flush_rate_hz is configured -- it is spread out at (at most) that rate, so a robot
+// recovering from an incident doesn't also have to absorb the whole window at once.
+TEST_F(MeasurementBufferingTest, MaxFlushRateSpreadsALargeBufferedWindowOverTime)
+{
+  const double max_flush_rate_hz = 10.0;  // one Record every 100ms
+  const int release_interval_ms = 100;
+  ms_node_->declare_parameter("dummy.buffer_duration_sec", 10.0);
+  ms_node_->declare_parameter("dummy.max_flush_rate_hz", max_flush_rate_hz);
+
+  startLifecycleNode();
+
+  // A second of 50ms polling buffers ~20 samples -- a window far larger than one release
+  // interval, which is what makes the rate limit observable.
+  spinFor(1000);
+  ASSERT_TRUE(received_.empty());
+
+  publishFlush("incident-rate");
+  ASSERT_TRUE(spinUntil([this] { return !received_.empty(); }, 1000));
+
+  // Without the rate limit the whole window would be out by now; at 10Hz only a handful can be.
+  spinFor(300);
+  const int early = static_cast<int>(received_.size());
+  EXPECT_LE(early, 8) << "burst: " << early << " Records in the first 300ms of a 10Hz release";
+
+  // The whole window still makes it out, only spread over time.
+  ASSERT_TRUE(spinUntil([this] { return received_.size() >= 15u; }, 5000))
+      << "only " << received_.size() << " Records released";
+  EXPECT_GT(static_cast<int>(received_.size()), early);
+  EXPECT_EQ(countTaggedWith("incident-rate"), static_cast<int>(received_.size()));
+
+  // n Records at that rate cannot have arrived in less than (n-1) intervals; 70% of that leaves
+  // room for timer and delivery jitter while still failing loudly on a burst (span ~0).
+  const int spacing_count = static_cast<int>(received_.size()) - 1;
+  EXPECT_GE(receivedSpanMs(), (spacing_count * release_interval_ms * 7) / 10)
+      << spacing_count + 1 << " Records arrived within " << receivedSpanMs() << "ms";
 }
 
 int main(int argc, char** argv)

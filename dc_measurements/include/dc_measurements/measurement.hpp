@@ -8,6 +8,7 @@
 #include <ctime>
 #include <fstream>
 #include <memory>
+#include <mutex>
 #include <nlohmann/json-schema.hpp>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -543,9 +544,13 @@ public:
   {
     if (msg.data.empty() || msg.data == "null")
     {
+      // Nothing to offer, but the phase deadlines and a rate-limited release still need driving.
+      const std::lock_guard<std::mutex> lock(releaser_mutex_);
+      releaser_->tick(std::chrono::system_clock::now());
       return;
     }
     enrichMsg(msg);
+    const std::lock_guard<std::mutex> lock(releaser_mutex_);
     releaser_->offer(msg.data, std::chrono::system_clock::now());
   }
 
@@ -584,6 +589,7 @@ public:
     {
       return;
     }
+    const std::lock_guard<std::mutex> lock(releaser_mutex_);
     releaser_->onFlush(event.incident_id, std::chrono::system_clock::now());
   }
 
@@ -605,7 +611,7 @@ public:
                  const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
                  const std::string& run_id, const bool& run_id_enabled, const std::vector<json>& custom_keys,
                  const double& buffer_duration_sec, const double& post_roll_duration_sec, const double& cooldown_sec,
-                 const std::string& flush_topic) override
+                 const double& max_flush_rate_hz, const std::string& flush_topic) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -661,16 +667,33 @@ public:
     buffer_duration_sec_ = buffer_duration_sec;
     post_roll_duration_sec_ = post_roll_duration_sec;
     cooldown_sec_ = cooldown_sec;
+    max_flush_rate_hz_ = max_flush_rate_hz;
     flush_topic_ = flush_topic.empty() ? std::string("/dc/flush") : flush_topic;
     if (buffer_duration_sec_ > 0.0)
     {
       releaser_ = std::make_shared<IncidentReleaser>(
           durationFromSeconds(buffer_duration_sec_), durationFromSeconds(post_roll_duration_sec_),
-          durationFromSeconds(cooldown_sec_),
+          durationFromSeconds(cooldown_sec_), max_flush_rate_hz_,
           [this](const std::string& record_json, const std::chrono::system_clock::time_point& stamp,
                  const std::string& incident_id) { publishIncidentRecord(record_json, stamp, incident_id); });
       flush_sub_ = node->create_subscription<dc_interfaces::msg::FlushEvent>(
           flush_topic_, 10, std::bind(&Measurement::onFlushEvent, this, std::placeholders::_1));
+      if (max_flush_rate_hz_ > 0.0)
+      {
+        // A rate-limited release is drained by tick(), and the polling timer alone would drain it
+        // at the polling rate -- in bursts, and never faster than collection however high
+        // max_flush_rate_hz is. This timer paces the release properly (#289).
+        release_timer_ = node->create_wall_timer(
+            durationFromSeconds(1.0 / max_flush_rate_hz_),
+            [this] {
+              const std::lock_guard<std::mutex> lock(releaser_mutex_);
+              if (releaser_)
+              {
+                releaser_->tick(std::chrono::system_clock::now());
+              }
+            },
+            client_cb_group_);
+      }
     }
 
     RCLCPP_INFO(logger_, "Done configuring %s", measurement_name_.c_str());
@@ -705,7 +728,12 @@ public:
   {
     data_pub_.reset();
     flush_sub_.reset();
-    releaser_.reset();
+    // Before the releaser it ticks, so the timer can't fire on a null one.
+    release_timer_.reset();
+    {
+      const std::lock_guard<std::mutex> lock(releaser_mutex_);
+      releaser_.reset();
+    }
     onCleanup();
   }
 
@@ -799,9 +827,15 @@ protected:
   double buffer_duration_sec_{ 0.0 };
   double post_roll_duration_sec_{ 0.0 };
   double cooldown_sec_{ 0.0 };
+  double max_flush_rate_hz_{ 0.0 };
   std::string flush_topic_;
   std::shared_ptr<IncidentReleaser> releaser_;
   rclcpp::Subscription<dc_interfaces::msg::FlushEvent>::SharedPtr flush_sub_;
+  // Paces a rate-limited release; only created when max_flush_rate_hz_ > 0 (#289).
+  rclcpp::TimerBase::SharedPtr release_timer_;
+  // The releaser is reached from three concurrent paths -- the polling timer, the FlushEvent
+  // subscription and release_timer_ -- so every entry into it is serialized here.
+  std::mutex releaser_mutex_;
 };
 
 }  // namespace dc_measurements
