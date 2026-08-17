@@ -128,6 +128,14 @@ The Measurement then re-arms itself back to **Buffering** with no manual interve
 second incident is captured exactly like the first. With both `post_roll_duration_sec` and
 `cooldown_sec` left at 0, a flush releases the pre-roll window and the Measurement is armed
 again immediately.
+
+`incident_id` is a top-level field of the Record envelope, beside `tags`, `run_id` and `name`
+— not a key nested inside the measurement's own data — so a `postgres` Destination stores it
+in its own `incident_id` column and "everything from this one event" is a plain
+`WHERE incident_id = '…'`. See [Destinations](./destinations.md#incident_id) for the column
+the table needs. A Record collected outside an incident carries no `incident_id` at all,
+leaving the column NULL. A [Group](./groups.md) lifts a member's `incident_id` onto the merged
+Record the same way it does `tags`, so grouping does not bury it.
 ```
 
 ```admonish info title="gate_condition vs. if_all/if_any/if_none_conditions"

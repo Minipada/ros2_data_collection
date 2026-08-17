@@ -16,6 +16,12 @@ merged Record on `/dc/group/my_group`:
 A merged Record is an ordinary Record from there on: it carries the Tag derived from its
 output topic, and a Destination receives it by listing that topic in `inputs`.
 
+Envelope fields do not get nested under a member's key: a member's `tags` is replaced by the
+Group's own, and its `incident_id` — the id a Measurement stamps on a Record it released as
+part of an [incident](./measurements.md) — is lifted to the merged Record's top level, where
+a `postgres` Destination has a column for it. Buried under `<group_key>.incident_id` it would
+simply be dropped by that sink.
+
 ```admonish info
 The Group node is written in Python: allocating and passing a variable number of inputs to
 the `ApproximateTimeSynchronizer` is straightforward there and awkward in C++.
@@ -132,6 +138,9 @@ report, plus two keys that mark it as partial:
 - `missing_inputs` lists the input *topics* that contributed no Record, in `inputs` order.
 - `tags`, `name` and `plugins` behave as they do on a complete Record — `plugins` only
   lists the plugins that actually reported.
+- `incident_id` behaves the same way: if any member that *did* arrive was released as part
+  of an [incident](./measurements.md), the merged Record carries its `incident_id`, so a
+  partial Record of an incident is still queryable as one.
 
 ```admonish warning title="Add the columns before charting a partial Record"
 Vector's `postgres` sink silently drops top-level keys that have no matching column, so

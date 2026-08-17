@@ -6368,3 +6368,88 @@ asserted.
   now sets `max_flush_rate_hz` to 20Hz so every released Record is delivered and the assertions
   cover the whole window; whether the publisher's depth should be raised for the burst path is a
   question for #282's parent, not something to change under this issue.
+
+## #291 - Add incident_id as a first-class field in the Record schema and Postgres sink config
+
+Sixth implementation slice of #282 (Pre-event circular-buffer capture via a new Trigger
+plugin), on top of #287's flush wiring, #288's `IncidentReleaser`, #289's rate limit and
+#290's File staging. Those slices made an armed Measurement release a window of Records
+each stamped with the `FlushEvent`'s `incident_id`; this one makes that id **queryable as a
+column** everywhere the Record can land, rather than a key riding along inside an opaque
+payload. User stories 9 and 19 of #282.
+
+- **`dc_bridge/src/render.cpp`** — `render_normalize_source()` now emits, inside the branch
+  guarding each **postgres** Destination's own Tags, one extra VRL block:
+
+      if exists(.incident_id) {
+        .incident_id = to_string(.incident_id) ?? null
+      }
+
+  The judgement call of this slice, so the reasoning in full. Vector's `postgres` sink has
+  no column-mapping options at all: it hands the event to `jsonb_populate_record`, so a
+  top-level key lands in the same-named column and everything else is dropped. There is no
+  `columns = [...]` to render — which is why the *mapping* has to be this block, and why the
+  block is worth rendering at all rather than relying on the key being top-level by accident:
+  it is where the generated config names `incident_id` as a field DC maps onto a column, and
+  it is what the config-generation tests can assert against. It also does real work.
+  `to_string(...) ?? null` is the same coercion the route predicates already apply to `.tag`
+  (VRL types an event field as `any`): a Measurement whose own payload carried a non-string
+  `incident_id` — an object, say — would otherwise reach the sink as a value a `text` column
+  cannot take and fail the *whole insert batch*; coerced, that Record still lands with a NULL
+  in the column. The `exists` guard is load-bearing: VRL's `to_string(null)` is `""`, so
+  without it every Record collected outside an incident would write an empty string where a
+  NULL belongs. Scoped to postgres destinations because they are the only column-mapped sink
+  — s3/file/console already receive `incident_id` as a JSON key and need nothing.
+- **Verified against the real pinned Vector binary**, not inferred: `vector validate
+  --no-environment` accepts the rendered `multiple_destinations.toml` fixture (the `??` is
+  neither rejected as invalid nor flagged as an unnecessary coalesce), and `vector vrl
+  --print-object` confirms all four cases — `"abc-123"` → `"abc-123"`, `7` → `"7"`,
+  `{"a":1}` → `null` (rescued instead of failing the batch), key absent → still absent, so
+  the column stays NULL rather than becoming `""`.
+- **Gold fixtures**: `basic_double.toml`, `iso8601.toml` and both destinations of
+  `multiple_destinations.toml` gain the block; `s3_aws`, `s3_custom_endpoint` and
+  `file_and_console` deliberately do not.
+- **`dc_bridge/test/render_test.cpp`** (48 → 51 cases): the block is rendered for a postgres
+  destination under every `time_format`; it sits *inside* that destination's tag branch and
+  is rendered exactly once even when a console destination shares the transform; and a config
+  with no column-mapped sink renders no `incident_id` at all.
+- **DDL** — the column has to exist before the first incident, since the sink neither creates
+  tables nor adds columns: `incident_id text` added to `tools/e2e/sql/init.sql`'s `dc_records`
+  and `tools/infrastructure/docker/config/postgresql/init.sql`'s `dc`. Not `dc_files`: the
+  Uploader's own metadata Records know nothing about incidents.
+- **`dc_group/dc_group/group_server.py`** — a Group nests each member's Record under its
+  `group_key`, so a released member's `incident_id` would have become
+  `<group_key>.incident_id`: no column any table has, silently dropped by the very sink this
+  issue is about. It is now popped from each member and lifted onto the merged Record's top
+  level, exactly the way `tags` already is (first non-null wins — one FlushEvent mints one id
+  for every Measurement listening, so members of a released window all carry the same one),
+  and only when a member actually carried one, so an ordinary grouped Record still leaves the
+  column NULL. Strictly field preservation, *not* the Group-level correlated buffering #282
+  defers. Three cases added to `dc_group/test/test_group_sync_timeout.py`: lifted to top level
+  and gone from the members' data, absent when no member carried one, and preserved on a
+  partial Record assembled by the sync timeout.
+- **`tools/e2e/scripts/run_incident.sh` + `tools/e2e/params/e2e_incident_params.yaml`** — the
+  fourth acceptance criterion ("verified queryable as a column value, not just JSON payload
+  text") is not something a unit test can answer, so it gets a real scenario harness, modelled
+  on #267's `run_retention.sh` (its own containers, its own params, Postgres only, not wired
+  into `ci.yaml`). An `uptime` Measurement armed with `buffer_duration_sec: 6.0` (and
+  `max_flush_rate_hz: 20.0` — #290's finding: an unpaced burst is coalesced away by the
+  KeepLast(1) data publisher) runs beside a never-armed `memory` Measurement, both into one
+  postgres Destination. It asserts, in order: `dc_records.incident_id` is a real `text` column;
+  the live Measurement is landing rows while the armed one has shipped *nothing* (without which
+  the final query could pass on a pipeline that never buffered); after one FlushEvent the
+  released window is reachable as `WHERE incident_id = '…'` — the column predicate that is the
+  entire point; and the id is on that window only, with the never-armed Measurement's rows
+  still `IS NULL`.
+  The FlushEvent is published with `ros2 topic pub --once -w 1` rather than by a `dc_triggers`
+  broadcast node: `/dc/flush` *is* the contract a Measurement subscribes to, `dc_triggers` has
+  its own tests for minting the event, and the broadcast node is not in `dc_bringup`'s launch
+  yet — wiring it there is separate work, and this scenario is about what happens to the id
+  downstream of the event, not about what produced it.
+- **Docs**: `destinations.md` gains an `incident_id` section (the column, the `ALTER TABLE`,
+  why the sink needs it to pre-exist, and that other Destination types need nothing);
+  `measurements.md`'s buffering block states that `incident_id` is a top-level envelope field
+  beside `tags`/`run_id`/`name` and links to it; `groups.md` documents the lift in both the
+  merge description and the partial-Record notes; `tools/e2e/README.md` gains the scenario.
+- **Not touched, deliberately**: the Streamlit demo dashboard (#282 puts incident browsing UI
+  out of scope) and `CONTEXT.md`'s glossary (#345 owns the **Incident** entry).
