@@ -21,15 +21,26 @@ empty Record.
 
 ## Schema
 
+Zone type strings are the field names, so they can't be listed ahead of time — the schema
+constrains their shape instead: at least one entry (the Measurement publishes nothing rather
+than an empty Record), a non-empty type string as key, and a temperature in degrees Celsius
+above absolute zero as value.
+
 ```json
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Thermal",
-    "description": "Temperature readings from /sys/class/thermal, keyed by each zone's type string",
+    "description": "One entry per thermal zone read this cycle, keyed by the zone's type string",
+    "propertyNames": {
+        "description": "The zone's type string, e.g. x86_pkg_temp or cpu-thermal",
+        "minLength": 1
+    },
     "additionalProperties": {
         "description": "Temperature of the zone in degrees Celsius",
-        "type": "number"
+        "type": "number",
+        "minimum": -273.15
     },
+    "minProperties": 1,
     "type": "object"
 }
 ```
