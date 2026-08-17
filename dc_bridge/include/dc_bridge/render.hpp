@@ -2,7 +2,10 @@
 // parameters to a complete Vector configuration. `render()` produces Vector TOML with:
 // the shipper ingest protocol source (global acknowledgements enabled — #266, delivery
 // is confirmed end-to-end), one VRL transform normalizing each blessed destination's
-// timestamp, one `route` transform exposing the public per-Tag `dc.<tag>` routes (the
+// timestamp (and, for a `postgres` destination, the envelope's `incident_id` — #291, so
+// the incident an armed Measurement released a Record under is a queryable column rather
+// than an opaque payload key), one `route` transform exposing the public per-Tag
+// `dc.<tag>` routes (the
 // passthrough contract — see route_output_for_tag), disk-buffer settings, and the
 // blessed sinks (postgres, s3, file, console).
 //

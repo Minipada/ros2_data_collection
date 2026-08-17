@@ -31,6 +31,9 @@ inputs = ["dc_bridge_in"]
 source = """
 if includes(["dc.group.robot"], .tag) {
   .date = to_float(to_unix_timestamp!(.timestamp, unit: "nanoseconds")) / 1000000000.0
+  if exists(.incident_id) {
+    .incident_id = to_string(.incident_id) ?? null
+  }
 }
 """
 type = "remap"

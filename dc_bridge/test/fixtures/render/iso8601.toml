@@ -31,6 +31,9 @@ inputs = ["dc_bridge_in"]
 source = """
 if includes(["dc.group.robot"], .tag) {
   .date = format_timestamp!(.timestamp, format: "%Y-%m-%dT%H:%M:%S%.9f")
+  if exists(.incident_id) {
+    .incident_id = to_string(.incident_id) ?? null
+  }
 }
 """
 type = "remap"
