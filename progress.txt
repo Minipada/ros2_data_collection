@@ -6339,3 +6339,32 @@ asserted.
   that the scratch directory rolls on the same `buffer_duration_sec` window, that `remote_paths`
   is untouched so each File uploads where it would have anyway, that post-roll Files are never
   staged, and that the Bridge needs no configuration for any of it.
+- **Verified**: `podman run` against the `localhost/dc-workspace` Jazzy image with this worktree
+  bind-mounted over `/root/ws/src/ros2_data_collection`, as in #284-#289. `colcon build
+  --packages-select dc_common dc_core dc_interfaces dc_measurements dc_bridge --cmake-args
+  -DBUILD_TESTING=ON` succeeded with zero warnings under `-Wall -Wextra -Wpedantic -Werror
+  -Wdeprecated` (13min for `dc_measurements` -- every measurement/condition plugin recompiles
+  because they all include `measurement.hpp`), then `colcon test` + `colcon test-result --all`:
+  **342 tests, 0 errors, 0 failures, 0 skipped** (#289's 241 across four packages, plus
+  dc_bridge's 147 which this slice touches for the first time, plus this slice's +4
+  `file_scratch_ring_test`, +2 `test_measurement_buffering`, +1 `uploader_test`). The
+  `FileScratchRing` unit test was also compiled and run standalone (`g++ -std=c++17 -Wall
+  -Wextra -Wpedantic -Werror -I dc_common/include ... -lgtest`) in seconds, which is the payoff
+  of #285 keeping it ROS-free. Two process notes for future sessions: `podman run --rm` throws
+  the build away with the container, so build and test have to happen in the *same* invocation
+  (a separate `colcon test` run silently tests the image's baked workspace and reports "0
+  tests"); iterating is much faster against a `podman run -d ... sleep infinity` container held
+  open across `podman exec` calls, where a test-only change rebuilds `dc_measurements` in 27s
+  instead of 13min.
+- **A real finding, from the first red test**: releasing a buffered window as one burst *drops
+  Records at the middleware*. `data_pub_` is created `KeepLast(1)`, so when `onFlush()` publishes
+  six Records synchronously before the subscription's executor gets a turn, only the last
+  survives -- the first version of
+  `FileProducingMeasurementStagesFilesWhileArmedAndReleasesTheStagedCopies` asserted three
+  released Records and got one. This is pre-existing (#287/#288 behavior, not this slice) and it
+  is exactly the pressure #289's `max_flush_rate_hz` exists to relieve, which is why the older
+  burst tests never caught it: `FlushEventReleasesBufferedWindowThenReturnsToBuffering` measures
+  `received_.size()` rather than asserting a count, and the #289 test paces its release. The test
+  now sets `max_flush_rate_hz` to 20Hz so every released Record is delivered and the assertions
+  cover the whole window; whether the publisher's depth should be raised for the burst path is a
+  question for #282's parent, not something to change under this issue.

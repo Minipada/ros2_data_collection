@@ -376,6 +376,12 @@ TEST_F(MeasurementBufferingTest, MaxFlushRateSpreadsALargeBufferedWindowOverTime
 TEST_F(MeasurementBufferingTest, FileProducingMeasurementStagesFilesWhileArmedAndReleasesTheStagedCopies)
 {
   ms_node_->declare_parameter("dummy.buffer_duration_sec", 1.0);
+  // Pace the release (#289). data_pub_ is KeepLast(1), so releasing a whole window in one
+  // synchronous burst leaves the middleware delivering only the last Record of it -- the very
+  // pressure the rate limit exists to relieve. At 20Hz every released Record reaches the
+  // subscription, so the assertions below cover the whole window rather than whichever Record
+  // happened to survive it.
+  ms_node_->declare_parameter("dummy.max_flush_rate_hz", 20.0);
   useFileProducingRecord();
 
   startLifecycleNode();
@@ -387,8 +393,8 @@ TEST_F(MeasurementBufferingTest, FileProducingMeasurementStagesFilesWhileArmedAn
   ASSERT_GE(staged_while_armed.size(), 3u) << "the produced Files should have been staged";
 
   publishFlush("incident-files");
-  ASSERT_TRUE(spinProducingUntil([this] { return !received_.empty(); }, 1000));
-  spinProducing(polling_interval_ * 3);
+  ASSERT_TRUE(spinProducingUntil([this] { return received_.size() >= 3u; }, 3000))
+      << "only " << received_.size() << " Records released";
 
   ASSERT_GE(received_.size(), 3u);
   EXPECT_EQ(countTaggedWith("incident-files"), static_cast<int>(received_.size()));
