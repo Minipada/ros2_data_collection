@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Readiness: tracks whether Vector is currently accepting shipper ingest protocol
 // connections, shared between a background prober and the ROS readiness service
 // (ADR-0006 — the Bridge has no lifecycle state beyond "process up + ready service

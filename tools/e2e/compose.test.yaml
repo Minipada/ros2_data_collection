@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Stable test-dependency stores for the store-backed dc_bridge gtests (colcon test):
 # Postgres + an S3-compatible RustFS. Unlike the zero-loss harness (which stops and
 # restarts its stores to induce an outage, so it drives them with native podman — see

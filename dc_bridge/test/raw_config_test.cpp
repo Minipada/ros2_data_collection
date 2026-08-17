@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Raw / generic-subscription mode policy (#227): the filter, the Tag derivation and the
 // per-topic rate limit that is raw mode's first line of defence against a firehose
 // topic. All ROS-free — these are the decisions the manager makes before it ever touches

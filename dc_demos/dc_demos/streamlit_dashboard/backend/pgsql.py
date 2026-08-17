@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Queries against the flat `dc` table dc_bridge's `postgres` Destination writes.
 
 Every query here reads top-level columns. See `models/robot_data.py` for why there is no

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: Apache-2.0
+
 cmake_minimum_required(VERSION 3.17)  # GIT_SUBMODULES_RECURSE (see below)
 project(aws_sdk_vendor)
 

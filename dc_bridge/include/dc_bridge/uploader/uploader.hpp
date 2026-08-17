@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // The Uploader (ADR-0005): per File × storage, head+size verify-or-upload (an
 // already-verified object short-circuits — idempotent retries), verified-only status
 // Records, a group-completion marker only when every File in the group is verified on

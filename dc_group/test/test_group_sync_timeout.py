@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Tests for the Group node's sync-timeout drop/emit_partial behaviour (#126), plus the
 envelope fields a merged Record has to carry through at top level (`incident_id`, #291).
 

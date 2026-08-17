@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // The S3 (aws-sdk-cpp) implementation of the ObjectStore interface — the only Uploader
 // piece that links aws_sdk_vendor. Configured to match the Records-side aws_s3 Vector
 // sink (explicit endpoint/region/path-style/credentials, or ambient AWS credentials).

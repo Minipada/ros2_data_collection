@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Summarize a dc_mcap_writer capture for verify_zero_loss.py (#210 e2e coverage).
 
 Runs *inside* a one-off container against the dc_e2e_data volume — the same pattern

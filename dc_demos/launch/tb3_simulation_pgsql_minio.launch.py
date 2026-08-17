@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Send Records from the TurtleBot3 simulation to PostgreSQL and object storage.
 
 This launch file starts DC only -- Nav2 and the simulator are launched

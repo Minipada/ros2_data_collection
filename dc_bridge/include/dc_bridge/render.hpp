@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Config renderer (ADR-0003): a pure, I/O-free mapping from Bridge/Destination
 // parameters to a complete Vector configuration. `render()` produces Vector TOML with:
 // the shipper ingest protocol source (global acknowledgements enabled — #266, delivery

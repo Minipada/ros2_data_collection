@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2019 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+# Copied from nav2_common.
 
 #
 # Standard DC project setup

@@ -1,0 +1,127 @@
+version = 1
+SPDX-PackageName = "ros2_data_collection"
+SPDX-PackageSupplier = "David Bensoussan <d.bensoussan@proton.me>"
+SPDX-PackageDownloadLocation = "https://github.com/Minipada/ros2_data_collection"
+
+# Anything that can hold a comment carries its own SPDX header; this file covers the rest —
+# binaries, prose, and third-party assets. Deliberately no `**` catch-all: a new file that
+# declares nothing must fail `reuse lint` instead of being silently claimed as ours. Later
+# sections win over earlier ones.
+
+# Prose. Headers would be the first thing a reader sees in the raw markdown.
+[[annotations]]
+path = ["**.md", "LICENSE.md", "requirements/**.sdoc"]
+SPDX-FileCopyrightText = "2022-2026 David Bensoussan"
+SPDX-License-Identifier = "MPL-2.0"
+
+# Formats with no comment syntax (JSON), byte-exact test fixtures, and binaries.
+[[annotations]]
+path = [
+  "**.json",
+  "doc/src/images/**",
+  "dc_demos/dc_demos/streamlit_dashboard/static/images/**",
+  "dc_bridge/test/fixtures/**",
+  "dc_simulation/maps/**",
+  "dc_simulation/models/**",
+  "dc_simulation/env-hooks/dc_simulation.dsv.in",
+  "progress.txt",
+  ".codespell.txt",
+  ".python-version",
+]
+SPDX-FileCopyrightText = "2022-2026 David Bensoussan"
+SPDX-License-Identifier = "MPL-2.0"
+
+# --- Documentation site assets ------------------------------------------------------
+
+# mdBook's default theme, as generated into the book.
+[[annotations]]
+path = "doc/theme/**"
+SPDX-FileCopyrightText = "The mdBook Authors"
+SPDX-License-Identifier = "MPL-2.0"
+
+[[annotations]]
+path = "doc/theme/highlight.js"
+SPDX-FileCopyrightText = "2006-2020 Ivan Sagalaev"
+SPDX-License-Identifier = "BSD-3-Clause"
+
+# Bundle: mermaid, dagre (both MIT) and DOMPurify (Apache-2.0 OR MPL-2.0).
+[[annotations]]
+path = ["doc/js/mermaid.js", "doc/js/mermaid.min.js"]
+SPDX-FileCopyrightText = [
+  "2014-2022 Knut Sveidqvist",
+  "2012-2013 Chris Pettitt",
+  "Cure53 and other contributors",
+]
+SPDX-License-Identifier = "MIT AND (Apache-2.0 OR MPL-2.0)"
+
+# mdbook-mermaid's init script, adapted here for the theme switcher.
+[[annotations]]
+path = "doc/js/mermaid-init.js"
+SPDX-FileCopyrightText = ["Jan-Erik Rediger", "2022-2026 David Bensoussan"]
+SPDX-License-Identifier = "MPL-2.0"
+
+[[annotations]]
+path = "doc/css/mdbook-admonish.css"
+SPDX-FileCopyrightText = ["Tom Milligan", "Martin Donath"]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+  "doc/css/lineicon.css",
+  "doc/src/fonts/lineicons.*",
+  "dc_demos/dc_demos/streamlit_dashboard/static/css/lineicons.css",
+  "dc_demos/dc_demos/streamlit_dashboard/static/fonts/lineicons.*",
+]
+SPDX-FileCopyrightText = "Lineicons"
+SPDX-License-Identifier = "MIT"
+
+# --- Assets derived from Apache-2.0 upstreams ---------------------------------------
+
+# TurtleBot3 (ROBOTIS), with this project's QR-code and sensor additions.
+[[annotations]]
+path = [
+  "dc_description/urdf/turtlebot3_waffle_qrcodes.xacro",
+  "dc_simulation/worlds/waffle.model",
+]
+SPDX-FileCopyrightText = [
+  "ROBOTIS CO., LTD.",
+  "The Nav2 Project Contributors",
+  "2022-2026 David Bensoussan",
+]
+SPDX-License-Identifier = "Apache-2.0"
+
+# Derived from nav2_bringup's nav2_default_view.rviz.
+[[annotations]]
+path = "dc_simulation/rviz/qrcodes.rviz"
+SPDX-FileCopyrightText = ["The Nav2 Project Contributors", "2022-2026 David Bensoussan"]
+SPDX-License-Identifier = "Apache-2.0"
+
+# --- Simulation models --------------------------------------------------------------
+
+[[annotations]]
+path = "dc_simulation/models/Chair/**"
+SPDX-FileCopyrightText = "Open Robotics"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# Gazebo Fuel entry by Open Robotics; the mesh itself is a Kenney.nl asset.
+[[annotations]]
+path = "dc_simulation/models/MonitorAndKeyboard/**"
+SPDX-FileCopyrightText = "Open Robotics"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = "dc_simulation/models/warehouse/**"
+SPDX-FileCopyrightText = "MOV.AI"
+SPDX-License-Identifier = "CC-BY-NC-ND-4.0"
+
+# From the Gazebo Classic model database (osrf/gazebo_models), which is CC-BY-3.0 as a
+# whole; cutout_wall's model.config still credits its OSRF author.
+[[annotations]]
+path = [
+  "dc_simulation/models/bag/**",
+  "dc_simulation/models/cutout_wall/**",
+  "dc_simulation/models/europallet/**",
+  "dc_simulation/models/europallet_10/**",
+]
+SPDX-FileCopyrightText = "2012 Nathan Koenig"
+SPDX-License-Identifier = "CC-BY-3.0"

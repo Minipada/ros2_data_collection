@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Shared builder for the dc_demos demo launch files.
 
 Every demo in this package brings the same thing up: the standard set of

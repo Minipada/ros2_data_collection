@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Exercises the Uploader against an in-memory ObjectStore fake with failure injection —
 // no aws-sdk-cpp / cloud dependency.
 #include "dc_bridge/uploader/uploader.hpp"

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Ports of the inline readiness / config (TopicConfig) / vector_binary tests.
 #include <gtest/gtest.h>
 

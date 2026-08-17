@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // A disk-backed durable intent queue for the Uploader (ADR-0005 follow-up, #265):
 // Humble's embedded Fluent Bit made ingestion and durable buffering atomic (`in_ros2`
 // wrote straight into FLB's own filesystem chunks; chunk retry was the durable upload

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Gold-file comparisons parse both the rendered output and the checked-in fixture and
 // compare toml++ tables (order/format insensitive) rather than raw text.
 #include "dc_bridge/render.hpp"

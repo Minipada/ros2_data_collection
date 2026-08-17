@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // The dc_bridge ROS node (ADRs 0001/0003/0006/0007): wires the ROS-independent core
 // (Forwarder, Supervisor, Readiness, ConfigRenderer) to topic subscriptions and a
 // readiness service.

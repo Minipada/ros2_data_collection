@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Record Records as .mcap through the ADR-0003/ADR-0009 passthrough (#210).
 
 Hardware-free: four system Measurements (cpu, memory, os, uptime), a `console`

@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Incident-capture E2E scenario (#291). From the repo root:
 #
 #   ./tools/e2e/scripts/run_incident.sh

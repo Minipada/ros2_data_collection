@@ -1,3 +1,7 @@
+-- SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+--
+-- SPDX-License-Identifier: MPL-2.0
+
 -- Pre-created tables for the E2E harness's Postgres destinations (dc_bridge/render.rs's
 -- postgres sink maps JSON event keys onto existing columns 1:1 — it does not create the
 -- table or add columns itself, see dc_bridge/dc_bridge_core/tests/end_to_end.rs).

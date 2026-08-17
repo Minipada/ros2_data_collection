@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Parsing the Files a Record references out of its JSON payload — the
 // local_paths/remote_paths structure Measurements embed (camera/map), replacing the
 // Humble-era parallel src_fields/upload_fields arrays. remote_paths is keyed by

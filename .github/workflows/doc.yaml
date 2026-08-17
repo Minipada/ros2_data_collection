@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # DC 2.0 (Jazzy) documentation build (#252). Builds the mdbook site and the strictdoc
 # requirements export as a CI gate; does not deploy anywhere. GitHub Pages for this repo
 # has been taken down (gh-pages branch deleted) and this job no longer deploys to it.

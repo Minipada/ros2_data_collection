@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 #ifndef DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__MAP_HPP_
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__MAP_HPP_
 

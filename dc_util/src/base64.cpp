@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2004-2017, 2020-2022 René Nyffenegger
+// SPDX-License-Identifier: Zlib
+
 /*
    base64.cpp and base64.h
 

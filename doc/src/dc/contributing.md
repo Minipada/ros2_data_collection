@@ -60,6 +60,32 @@ To run every hook over the whole tree the way CI does:
 prek run --all-files --skip build-doc   # drop the --skip to check the docs build too
 ```
 
+#### License headers
+
+The repo follows [REUSE](https://reuse.software): every file declares its copyright and
+license, and the `reuse` hook fails if one doesn't. Sources say so in a header:
+
+<!-- REUSE-IgnoreStart -->
+
+```
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+```
+
+<!-- REUSE-IgnoreEnd -->
+
+`reuse annotate` writes it for you, in whatever comment syntax the file uses:
+
+```bash
+uvx reuse annotate --copyright "2022-2026 David Bensoussan" --license MPL-2.0 path/to/new_file.cpp
+uvx reuse lint          # what the hook runs
+```
+
+Files that can't carry a comment — images, meshes, fonts — are covered by path in
+`REUSE.toml`, which is also where third-party assets declare their own upstream license.
+Add a new license there and run `uvx reuse download --all` to fetch its text into
+`LICENSES/`.
+
 #### Docs
 
 To build the docs, install cargo:

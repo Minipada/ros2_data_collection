@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Raw / generic-subscription mode against real message types (#227).
 //
 // The point of every test here is that the Bridge is handed *bytes and a type name* and

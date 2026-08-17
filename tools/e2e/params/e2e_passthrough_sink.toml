@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # ADR-0003 passthrough coverage for the zero-loss harness (#131 follow-up).
 #
 # Before this, the passthrough was tested only by render_test.cpp's pure

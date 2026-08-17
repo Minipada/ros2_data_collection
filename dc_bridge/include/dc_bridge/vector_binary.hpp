@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Locates the vendored Vector binary installed by the vector_vendor package.
 #ifndef DC_BRIDGE__VECTOR_BINARY_HPP_
 #define DC_BRIDGE__VECTOR_BINARY_HPP_

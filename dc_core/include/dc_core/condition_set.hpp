@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 #ifndef DC_CORE_CONDITION_SET_HPP_
 #define DC_CORE_CONDITION_SET_HPP_
 

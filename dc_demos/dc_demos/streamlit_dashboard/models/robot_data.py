@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """ORM view of the flat `dc` table dc_bridge's `postgres` Destination writes into.
 
 The DC 1.x embedded Fluent Bit `out_pgsql` plugin stored a whole Record as one JSON blob

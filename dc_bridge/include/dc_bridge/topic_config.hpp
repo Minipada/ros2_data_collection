@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Bridge configuration: which topics to subscribe to and the shipper ingest protocol Tag
 // each one is sent under. Kept separate from `forwarder` so the wire protocol code never
 // has to know about ROS topic names.

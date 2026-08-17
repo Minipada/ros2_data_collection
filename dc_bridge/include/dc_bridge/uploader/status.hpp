@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Status-Record row shapes the Uploader emits (ADR-0005), preserving the Humble
 // out_files_metrics column set.
 #ifndef DC_BRIDGE__UPLOADER__STATUS_HPP_

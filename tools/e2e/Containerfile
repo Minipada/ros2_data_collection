@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Full DC workspace (every dc_* package, all C++) — three stages:
 # - `cacher`: extracts just the package manifests (package.xml) from the full source
 #   tree, so `toolchain`'s COPY --from below keys its own cache on dependency lists

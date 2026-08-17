@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Generic-subscription ("raw") mode policy (#227): which discovered topics the Bridge
 // subscribes to with no compile-time knowledge of their types, the Tag each one's
 // Records carry, and the volume controls that stop a firehose topic from outrunning the

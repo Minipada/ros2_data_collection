@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Static checks over every launch file and SDF in the simulation/demo layer.
 
 Neither `colcon build` nor `colcon test` looks at any of this: launch files, SDF and

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Synthetic reference-workload feed for the zero-loss E2E harness (#249).
 
 Publishes to the 14 `/dc/e2e/synth/synthNN` topics that

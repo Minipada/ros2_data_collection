@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Incident-capture scenario (#291): two Measurements, one armed for pre-event buffering and
 # one collecting live, both landing in the same Postgres table. What it proves is that
 # `incident_id` reaches Postgres as a *column* — see tools/e2e/scripts/run_incident.sh, which

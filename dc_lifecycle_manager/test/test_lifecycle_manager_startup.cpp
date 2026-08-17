@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Startup/teardown ordering of the nodes `lifecycle_manager_dc` manages.
 #include <gtest/gtest.h>
 

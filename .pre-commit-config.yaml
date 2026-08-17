@@ -1,6 +1,10 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Run by prek (https://prek.j178.dev): `prek install` for the git hook,
 # `prek run --all-files` for everything.
-exclude: "doc/js/.*$|doc/theme/.*|doc/src/fonts/.*|doc/css/lineicon.css"
+# LICENSES/ holds verbatim licence texts — including their upstream typos. No hook edits them.
+exclude: "doc/js/.*$|doc/theme/.*|doc/src/fonts/.*|doc/css/lineicon.css|^LICENSES/.*"
 repos:
   - repo: local
     hooks:
@@ -83,6 +87,12 @@ repos:
         # `Containerfile` instead (tools/e2e/), including suffixed variants like
         # `Containerfile.e2e`.
         files: (^|/)(Dockerfile|Containerfile)(\.[a-zA-Z0-9_-]+)?$
+  # Every file declares its copyright and license, in a header or in REUSE.toml.
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v6.2.0
+    hooks:
+      - id: reuse
+        name: Ensure every file declares its copyright and license
   # Vendored from minipada/ros2_pre-commit: upstream walks into ./.venv, and both its
   # hooks need xmllint. See the script's docstring.
   - repo: local

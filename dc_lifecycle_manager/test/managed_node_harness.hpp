@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Shared harness for the dc_lifecycle_manager gtest suites.
 //
 // Everything here runs in-process: the manager under test, the lifecycle nodes it

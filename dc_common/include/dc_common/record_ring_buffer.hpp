@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 #ifndef DC_COMMON_RECORD_RING_BUFFER_HPP_
 #define DC_COMMON_RECORD_RING_BUFFER_HPP_
 

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Smoke tests for the `dc_mcap_writer` CLI/process (#210).
 
 Unlike `test_writer.py` (which exercises `RotatingMcapWriter` as a plain Python object),

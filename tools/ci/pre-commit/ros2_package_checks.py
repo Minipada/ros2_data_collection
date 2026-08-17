@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Workspace-level checks over every dc_* ROS 2 package manifest.
 
     versions   one version across every dc_*/package.xml, declared by each dc_*/setup.py

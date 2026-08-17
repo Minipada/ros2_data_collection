@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Generic-subscription ("raw") mode, rclcpp side (#227): discovers topics on the ROS
 // graph, subscribes to them with `create_generic_subscription` — no compile-time
 // knowledge of their types, no generated headers, nothing the Bridge has to be rebuilt

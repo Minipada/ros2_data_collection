@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Documentation builder image: mdbook (plus the preprocessors doc/book.toml declares) and
 # strictdoc. Built and used by `tools/ci/pre-commit/build_doc.sh`, which both
 # `.github/workflows/doc.yaml` and the `build-doc` pre-commit hook call — so a local docs

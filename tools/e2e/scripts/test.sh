@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Runs `colcon test` (C++ gtest across every dc_* package, including dc_bridge) against
 # the already-built tools/e2e/Containerfile image, plus C++ coverage. Used identically
 # by a developer locally and by .github/workflows/ci.yaml — there's no separate CI-only

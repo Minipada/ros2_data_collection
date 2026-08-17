@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+SPDX-License-Identifier: MPL-2.0
+-->
+
 <class_libraries>
     <library path="dc_edge_trigger">
         <class name="dc_triggers/EdgeTrigger" type="dc_triggers::EdgeTrigger" base_class_type="dc_core::Trigger">

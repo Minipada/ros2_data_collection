@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Raw-topic collection (#227) — the params file `dc_raw.launch.py` uses by default.
 #
 # `dc_bridge` subscribes to topics it was never compiled against

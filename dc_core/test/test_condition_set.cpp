@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Unit tests for dc_core::ConditionSet, the if_all/if_any/if_none composition extracted from
 // dc_measurements::Measurement::isConditionOn() (#284).
 //
