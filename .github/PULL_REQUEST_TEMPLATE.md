@@ -35,5 +35,6 @@ This will automatically close the issue when this PR gets merged.
 - [ ] 📑 I documented correctly following our [guidelines](./CONTRIBUTING.md)
 - [ ] 💯 I tested locally and it is working
 - [ ] 🟢 My code does not fail neither code linting checks nor unit test.
+- [ ] ✍️ Every commit is signed off (`git commit -s`) — see the [DCO](../DCO)
 
 Thank you!

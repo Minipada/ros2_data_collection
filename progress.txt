@@ -6748,3 +6748,68 @@ either way.
 .github/ISSUE_TEMPLATE/config.yml --skip build-doc` passes (codespell, yaml syntax,
 end-of-file/whitespace fixers). Private vulnerability reporting confirmed enabled through the
 API, not just assumed.
+
+## #303 - Add a DCO check to pull requests
+
+**The repo already had the check, and nobody could tell.** The issue was written on the premise
+that nothing recorded a contributor's right to submit what they submit. Half true: the probot
+[DCO app](https://github.com/apps/dco) has been installed on this repo the whole time and posts
+a `DCO` check run on every pull request (green on #353, so it predates this work). It already
+covered three of the four acceptance criteria — fails an unsigned PR, names the offending
+commits, only looks at the PR's own commits. What was missing was everything *in the tree* — no
+DCO text, no `git commit -s` in the contributing guide — and, as it turned out, enforcement.
+
+So nothing here is a new checker, and two attempts at writing one were deleted along the way:
+
+1. `.github/workflows/dco.yaml` running an in-repo script over `base.sha..head.sha`. Verified
+   green on real CI (job "Sign-off" on #355) before being removed. Two identical gates on every
+   PR is noise, and it was the weaker of the two — it only required a well-formed trailer to be
+   present, where the app requires it to *match the commit author*.
+2. `tools/ci/dco_check.sh`, kept for a while as the local half after the workflow went. Also
+   deleted: with no CI job running it, it was a hand-reimplementation of a rule it could never
+   be verified against, and its failure mode is the bad one — drift toward leniency means it
+   passes locally while the app fails, which is worse than having no local check. Its `tools/ci/`
+   path also oversold it, since nothing in CI ran it.
+
+What actually shipped:
+
+- **`DCO`** at the repo root — the verbatim v1.1 text from developercertificate.org. The
+  sign-off now points at a file in the tree rather than a URL that can change under the
+  project, and the app's invisibility stops being the whole problem.
+- **Docs** — `doc/src/dc/contributing.md` gains "Signing off your commits" before the setup
+  instructions: what the trailer certifies, that it has to match `user.name`/`user.email`,
+  `git commit -s`, `git commit --amend -s --no-edit`, `git rebase --signoff origin/jazzy` +
+  `--force-with-lease`. In place of a script, a documented one-liner for a pre-push eyeball —
+  `git log --no-merges --format='%h %s → %(trailers:key=Signed-off-by,valueonly,separator=%x2C%x20)' origin/jazzy..HEAD`,
+  where an empty right-hand side is an unsigned commit. `separator` matters: without it every
+  commit's line is followed by a blank one. Matching item on the PR template checklist.
+- **Enforcement** — `jazzy` had no branch protection and no rulesets at all, so the app's check
+  reported an unsigned PR and the merge went through regardless; AC 1 ("a CI check *fails* a
+  pull request") was only half-met however many checkers were wired up. `jazzy` now requires
+  `DCO` as its one status check (pinned to the app, `app_id` 1861), with `enforce_admins: false`
+  so the maintainer can still push straight to the branch, and force-pushes/deletions off.
+
+Two traps from the deleted script, recorded because any future in-repo git-message check walks
+into both:
+
+- `git show -s --format=%B "$sha" | grep -Eiq …` is wrong under `set -o pipefail`. `grep -q`
+  exits at the first match, `git` takes SIGPIPE, the pipeline reports 141, and a *signed* commit
+  reads as unsigned — intermittently, and only for long messages. Feed the message in through a
+  herestring instead.
+- `while read … < <(git rev-list "$RANGE")` swallows an unresolvable range and then cheerfully
+  reports "every commit is signed off" over a list it never read. Capture first, check the exit
+  status, then iterate.
+
+Matching the app's rule, in case it is ever reimplemented: the trailer has to equal the commit
+author's `Name <email>` (the committer's also passes, which is what makes an `am`/rebase of
+someone else's signed patch legal), compared case-insensitively, and merge commits are exempt —
+those come from GitHub's "Update branch" button and the contributor can't sign them.
+
+**Verified**: the deleted script was tested against throwaway repos with `core.hooksPath`
+pointed at nothing, so the sign-off wasn't added behind the test's back — this machine's global
+`prepare-commit-msg` hook signs every commit, which silently made the first two attempts at that
+test pass for the wrong reason. Worth knowing for any future test of commit-message tooling here.
+The one-liner that replaced it was run against the same repo: unsigned, wrong-identity and
+correctly-signed commits are all distinguishable at a glance. On #355 itself the required `DCO`
+check is green, along with `Format`, `build`, `build-workspace`, `build-e2e-image`, `e2e`, `sim`
+and codecov; `prek run --all-files --skip build-doc` is green.

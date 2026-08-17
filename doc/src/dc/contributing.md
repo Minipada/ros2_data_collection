@@ -41,6 +41,43 @@ You can contribute to the source code with Pull Requests, for example:
   * Make sure to add documentation if it's relevant.
 
 
+### Signing off your commits
+
+Every commit in a pull request must carry a `Signed-off-by` trailer. It certifies that you
+wrote the patch, or otherwise have the right to submit it under this project's license — the
+full text is the [Developer Certificate of Origin](https://github.com/Minipada/ros2_data_collection/blob/jazzy/DCO)
+at the repository root. There is no agreement to sign and nothing to send: the trailer *is* the
+certification.
+
+`-s` adds it from your `user.name` and `user.email`, which is also the identity the trailer has
+to match:
+
+```bash
+git commit -s -m "fix(dc_group): drop partial Records on timeout"
+```
+
+If you forgot it, sign off the last commit:
+
+```bash
+git commit --amend -s --no-edit
+```
+
+…or a whole branch at once, then force-push:
+
+```bash
+git rebase --signoff origin/jazzy
+git push --force-with-lease
+```
+
+The `DCO` check on your pull request looks at every commit the pull request adds — history
+before it is left alone — and names each commit that is missing or mismatching the trailer. It
+is required on `jazzy`, so an unsigned commit blocks the merge. To see where your branch stands
+before you push — an empty right-hand side is a commit with no sign-off:
+
+```bash
+git log --no-merges --format='%h %s → %(trailers:key=Signed-off-by,valueonly,separator=%x2C%x20)' origin/jazzy..HEAD
+```
+
 ### Setup environment
 #### ROS
 Follow the steps to build your workspace and install dependencies in the [setup section](./setup.md)
