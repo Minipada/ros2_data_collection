@@ -6,6 +6,7 @@
 | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Want to contribute                  | [Open a PR](https://github.com/Minipada/ros2_data_collection/pulls)                                                                           |
 | Found a bug                         | [File a ticket on Github Issues](https://github.com/Minipada/ros2_data_collection/issues/new?assignees=&labels=bug&template=issues.md&title=) |
+| Found a vulnerability               | [Report it privately](https://github.com/Minipada/ros2_data_collection/security/advisories/new), never as a public issue                      |
 | Feature request                     | [Describe what you want on Github Discussions](https://github.com/Minipada/ros2_data_collection/discussions)                                  |
 | Want to start a discussion          | [Start one on Github Discussions](https://github.com/Minipada/ros2_data_collection/discussions)                                               |
 | Be aware of the ongoing development | Take a look at the [Github Project](https://github.com/users/Minipada/projects/1) and what is being worked on                                 |
@@ -19,6 +20,13 @@ Since I want DC to be community driven, go to [Github discussions](https://githu
 ### Found a bug?
 
 If you find a problem, first search if an issue already exists. If a related issue doesn't exist, you can open a new issue using the [issue form](https://github.com/Minipada/ros2_data_collection/issues/new?assignees=&labels=bug&template=bug_report.md&title=).
+
+### Found a vulnerability?
+
+Do not open a public issue, discussion or pull request. Report it through
+[GitHub private vulnerability reporting](https://github.com/Minipada/ros2_data_collection/security/advisories/new)
+instead; the [security policy](https://github.com/Minipada/ros2_data_collection/blob/jazzy/SECURITY.md)
+states the supported branches, the response targets and what is in scope.
 
 ### General guidelines
 

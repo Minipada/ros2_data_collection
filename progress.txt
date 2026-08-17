@@ -6697,3 +6697,54 @@ and that `nlohmann_json_schema_validator` in Jazzy implements `propertyNames`/`m
 `prek run --files …` passes on the three changed files. `doc/src/dc/measurements/thermal.md`'s
 Schema section carries the new schema plus a sentence on why the constraints are shaped this
 way instead of a `required` list.
+
+## #302 - Add SECURITY.md and a vulnerability disclosure contact
+
+The repository had no security policy, so the only route for someone finding a vulnerability
+was a public issue — which is the disclosure. `SECURITY.md` at the repo root now states the
+supported branches, the private reporting route, the response targets and the disclosure terms.
+
+**Supported branches, not versions.** DC has no tags and no releases (`0.1.0` in every
+`package.xml`, no `git tag`), so a "supported versions" table would have been fiction. The
+table names branch tips instead: `jazzy` gets fixes first (active DC 2.0 line), `humble` gets
+high/critical only (legacy DC 1.x, Fluent Bit), feature branches and forks get nothing.
+
+**Reporting route**: GitHub private vulnerability reporting, which was already enabled on the
+repository (`gh api repos/Minipada/ros2_data_collection/private-vulnerability-reporting` →
+`{"enabled":true}`), with `d.bensoussan@proton.me` as the fallback. The advisory link
+(`/security/advisories/new`) is the one the document leads with, so report, discussion, fix and
+advisory stay in one private place.
+
+**Response targets, stated as targets**: acknowledgement 3 business days, accept/reject +
+severity 10 business days, status update every 14 days, fix severity-dependent. Disclosure is
+coordinated with a 90-day default embargo (or until the fix lands on `jazzy`, whichever is
+first), published as a GHSA, CVE requested through GitHub when warranted, reporter credited.
+The document says outright that this is one maintainer with no support contract behind it and
+these are targets rather than an SLA — better than an SLA nobody can hold to.
+
+**Scope** is spelled out because of what this repo contains: the demo configs and
+`tools/infrastructure/` are deliberately trivial (unauthenticated Postgres, default
+credentials) so a demo runs on a laptop, and they attract scanner reports. Those are out of
+scope, as are ROS 2 and third-party dependencies (Vector, AWS SDK) unless DC's *use* of them is
+what creates the problem — but documentation presenting a demo credential as production-ready
+is explicitly called a bug, filed as a normal issue.
+
+**Linked from three places**, since a policy nobody finds is not a policy: the README
+(`README.md` is a symlink to `doc/src/dc/introduction.md`, so the link uses the
+`blob/jazzy/SECURITY.md` absolute form the docs already use for repo files — a relative link
+would break on the docs site) gets both a list entry and a `# Security` section before
+`# License`; `doc/src/dc/contributing.md` gets a TLDR row and a "Found a vulnerability?"
+subsection; and `.github/ISSUE_TEMPLATE/config.yml` gets a contact link, which puts "Report a
+security vulnerability" in the new-issue chooser itself — the moment someone is about to do the
+wrong thing.
+
+**Caveat worth knowing**: GitHub surfaces `SECURITY.md` from the **default branch**, which is
+still `humble`. Until this reaches `humble` (or the default branch moves to `jazzy`), the
+Security tab will keep showing no policy even though the file exists on `jazzy`. Private
+vulnerability reporting is repo-level and works regardless, so the reporting channel is live
+either way.
+
+**Verified**: `prek run --files SECURITY.md doc/src/dc/introduction.md doc/src/dc/contributing.md
+.github/ISSUE_TEMPLATE/config.yml --skip build-doc` passes (codespell, yaml syntax,
+end-of-file/whitespace fixers). Private vulnerability reporting confirmed enabled through the
+API, not just assumed.

@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Minipada/ros2_data_collection/security/advisories/new
+    about: Report it privately here, never as a public issue. See SECURITY.md.
   - name: Q&A
     url: https://github.com/Minipada/ros2_data_collection/discussions/categories/q-a
     about: Ask and answer questions
