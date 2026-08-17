@@ -30,6 +30,11 @@ void Camera::onConfigure()
   save_inspected_base64_ = dc_util::get_bool_type_param(node, measurement_name_, "save_inspected_base64", false);
   detection_modules_ =
       dc_util::get_str_array_type_param(node, measurement_name_, "detection_modules", std::vector<std::string>());
+  estimate_pose_ = dc_util::get_bool_type_param(node, measurement_name_, "estimate_pose", false);
+  code_size_ = dc_util::get_double_type_param(node, measurement_name_, "code_size", 0.0);
+  camera_info_topic_ = dc_util::get_str_type_param(node, measurement_name_, "camera_info_topic", "");
+  pose_frame_ = dc_util::get_str_type_param(node, measurement_name_, "pose_frame", "");
+  transform_timeout_ = dc_util::get_double_type_param(node, measurement_name_, "transform_timeout", 0.1);
   // FIXME Not used, wrong parameter too, should be without measurement_name_
   minio_bucket_ = dc_util::get_str_type_param(node, measurement_name_, "destinations.minio.bucket", "");
 
@@ -46,6 +51,11 @@ void Camera::onConfigure()
     RCLCPP_WARN(logger_, "Rotation angle is set to full rotation (%d). Ignored", rotation_angle_);
     rotation_angle_ = 0;
     node->set_parameter(rclcpp::Parameter(measurement_name_ + ".rotation_angle", rotation_angle_));
+  }
+
+  if (estimate_pose_ && code_size_ <= 0.0)
+  {
+    throw std::runtime_error{ "code_size must be a positive length in metres when estimate_pose is enabled" };
   }
 
   if (draw_det_barcodes_)
@@ -66,11 +76,32 @@ void Camera::onConfigure()
   // Data subscriber
   subscription_ = node->create_subscription<sensor_msgs::msg::Image>(
       cam_topic_, 10, std::bind(&Camera::cameraCb, this, std::placeholders::_1));
+
+  if (estimate_pose_)
+  {
+    if (camera_info_topic_.empty())
+    {
+      // ROS convention: camera_info sits next to the image topic it describes.
+      const size_t last_slash = cam_topic_.find_last_of('/');
+      camera_info_topic_ =
+          (last_slash == std::string::npos) ? "camera_info" : cam_topic_.substr(0, last_slash + 1) + "camera_info";
+    }
+    // Best-effort so the subscription also matches best-effort camera drivers.
+    camera_info_subscription_ = node->create_subscription<sensor_msgs::msg::CameraInfo>(
+        camera_info_topic_, rclcpp::SensorDataQoS(), std::bind(&Camera::cameraInfoCb, this, std::placeholders::_1));
+    RCLCPP_INFO(logger_, "Pose estimation enabled, reading intrinsics from %s", camera_info_topic_.c_str());
+  }
 }
 
 void Camera::cameraCb(const sensor_msgs::msg::Image& msg)
 {
   last_data_ = msg;
+}
+
+void Camera::cameraInfoCb(const sensor_msgs::msg::CameraInfo& msg)
+{
+  last_camera_info_ = msg;
+  camera_info_received_ = true;
 }
 
 void Camera::setValidationSchema()
@@ -127,6 +158,75 @@ void Camera::rotateImage(cv_bridge::CvImagePtr& cv_ptr)
   }
 }
 
+void Camera::addCodePose(json& barcode_json, const ZXing::Position& position, const cv::Size& raw_size)
+{
+  if (!camera_info_received_)
+  {
+    RCLCPP_WARN_THROTTLE(logger_, *getNode()->get_clock(), 5000, "No CameraInfo received on %s yet, skipping pose",
+                         camera_info_topic_.c_str());
+    return;
+  }
+
+  // Detection runs on the rotated image; the intrinsics describe the raw one.
+  const std::array<cv::Point2f, 4> corners = {
+    unrotatePoint({ static_cast<float>(position.topLeft().x), static_cast<float>(position.topLeft().y) },
+                  rotation_angle_, raw_size.width, raw_size.height),
+    unrotatePoint({ static_cast<float>(position.topRight().x), static_cast<float>(position.topRight().y) },
+                  rotation_angle_, raw_size.width, raw_size.height),
+    unrotatePoint({ static_cast<float>(position.bottomRight().x), static_cast<float>(position.bottomRight().y) },
+                  rotation_angle_, raw_size.width, raw_size.height),
+    unrotatePoint({ static_cast<float>(position.bottomLeft().x), static_cast<float>(position.bottomLeft().y) },
+                  rotation_angle_, raw_size.width, raw_size.height)
+  };
+
+  const std::vector<double> distortion(last_camera_info_.d.begin(), last_camera_info_.d.end());
+  auto pose = estimateSquareCodePose(corners, code_size_, last_camera_info_.k, distortion);
+  if (!pose.has_value())
+  {
+    RCLCPP_WARN(logger_, "Could not estimate a pose for the detected code");
+    return;
+  }
+
+  geometry_msgs::msg::PoseStamped pose_stamped;
+  pose_stamped.header.frame_id =
+      last_camera_info_.header.frame_id.empty() ? last_data_.header.frame_id : last_camera_info_.header.frame_id;
+  pose_stamped.header.stamp = last_data_.header.stamp;
+  pose_stamped.pose = pose.value();
+
+  if (!pose_frame_.empty() && pose_frame_ != pose_stamped.header.frame_id)
+  {
+    try
+    {
+      pose_stamped = tf_->transform(pose_stamped, pose_frame_, tf2::durationFromSec(transform_timeout_));
+    }
+    catch (const tf2::TransformException& ex)
+    {
+      // Reported in the camera optical frame rather than dropped: frame_id says which.
+      RCLCPP_WARN(logger_, "Could not transform code pose into %s (%s), reporting it in %s", pose_frame_.c_str(),
+                  ex.what(), pose_stamped.header.frame_id.c_str());
+    }
+  }
+
+  double roll = 0.0;
+  double pitch = 0.0;
+  double yaw = 0.0;
+  tf2::Quaternion q(pose_stamped.pose.orientation.x, pose_stamped.pose.orientation.y, pose_stamped.pose.orientation.z,
+                    pose_stamped.pose.orientation.w);
+  tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
+
+  barcode_json["pose"]["frame_id"] = pose_stamped.header.frame_id;
+  barcode_json["pose"]["x"] = pose_stamped.pose.position.x;
+  barcode_json["pose"]["y"] = pose_stamped.pose.position.y;
+  barcode_json["pose"]["z"] = pose_stamped.pose.position.z;
+  barcode_json["pose"]["roll"] = roll;
+  barcode_json["pose"]["pitch"] = pitch;
+  barcode_json["pose"]["yaw"] = yaw;
+  // Camera-to-code range, taken from the untransformed pose so it stays a range whatever
+  // frame x/y/z ended up in.
+  barcode_json["pose"]["distance"] =
+      std::sqrt(std::pow(pose->position.x, 2) + std::pow(pose->position.y, 2) + std::pow(pose->position.z, 2));
+}
+
 dc_interfaces::msg::StringStamped Camera::collect()
 {
   auto node = getNode();
@@ -179,6 +279,9 @@ dc_interfaces::msg::StringStamped Camera::collect()
       auto* enc_msg = reinterpret_cast<unsigned char*>(buf.data());
       data_json["base64"]["raw"] = base64_encode(enc_msg, buf.size());
     }
+
+    // Kept for addCodePose(): the intrinsics describe the raw image, not the rotated one.
+    const cv::Size raw_size = cv_ptr->image.size();
 
     // Rotate image
     if (rotation_angle_ != 0)
@@ -236,28 +339,23 @@ dc_interfaces::msg::StringStamped Camera::collect()
         }
       }
 
+      const bool draw_detections = save_detections_img_ && draw_det_barcodes_;
       if (!result_barcodes.empty())
       {
         data_json["inspected"]["barcode"] = json::array();
       }
-      if (
-          // Save image with inspected data
-          save_detections_img_
-          // Barcode(s) found
-          && !result_barcodes.empty()
-          // Drawing enabled
-          && draw_det_barcodes_)
+      for (auto& barcode : result_barcodes)
       {
-        for (auto& barcode : result_barcodes)
-        {
-          auto bbox = ZXing::BoundingBox(barcode.position());
-          uint16_t top = static_cast<uint16_t>(std::max(0, bbox.topLeft().y));
-          uint16_t left = static_cast<uint16_t>(std::max(0, bbox.topLeft().x));
-          uint16_t width = static_cast<uint16_t>(bbox.bottomRight().x - bbox.topLeft().x);
-          uint16_t height = static_cast<uint16_t>(bbox.bottomRight().y - bbox.topLeft().y);
-          std::string type = ZXing::ToString(barcode.format());
-          std::string data = barcode.text();
+        auto bbox = ZXing::BoundingBox(barcode.position());
+        uint16_t top = static_cast<uint16_t>(std::max(0, bbox.topLeft().y));
+        uint16_t left = static_cast<uint16_t>(std::max(0, bbox.topLeft().x));
+        uint16_t width = static_cast<uint16_t>(bbox.bottomRight().x - bbox.topLeft().x);
+        uint16_t height = static_cast<uint16_t>(bbox.bottomRight().y - bbox.topLeft().y);
+        std::string type = ZXing::ToString(barcode.format());
+        std::string data = barcode.text();
 
+        if (draw_detections)
+        {
           auto draw_req = std::make_shared<dc_interfaces::srv::DrawImage::Request>();
           draw_req->frame = dc_util::cvToImage(cv_ptr);
           draw_req->shape = "rectangle";
@@ -282,18 +380,23 @@ dc_interfaces::msg::StringStamped Camera::collect()
           }
           auto image_det = result_future_draw.get()->frame;
           cv_ptr = cv_bridge::toCvCopy(image_det, image_det.encoding);
-          json barcode_json;
-          barcode_json["data"] = data;
-          barcode_json["type"] = type;
-          barcode_json["top"] = top;
-          barcode_json["left"] = left;
-          barcode_json["width"] = width;
-          barcode_json["height"] = height;
-          data_json["inspected"]["barcode"].push_back(barcode_json);
         }
+
+        json barcode_json;
+        barcode_json["data"] = data;
+        barcode_json["type"] = type;
+        barcode_json["top"] = top;
+        barcode_json["left"] = left;
+        barcode_json["width"] = width;
+        barcode_json["height"] = height;
+        if (estimate_pose_)
+        {
+          addCodePose(barcode_json, barcode.position(), raw_size);
+        }
+        data_json["inspected"]["barcode"].push_back(barcode_json);
       }
 
-      if (!detection_modules_.empty() && save_detections_img_ && dc_util::fieldInJSON(data_json, "inspected"))
+      if (!detection_modules_.empty() && draw_detections && dc_util::fieldInJSON(data_json, "inspected"))
       {
         // Save image with detection
         // Get local and relative path

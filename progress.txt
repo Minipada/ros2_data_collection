@@ -6748,3 +6748,122 @@ either way.
 .github/ISSUE_TEMPLATE/config.yml --skip build-doc` passes (codespell, yaml syntax,
 end-of-file/whitespace fixers). Private vulnerability reporting confirmed enabled through the
 API, not just assumed.
+
+## #48 - Camera measurement: estimate pose from detected QR codes
+
+A detection Record now optionally carries the pose of each code it decoded, so an inspection
+answers "where was it?" and not only "was it there?".
+
+**The issue's own gate was stale and is not honoured.** #48 was originally blocked on the ViSP
+migration (lagadic/vision_visp#121). Pose from a planar marker is `cv::solvePnP` over four
+corners given a physical size and the camera intrinsics, and #123 already put a detector in
+process that hands back exactly those four corners (`ZXing::Result::position()`), so ViSP would
+have been a large dependency for a solved problem. `SOLVEPNP_IPPE_SQUARE` is the solver for this
+exact case — four coplanar corners of a square — and it lives in `opencv_calib3d`, which the
+image already carries for `cv_bridge`.
+
+- **Off by default, and free when off.** `estimate_pose` defaults to false; with it false no
+  `camera_info` subscription is created and the Record is byte-for-byte what it was. Turning it
+  on needs the two things detection alone does not have: `code_size` (the printed side length,
+  in metres — `onConfigure()` throws if it is not positive, the same way `rotation_angle` already
+  validates) and intrinsics from `camera_info_topic`, which defaults to `camera_info` alongside
+  `cam_topic` rather than to nothing, since that is the ROS convention every driver follows.
+  Subscribed best-effort (`SensorDataQoS`) so a best-effort camera driver still matches.
+
+- **The maths lives in its own header so it can be tested without a ROS graph.**
+  `dc_measurements/include/dc_measurements/code_pose.hpp` is header-only:
+  `estimateSquareCodePose(corners, side, k, d)` returns `std::optional<geometry_msgs::msg::Pose>`
+  and `unrotatePoint()` maps a rotated-image pixel back to the raw image. Neither touches a node,
+  a parameter or a topic, so `test_code_pose` exercises them directly instead of standing up a
+  MeasurementServer and hoping. Degenerate input (`code_size` 0, an all-zero camera matrix, a
+  `cv::Exception` out of solvePnP) returns nullopt rather than a plausible-looking wrong pose.
+
+- **The convention is written down because it is the part that silently goes wrong — and the
+  first version of it was wrong.** The pose is the *code's* pose, not the robot's. The reported
+  code frame is centred on the code with X right, Y **down**, Z **into** its printed face: the
+  camera optical frame's own axes, so a code seen square-on is the identity orientation and
+  roll/pitch/yaw read as how far off square-on it was. That is the ArUco/OpenCV marker frame
+  turned 180 degrees about X, which is why the code negates the Y and Z columns of the matrix
+  solvePnP returns. The first draft instead declared the object points Y-up *and* claimed the
+  identity for square-on, which is self-contradictory: `SOLVEPNP_IPPE_SQUARE` documents its
+  object-point layout as a precondition, and that layout's frame has Z pointing back at the
+  camera. It survived the synthetic tests — they projected through the same wrong object points,
+  so the error cancelled — and was caught only by the end-to-end test, which renders a real QR
+  code and lets ZXing find the corners: a 15-degree tilt came back as `rpy=(164, 0.13, -90)`
+  instead of `(0, 15, 0)`. Worth recording because the render itself was the tell: mapping the
+  bitmap's top-left onto the Y-up "top-left" object point drew the code upside down, and ZXing
+  duly reported its corners in the code's own (rotated) orientation. A synthetic-corner test can
+  never catch this class of bug on its own.
+
+- **Also checked, because it was the first suspicion for that failure: ZXing's corners are
+  perspective-faithful.** A QR code below version 2 has no alignment pattern, so a detector has
+  to derive the fourth corner (the one without a finder pattern) somehow, and extrapolating it
+  as a parallelogram would destroy exactly the out-of-plane information a PnP solve needs.
+  Measured on rendered codes at 0, 15, 30 and 40 degrees of tilt, the diagonal-midpoint skew of
+  ZXing's reported quad tracks the true projected quad closely (20.1 vs 21.1 px at 15 degrees,
+  38.1 vs 40.8 at 30, 51.2 vs 52.7 at 40) for a 21-module version-1 code as well as a 25-module
+  one. Orientation is recoverable from a version-1 code; the bug was ours.
+
+- **Frames and the failure mode.** The output frame is the camera optical frame (REP 103) unless
+  `pose_frame` names one to transform into via TF. Every emitted pose carries the `frame_id` it
+  is actually in, which is what makes the failure mode safe: if the transform is not available
+  inside `transform_timeout` the pose is still written, in the camera frame, with a warning —
+  dropping it would lose the reading, and reporting it silently in the wrong frame is the thing
+  `frame_id` exists to prevent. `pose.distance` is deliberately computed from the *untransformed*
+  pose so it stays a camera-to-code range whatever `pose_frame` is.
+
+- **`rotation_angle` is handled, not ignored.** Detection runs on the rotated image while the
+  intrinsics describe the raw one, so corners are mapped back through `unrotatePoint()` before
+  the solve. Without that, any camera configured with a rotation would have produced a
+  confidently wrong pose. `PoseIsUnchangedByImageRotation` is the test that pins it: project a
+  known pose, rotate the corners into a 90-degree image, map them back, and require the same
+  pose out.
+
+- **A pre-existing bug had to be fixed for the feature to be reachable at all.** `camera.cpp`
+  built its `inspected.barcode` entries *inside* the `save_detections_img_ && draw_det_barcodes_`
+  branch, so a deployment with drawing off recorded no detections whatsoever — the codes were
+  decoded and thrown away. The loop now always records the entry and draws separately. The image
+  saving stays gated on drawing exactly as before (the old condition tested
+  `fieldInJSON(data_json, "inspected")`, which only the drawing branch could ever set, so this is
+  the same behaviour spelled out rather than implied); the only visible change is that detections
+  now reach the Record with `draw_det_barcodes: false`.
+
+- **Schema and docs.** `camera.json` gains a `pose` `$def` (frame_id, x/y/z, roll/pitch/yaw,
+  distance) referenced from the barcode entry. `doc/src/dc/measurements/camera.md` gains the
+  parameter rows, a "Code pose estimation" section with the frame/convention explanation, a
+  worked YAML plus the JSON it produces, and a warning covering the two *systematic* biases (a
+  detector locates corners to about one module, so range carries a percent-level bias averaging
+  will not remove; and IPPE_SQUARE assumes a square, so a stretched code solves to a compromise
+  scale). The page's embedded schema block was stale — it still described `local_img_paths` and a
+  `data` array of integers, neither of which the plugin has emitted for some time — and is now
+  generated from `camera.json` itself rather than re-hand-edited.
+
+- **The demo proves frames and axes, not centimetres, and the reason is the asset.**
+  `dc_simulation`'s `qrcode_*` model stretches a 290x365 texture across a 0.5 x 0.5 m face (the
+  COLLADA node scales the 2x2x2 cube by 0.25 in Y and Z), so its printed code measures 0.362 m
+  across and 0.288 m down — not square, and therefore not a metrologically sound target for a
+  square-marker solver. `qrcodes_stdout.yaml` (the params the simulation check runs) turns pose
+  estimation on with a mid-value `code_size: 0.325` and `pose_frame: "map"`, and
+  `verify_sim.py`'s recorder now prints each code's map-frame pose next to `gt_err`, the
+  horizontal distance to the nearest QR model parsed out of `qrcodes.world` — the simulator's own
+  ground truth. `run.sh`'s `detect` stage fails if the closest such reading is more than a metre
+  out. A metre is loose on purpose: it cannot certify accuracy, but it does catch every failure
+  that a decoded-payload check cannot — wrong frame, flipped axis, uninitialised intrinsics,
+  a pose left in the camera frame. Making the asset square is separate work, not smuggled in
+  here: #51 tuned detection against these exact renders and changing them would move that too.
+
+- **Verified**: the six `test_code_pose` cases pass, compiled and run against the workspace image
+  (`libzxing-dev` 2.2.1, OpenCV 4.6, Jazzy). Four are synthetic — round-tripping a known pose
+  through `cv::projectPoints` and back, the degenerate-input rejections, and the rotation
+  mapping. The other two are the ones that carry weight: `RecoversAPoseFromARenderedQrCode`
+  encodes a QR with ZXing's own writer, renders it through the demo camera's intrinsics
+  (1280x720, 1.047 rad horizontal FOV) at a known pose, decodes it back with
+  `ZXing::ReadBarcodes` and recovers a range of **1.19593 m against 1.20121 m of ground truth,
+  0.44%**, with the tilt inside 5 degrees; `PoseIsUnchangedByImageRotation` pins the
+  `rotation_angle` mapping. Angular tolerances sit at 0.01 rad rather than 1e-5 because the
+  corner points are `cv::Point2f` and the test code spans only ~50 px — a convention error is
+  tens of degrees, so this still separates the two cleanly. `prek run clang-format` passes on
+  every touched C++ file and `ruff check`/`ruff format` on `verify_sim.py`. Not run here: the
+  simulation harness's `detect` stage (it needs the full warehouse world under Nav2, tens of
+  minutes on a GPU-less machine) — the `gt_err` assertion it adds is exercised by CI's `sim`
+  job, not locally.

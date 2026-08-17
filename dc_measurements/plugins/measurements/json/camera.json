@@ -88,6 +88,47 @@
         "type": {
           "description": "Barcode type",
           "type": "string"
+        },
+        "pose": {
+          "description": "Pose of the code, present only when estimate_pose is enabled",
+          "$ref": "#/$defs/pose"
+        }
+      }
+    },
+    "pose": {
+      "type": "object",
+      "properties": {
+        "frame_id": {
+          "description": "Frame the pose is expressed in",
+          "type": "string"
+        },
+        "x": {
+          "description": "Code position along the frame's X axis, in meters",
+          "type": "number"
+        },
+        "y": {
+          "description": "Code position along the frame's Y axis, in meters",
+          "type": "number"
+        },
+        "z": {
+          "description": "Code position along the frame's Z axis, in meters",
+          "type": "number"
+        },
+        "roll": {
+          "description": "Code orientation about the frame's X axis, in radians",
+          "type": "number"
+        },
+        "pitch": {
+          "description": "Code orientation about the frame's Y axis, in radians",
+          "type": "number"
+        },
+        "yaw": {
+          "description": "Code orientation about the frame's Z axis, in radians",
+          "type": "number"
+        },
+        "distance": {
+          "description": "Straight-line distance from the camera to the code, in meters",
+          "type": "number"
         }
       }
     }

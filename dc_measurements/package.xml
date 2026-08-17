@@ -27,6 +27,7 @@
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>yaml_cpp_vendor</depend>
   <depend>zxing-cpp</depend>

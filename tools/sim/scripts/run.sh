@@ -261,6 +261,22 @@ if has_stage detect; then
   codes=$(rin 'grep -a "format=QRCode" /tmp/codes.log | grep -ao "code=[0-9]*" | sort -u | tr "\n" " "' 2>/dev/null || true)
   log "$reads QR codes read over $reached stations: ${codes:-none}"
   [ "$reads" -ge "$want" ] || fail "only $reads QR codes read, wanted at least $want (see $RUN_DIR/sim.log)"
+
+  # Pose estimation (#48). The recorder reports each map-frame code pose next to the
+  # nearest QR model in the world file, so this asserts against the simulator's own
+  # ground truth. The tolerance is deliberately loose: dc_simulation's qrcode_* asset
+  # stretches a 290x365 texture over a square face, so its printed code is 0.362 m
+  # across and 0.288 m down and no single code_size is exact. A metre still catches
+  # every failure worth catching here -- wrong frame, flipped axis, uninitialised
+  # intrinsics -- which a decoded-payload check cannot.
+  best=$(rin 'grep -ao "gt_err=[0-9.]*" /tmp/codes.log | cut -d= -f2 | sort -g | head -1' 2>/dev/null | head -1 | tr -dc '0-9.' || true)
+  if [ -n "${best:-}" ]; then
+    log "best QR-code pose landed ${best} m from the world's own placement"
+    awk -v e="$best" 'BEGIN { exit !(e < 1.0) }' \
+      || fail "closest estimated code pose was ${best} m from any QR model in the world"
+  else
+    fail "no estimated code poses recorded (estimate_pose off, or no CameraInfo)"
+  fi
 fi
 
 log "simulation check passed (stages: $STAGES)"
