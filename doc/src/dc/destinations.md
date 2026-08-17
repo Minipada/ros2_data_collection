@@ -111,6 +111,27 @@ The destination's own column type can truncate independently of `time_format`. A
 `epoch_nanos` is exact, sortable and indexable.
 ```
 
+### `incident_id`
+
+A Measurement configured for [incident capture](./measurements.md) tags every Record it
+releases with the `incident_id` of the `FlushEvent` that released it. That field is part of
+the Record envelope, so a `postgres` Destination writes it to its own **`incident_id`
+column** — "everything from this one event" is `WHERE incident_id = '…'`, not a substring
+search through a JSON payload:
+
+```sql
+ALTER TABLE dc ADD COLUMN incident_id text;
+```
+
+The Bridge renders the mapping into the `dc_bridge_normalize` transform for every `postgres`
+Destination. Vector's `postgres` sink has no column options of its own — a top-level event
+key lands in the same-named column and everything else is dropped — so the column has to
+exist in the table before the first incident, exactly like every other column
+(`tools/e2e/sql/init.sql` and `tools/infrastructure/docker/config/postgresql/init.sql` both
+carry it). Records collected outside an incident have no `incident_id` and leave the column
+NULL. Other Destination types need nothing: `incident_id` is already a top-level key of the
+JSON they receive.
+
 Type-specific parameters:
 
 | Type       | Required                                    | Optional                                                                                                          |
