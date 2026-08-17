@@ -1,10 +1,10 @@
 import os
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseSettings
 
 
-class GetDataMode(str, Enum):
+class GetDataMode(StrEnum):
     TODAY = "Today"
     YESTERDAY = "Yesterday"
     THIS_WEEK = "This week"
@@ -15,13 +15,13 @@ class GetDataMode(str, Enum):
     RUN_ID = "Run id"
 
 
-class Storage(str, Enum):
+class Storage(StrEnum):
     # Follows JSON model structure: must match the dc_bridge `destinations` name
     # the demo's Measurements write under `remote_paths` (see qrcodes_minio_pgsql.yaml).
     RUSTFS = "rustfs"
 
 
-class Backend(str, Enum):
+class Backend(StrEnum):
     POSTGRESQL = "postgresql"
 
 

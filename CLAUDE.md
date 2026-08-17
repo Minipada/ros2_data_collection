@@ -42,9 +42,15 @@ are already recorded there rather than in code comments.
 
 ```bash
 colcon build                 # requires a sourced ROS 2 workspace; see doc/src/dc/setup.md
-pip3 install -r requirements.txt   # or `poetry install`
-pre-commit run --all-files   # flake8, doc build, yaml/json/xml checks, etc. — see .pre-commit-config.yaml
+uv sync                      # Python deps: pyproject.toml + uv.lock, no requirements.txt
+prek run --all-files --skip build-doc   # ruff, doc build, yaml/json/xml checks, … — see .pre-commit-config.yaml
 ```
+
+Python tooling is **prek + uv**, not pre-commit + poetry (same move as `~/dev/monorepo`),
+and lint/format is **ruff only** (`[tool.ruff]` in `pyproject.toml`). There are no
+`requirements*.txt` any more — `pyproject.toml` + `uv.lock` are the dependency source.
+Skip `build-doc` outside a docs change: it builds the docs container, which `doc.yaml`
+owns in CI.
 
 CI (`.github/workflows/ci.yaml`) builds the DC workspace with Podman and runs `colcon
 test` (C++ gtest across every package) against it — see "Containers: Podman, not
@@ -116,6 +122,14 @@ those are dropped):
 - **`hadolint`** lints every Containerfile (already wired into `.pre-commit-config.yaml`
   for the legacy `docker/*/Dockerfile`s — new `Containerfile`s are covered by the same
   hook via its glob).
+
+## Comments
+
+Keep them short. A file header is one to three lines; a block comment is one or two.
+Say *why*, and only when the code can't. No history lessons, no restating the diff, no
+paragraphs of rationale — that belongs in `progress.txt`, an ADR, or the PR description.
+Some older files (`ci.yaml`, `doc.yaml`, `tools/e2e/Containerfile`) have long headers
+from before this rule; don't copy them, and trim them when you touch them.
 
 ## Issue-tracker workflow (used by `run_once.sh`)
 

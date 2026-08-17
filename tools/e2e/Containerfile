@@ -37,8 +37,11 @@ ARG ROS_DISTRO=jazzy
 FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS cacher
 WORKDIR /root/ws
 COPY . src/ros2_data_collection
+# `-exec … +` rather than `| xargs`: this stage sets no pipefail SHELL (only the
+# toolchain stage below does), so a pipe here would hide a failing `find` — hadolint
+# DL4006/SC2038.
 RUN mkdir -p /tmp/manifests && \
-    find src/ros2_data_collection -name package.xml | xargs cp --parents -t /tmp/manifests
+    find src/ros2_data_collection -name package.xml -exec cp --parents -t /tmp/manifests {} +
 
 FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS toolchain
 

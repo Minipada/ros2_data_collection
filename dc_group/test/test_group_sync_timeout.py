@@ -12,13 +12,13 @@ import time
 
 import pytest
 import rclpy
+from dc_group.group_server import GroupServer
 from rcl_interfaces.msg import Log
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 
-from dc_group.group_server import GroupServer
 from dc_interfaces.msg import StringStamped
 
 GROUP = "test_group"
@@ -101,9 +101,11 @@ class GroupHarness:
 
     def wait_for_discovery(self):
         matched = self.spin_until(
-            lambda: all(pub.get_subscription_count() > 0 for pub in self.input_publishers)
-            and self.client.count_publishers(OUTPUT) > 0
-            and self.client.count_publishers("/rosout") > 0,
+            lambda: (
+                all(pub.get_subscription_count() > 0 for pub in self.input_publishers)
+                and self.client.count_publishers(OUTPUT) > 0
+                and self.client.count_publishers("/rosout") > 0
+            ),
             timeout=10.0,
         )
         assert matched, "the Group node's subscriptions/publisher never matched the test node"

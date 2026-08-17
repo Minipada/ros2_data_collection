@@ -376,7 +376,7 @@ def main(args: list[str] | None = None) -> None:
         group_node = GroupServer(node_name="group_server")
         rclpy.spin(group_node)
     except KeyboardInterrupt:
-        print("Group data collection stopped")  # noqa: T201
+        print("Group data collection stopped")
         group_node.destroy_node()
     finally:
         rclpy.shutdown()

@@ -12,6 +12,7 @@ Usage:
     verify_sim.py nav          # AMCL is localized against the static map
     verify_sim.py record       # log every QR code the demo reads, until killed
 """
+
 import json
 import math
 import sys
@@ -121,9 +122,11 @@ def check_topics(node, report):
         report: collects pass/fail for the exit status.
     """
     node.spin_until(
-        lambda: all(x is not None for x in (node.odom, node.scan, node.imu, node.joints))
-        and len(node.images) == len(CAMERAS)
-        and node.tf_frames,
+        lambda: (
+            all(x is not None for x in (node.odom, node.scan, node.imu, node.joints))
+            and len(node.images) == len(CAMERAS)
+            and node.tf_frames
+        ),
         SETTLE_S,
     )
 

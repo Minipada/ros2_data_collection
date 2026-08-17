@@ -4,8 +4,8 @@
 !ros2_data_collection*.repos
 !.clang*
 !.codecov.yaml
-!requirements.txt
-!requirements-dev.txt
+!pyproject.toml
+!uv.lock
 !humble.yaml
 !setup.cfg
 !**/package.xml

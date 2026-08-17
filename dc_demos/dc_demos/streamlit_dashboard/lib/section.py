@@ -4,6 +4,8 @@ from abc import ABCMeta, abstractmethod
 import streamlit as st
 from config import Backend, Storage, config
 
+logger = logging.getLogger(__name__)
+
 
 class Section(metaclass=ABCMeta):
     def __init__(
@@ -29,7 +31,7 @@ class Section(metaclass=ABCMeta):
                 result = func(self, *args, **kwargs)
                 return result
             else:
-                logging.warning("Backend not supported for this function")
+                logger.warning("Backend not supported for this function")
 
         return wrapper
 
@@ -40,7 +42,7 @@ class Section(metaclass=ABCMeta):
                 result = func(self, *args, **kwargs)
                 return result
             else:
-                logging.warning("Storage not supported for this function")
+                logger.warning("Storage not supported for this function")
 
         return wrapper
 
@@ -50,7 +52,7 @@ class Section(metaclass=ABCMeta):
             try:
                 func(self)
             except (TypeError, AssertionError):
-                logging.info("No data")
+                logger.info("No data")
 
         return wrapper
 

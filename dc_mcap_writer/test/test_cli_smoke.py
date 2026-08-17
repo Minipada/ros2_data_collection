@@ -6,6 +6,7 @@ actual callers do: a TCP client sending newline-delimited JSON, exactly what Vec
 `socket` sink does (`dc_demos/config/mcap_sink.toml`), and `SIGTERM`, exactly what
 `podman stop`/systemd send on shutdown — neither is exercised by the unit tests.
 """
+
 import json
 import os
 import signal
@@ -97,7 +98,7 @@ def test_two_process_restarts_in_the_same_second_do_not_collide(tmp_path):
     messages = _read_all_messages(tmp_path)
     topics = {channel.topic for _, channel, _ in messages}
     assert topics == {"dc.measurement.a", "dc.measurement.b"}, (
-        "one process's file was truncated by the other's — " f"{first_stdout}\n{second_stdout}"
+        f"one process's file was truncated by the other's — {first_stdout}\n{second_stdout}"
     )
 
 

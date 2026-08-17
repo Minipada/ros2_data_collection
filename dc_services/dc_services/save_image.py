@@ -46,7 +46,7 @@ def main(args: list[str] | None = None) -> None:
         save_image_node = SaveImageNode(node_name="save_image")
         rclpy.spin(save_image_node)
     except KeyboardInterrupt:
-        print("save_image stopped")  # noqa: T201
+        print("save_image stopped")
     finally:
         save_image_node.destroy_node()
         rclpy.shutdown()

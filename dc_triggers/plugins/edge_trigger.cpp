@@ -16,10 +16,8 @@ bool EdgeTrigger::checkFired()
     return false;
   }
 
-  const bool satisfied = condition_set_.isSatisfied(
-      dc_core::ConditionStateLookup{ [this](const std::string& condition_name) {
-        return getConditionState(condition_name);
-      } });
+  const bool satisfied = condition_set_.isSatisfied(dc_core::ConditionStateLookup{
+      [this](const std::string& condition_name) { return getConditionState(condition_name); } });
 
   const bool fired = satisfied && !previously_satisfied_;
   previously_satisfied_ = satisfied;

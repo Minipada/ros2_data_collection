@@ -148,7 +148,8 @@ def check_if_numbers_are_consecutive(list_: list) -> bool:
         bool: Returns True if numbers in the list are consecutive
     """
     return all(
-        True if second - first == 1 else False for first, second in zip(list_[:-1], list_[1:])
+        True if second - first == 1 else False
+        for first, second in zip(list_[:-1], list_[1:], strict=True)
     )
 
 

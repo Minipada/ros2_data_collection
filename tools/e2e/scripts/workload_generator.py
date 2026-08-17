@@ -11,6 +11,7 @@ tools/e2e/scripts/verify_zero_loss.py can assert both "no gaps" (a missing value
 data loss) and "no duplicates" (a repeated value is a double-delivery) independently of
 timestamp precision.
 """
+
 import json
 import os
 
@@ -96,7 +97,7 @@ class WorkloadGenerator(Node):
         Returns:
             dict: per-topic next counter value.
         """
-        counters = {name: 0 for name in self._names}
+        counters = dict.fromkeys(self._names, 0)
         if not os.path.exists(LEDGER_PATH):
             return counters
         with open(LEDGER_PATH) as ledger:

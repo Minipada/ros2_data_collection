@@ -8,10 +8,9 @@ doc/src/dc/demos/qrcodes_minio_pgsql.md.
 import os
 
 from ament_index_python.packages import get_package_share_directory
+from dc_demos.launch_common import dc_demo_launch_description
 from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
-
-from dc_demos.launch_common import dc_demo_launch_description
 
 
 def generate_launch_description():

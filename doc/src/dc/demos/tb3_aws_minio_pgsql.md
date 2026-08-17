@@ -25,10 +25,11 @@ colcon build
 
 ### Python dependencies
 
-For this tutorial, we will need to install all dependencies:
+For this tutorial, we will need to install all dependencies, the demo dashboard's
+included ([uv](https://docs.astral.sh/uv/) owns them; see [Setup](../setup.md)):
 
 ```bash
-pip3 install -r requirements.txt -r requirements-dev.txt
+uv sync
 ```
 
 ### Setup Infrastructure

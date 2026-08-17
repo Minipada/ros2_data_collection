@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Follow waypoints using the ROS 2 Navigation Stack (Nav2)."""
+
 import math
 import sys
 
@@ -47,7 +48,9 @@ def camera_stations():
         A list of (x, y, yaw) tuples, metres and radians in the map frame.
     """
     stations = []
-    for row, (row_x, yaw) in enumerate(zip(ROWS_X, [ROW_YAW[0], ROW_YAW[1], ROW_YAW[0]])):
+    for row, (row_x, yaw) in enumerate(
+        zip(ROWS_X, [ROW_YAW[0], ROW_YAW[1], ROW_YAW[0]], strict=True)
+    ):
         indices = range(ROWS_COUNT * PALLET_PER_ROW)
         # The middle row is driven the other way, so the robot does not have to
         # cross the whole warehouse between aisles.

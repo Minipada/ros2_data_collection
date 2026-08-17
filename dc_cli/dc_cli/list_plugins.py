@@ -20,7 +20,7 @@ def print_plugins(path: pathlib.Path):
             {"description": library[0][0].text.strip(), "class": library[0].attrib["name"]}
         )
 
-    plugins = sorted(plugins, key=lambda i: (i["class"]))
+    plugins = sorted(plugins, key=lambda i: i["class"])
 
     for plugin in plugins:
         print(f"{plugin['class']}: {plugin['description']}")

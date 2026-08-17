@@ -1,6 +1,5 @@
 """Collects cpu data."""
 
-
 import cv2
 import rclpy
 from cv_bridge import CvBridge
@@ -77,7 +76,7 @@ def main(args: list[str] | None = None) -> None:
         draw_image = DrawImageNode(node_name="draw_image")
         rclpy.spin(draw_image)
     except KeyboardInterrupt:
-        print("draw_image stopped")  # noqa: T201
+        print("draw_image stopped")
     finally:
         draw_image.destroy_node()
         rclpy.shutdown()

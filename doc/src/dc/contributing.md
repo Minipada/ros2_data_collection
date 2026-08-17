@@ -37,13 +37,20 @@ You can contribute to the source code with Pull Requests, for example:
 #### ROS
 Follow the steps to build your workspace and install dependencies in the [setup section](./setup.md)
 
-Then, install the pre-commit hook:
+Then install the git hook. `.pre-commit-config.yaml` is run by
+[prek](https://prek.j178.dev), a single-binary reimplementation of pre-commit:
 
 ```bash
-pre-commit install
+uv tool install prek   # or: curl -LsSf https://prek.j178.dev/install.sh | sh
+prek install
 ```
 
-You are now ready to write some code, commit and follow the standards with the pre-commit hook.
+You are now ready to write some code, commit and follow the standards with the git hook.
+To run every hook over the whole tree the way CI does:
+
+```bash
+prek run --all-files --skip build-doc   # drop the --skip to check the docs build too
+```
 
 #### Docs
 

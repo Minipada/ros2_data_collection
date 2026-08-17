@@ -55,6 +55,7 @@ Checks:
    (scripts/mcap_summary.py, which needs the `mcap` library and so runs inside the DC
    image via run.sh, not on the CI host runner).
 """
+
 import argparse
 import datetime
 import json
@@ -592,9 +593,7 @@ def check_raw(
         if span >= 1.0:
             details["raw"]["span_seconds"] = round(span, 1)
             details["raw"]["bytes_per_second"] = round(total_bytes / span, 1)
-            details["raw"]["projected_mb_per_day"] = round(
-                total_bytes / span * 86400 / 1e6, 1
-            )
+            details["raw"]["projected_mb_per_day"] = round(total_bytes / span * 86400 / 1e6, 1)
 
     if total_lines == 0:
         violations.append(
