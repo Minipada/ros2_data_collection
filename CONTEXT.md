@@ -10,16 +10,33 @@ _Avoid_: metric, sensor log, sample
 
 **Condition**:
 A boolean predicate on robot state that gates whether a Measurement's Records are collected.
-_Avoid_: filter (as a synonym for Condition; "Trigger" is now a distinct DC concept, see below)
+A Condition is a *level*: it holds for as long as the predicate is true, and gates collection
+going forward only.
+_Avoid_: filter (as a synonym for Condition); **trigger** — "a Condition turning on" is not a
+Trigger, which is a distinct DC concept with its own plugin type (see below)
 
 **Trigger**:
 A plugin that fires a one-shot signal (a FlushEvent) on the false→true rising edge of a
-Condition composition, distinct from Condition's continuous gating. Used to release a
-Measurement's pre-event buffer around an incident (e.g. an emergency brake).
+Condition composition. A Trigger is an *edge*, where a Condition is a level: it fires once
+to release a Measurement's pre-event buffer around an incident (e.g. an emergency brake),
+rather than gating live collection while true. Built out of Condition plugins, using the same
+`if_all`/`if_any`/`if_none` composition Measurements use, and loaded by the trigger broadcast
+node — never by a Measurement.
+_Avoid_: using the word for a Condition becoming active, or for a Measurement's polling tick
 
 **FlushEvent**:
 The message a Trigger broadcast node publishes when its Trigger fires, carrying a fresh
-`incident_id` that downstream Measurements adopt for that one event.
+`incident_id` that downstream Measurements adopt for that one event. It is the whole contract
+between the Trigger side and the Measurement side — several Measurements can subscribe to the
+same flush topic.
+_Avoid_: flush signal, flush command
+
+**Incident**:
+One flush cycle: the pre-event window a FlushEvent released, plus the post-roll collected
+after it. Every Record and File of one cycle carries that event's `incident_id` — a top-level
+field of the Record envelope beside Tags, and its own column in a PostgreSQL Destination — so
+"everything from this one event" is a query, not a timestamp range reconstructed by hand.
+_Avoid_: event (a Record is not an event), alert, incident report
 
 **Group**:
 A merge of Records from several Measurements into one Record, based on time proximity.
@@ -64,6 +81,8 @@ _Avoid_: route (a "route" is the Shipper-side path a Tag selects)
 - The **Shipper** delivers Records to one or more **Destinations**
 - A **File** is uploaded to an object-storage **Destination**; its metadata becomes a **Record**
 - A **Record** carries **Tags**; each Tag names a **Destination**
+- A **Trigger** fires a **FlushEvent**; every Measurement listening for it releases its
+  buffered **Records** and **Files** as one **Incident**
 
 ## Example dialogue
 
@@ -74,3 +93,4 @@ _Avoid_: route (a "route" is the Shipper-side path a Tag selects)
 
 - "destination" was used for both the DC pluginlib class and the external system — resolved: a **Destination** is the external system; the per-destination pluginlib layer is retired.
 - "backend" was used for Fluent Bit's embedded engine — resolved: the engine is the **Shipper**, an external process, not an embedded library.
+- "trigger" was loose talk for a **Condition** becoming active, and the Condition entry told you to avoid the word — resolved: **Trigger** is now a real pluginlib type (`dc_triggers`) that fires on an edge; a Condition still gates on a level. The two are documented side by side in [doc/src/dc/triggers.md](./doc/src/dc/triggers.md#trigger-vs-condition).

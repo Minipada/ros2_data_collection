@@ -11,5 +11,10 @@ again. No rule-evaluation logic of its own: composition is entirely delegated to
 
 ## Parameters
 
-See [Node parameters](../triggers.md#node-parameters) — `EdgeTrigger` has no parameters
+See [Plugin parameters](../triggers.md#plugin-parameters) — `EdgeTrigger` has no parameters
 of its own beyond the shared `trigger.*` ones every Trigger plugin reads.
+
+## Trigger vs Condition
+
+`EdgeTrigger` fires *once* per false→true transition; a Condition stays true and keeps gating
+for as long as its predicate holds. See [Trigger vs Condition](../triggers.md#trigger-vs-condition).

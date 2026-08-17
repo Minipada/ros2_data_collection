@@ -10,6 +10,9 @@ DC has a small, fixed vocabulary. Using it precisely makes the rest of the docum
 | **Measurement**           | A source of sampled data (CPU, position, camera inspection…) that emits Records.                              |
 | **Record**                | One timestamped JSON document flowing through the pipeline.                                                   |
 | **Condition**             | A boolean predicate on robot state that gates whether a Measurement's Records are collected.                  |
+| **Trigger**               | A plugin that fires a one-shot signal on the false→true edge of a Condition composition, releasing a Measurement's pre-event buffer. Distinct from a Condition, which gates continuously. |
+| **FlushEvent**            | The message a Trigger broadcast node publishes when its Trigger fires, carrying the `incident_id` subscribed Measurements adopt. |
+| **Incident**              | One flush cycle — the pre-event window a Trigger released plus its post-roll — identified by the `incident_id` every Record and File of that cycle carries. |
 | **Group**                 | A merge of Records from several Measurements into one Record, based on time proximity.                        |
 | **File**                  | A binary artifact produced by a Measurement (image, video, map), uploaded to object storage as-is; only its metadata travels as a Record. |
 | **Destination**           | An external system that receives Records or Files (PostgreSQL, S3-compatible storage, console…).              |
@@ -27,11 +30,15 @@ Relationships between them:
 - The **Shipper** delivers Records to one or more **Destinations**
 - A **File** is uploaded to an object-storage **Destination**; its metadata becomes a **Record**
 - A **Record** carries a **Tag**; each Tag names a route Destinations subscribe to
+- A **Trigger** fires a **FlushEvent**; every Measurement listening for it releases its
+  buffered window as one **Incident**
 
 ```admonish example title="Words that mean something specific here"
 "Sink" is the Shipper's internal configuration unit, not the DC concept — the DC concept
 is **Destination**. "Route" is the Shipper-side path a **Tag** selects. A camera image is
 a **File**, not a Record; the Record is the JSON document describing where that File went.
+"Trigger" is not a synonym for a **Condition** turning on: a Condition is a level that gates
+collection while true, a **Trigger** is an edge that fires once.
 ```
 
 ## ROS 2
@@ -156,6 +163,15 @@ measurement_server:
 A Condition enables or disables one or more Measurements. For example, collect camera
 images only when the robot is stopped. A Measurement can require that all, any, or none
 of a set of Conditions are active. See [Conditions](./conditions.md).
+
+## Triggers and incidents
+
+A Condition can only give you data from the moment it turned true. When what matters is the
+run-up to an event — the seconds before an emergency brake — a **Trigger** is the mechanism:
+a Measurement holds its recent output in a rolling buffer instead of publishing it, and a
+Trigger firing on the false→true edge of a Condition composition broadcasts a **FlushEvent**
+that releases that buffer. Everything released by one firing, across every Measurement
+listening, shares one `incident_id`. See [Triggers](./triggers.md).
 
 ## Lifecycle Nodes and Bond
 

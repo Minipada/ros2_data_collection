@@ -5,6 +5,13 @@ A condition enables or disables one or multiple measurements to be published and
 
 Each condition is enabled or disabled through a pluginlib plugin. It has these configuration parameters:
 
+```admonish note title="A Condition is a level, not an edge"
+A Condition gates collection for as long as its predicate holds, so it can only give you data
+from the moment it became true onwards. To capture what happened *before* an event, use a
+[Trigger](./triggers.md): it is built out of these same Condition plugins but fires once on
+the false→true edge, releasing a window a Measurement had already buffered.
+```
+
 ## Available plugins:
 
 | Name                                                     | Description                                      |

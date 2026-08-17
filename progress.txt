@@ -6479,3 +6479,72 @@ payload. User stories 9 and 19 of #282.
   only be true once the real server is up *and* init.sql has been applied. `run_retention.sh`
   gets away with `pg_isready` only because its first query happens minutes later; not changed
   here, to keep this diff scoped.
+
+## #292 - Document Trigger vs Condition and update CONTEXT.md's vocabulary
+
+Seventh and last-but-one slice of #282 (Pre-event circular-buffer capture via a new Trigger
+plugin), and the only documentation-only one. User story 20 ("documentation covering the
+difference between Condition and Trigger, so that I don't confuse the two when designing a
+data collection config"). Nothing under any package's `src/` changed.
+
+- **`doc/src/dc/triggers.md` is the page the issue asks for, expanded rather than duplicated.**
+  The issue says "add a new documentation page (mirroring `conditions.md`)"; #286 already
+  created that page when it built `dc_triggers`, with the same Description / Available plugins
+  / Node parameters shape `conditions.md` has. Writing a *second* page next to it would have
+  split the Trigger docs in two and left the SUMMARY with two entries for one concept, so the
+  work went into the existing page instead. It now covers, in order: what a Trigger is and the
+  incident-review problem it solves; **Trigger vs Condition** as a seven-row comparison table
+  (level vs edge, what data each can give you, per-Measurement vs per-robot configuration,
+  scope) plus the note that they compose rather than compete; the flush broadcast, with an
+  ASCII diagram of Conditions → Trigger → `/dc/flush` → several Measurements; the `FlushEvent`
+  message's two fields and the rule that an event arriving mid-cycle is ignored; `incident_id`
+  with the `WHERE incident_id = '…'` query that is the point of it, and its Postgres-column,
+  Group-lift and outside-an-incident-is-NULL behaviours; the existing node/plugin parameter
+  tables; **all five Measurement-side parameters** (`buffer_duration_sec`,
+  `post_roll_duration_sec`, `cooldown_sec`, `max_flush_rate_hz`, `flush_topic`) with the
+  four-state cycle in one sentence; and a complete two-file worked example (broadcast node +
+  one armed and one live Measurement).
+- **Why the Measurement parameters are on both pages.** `measurements.md` keeps the canonical
+  long-form treatment (#287-#290 wrote it: the state machine, File staging into
+  `.dc_incident_scratch`, re-arm), and `triggers.md` links to it. The five-row table is
+  repeated there anyway because the acceptance criterion asks for one page documenting *all*
+  the configuration this feature introduced, and a reader arriving from "how do I capture the
+  seconds before an emergency brake?" should not have to assemble the answer from two pages.
+- **`max_flush_rate_hz` sizing is documented as a real constraint, not a preference.** The
+  data publisher is `KeepLast(1)`, so a burst release is coalesced to its last Record before a
+  subscriber runs — #290's finding, and the reason `e2e_incident_params.yaml` sets 20 Hz for a
+  2 Hz Measurement. That is now an `admonish tip` rather than a comment in one params file.
+- **The broadcast node is documented as not launch-wired.** `dc_bringup.launch.py` does not
+  start `trigger_broadcast_node`, so the page says to run it with `ros2 run` (it is a
+  lifecycle node; transition it yourself or add it to your own lifecycle manager's
+  `node_names`), and that anything publishing a `FlushEvent` on `flush_topic` releases the
+  buffer — `ros2 topic pub` included, which is how `run_incident.sh` drives its flush. Wiring
+  it into bringup is separate work, not smuggled into a docs issue.
+- **`CONTEXT.md`** gains the **Incident** entry (one flush cycle: released pre-roll window plus
+  post-roll, identified by the `incident_id` every Record and File of that cycle carries) and
+  sharpens the three neighbouring entries #286 left thin. **Condition** now says it is a
+  *level* and its `_Avoid_` line names **trigger** explicitly — "a Condition turning on" is not
+  a Trigger — which is the cross-reference the issue asks for; **Trigger** says it is an *edge*
+  and is loaded by the broadcast node, never by a Measurement; **FlushEvent** notes several
+  Measurements can share one flush topic. A Relationships bullet and a "Flagged ambiguities"
+  entry record the resolution: the word used to be banned, now it names a pluginlib type.
+- **`doc/src/dc/concepts.md`** mirrors that, since its glossary is the published twin of
+  CONTEXT.md's: three new rows (Trigger, FlushEvent, Incident), a relationships bullet, a
+  "Words that mean something specific here" sentence separating level from edge, and a short
+  `## Triggers and incidents` section next to `## Conditions`.
+- **`doc/src/dc/conditions.md`** gains an `admonish note` — a Condition is a level, not an edge;
+  for the run-up to an event use a Trigger — so the confusion is answered on the page where a
+  reader is most likely to have it, not only on the page they haven't found yet.
+- **`doc/src/dc/triggers/edge_trigger.md`**: fixed a wrong link (the shared `trigger.*`
+  parameters live under *Plugin* parameters, not *Node* parameters) and added the one-line
+  edge-vs-level contrast with a link to the comparison table.
+- **Verified**: `./tools/ci/pre-commit/build_doc.sh` (the `build-doc` pre-commit hook, same
+  script CI's docs job runs) exits 0 — strictdoc export, mdbook build and the linkcheck
+  backend, with no errors and no new warnings on the touched pages. Worth recording: the first
+  run *silently* mis-rendered one admonition, because an escaped-quote title
+  (`title="\"Trigger\" is a specific thing in DC"`) is not valid admonish config and the
+  preprocessor only logs "Error processing admonition" and emits the raw config block into the
+  page — mdbook still exits 0. Caught by grepping `doc/book/html/dc/triggers.html` for
+  `class="admonition` and counting; the title no longer contains quotes. `pre-commit run
+  --files` over the five changed files passes every hook that applies to them (the black and
+  poetry-requirements failures it reports are pre-existing on unrelated files, left alone).
