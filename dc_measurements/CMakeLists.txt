@@ -19,6 +19,7 @@ set(dependencies
   rclcpp_lifecycle
   std_msgs
   tf2
+  tf2_geometry_msgs
   yaml_cpp_vendor
 )
 
@@ -35,6 +36,10 @@ pkg_search_module(UUID REQUIRED uuid)
 # exports a plain CMake config (ZXing::ZXing), not an ament package, so it's kept out of
 # the shared `dependencies` list/foreach below and linked directly to dc_camera_measurement.
 find_package(ZXing REQUIRED)
+
+# cv_bridge only re-exports OpenCV's core/imgproc/imgcodecs; the camera plugin's pose
+# estimation (#48) calls cv::solvePnP, which lives in opencv_calib3d.
+find_package(OpenCV REQUIRED COMPONENTS calib3d)
 
 # yaml_cpp_vendor (already in `dependencies` above) only guarantees a system yaml-cpp is
 # installed via rosdep; it doesn't itself re-export a linkable CMake target, so anything that
@@ -213,7 +218,7 @@ foreach(measurement_plugin ${dc_measurement_plugin_libs})
   )
   target_compile_definitions(${measurement_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
-target_link_libraries(dc_camera_measurement ZXing::ZXing)
+target_link_libraries(dc_camera_measurement ZXing::ZXing opencv_calib3d)
 target_include_directories(dc_ip_camera_measurement PRIVATE ${AVFORMAT_INCLUDE_DIRS} ${AVUTIL_INCLUDE_DIRS})
 target_link_directories(dc_ip_camera_measurement PRIVATE ${AVFORMAT_LIBRARY_DIRS} ${AVUTIL_LIBRARY_DIRS})
 target_link_libraries(dc_ip_camera_measurement ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES})
@@ -290,6 +295,7 @@ install(DIRECTORY plugins/measurements/json
 )
 
 set(tests
+  test_code_pose
   test_incident_releaser
   test_measurement_bool_equal
   test_measurement_buffering
@@ -346,9 +352,13 @@ if(BUILD_TESTING)
       ${PROJECT_NAME}_${test}
       nlohmann_json::nlohmann_json
       nlohmann_json_schema_validator
+      opencv_calib3d
       ${library_name}
       )
   endforeach()
+  # Only this test encodes a QR code (ZXing's writer) to render one back through the
+  # camera model; every other test gets the reader transitively or not at all.
+  target_link_libraries(${PROJECT_NAME}_test_code_pose ZXing::ZXing)
 endif()
 
 ament_export_include_directories(include)

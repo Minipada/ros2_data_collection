@@ -253,6 +253,41 @@ CHECKS = {"topics": check_topics, "cmd_vel": check_cmd_vel, "nav": check_nav}
 MEASUREMENTS = ["/dc/measurement/right_camera", "/dc/measurement/left_camera"]
 
 
+def ground_truth_codes(path=None):
+    """Map-frame (x, y) of every QR-code model placed in the world.
+
+    The world is the only ground truth for #48's pose estimation: a code's estimated
+    position is only meaningful next to where the simulator actually put it. Returns an
+    empty list rather than raising, so a recorder still logs detections if the world
+    moves.
+
+    Args:
+        path: the installed qrcodes.world; found via the ament index when omitted.
+    """
+    # stdlib ElementTree, not defusedxml: the input is this repo's own world file,
+    # installed in the image the check runs in.
+    import os
+    import xml.etree.ElementTree as ElementTree
+
+    from ament_index_python.packages import get_package_share_directory
+
+    try:
+        if path is None:
+            share = get_package_share_directory("dc_simulation")
+            path = os.path.join(share, "worlds", "qrcodes.world")
+        root = ElementTree.parse(path).getroot()
+    except (OSError, LookupError, ElementTree.ParseError):
+        return []
+    codes = []
+    for model in root.iter("model"):
+        if not any("qrcode_" in (i.findtext("uri") or "") for i in model.iter("include")):
+            continue
+        parts = (model.findtext("pose") or "").split()
+        if len(parts) >= 2:
+            codes.append((float(parts[0]), float(parts[1])))
+    return codes
+
+
 class Recorder(Node):
     """Prints one line per QR code the demo reads, with the pose it read it from.
 
@@ -268,6 +303,7 @@ class Recorder(Node):
         from dc_interfaces.msg import StringStamped
 
         self.pose = None
+        self.ground_truth = ground_truth_codes()
         self.create_subscription(PoseWithCovarianceStamped, "/amcl_pose", self._on_pose, 10)
         for topic in MEASUREMENTS:
             self.create_subscription(
@@ -291,9 +327,31 @@ class Recorder(Node):
             # pallet. Only a QRCode read means the demo saw what it came for.
             print(
                 f"{topic} pose={self.pose} format={barcode.get('type', '?')} "
-                f"code={barcode['data']}",
+                f"code={barcode['data']}{self._code_pose(barcode)}",
                 flush=True,
             )
+
+    def _code_pose(self, barcode):
+        """Estimated code pose (#48) and how far it lands from the world's own placement.
+
+        `gt_err` is the horizontal distance to the nearest QR model in the world file —
+        the assertion run.sh makes, and the only one that catches a pose that decodes
+        correctly but comes out in the wrong frame or with a flipped axis.
+
+        Args:
+            barcode: one entry of a Camera Record's `inspected.barcode`.
+        """
+        pose = barcode.get("pose")
+        if not pose:
+            return ""
+        line = (
+            f" code_pose=({round(pose['x'], 3)}, {round(pose['y'], 3)}, {round(pose['z'], 3)})"
+            f" frame={pose['frame_id']} distance={round(pose['distance'], 3)}"
+        )
+        if self.ground_truth and pose["frame_id"] == "map":
+            err = min(math.hypot(x - pose["x"], y - pose["y"]) for x, y in self.ground_truth)
+            line += f" gt_err={round(err, 3)}"
+        return line
 
 
 def main():
