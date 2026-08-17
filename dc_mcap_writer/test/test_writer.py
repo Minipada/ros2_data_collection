@@ -1,16 +1,16 @@
 """Tests for RotatingMcapWriter and its NDJSON/timestamp helpers (#210)."""
+
 import json
 import time
 
 import pytest
-from mcap.reader import make_reader
-
 from dc_mcap_writer.writer import (
     RotatingMcapWriter,
     RotationPolicy,
     extract_log_time_ns,
     iter_ndjson,
 )
+from mcap.reader import make_reader
 
 
 def _read_all(path):

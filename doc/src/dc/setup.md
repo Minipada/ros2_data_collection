@@ -60,10 +60,11 @@ exclude them if their dependencies are not resolvable on your machine:
 
 Only some Measurement plugins (camera inspection, QR code detection) need Python
 packages beyond what ROS 2 installs. `rosdep` covers the ones with rosdistro keys; for
-the rest:
+the rest, [uv](https://docs.astral.sh/uv/) installs `pyproject.toml`'s pins into a
+project virtualenv:
 
 ```bash
-pip3 install -r requirements.txt   # or `poetry install`
+uv sync --no-dev   # drop --no-dev to add the tooling and the demo dashboard's packages
 ```
 
 ## Run

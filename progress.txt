@@ -5982,7 +5982,7 @@ Measurement buffer its recent history in memory and release it, tagged with an
   (live resumption) that do *not* carry `incident_id` (proving the tag only applies to the
   released buffered window, not to subsequent live Records). Hit one real test bug during
   verification: the initial version declared `dummy.init_collect` in the shared `SetUp()`
-  and then re-declared it with a different value inside the first test, which throws
+  and then redeclared it with a different value inside the first test, which throws
   ("parameter ... has already been declared") since ROS 2 parameter declaration isn't
   idempotent across distinct values -- fixed by moving that declaration out of `SetUp()`
   and only declaring it (or relying on the framework's own true default) per test that
@@ -6081,7 +6081,7 @@ publish live for good" into the full per-Measurement state machine #282 specifie
   appended its two parameters at the very end of the signature), these two were inserted
   *after* `buffer_duration_sec` and before `flush_topic` so all four buffering parameters
   read in a sensible order -- safe because `dc_measurements::Measurement` remains the only
-  implementor of the interface and `MeasurementServer` its only caller (re-verified by grep).
+  implementer of the interface and `MeasurementServer` its only caller (re-verified by grep).
 - **Behavior change vs #287, intentional**: a flush no longer latches buffering off forever.
   With both new parameters at their default 0 a flush releases the pre-roll window and the
   Measurement is armed again immediately, rather than resuming live publishing for good --
@@ -6165,7 +6165,7 @@ incident doesn't also have to push its entire pre-roll window through the Bridge
   parameters, and threaded through `dc_core::Measurement::configure()` -- inserted after
   `cooldown_sec` and before `flush_topic`, keeping all buffering parameters in one run, the
   same placement rule #288 used (safe: `dc_measurements::Measurement` is still the only
-  implementor and `MeasurementServer` its only caller).
+  implementer and `MeasurementServer` its only caller).
 - **`dc_measurements/include/dc_measurements/incident_releaser.hpp`**: `Flushing` stops being
   a state the machine passes straight through and becomes one it can *sit in*.
   - The constructor takes `max_flush_rate_hz` and stores it as a `release_interval_`
@@ -6548,3 +6548,89 @@ data collection config"). Nothing under any package's `src/` changed.
   `class="admonition` and counting; the title no longer contains quotes. `pre-commit run
   --files` over the five changed files passes every hook that applies to them (the black and
   poetry-requirements failures it reports are pre-existing on unrelated files, left alone).
+
+## Python tooling: prek instead of pre-commit, uv instead of poetry (no issue of its own)
+
+Mirrors the move already made in `~/dev/monorepo`: `.pre-commit-config.yaml` is now run by
+[prek](https://prek.j178.dev) — same file, same schema, one Rust binary that resolves hook
+environments with uv and needs no Python environment of its own — and dependencies live in
+a PEP 621 `pyproject.toml` + `uv.lock` instead of poetry's `[tool.poetry]` + `poetry.lock`.
+
+**The formatting CI job was dead, not slow.** `.github/workflows/format.yaml` installed
+poetry and then pip-installed `requirements.txt` + `requirements-dev.txt` just to get
+`pre-commit` on PATH; that install has been failing outright (`ERROR: Failed to build
+'fastcov' … ModuleNotFoundError: No module named 'pkg_resources'`) — the last two runs
+never reached a single hook. So every finding below is pre-existing drift the broken gate
+was hiding, not new. The job now installs nothing but prek (`j178/prek-action`), and the
+apt preamble is gone with it: clang-format ships in the mirror hook's own wheel, `check-xml`
+uses Python's parser rather than `xmllint`, and graphviz was there only for `pydeps`, which
+nothing calls.
+
+**Python lint/format is ruff only.** flake8 + 13 plugins, black, isort, pycln, pyupgrade,
+flynt, yesqa and the `python-no-log-warn` pygrep hook are replaced by `ruff-check` +
+`ruff-format` — one binary instead of ~20 hook environments pre-commit had to build before
+linting a line. `[tool.ruff.lint]`'s selection is chosen for *parity* with what the old
+stack enforced (E/W/F, I, UP, B, C4, A, Q, N, G/LOG, T10, EXE, and RUF100 for yesqa), not
+for maximum strictness: ruff's own newer opinions (the rest of RUF, SIM, PTH, …) are
+deliberately left off, same "broaden over time" stance the monorepo's first rollout took.
+`setup.cfg`'s `[flake8]`/`[darglint]` sections are gone; docstring linting (darglint) has
+no ruff equivalent that was worth turning on blind and is not replaced.
+
+Fallout, all of it mechanical, fixed rather than ignored: 16 findings from the parity rule
+set (unsorted imports, a stale `# noqa: T201` ×3 for a rule this repo never enabled,
+`datetime.utcnow`, three `(str, Enum)` classes → `StrEnum`, two bare `zip()`s → `strict=True`,
+three root-logger calls in the dashboard → a module logger, one dict comprehension) and 14
+files reformatted by ruff-format (mostly black 23's missing blank line after a module
+docstring). Two more the broken job had hidden: `dc_triggers`' two `.cpp` files were never
+clang-formatted, and `tools/e2e/Containerfile`'s `find … | xargs` tripped hadolint
+DL4006/SC2038 — rewritten as `find … -exec … +`, which drops the pipe instead of silencing
+the rule.
+
+**Dependencies.** `requires-python` moves from the humble-era `>=3.8.10,<3.9.7 || >3.9.7`
+to `>=3.12` (Jazzy/Ubuntu 24.04), with `.python-version` pinning 3.12 so a local `uv sync`
+builds against the interpreter the code actually runs on. `numpy` stays `<2` on purpose —
+Jazzy's rclpy/cv_bridge are built against 1.26 — and `pydantic` stays `<2` because
+`draw_image.py` and the dashboard still use v1 APIs (`BaseSettings`). Dropped from the dev
+group as unused-by-anything: `ipython`, `pydeps`, `pylint`, `cmake-format`, and `strictdoc`
++ `fastcov`, which now live in the containers that actually run them
+(`containers/doc/Containerfile`, `tools/e2e/Containerfile`) — `fastcov`'s sdist is what
+broke CI in the first place.
+
+`requirements.txt` and `requirements-dev.txt` are **deleted**, not re-exported: with uv
+there is one dependency source (`pyproject.toml` + `uv.lock`), and a generated copy of it
+in the tree is only somewhere for the two to disagree. `doc/src/dc/setup.md` and the two
+AWS demo pages now say `uv sync` (`--no-dev` for the runtime set alone); `.dockerignore`
+allows `pyproject.toml` + `uv.lock` in their place.
+
+**The ROS manifest hooks are vendored, and that is what leaves the job with no system
+dependencies at all.** `minipada/ros2_pre-commit`'s `ros2_ws_same_versions` finds setup.py
+with an unbounded `find "$SRC" -name setup.py`, so once `uv sync` puts a virtualenv at
+`./.venv` it checks every setup.py in site-packages against the DC version and fails on
+numpy's. Both its hooks also shell out to `xmllint`, which GitHub's runner image doesn't
+ship — the single reason the workflow would still have needed an apt step.
+`tools/ci/pre-commit/ros2_package_checks.py` does both checks over `dc_*/` only
+(`versions`: one version across every `package.xml`, and each `dc_*/setup.py` declaring
+it; `metadata`: no package left the template's placeholder license, maintainer or
+description), reading manifests with ElementTree — the same parser the `check-xml` hook
+uses. stdlib rather than defusedxml: the input is this repo's own manifests, and adding a
+dependency would mean giving the hook a Python environment it otherwise doesn't need.
+The formatting job now installs prek and nothing else.
+
+**CLAUDE.md gains a `## Comments` rule** — file headers one to three lines, block comments
+one or two, why rather than what, long rationale in `progress.txt`/an ADR/the PR instead.
+The first draft of `format.yaml` here had a 22-line header essay, which is what prompted
+it; `ci.yaml`, `doc.yaml` and `tools/e2e/Containerfile` predate the rule and are to be
+trimmed when next touched, not copied.
+
+**Verified**: `prek run --all-files --skip build-doc` passes every hook (25 of them,
+including the docker-language hadolint hook, which prek runs under podman). `uv sync
+--frozen` resolves and installs on 3.12 and every dev-group package imports; `ruff` from
+that venv is the same 0.16.3 the hook pins. All 63 tracked `.py` files byte-compile, and
+`check_if_numbers_are_consecutive` and the dashboard's three `StrEnum`s were smoke-tested
+directly (`.value`, `==` against a plain `str`, and iteration order all unchanged). The
+vendored manifest checks were exercised against a scratch workspace laid out at the same
+depth, with a mismatched `package.xml` version, a mismatched `setup.py` version and a
+package carrying all three placeholder fields: each is reported, and both checks pass once
+the workspace agrees (single-quoted `version='…'` in setup.py included, which upstream's
+`grep` did not accept). Not run locally: the `build-doc` hook, unchanged by this work and
+covered by `doc.yaml` in CI.

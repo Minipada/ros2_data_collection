@@ -1,4 +1,5 @@
 """Rotating MCAP writer for Records consumed over the ADR-0003 passthrough (#210)."""
+
 import json
 import logging
 import os
@@ -6,7 +7,7 @@ import threading
 import time
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import BinaryIO, TextIO
 
@@ -50,7 +51,7 @@ def extract_log_time_ns(record: dict, time_key: str) -> int:
         except ValueError:
             return time.time_ns()
         if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
+            parsed = parsed.replace(tzinfo=UTC)
         return int(parsed.timestamp() * 1_000_000_000)
     return time.time_ns()
 

@@ -1,3 +1,5 @@
+# Run by prek (https://prek.j178.dev): `prek install` for the git hook,
+# `prek run --all-files` for everything.
 exclude: "doc/js/.*$|doc/theme/.*|doc/src/fonts/.*|doc/css/lineicon.css"
 repos:
   - repo: local
@@ -8,14 +10,10 @@ repos:
         language: script
         pass_filenames: false
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v6.0.0
     hooks:
       - id: check-merge-conflict
         name: Check that merge conflicts are not being committed
-      - id: debug-statements
-        name: Detect accidentally committed debug statements
-      - id: check-builtin-literals
-        name: Require literal syntax when initializing Python builtin types
       - id: detect-private-key
         name: Detect if private key is added to the repository
       - id: check-added-large-files
@@ -34,82 +32,34 @@ repos:
       - id: check-toml
         name: Verify toml syntax
       - id: check-xml
-        name: Check XML files with xmllint
+        name: Verify xml syntax
       - id: name-tests-test
-        name: Assert that files in tests/ end in _test.py
+        name: Assert that test files are named test_*.py
       - id: mixed-line-ending
         name: Detect if mixed line ending is used (\r vs. \r\n)
       - id: end-of-file-fixer
         name: Make sure that there is an empty line at the end
-        exclude: "(.*.pgm|.*.dae|.*.sdf|.*.config|.*.svg|.*.mtl|requirements.txt)"
+        exclude: "(.*.pgm|.*.dae|.*.sdf|.*.config|.*.svg|.*.mtl)"
       - id: trailing-whitespace
         name: Remove trailing whitespace at end of line
-      - id: fix-encoding-pragma
-        name: Remove encoding header from python files
-        args: ["--remove"]
-  - repo: https://github.com/hadialqattan/pycln
-    rev: v2.1.3
+  # ruff replaces flake8 (+ 13 plugins), black, isort, pycln, pyupgrade, flynt and
+  # yesqa; the rules standing in for them are in pyproject.toml.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.3
     hooks:
-      - id: pycln
-        args: [--all]
-  - repo: https://github.com/ikamensh/flynt
-    rev: "0.78"
+      - id: ruff-check
+      - id: ruff-format
+  # Fails if uv.lock has drifted from pyproject.toml.
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.5
     hooks:
-      - id: flynt
-        name: Run flynt string format converter for Python
-        exclude: |
-          (?x)
-        args:
-          # If flynt detects too long text it ignores it. So we set a very large limit to make it easy
-          # to split the text by hand. Too long lines are detected by flake8 (below),
-          # so the user is informed to take action.
-          - --line-length
-          - "99999"
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.1
-    hooks:
-      - id: pyupgrade
-        args: [--py310-plus]
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
-    hooks:
-      - id: flake8
-        additional_dependencies:
-          [
-            darglint,
-            flake8-alfred,
-            flake8-black,
-            flake8-builtins,
-            flake8-bugbear,
-            flake8-comprehensions,
-            flake8-copyright,
-            flake8-debugger,
-            flake8-executable,
-            flake8-logging-format,
-            flake8-pep3101,
-            flake8-quotes,
-            flake8-variables-names,
-          ]
-  - repo: https://github.com/psf/black
-    rev: 23.1.0
-    hooks:
-      - id: black
-        always_run: true
-        args: ["--config=./pyproject.toml", "."]
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-  - repo: http://github.com/ryanrhee/shellcheck-py
-    rev: v0.9.0.2
+      - id: uv-lock
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
     hooks:
       - id: shellcheck
-  - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.10.0
-    hooks:
-      - id: python-no-log-warn
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.4
+    rev: v2.4.3
     hooks:
       - id: codespell
         args:
@@ -117,7 +67,7 @@ repos:
             -w,
             --ignore-words=.codespell.txt,
             -S,
-            "*.pgm,requirements*.txt,poetry.lock,tools/infrastructure/docker/config/grafana/dashboards/*",
+            "*.pgm,uv.lock,tools/infrastructure/docker/config/grafana/dashboards/*",
           ]
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v15.0.7
@@ -133,27 +83,19 @@ repos:
         # `Containerfile` instead (tools/e2e/), including suffixed variants like
         # `Containerfile.e2e`.
         files: (^|/)(Dockerfile|Containerfile)(\.[a-zA-Z0-9_-]+)?$
-  - repo: https://github.com/asottile/yesqa
-    rev: v1.4.0
+  # Vendored from minipada/ros2_pre-commit: upstream walks into ./.venv, and both its
+  # hooks need xmllint. See the script's docstring.
+  - repo: local
     hooks:
-      - id: yesqa
-        name: Remove unnecessary noqa statements
-        exclude: |
-          (?x)
-        additional_dependencies: ["flake8>=4.0.1"]
-  - repo: https://github.com/minipada/ros2_pre-commit.git
-    rev: 1.0.3
-    hooks:
-      - id: ros2_ws_same_versions
-        args: [--src=., --regex=dc_.*]
-      - id: ros2_ws_set_metadata
-        args: [--src=., --regex=dc_.*]
-  - repo: https://github.com/arrrrrmin/poetry-requirements
-    rev: 0.1.5
-    hooks:
-      - id: poetry-requirements
-        name: Check requirements.txt
-        args: [-o, requirements.txt, --without-hashes]
-      - id: poetry-requirements
-        name: Check requirements-dev.txt
-        args: [-o, requirements-dev.txt, --with, dev, --without-hashes]
+      - id: ros2-package-versions
+        name: Ensure all ROS 2 packages are of the same version
+        entry: ./tools/ci/pre-commit/ros2_package_checks.py versions
+        language: script
+        pass_filenames: false
+        files: (^|/)(package\.xml|setup\.py)$
+      - id: ros2-package-metadata
+        name: Ensure ROS 2 package metadata are set
+        entry: ./tools/ci/pre-commit/ros2_package_checks.py metadata
+        language: script
+        pass_filenames: false
+        files: (^|/)package\.xml$

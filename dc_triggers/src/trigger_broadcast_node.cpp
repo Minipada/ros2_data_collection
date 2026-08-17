@@ -64,9 +64,9 @@ bool TriggerBroadcastNode::loadTriggerPlugin()
 
   try
   {
-    RCLCPP_INFO_STREAM(get_logger(), "Creating trigger plugin "
-                                          << trigger_id_ << ": Type " << trigger_type_ << ", Topic: " << trigger_topic_
-                                          << ", Polling interval: " << trigger_polling_interval_);
+    RCLCPP_INFO_STREAM(get_logger(), "Creating trigger plugin " << trigger_id_ << ": Type " << trigger_type_
+                                                                << ", Topic: " << trigger_topic_
+                                                                << ", Polling interval: " << trigger_polling_interval_);
 
     trigger_ = trigger_plugin_loader_.createUniqueInstance(trigger_type_);
     trigger_->configure(node, trigger_id_, conditions_, trigger_if_all_conditions_, trigger_if_any_conditions_,

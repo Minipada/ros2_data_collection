@@ -9,6 +9,7 @@ installed in the DC workspace image (tools/e2e/Containerfile), not on the runner
 Emits one JSON object to stdout: {"<tag>": [<record>, ...], ...}, one entry per Channel
 (Tag) found across every `.mcap` file in the given directory.
 """
+
 import argparse
 import glob
 import json

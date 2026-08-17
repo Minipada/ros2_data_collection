@@ -5,6 +5,7 @@ Consumes Records over the ADR-0003 `dc.<tag>` passthrough — a Vector `socket` 
 process — and writes them to rotated `.mcap` files. See
 doc/src/dc/demos/mcap_recording.md.
 """
+
 import argparse
 import io
 import logging
