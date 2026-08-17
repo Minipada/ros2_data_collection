@@ -144,3 +144,5 @@ from before this rule; don't copy them, and trim them when you touch them.
   `Closes #N`.
 - `run_once.sh` automates all of the above: it picks the oldest eligible issue, does the work in
   an isolated `git worktree` under `.worktrees/`, and hands the prompt to `claude` or `codex`.
+  `--issue N` (or a bare `N`, or `RUN_ONCE_ISSUE=N`) works on that issue instead — the label,
+  open-PR and `Blocked by` filters then only warn, since they exist to pick a candidate.
