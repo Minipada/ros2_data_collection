@@ -1,0 +1,56 @@
+# Incident-capture scenario (#291): two Measurements, one armed for pre-event buffering and
+# one collecting live, both landing in the same Postgres table. What it proves is that
+# `incident_id` reaches Postgres as a *column* — see tools/e2e/scripts/run_incident.sh, which
+# asserts it with `WHERE incident_id = '...'` rather than by matching payload text.
+measurement_server:
+  ros__parameters:
+    save_local_base_path: "$HOME/.dc/e2e/data/%Y/%M/%D/%H"
+    all_base_path: "e2e"
+    measurement_plugins: ["uptime", "memory"]
+
+    # Armed: publishes nothing until a FlushEvent arrives on /dc/flush, then releases the
+    # last `buffer_duration_sec` of collection tagged with that event's incident_id.
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      polling_interval: 500
+      group_key: "uptime"
+      buffer_duration_sec: 6.0
+      post_roll_duration_sec: 2.0
+      # Paced, not burst: the Measurement's data publisher is KeepLast(1), so a whole window
+      # published back-to-back in one callback would be coalesced down to its last Record
+      # before any subscriber ran. 20 Hz is far faster than the 2 Hz collection being
+      # released, so it costs the scenario nothing and delivers the whole window.
+      max_flush_rate_hz: 20.0
+
+    # The control: never armed, so every one of its Records must reach Postgres live and with
+    # a NULL incident_id. Without it, "no incident_id" and "no Records at all" would look the
+    # same in the final query.
+    memory:
+      plugin: "dc_measurements/Memory"
+      polling_interval: 1000
+      group_key: "memory"
+
+dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/e2e/buffer"
+    destinations: ["pgsql_records"]
+    pgsql_records:
+      type: postgres
+      receives: records
+      inputs: ["/dc/measurement/uptime", "/dc/measurement/memory"]
+      host: "127.0.0.1"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc_records"
+      time_key: "date"
+
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
+
+lifecycle_manager_dc:
+  ros__parameters:
+    node_names: ["measurement_server"]
+    transitions: [configure, activate]

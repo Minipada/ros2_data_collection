@@ -157,6 +157,31 @@ own camera path already covers the File pipeline's steady-state/outage behavior;
 this scenario into CI as its own job is left as a follow-up, same as the "not done" list
 below.
 
+## Incident-capture scenario (#291)
+
+A third narrow harness, for the `incident_id` field an armed Measurement stamps on the
+pre-event window it releases:
+
+```sh
+./tools/e2e/scripts/run_incident.sh
+```
+
+Same `dc-e2e` image and env vars again, this time against
+`params/e2e_incident_params.yaml`: an `uptime` Measurement armed with
+`buffer_duration_sec` beside a `memory` Measurement collecting live, both routed to one
+`postgres` Destination. The scenario publishes a single `FlushEvent` onto `/dc/flush`
+with a known id and asserts: (1) `dc_records.incident_id` exists as a real `text`
+column; (2) while armed, the buffered Measurement ships *nothing* while the live one
+keeps landing rows; (3) after the event, the released window is reachable as `WHERE
+incident_id = '…'` — a column predicate, which is the whole point of #291, since the
+same data buried in the JSON payload would not be; (4) the id is on the released window
+only, and the never-armed Measurement's rows keep `incident_id IS NULL`.
+
+The `FlushEvent` is published with `ros2 topic pub` rather than by a `dc_triggers`
+broadcast node: that topic is the contract Measurements subscribe to, `dc_triggers` has
+its own tests for minting the event, and the broadcast node is not in `dc_bringup`'s
+launch yet. Not run by `ci.yaml`, same as the retention scenario.
+
 ## Layout
 
 - `Containerfile` — builds the full DC workspace (every `dc_*` package, all C++ since
@@ -233,6 +258,8 @@ below.
 - `params/e2e_retention_params.yaml` / `scripts/run_retention.sh` — the files retention
   scenario (#267) described above; a separate, narrower harness reusing the same
   `dc-e2e` image.
+- `params/e2e_incident_params.yaml` / `scripts/run_incident.sh` — the incident-capture
+  scenario (#291) described above, likewise reusing the same `dc-e2e` image.
 
 ## `.dockerignore`
 
