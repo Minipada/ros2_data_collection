@@ -290,6 +290,7 @@ install(DIRECTORY plugins/measurements/json
 )
 
 set(tests
+  test_incident_releaser
   test_measurement_bool_equal
   test_measurement_buffering
   test_measurement_camera

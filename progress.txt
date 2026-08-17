@@ -6013,3 +6013,140 @@ Measurement buffer its recent history in memory and release it, tagged with an
   session notes, reverted again here to keep this diff scoped; `poetry-requirements` failed
   on the same pre-existing local environment gap (no `poetry` module) noted in every prior
   session, unrelated to this change.
+
+## #288 - Add IncidentReleaser state machine: post-roll capture, cooldown, and auto re-arm
+
+Third implementation slice of #282 (Pre-event circular-buffer capture via a new Trigger
+plugin), on top of #285's `RecordRingBuffer`/`FileScratchRing`, #286's `dc_triggers`, and
+#287's basic flush-and-resume wiring. Turns #287's one-shot "release the window, then
+publish live for good" into the full per-Measurement state machine #282 specified.
+
+- **New `dc_measurements/include/dc_measurements/incident_releaser.hpp`**: header-only,
+  ROS-free `dc_measurements::IncidentReleaser` plus an `IncidentState` enum
+  (`Buffering`/`Flushing`/`PostRoll`/`Cooldown`), a `toString(IncidentState)` helper, and a
+  `durationFromSeconds(double)` helper converting the ROS parameters' seconds-as-double into
+  `std::chrono::system_clock::duration`. One cycle:
+  - **Buffering** (initial, armed): `offer()`ed samples go into an owned
+    `dc_common::RecordRingBuffer` (`push` + `evict` relative to the caller-supplied now);
+    nothing is published. The only state in which `onFlush()` does anything.
+  - **Flushing**: releases `buffer_.window()` oldest-first through the `PublishFn`, each
+    Record tagged with the FlushEvent's `incident_id` and stamped with when it was
+    *collected*, then `buffer_.clear()`s so the next incident releases its own history
+    rather than replaying this one. Release is immediate today, so the state is entered and
+    left inside `onFlush()`; it stays a distinct state because #282's `max release rate`
+    knob will drain the window across several `tick()`s instead (deliberately not built in
+    this slice -- the issue's acceptance criteria don't include rate limiting).
+  - **PostRoll**: for `post_roll` after the flush, `offer()`ed samples are published live as
+    collected, still under the same `incident_id`. Zero (the default) skips the phase.
+  - **Cooldown**: for `cooldown` after post-roll *ends* (not after the flush), `onFlush()` is
+    ignored. Samples keep buffering during this phase, so the next incident still gets a full
+    pre-roll window instead of one with a `post_roll + cooldown`-sized hole at its start.
+  - Then `enterBuffering()` re-arms automatically, clearing `incident_id_`.
+  - Interface is the small one #288 asked for: `offer(json, now)`, `onFlush(incident_id,
+    now)`, `tick(now)`, `isArmed()`, plus `state()`/`incidentId()`/`bufferedCount()` for
+    assertions. Time is a parameter on every entry point rather than read from a clock, and
+    Records go out through a caller-supplied `PublishFn` rather than a publisher -- that is
+    what makes the whole cycle testable with a fake clock and no ROS node. `offer()` and
+    `onFlush()` both call `tick(now)` first, so a Measurement driving them from its polling
+    timer and flush subscription needs no separate tick timer, and a sample collected after
+    the post-roll deadline is buffered rather than published even at a coarse polling rate.
+  - Cooldown is measured from `phase_deadline_` (when post-roll actually ended), not from
+    whenever the tick noticed the expiry, so total suppression is `post_roll + cooldown`
+    however coarsely `tick()` gets called.
+- **`dc_common/include/dc_common/record_ring_buffer.hpp`**: new `clear()` (drop every entry
+  regardless of age), needed so a released window is not released a second time. New test
+  case `ClearDropsEveryEntryRegardlessOfAge` covers it, including that the buffer is still
+  usable afterwards.
+- **`dc_measurements/include/dc_measurements/measurement.hpp`**: `buffering_active_` and the
+  raw `ring_buffer_` are replaced by a single `std::shared_ptr<IncidentReleaser> releaser_`,
+  created in `configure()` only when `buffer_duration_sec_ > 0` and reset in `cleanup()`.
+  - `collectAndPublish()` branches on `releaser_` instead of `buffering_active_`.
+  - `bufferSample()` renamed to `offerSample()` (it no longer only buffers -- during
+    post-roll the same call publishes): enriches via the existing `enrichMsg()`, then
+    `releaser_->offer(msg.data, system_clock::now())`.
+  - New `publishIncidentRecord(record_json, stamp, incident_id)` is the `PublishFn` the
+    releaser is constructed with -- it is #287's release loop body, now shared by pre-roll
+    release and post-roll live publishing: sets `group_key`, converts the buffered
+    `system_clock` stamp to `header.stamp`, injects `incident_id` into the JSON, and
+    publishes straight through `data_pub_`, bypassing `publish()`'s gate/counter logic (a
+    Record captured for an incident was already unconditionally collected and is not
+    re-filtered on the way out).
+  - `onFlushEvent()` is now two lines: no-op without a `releaser_`, otherwise forward
+    `event.incident_id` to `releaser_->onFlush()`. All the "is this event actionable"
+    reasoning moved into the state machine.
+- **New parameters** `post_roll_duration_sec` (double, default 0.0) and `cooldown_sec`
+  (double, default 0.0), read in `loadMeasurementPlugins()` via the existing
+  `dc_util::get_double_type_param`, resized/logged alongside `buffer_duration_sec`/
+  `flush_topic`, and threaded through `dc_core::Measurement::configure()`. Unlike #287 (which
+  appended its two parameters at the very end of the signature), these two were inserted
+  *after* `buffer_duration_sec` and before `flush_topic` so all four buffering parameters
+  read in a sensible order -- safe because `dc_measurements::Measurement` remains the only
+  implementor of the interface and `MeasurementServer` its only caller (re-verified by grep).
+- **Behavior change vs #287, intentional**: a flush no longer latches buffering off forever.
+  With both new parameters at their default 0 a flush releases the pre-roll window and the
+  Measurement is armed again immediately, rather than resuming live publishing for good --
+  #282's user story 21 ("the system doesn't keep continuously shipping data indefinitely
+  after one incident") and 7 (auto re-arm). `buffer_duration_sec` unset/zero is still exactly
+  today's live-publishing behavior; `ZeroBufferDurationPublishesLiveAsBefore` still covers
+  that, unchanged. #287's `FlushEventReleasesBufferedWindowThenResumesLivePublishing` was
+  renamed to `...ThenReturnsToBuffering` and its second half inverted accordingly (it now
+  asserts *no* further Records arrive after the released window).
+- **Tests**:
+  - New `dc_measurements/test/test_incident_releaser.cpp` (registered first in
+    `CMakeLists.txt`'s `tests` list), 10 cases, fake clock (`base_` = epoch + 24h, `at(sec)`
+    helper) and a `Published{json, stamp, incident_id}` capture vector standing in for a ROS
+    publisher: armed-and-silent start; release ordering with original stamps; window eviction;
+    post-roll transition, live tagging and duration; cooldown ignoring a second flush both
+    during post-roll and during cooldown proper; auto re-arm after cooldown *including* the
+    window buffered during cooldown becoming the next incident's pre-roll; a flush landing
+    exactly on the cooldown deadline being honored; both-zero defaults re-arming immediately;
+    zero post-roll still entering a configured cooldown; and a flush with an empty buffer
+    still running post-roll.
+  - New lifecycle case `FullIncidentCycleBuffersFlushesPostRollsCoolsDownThenReArms` in
+    `test_measurement_buffering.cpp` -- the issue's end-to-end criterion on a real
+    Measurement (`post_roll_duration_sec` 0.6, `cooldown_sec` 0.6, 50ms polling): buffers
+    silently, flushes under `incident-1`, proves post-roll *live* publishing by measuring
+    growth in a second 200ms window (by then the released burst has certainly been delivered,
+    so further growth can only be live), ignores a FlushEvent during post-roll and another
+    during cooldown, shows the Record count going flat once re-armed, then captures
+    `incident-3` off a third FlushEvent. Two new fixture helpers: `publishFlush(incident_id)`
+    and `countTaggedWith(incident_id)`, plus `spinUntil(predicate, timeout_ms)` -- a *bounded*
+    spin, so a behavior regression fails loudly instead of hanging the way #286's Moving
+    re-arm bug did.
+- **Docs**: `doc/src/dc/measurements.md` gains `post_roll_duration_sec` and `cooldown_sec`
+  rows, and its buffering admonish block was rewritten from "post-roll capture, cooldown and
+  rate-limiting are not part of this behavior yet" into a numbered walk through the four
+  phases plus the re-arm, still noting that rate-limited release is not implemented (the whole
+  window goes out in one burst).
+- **Real bug caught by the new unit tests**: `tick()` passed the *member* `phase_deadline_` by
+  const reference into `enterCooldown()`, which assigns `phase_deadline_ = from + cooldown_`
+  and then checks `from >= phase_deadline_` to handle a zero cooldown -- with `from` aliasing
+  the member it had just overwritten, that comparison was always true, so every cooldown
+  re-armed instantly. `CooldownIgnoresASecondFlushWithinItsWindow` and
+  `ReArmsItselfAfterCooldownAndCapturesTheNextIncident` failed on it; fixed by taking `from`
+  by value (with a comment saying why). Worth noting the first version of the lifecycle test
+  passed *despite* this bug, because its second FlushEvent landed during post-roll (ignored
+  either way) -- the lifecycle test was then strengthened to send one during cooldown proper
+  too, which is what makes it actually cover the criterion.
+- **Verified**: `podman run` against the `localhost/dc-workspace` Jazzy image, bind-mounting
+  this worktree over `/root/ws/src/ros2_data_collection`, same as #284-#287. `colcon build
+  --packages-select dc_common dc_core dc_interfaces dc_measurements --cmake-args
+  -DBUILD_TESTING=ON` succeeded with **zero warnings** under `-Wall -Wextra -Wpedantic
+  -Werror -Wdeprecated` (21min for `dc_measurements` -- every measurement/condition plugin
+  recompiles because they all include `measurement.hpp`), then `colcon test` +
+  `colcon test-result`: **235 tests, 0 errors, 0 failures, 0 skipped** across the four
+  packages (up from #287's 222: +10 `test_incident_releaser`, +1 lifecycle case, +1
+  `RecordRingBuffer::clear` case, +1 from the `dc_measurements` ctest count). While iterating
+  on the aliasing fix, the unit test was also compiled and run standalone (`g++ -std=c++17
+  -Wall -Wextra -Wpedantic -Werror -I dc_measurements/include -I dc_common/include ...
+  -lgtest`) inside the same image -- it needs neither ROS nor colcon, which is the point of
+  keeping `IncidentReleaser` ROS-free, and it turns a 22-minute verification loop into
+  seconds.
+- `pre-commit run --files <changed>` passed `clang-format`, `codespell`, the mdbook **doc
+  build**, `black`/`isort`/`pyupgrade`, `ros2_ws_same_versions`/`ros2_ws_set_metadata` and the
+  rest. `clang-format` left one 121-char line (the `IncidentReleaser` constructor signature)
+  and still reports the file as passing, so it was left as formatted. The only failures are
+  the two long-standing local-environment ones: `poetry-requirements` (no `poetry` module on
+  this host) and `pycln`/`flake8` on the pre-existing violation in
+  `tools/e2e/scripts/verify_zero_loss.py`, which the hooks reformat repo-wide and which was
+  reverted again here to keep this diff scoped, exactly as in the #285/#286/#287 sessions.

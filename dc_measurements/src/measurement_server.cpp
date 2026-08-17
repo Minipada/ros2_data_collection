@@ -154,6 +154,8 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   measurement_nested_.resize(measurement_ids_.size());
   measurement_flatten_.resize(measurement_ids_.size());
   measurement_buffer_duration_sec_.resize(measurement_ids_.size());
+  measurement_post_roll_duration_sec_.resize(measurement_ids_.size());
+  measurement_cooldown_sec_.resize(measurement_ids_.size());
   measurement_flush_topic_.resize(measurement_ids_.size());
 
   measurement_if_all_conditions_.resize(measurement_ids_.size());
@@ -239,6 +241,9 @@ bool MeasurementServer::loadMeasurementPlugins()
     measurement_flatten_[i] = dc_util::get_bool_type_param(node, measurement_ids_[i], "flatten", false);
     measurement_buffer_duration_sec_[i] =
         dc_util::get_double_type_param(node, measurement_ids_[i], "buffer_duration_sec", 0.0);
+    measurement_post_roll_duration_sec_[i] =
+        dc_util::get_double_type_param(node, measurement_ids_[i], "post_roll_duration_sec", 0.0);
+    measurement_cooldown_sec_[i] = dc_util::get_double_type_param(node, measurement_ids_[i], "cooldown_sec", 0.0);
     measurement_flush_topic_[i] =
         dc_util::get_str_type_param(node, measurement_ids_[i], "flush_topic", std::string("/dc/flush"));
 
@@ -274,8 +279,10 @@ bool MeasurementServer::loadMeasurementPlugins()
               << ", If all condition: " << dc_util::join(measurement_if_all_conditions_[i], ",")
               << ", If any condition: " << dc_util::join(measurement_if_any_conditions_[i], ",")
               << ", If none condition: " << dc_util::join(measurement_if_none_conditions_[i], ",")
-              << ", Gate condition: " << measurement_gate_condition_[i] << ", Buffer duration sec: "
-              << measurement_buffer_duration_sec_[i] << ", Flush topic: " << measurement_flush_topic_[i]);
+              << ", Gate condition: " << measurement_gate_condition_[i]
+              << ", Buffer duration sec: " << measurement_buffer_duration_sec_[i] << ", Post roll duration sec: "
+              << measurement_post_roll_duration_sec_[i] << ", Cooldown sec: " << measurement_cooldown_sec_[i]
+              << ", Flush topic: " << measurement_flush_topic_[i]);
 
       measurements_.push_back(measurement_plugin_loader_.createUniqueInstance(measurement_types_[i]));
       measurements_.back()->configure(
@@ -288,7 +295,8 @@ bool MeasurementServer::loadMeasurementPlugins()
           measurement_gate_condition_[i], measurement_remote_keys_[i], measurement_remote_prefixes_[i],
           measurement_nested_[i], measurement_flatten_[i], save_local_base_path_, all_base_path_,
           all_base_path_expanded_, save_local_base_path_expanded_, run_id_, run_id_enabled_, custom_keys_,
-          measurement_buffer_duration_sec_[i], measurement_flush_topic_[i]);
+          measurement_buffer_duration_sec_[i], measurement_post_roll_duration_sec_[i], measurement_cooldown_sec_[i],
+          measurement_flush_topic_[i]);
     }
     catch (const pluginlib::PluginlibException& ex)
     {

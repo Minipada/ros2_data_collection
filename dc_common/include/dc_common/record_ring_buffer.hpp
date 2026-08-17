@@ -74,6 +74,17 @@ public:
     }
   }
 
+  /**
+   * @brief Drop every entry regardless of age.
+   *
+   * For the caller that has just consumed the whole window and must not see those entries again --
+   * dc_measurements::IncidentReleaser after releasing one incident's pre-roll (#288).
+   */
+  void clear()
+  {
+    entries_.clear();
+  }
+
   /// Current contents, oldest first. Does not evict -- call evict() first if that's wanted.
   std::vector<StampedRecord> window() const
   {
