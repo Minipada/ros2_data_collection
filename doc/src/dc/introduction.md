@@ -38,6 +38,7 @@ For detailed instructions:
 - [Requirements](https://minipada.github.io/ros2_data_collection/dc/requirements.html)
 - [Future work and Roadmap](https://minipada.github.io/ros2_data_collection/dc/future_work.html)
 - [Contributing](https://minipada.github.io/ros2_data_collection/dc/contributing.html)
+- [Security policy](https://github.com/Minipada/ros2_data_collection/blob/jazzy/SECURITY.md)
 - [FAQ](https://minipada.github.io/ros2_data_collection/dc/faq.html)
 - [About and contact](https://minipada.github.io/ros2_data_collection/dc/about_contact.html)
 
@@ -155,6 +156,13 @@ flowchart LR
     gr_inspection -- "Raw, rotated and/or inspected images (Files)" --> pl_rustfs
     gr_inspection -- "Raw, rotated and/or inspected images (Files)" --> pl_s3
 ```
+
+# Security
+
+Found a vulnerability? Do not open a public issue — report it privately through
+[GitHub private vulnerability reporting](https://github.com/Minipada/ros2_data_collection/security/advisories/new).
+The [security policy](https://github.com/Minipada/ros2_data_collection/blob/jazzy/SECURITY.md)
+covers the supported branches, the response targets, and what is in scope.
 
 # License
 This program is under the terms of the [Mozilla Public License Version 2.0](https://www.mozilla.org/en-US/MPL/2.0/).
