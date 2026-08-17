@@ -3,16 +3,23 @@ set -e
 set -o pipefail
 
 AGENT="${RUN_ONCE_AGENT:-claude}"
+ISSUE_ARG="${RUN_ONCE_ISSUE:-}"
+ISSUE_ARG="${ISSUE_ARG#\#}"
 
 usage() {
-	echo "Usage: $0 [--agent claude|codex]"
+	echo "Usage: $0 [--agent claude|codex] [--issue N]"
 	echo "Example: $0"
 	echo "Example: $0 --agent codex"
-	echo "Example: RUN_ONCE_AGENT=codex $0"
+	echo "Example: $0 --issue 249"
+	echo "Example: $0 249 codex"
+	echo "Example: RUN_ONCE_AGENT=codex RUN_ONCE_ISSUE=249 $0"
 	echo ""
 	echo "Picks the oldest open 'ready-for-agent' issue with no open PR and no open"
 	echo "'Blocked by' dependency, does the work in an isolated git worktree, and"
 	echo "opens a PR that closes it."
+	echo ""
+	echo "With --issue N (or a bare issue number), works on that issue instead. The"
+	echo "label, open-PR and 'Blocked by' filters become warnings rather than skips."
 }
 
 while [[ $# -gt 0 ]]; do
@@ -29,12 +36,29 @@ while [[ $# -gt 0 ]]; do
 		AGENT="${1#--agent=}"
 		shift
 		;;
+	--issue)
+		if [[ -z "${2:-}" ]]; then
+			echo "ERROR: --issue requires an issue number"
+			exit 1
+		fi
+		ISSUE_ARG="${2#\#}"
+		shift 2
+		;;
+	--issue=*)
+		ISSUE_ARG="${1#--issue=}"
+		ISSUE_ARG="${ISSUE_ARG#\#}"
+		shift
+		;;
 	-h | --help)
 		usage
 		exit 0
 		;;
 	claude | codex)
 		AGENT="$1"
+		shift
+		;;
+	'#'[0-9]* | [0-9]*)
+		ISSUE_ARG="${1#\#}"
 		shift
 		;;
 	*)
@@ -52,20 +76,18 @@ claude | codex) ;;
 	;;
 esac
 
+if [[ -n "$ISSUE_ARG" && ! "$ISSUE_ARG" =~ ^[0-9]+$ ]]; then
+	echo "ERROR: Invalid issue '${ISSUE_ARG}'. Expected a number, e.g. 249."
+	exit 1
+fi
+
 REPO_ROOT="$(git -C "$(dirname "$(realpath "$0")")" rev-parse --show-toplevel)"
 BASE_REF="origin/jazzy"
 PROGRESS_FILE="progress.txt"
 
 AGENT_COLORS=(blue cyan fuchsia green indigo lime magenta orange pink purple rose teal violet yellow)
 
-# Find oldest open ready-for-agent issue without an open PR closing it (lowest number = oldest).
-ISSUES_JSON=$(gh issue list \
-	--label "ready-for-agent" \
-	--state open \
-	--limit 50 \
-	--json number,title,body,closedByPullRequestsReferences |
-	jq 'sort_by(.number)')
-
+ISSUE_FIELDS="number,title,body,state,closedByPullRequestsReferences"
 ISSUE_JSON=""
 declare -A BLOCKED_BY_MAP # candidate number -> space-separated open blocker numbers
 declare -A BLOCKS_MAP     # blocker number -> space-separated candidate numbers it blocks
@@ -175,50 +197,79 @@ What should be done with this issue right now? Give me the most concrete next st
 		"$prompt"
 }
 
-while IFS= read -r CANDIDATE_JSON; do
-	CANDIDATE_NUMBER=$(echo "$CANDIDATE_JSON" | jq -r '.number')
-	CANDIDATE_OPEN_PRS_JSON=$(
-		while IFS= read -r CLOSING_PR_URL; do
-			PR_JSON=$(gh pr view "$CLOSING_PR_URL" --json number,url,state)
-			if [[ "$(jq -r '.state' <<<"$PR_JSON")" == "OPEN" ]]; then
-				jq -c '{number, url, state}' <<<"$PR_JSON"
-			fi
-		done < <(jq -r '.closedByPullRequestsReferences[]?.url // empty' <<<"$CANDIDATE_JSON") |
-			jq -s -c '.'
-	)
-	OPEN_PR_COUNT=$(echo "$CANDIDATE_OPEN_PRS_JSON" | jq 'length')
-
-	if [[ "$OPEN_PR_COUNT" -gt 0 ]]; then
-		OPEN_PRS=$(echo "$CANDIDATE_OPEN_PRS_JSON" |
-			jq -r 'map(if .number then "#\(.number)" else .url end) | join(", ")')
-		echo "Skipping issue #${CANDIDATE_NUMBER}; open PR already exists: ${OPEN_PRS}"
-		continue
-	fi
-
-	# Skip issues whose "## Blocked by" section references a still-open issue.
-	BLOCKER_NUMBERS=$(jq -r '.body // ""' <<<"$CANDIDATE_JSON" |
-		awk '/^## Blocked by/{flag=1; next} /^## /{flag=0} flag && /^- /' |
-		grep -oE '#[0-9]+' | tr -d '#' | sort -un || true)
-	OPEN_BLOCKERS=""
-	OPEN_BLOCKER_NUMS=()
-	for BLOCKER in $BLOCKER_NUMBERS; do
-		BLOCKER_STATE=$(gh issue view "$BLOCKER" --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
-		if [[ "$BLOCKER_STATE" == "OPEN" ]]; then
-			OPEN_BLOCKERS="${OPEN_BLOCKERS} #${BLOCKER}"
-			OPEN_BLOCKER_NUMS+=("$BLOCKER")
-			BLOCKS_MAP[$BLOCKER]="${BLOCKS_MAP[$BLOCKER]:+${BLOCKS_MAP[$BLOCKER]} }${CANDIDATE_NUMBER}"
+# "#12, #34" for the open PRs closing the given issue JSON; empty if there are none.
+_open_prs_for() {
+	local pr_url pr_json
+	while IFS= read -r pr_url; do
+		pr_json=$(gh pr view "$pr_url" --json number,url,state)
+		if [[ "$(jq -r '.state' <<<"$pr_json")" == "OPEN" ]]; then
+			jq -r 'if .number then "#\(.number)" else .url end' <<<"$pr_json"
 		fi
+	done < <(jq -r '.closedByPullRequestsReferences[]?.url // empty' <<<"$1") |
+		paste -sd',' - | sed 's/,/, /g'
+}
+
+# Numbers of the still-open issues listed in the given issue body's "## Blocked by" section.
+_open_blockers_for() {
+	local blocker state
+	for blocker in $(awk '/^## Blocked by/{flag=1; next} /^## /{flag=0} flag && /^- /' <<<"$1" |
+		grep -oE '#[0-9]+' | tr -d '#' | sort -un || true); do
+		state=$(gh issue view "$blocker" --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
+		[[ "$state" == "OPEN" ]] && echo "$blocker"
 	done
-	if [[ -n "$OPEN_BLOCKERS" ]]; then
-		echo "Skipping issue #${CANDIDATE_NUMBER}; blocked by open issue(s):${OPEN_BLOCKERS}"
-		BLOCKED_BY_MAP[$CANDIDATE_NUMBER]="${OPEN_BLOCKER_NUMS[*]}"
-		SKIPPED_ISSUES+=("$CANDIDATE_NUMBER")
-		continue
+	return 0
+}
+
+if [[ -n "$ISSUE_ARG" ]]; then
+	# Explicit issue: the queue's filters become warnings, since the caller asked for this one.
+	if ! ISSUE_JSON=$(gh issue view "$ISSUE_ARG" --json "$ISSUE_FIELDS" 2>&1); then
+		echo "ERROR: Cannot read issue #${ISSUE_ARG}: ${ISSUE_JSON}"
+		exit 1
 	fi
 
-	ISSUE_JSON="$CANDIDATE_JSON"
-	break
-done < <(echo "$ISSUES_JSON" | jq -c '.[]')
+	ISSUE_STATE=$(jq -r '.state' <<<"$ISSUE_JSON")
+	[[ "$ISSUE_STATE" == "OPEN" ]] || echo "WARNING: issue #${ISSUE_ARG} is ${ISSUE_STATE}"
+
+	OPEN_PRS=$(_open_prs_for "$ISSUE_JSON")
+	[[ -z "$OPEN_PRS" ]] || echo "WARNING: issue #${ISSUE_ARG} already has an open PR: ${OPEN_PRS}"
+
+	mapfile -t OPEN_BLOCKER_NUMS < <(_open_blockers_for "$(jq -r '.body // ""' <<<"$ISSUE_JSON")")
+	[[ ${#OPEN_BLOCKER_NUMS[@]} -eq 0 ]] ||
+		echo "WARNING: issue #${ISSUE_ARG} is blocked by open issue(s): ${OPEN_BLOCKER_NUMS[*]/#/#}"
+else
+	# Find oldest open ready-for-agent issue without an open PR closing it (lowest number = oldest).
+	ISSUES_JSON=$(gh issue list \
+		--label "ready-for-agent" \
+		--state open \
+		--limit 50 \
+		--json "$ISSUE_FIELDS" |
+		jq 'sort_by(.number)')
+
+	while IFS= read -r CANDIDATE_JSON; do
+		CANDIDATE_NUMBER=$(jq -r '.number' <<<"$CANDIDATE_JSON")
+
+		OPEN_PRS=$(_open_prs_for "$CANDIDATE_JSON")
+		if [[ -n "$OPEN_PRS" ]]; then
+			echo "Skipping issue #${CANDIDATE_NUMBER}; open PR already exists: ${OPEN_PRS}"
+			continue
+		fi
+
+		# Skip issues whose "## Blocked by" section references a still-open issue.
+		mapfile -t OPEN_BLOCKER_NUMS < <(_open_blockers_for "$(jq -r '.body // ""' <<<"$CANDIDATE_JSON")")
+		for BLOCKER in "${OPEN_BLOCKER_NUMS[@]}"; do
+			BLOCKS_MAP[$BLOCKER]="${BLOCKS_MAP[$BLOCKER]:+${BLOCKS_MAP[$BLOCKER]} }${CANDIDATE_NUMBER}"
+		done
+		if [[ ${#OPEN_BLOCKER_NUMS[@]} -gt 0 ]]; then
+			echo "Skipping issue #${CANDIDATE_NUMBER}; blocked by open issue(s): ${OPEN_BLOCKER_NUMS[*]/#/#}"
+			BLOCKED_BY_MAP[$CANDIDATE_NUMBER]="${OPEN_BLOCKER_NUMS[*]}"
+			SKIPPED_ISSUES+=("$CANDIDATE_NUMBER")
+			continue
+		fi
+
+		ISSUE_JSON="$CANDIDATE_JSON"
+		break
+	done < <(echo "$ISSUES_JSON" | jq -c '.[]')
+fi
 
 ISSUE_NUMBER=$(echo "$ISSUE_JSON" | jq -r '.number')
 ISSUE_TITLE=$(echo "$ISSUE_JSON" | jq -r '.title')
