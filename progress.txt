@@ -6634,3 +6634,66 @@ package carrying all three placeholder fields: each is reported, and both checks
 the workspace agrees (single-quoted `version='…'` in setup.py included, which upstream's
 `grep` did not accept). Not run locally: the `build-doc` hook, unchanged by this work and
 covered by `doc.yaml` in CI.
+
+## #300 - Give the Thermal Measurement a schema that actually constrains its Record
+
+`thermal.json` declared a `type: object` with an `additionalProperties: {type: number}` and
+nothing else — no floor on how few entries a Record may carry, no constraint on the keys, and
+no bound on the values. `{}` validated, and so did a Record whose only "zone" was named `""`.
+Every other Measurement's schema says something about what it emits; this one didn't.
+
+**The shape stays as it is; only the schema changed.** Zone `type` strings *are* the field
+names (`x86_pkg_temp`, `cpu-thermal`, …), platform-specific and unknowable ahead of time, so
+there is no fixed `properties`/`required` list to write — which is why the original schema
+punted. Draft-07 has the vocabulary for exactly this case, and the new schema uses it:
+
+- `minProperties: 1` — a Record must carry at least one zone entry. This is the "missing a
+  required field" case for a map-shaped Record: the entry *is* the field. `collect()` already
+  returns an empty `StringStamped` (publishing nothing that cycle) rather than a content-free
+  `{}` when no zone can be read, so this can't fire on the plugin's own output — an empty
+  Thermal Record reaching a Destination means something went wrong upstream.
+- `propertyNames: {minLength: 1}` — a zone whose `type` file is empty can't become a nameless
+  key. `readZone()` already rejects an empty `type`, so again the schema documents and enforces
+  an invariant the plugin holds rather than inventing a new one.
+- `additionalProperties: {type: number, minimum: -273.15}` — degrees Celsius, above absolute
+  zero. A garbage `temp` read (or a units mix-up putting millidegrees through unconverted in
+  the negative direction) is caught instead of shipped.
+
+Nothing about collection changed: `base_path`, `zones`, auto-discovery, the graceful-degradation
+contract and the emitted `{"<zone type>": <celsius>}` map are all untouched, and with
+`enable_validator` off the plugin never loads the schema at all (`setValidationSchema()` is
+already guarded on the flag) so its behaviour is unchanged either way.
+
+**Tests** (`test_measurement_thermal.cpp`, 3 existing → 8). A `ThermalSchema` helper loads the
+*installed* `thermal.json` through `ament_index_cpp::get_package_share_directory()` — the same
+file and the same `nlohmann::json_schema::json_validator` `Measurement::validateJSON()` uses, so
+the test exercises the shipped artifact rather than a copy of it:
+
+- `AcceptsARepresentativeRecord` — a two-zone Record validates.
+- `RejectsARecordWithNoZoneEntry` — `{}` fails (`minProperties`).
+- `RejectsMalformedZoneEntries` — a string temperature, a sub-absolute-zero temperature, and an
+  empty zone-type key each fail.
+- `PublishedRecordValidatesAgainstTheSchema` — end-to-end through the `MeasurementServer`
+  harness with the validator on (its default), against a `FakeThermalTree`.
+- `PublishesTheSameRecordWithTheValidatorOff` — `enable_validator: false`, same Record.
+
+Worth recording, because the first draft of the end-to-end test failed on it: `publish()` calls
+`enrichMsg()`, which runs `validateJSON()` **first** and only then adds `name`, `nested`,
+`flattened`, `run_id` and `tags`. So the Record a subscriber sees is not the one the validator
+saw, and a schema with a closed `additionalProperties` would reject it — the test strips those
+framework keys before validating. This is why the schema can constrain values as tightly as it
+does without breaking the enrichment path.
+
+**Verified for real**, not just linted: no colcon/ROS 2 in this sandbox (same recurring
+constraint as the rest of this log), so the cached `localhost/dc-workspace:latest` Podman image
+was reused with this worktree bind-mounted over `/root/ws/src/ros2_data_collection` — the image
+was five days stale and missing `dc_common/file_scratch_ring.hpp`, so the whole tree had to be
+mounted and `colcon build --packages-up-to dc_measurements` re-run, not just `dc_measurements`.
+`colcon test --packages-select dc_measurements`: 8/8 thermal tests pass, and the whole package
+suite is green at 163 tests / 0 failures. The
+`INFO … schema:` line in the test log confirms the new schema is what the running plugin loads,
+and that `nlohmann_json_schema_validator` in Jazzy implements `propertyNames`/`minProperties`
+(it does — the three negative cases all fail as intended, which was the one real unknown here).
+`prek run --files …` passes on the three changed files. `doc/src/dc/measurements/thermal.md`'s
+Schema section carries the new schema plus a sentence on why the constraints are shaped this
+way instead of a `required` list.
