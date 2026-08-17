@@ -1,11 +1,18 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+
+<!--
+SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+SPDX-License-Identifier: MPL-2.0
+-->
+
 <package format="3">
     <name>dc_description</name>
     <version>0.1.0</version>
     <description>Description files for DC</description>
     <maintainer email="d.bensoussan@proton.me">David Bensoussan</maintainer>
     <license>MPL-2.0</license>
+    <license>Apache-2.0</license>
 
     <!-- Ships the TurtleBot3 meshes the waffle URDF's visuals reference.
          turtlebot3_gazebo, which used to provide them, has no Jazzy release, so

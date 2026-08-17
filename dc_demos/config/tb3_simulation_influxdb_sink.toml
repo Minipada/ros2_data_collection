@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Illustrative ADR-0003 passthrough sink for the tb3_simulation_influxdb demo.
 #
 # dc_bridge's blessed destinations are postgres/s3/file/console only — there is no

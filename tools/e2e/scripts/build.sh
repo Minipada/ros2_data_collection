@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Builds tools/e2e/Containerfile — the shared DC workspace image both CI
 # (.github/workflows/ci.yaml's build-workspace job, which also runs `colcon test`
 # as part of this same build — see the Containerfile's `workspace` stage) and the

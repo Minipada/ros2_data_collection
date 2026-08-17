@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Elasticsearch + Kibana, the store behind the passthrough Destination tutorial
 # (doc/src/dc/demos/elasticsearch.md). Elasticsearch is NOT a blessed Destination type —
 # dc_bridge blesses postgres/s3/file/console only (ADR-0003) — so nothing in dc_bridge

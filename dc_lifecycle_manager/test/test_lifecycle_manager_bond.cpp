@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Bond timeout handling and respawn behaviour of `lifecycle_manager_dc`.
 //
 // A managed node is made to look dead by stopping its executor: it stays discoverable,

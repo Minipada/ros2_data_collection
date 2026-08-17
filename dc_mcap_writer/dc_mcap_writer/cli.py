@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """`dc_mcap_writer` console entrypoint.
 
 Consumes Records over the ADR-0003 `dc.<tag>` passthrough — a Vector `socket` sink

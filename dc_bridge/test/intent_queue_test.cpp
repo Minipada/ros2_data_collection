@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Exercises the durable intent queue (ADR-0005 follow-up, #265) purely on disk — no ROS,
 // no Uploader/ObjectStore needed.
 #include "dc_bridge/uploader/intent_queue.hpp"

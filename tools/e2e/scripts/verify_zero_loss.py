@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Hard-failing zero-loss verification for the E2E harness (#249).
 
 Queries Postgres through `podman exec` on the Postgres container (no host-side

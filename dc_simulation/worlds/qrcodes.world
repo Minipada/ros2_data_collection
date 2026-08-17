@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding='utf-8' ?>
+
+<!--
+SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+
+SPDX-License-Identifier: MPL-2.0
+-->
+
 <sdf version="1.6">
   <world name="warehouse">
 

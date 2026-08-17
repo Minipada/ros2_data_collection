@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Content-type sniffing for uploaded Files (ADR-0005), replacing the Humble Go plugin's
 // http.DetectContentType. Magic-byte based for the formats DC Measurements produce
 // (camera JPEGs, map PGM/PNG/YAML, videos), with a UTF-8 text fallback. Pure, no I/O.

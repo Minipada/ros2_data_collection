@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Readiness gate for the DC bringup startup sequence (ADR-0006).
 
 Polls the Bridge's readiness service (``std_srvs/Trigger``, default

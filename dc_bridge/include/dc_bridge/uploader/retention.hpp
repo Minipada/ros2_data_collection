@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Files retention policy — bounded local storage for un-uploaded Files (#267, ADR-0005
 // follow-up). #265's durable intent queue never abandons an intent by design (an intent
 // and its Files live and die together), so a robot offline for weeks — or a store that's

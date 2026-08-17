@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Repo-local rosdep rules for apt packages that upstream rosdistro has no key for.
 # Register as a local rosdep source before `rosdep install` (tools/e2e/Containerfile
 # does this in CI; see dc_bridge/README.md for the one-liner for local dev):

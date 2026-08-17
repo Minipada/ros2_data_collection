@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Merge memory and uptime Records with the Group node, then print to stdout.
 
 See doc/src/dc/demos/memory_uptime_stdout.md.

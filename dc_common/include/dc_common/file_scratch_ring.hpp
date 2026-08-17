@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 #ifndef DC_COMMON_FILE_SCRATCH_RING_HPP_
 #define DC_COMMON_FILE_SCRATCH_RING_HPP_
 

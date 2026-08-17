@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # ADR-0003/ADR-0009 MCAP passthrough coverage for the zero-loss harness (#210).
 #
 # A second, differently-shaped passthrough alongside e2e_passthrough_sink.toml's `file`

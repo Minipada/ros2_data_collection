@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Unit tests for dc_common::RecordRingBuffer (#285, part of #282's pre-event circular-buffer
 // capture). No node, no rclcpp::init(): the buffer is exercised purely against explicit
 // std::chrono::system_clock::time_point values standing in for an injected/fake clock -- push()

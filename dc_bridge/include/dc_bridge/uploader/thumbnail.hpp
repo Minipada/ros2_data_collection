@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Optional derived previews for uploaded image/video Files (#256, ADR-0005 follow-up).
 // A dashboard rendering a gallery of inspection photos pulls full-size camera JPEGs (and
 // whole video files) just to draw a grid of tiles; a small JPEG preview uploaded next to

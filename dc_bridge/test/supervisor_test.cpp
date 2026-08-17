@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Port of dc_bridge_core supervisor_tests: supervises a plain `sh` command so it runs
 // without the vendored Vector binary.
 #include "dc_bridge/supervisor.hpp"

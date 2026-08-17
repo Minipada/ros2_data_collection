@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Print Records from the custom uptime Measurement plugin to stdout.
 
 The plugin itself lives in dc_demos/plugins/measurements/uptime_custom.cpp.

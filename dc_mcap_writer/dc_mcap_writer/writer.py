@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Rotating MCAP writer for Records consumed over the ADR-0003 passthrough (#210)."""
 
 import json

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // dc_bridge node entry point. rclcpp handles SIGINT/SIGTERM and returns from spin();
 // on_shutdown stops the supervised Vector before exit so it's never orphaned.
 #include <memory>

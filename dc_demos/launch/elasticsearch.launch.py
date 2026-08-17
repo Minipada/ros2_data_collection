@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Send Records to Elasticsearch through the ADR-0003 passthrough Destination.
 
 Hardware-free: four system Measurements (cpu, memory, os, uptime), a `console`

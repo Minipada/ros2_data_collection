@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Multipart, resumable uploads for large Files (ADR-0005): an interrupted transfer must
 // resume, not restart. Progress (the multipart upload id + each completed part's ETag)
 // is checkpointed to a JSON sidecar after every part, so a retry or a fresh process

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Runs .pre-commit-config.yaml with prek (https://prek.j178.dev) — same config as
 # pre-commit, no Python environment or apt packages to install first.
 # `--skip build-doc`: doc.yaml owns the docs build.

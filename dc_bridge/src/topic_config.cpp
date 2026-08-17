@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 #include "dc_bridge/topic_config.hpp"
 
 namespace dc_bridge

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Send Records from the TurtleBot3 simulation to InfluxDB.
 
 Uses the ADR-0003 passthrough Destination with a raw Vector `influxdb_metrics`

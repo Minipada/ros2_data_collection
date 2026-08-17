@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // To reload mermaid graphs
 document.getElementById('light').onclick = function () {
     location.reload();

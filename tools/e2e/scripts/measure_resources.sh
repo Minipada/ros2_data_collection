@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Samples CPU/RSS of the `dc` container at the reference workload, informational per
 # the PRD (not a gate). Run by tools/e2e/scripts/run.sh in the background for the
 # duration of a harness run; kill it (SIGTERM) to stop sampling.

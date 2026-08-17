@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+SPDX-License-Identifier: MPL-2.0
+-->
+
 <class_libraries>
     <library path="dc_camera_measurement">
         <class name="dc_measurements/Camera" type="dc_measurements::Camera" base_class_type="dc_core::Measurement">

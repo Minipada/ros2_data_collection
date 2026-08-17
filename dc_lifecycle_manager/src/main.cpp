@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
+// Copied from nav2_lifecycle_manager.
+
 #include <memory>
 
 #include "dc_lifecycle_manager/lifecycle_manager.hpp"

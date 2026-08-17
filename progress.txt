@@ -6890,3 +6890,95 @@ image already carries for `cv_bridge`.
   single message sent this investigation to the wrong component. Also aligned the asset's
   printed size with `lint_launch_files`' own measured `CODE_HALF_W`/`CODE_HALF_H`: 0.362 m
   across by **0.292** m down, not the 0.288 derived here from the texture geometry.
+
+## #301 - Declare copyright and license on every file, the REUSE way
+
+MPL-2.0 is a file-level license — its Exhibit A is meant to travel with each file — but
+nothing in the tree carried a notice, so the license attached only through LICENSE.md. The
+repo now follows [REUSE](https://reuse.software) 3.3: `uvx reuse lint` reports 728/728 files
+with copyright *and* license information, and the `fsfe/reuse-tool` prek hook keeps it that
+way.
+
+**The first attempt was a hand-rolled hook** — a `tools/ci/pre-commit/spdx_headers.py` that
+inserted headers and checked them against each package.xml. It worked, but re-implemented a
+spec that already has a maintained tool, and it only ever looked at C++/Python/CMake/shell —
+which is not what "every file" means. Deleted in favour of `reuse`.
+
+**Two mechanisms, one rule.** Anything that can hold a comment carries the header — 405
+files, in whatever syntax the format uses (`//`, `#`, `<!-- -->`, `/* */`, `--`, `;`,
+`{# #}`), above everything but a shebang:
+
+<!-- REUSE-IgnoreStart -->
+
+    // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+    // SPDX-License-Identifier: MPL-2.0
+
+<!-- REUSE-IgnoreEnd -->
+
+The rest — images, meshes, fonts, JSON, byte-exact test fixtures, prose — is covered by path
+in `REUSE.toml`. **Deliberately no `**` catch-all**: the first draft had one, and the
+negative test then *passed* on a headerless new file, because a catch-all silently claims
+anything that appears in the tree as ours. That is the opposite of a gate, and it is exactly
+how a CC-BY-NC-ND model got in unnoticed in the first place. Without it, an undeclared file
+fails `reuse lint`. 2022 is the root commit's year; no email on the copyright line, since
+package.xml already carries the maintainer address. License texts live in `LICENSES/`,
+fetched with `reuse download --all`: eight of them now.
+
+**What the audit turned up.** Writing the annotations meant establishing provenance, and the
+tree is not single-licensed:
+
+- `dc_util`'s `base64.{hpp,cpp}` are René Nyffenegger's, under the zlib licence whose text
+  was already sitting in the file — now `Zlib` with his copyright, marked rather than
+  skipped.
+- `dc_lifecycle_manager` is a port of `nav2_lifecycle_manager`: normalised similarity against
+  navigation2/humble is 0.87-1.00 for `lifecycle_manager{,_client}.{hpp,cpp}` and `main.cpp`,
+  and `dc_common`'s `dc_package.cmake` / `dc_common-extras.cmake` are verbatim copies of
+  nav2_common's. Those seven files are now `Apache-2.0` carrying Intel's (and Samsung
+  Research America's, where nav2 has it) copyright alongside DC's — the three verbatim ones
+  carry the upstream copyright only. Their tests, by contrast, score 0.04-0.09: written here,
+  still MPL-2.0.
+- `turtlebot3_waffle_qrcodes.xacro` (0.74 vs turtlebot3_gazebo's waffle URDF) and
+  `worlds/waffle.model` are TurtleBot3 with local additions → Apache-2.0 + ROBOTIS;
+  `rviz/qrcodes.rviz` (0.66) derives from nav2_default_view.rviz → Apache-2.0 + Nav2.
+- Sim models, resolved against the Gazebo Fuel API: `Chair` and `MonitorAndKeyboard` are
+  Open Robotics' → CC-BY-4.0. **`warehouse` is MOV.AI's, and Fuel lists it as
+  CC-BY-NC-ND-4.0** — non-commercial, no derivatives, inside an MPL-2.0 repo. Declared
+  honestly; replacing it is #357. `bag`, `cutout_wall`, `europallet`, `europallet_10` come
+  from the Gazebo Classic model database (CC-BY-3.0, Nathan Koenig) per the author's call.
+  The `aws_robomaker_*` and `drc_practice_*` models are *not* third-party: #268 replaced them
+  with local primitive-geometry placeholders.
+- `dc_description/urdf/realsense_d455.urdf.xacro` is Intel's RealSense URDF → Apache-2.0 +
+  Intel. Worth knowing: `reuse annotate` **replaced** that file's existing comment block
+  rather than prepending to it, deleting Intel's "License: Apache 2.0" line outright. It was
+  the only file in the tree with a real upstream notice in a format the tool recognised, and
+  the diff review caught it — the header is hand-written now, above the original notice, and
+  the check is worth repeating on any future bulk `annotate` run.
+- Doc assets: mdBook theme (MPL-2.0), its bundled highlight.js (BSD-3-Clause, Ivan Sagalaev),
+  the mermaid bundle (`MIT AND (Apache-2.0 OR MPL-2.0)` — mermaid, dagre, DOMPurify),
+  mdbook-admonish's CSS (MIT), Lineicons' webfont (MIT).
+
+`package.xml` follows the files: `dc_lifecycle_manager`, `dc_common` and `dc_description` now
+declare `Apache-2.0` next to `MPL-2.0`, and `dc_simulation` declares the four asset licences
+it ships.
+
+**How the derivation audit was actually run**, since "looks like nav2" is not evidence:
+navigation2/humble, turtlebot3/humble and turtlebot3_simulations/humble were cloned, both
+sides normalised (comments stripped, `nav2_`/`dc_`/`turtlebot3_` prefixes removed so a
+rename doesn't hide a copy), and compared two ways — `difflib` ratio against hand-picked
+counterpart files, then a 3-line-shingle sweep of every C++/Python/CMake/URDF/world/rviz file
+in the tree against every such file upstream, to catch pairs nobody thought to guess. Both
+passes name the same seven-plus-three files and nothing else: `dc_measurements`, `dc_bridge`,
+`dc_util`, `dc_group`, `dc_triggers` and `dc_core` are original work.
+
+**Verification.** `uvx reuse lint` is compliant (728/728, 0 bad licences, 0 invalid
+expressions); `prek run --all-files --skip build-doc` is green, all 24 hooks including the
+new one; across 416 changed files the diff deletes exactly one line — the `exclude:` in
+`.pre-commit-config.yaml`, replaced by a longer one — and every other change is an insertion,
+which is the whole no-functional-change argument in one number; `python3 -m compileall` over
+every tracked `.py` passes;
+`colcon build --packages-select dc_util dc_core dc_common dc_lifecycle_manager dc_interfaces`
+in the cached `localhost/dc-workspace:latest` image (this worktree bind-mounted) builds clean
+— `dc_interfaces` matters there, since the `.msg`/`.srv` files gained headers and the IDL
+generator parses them. Negative test: a new `.cpp` with no header now fails (`no license
+identifier` / `no copyright notice`), which the catch-all draft did not. Not run: `build-doc`
+(docs container, `doc.yaml` owns it in CI).

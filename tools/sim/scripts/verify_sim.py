@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Assertions for the simulation smoke check (see tools/sim/scripts/run.sh).
 
 Runs inside the container, inside the running simulation's ROS graph. Every check here

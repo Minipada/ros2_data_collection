@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Forwarder: send(record) hides shipper ingest protocol msgpack framing, socket
 // lifecycle, reconnection, backpressure, and delivery confirmation behind one call.
 #ifndef DC_BRIDGE__FORWARDER_HPP_

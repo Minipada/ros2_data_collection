@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // The pure halves of optional thumbnail generation (#256): which Files get a preview,
 // where it lands remotely, and where its scratch file lands locally. The Uploader's own
 // thumbnail behaviour (ordering against the primary upload, failure isolation, replay

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // The object-storage abstraction the Uploader (ADR-0005) is built on. `ObjectStore` is
 // the minimal synchronous interface the upload logic needs — head/put plus the
 // low-level multipart primitives whose persistent upload id makes interrupted transfers

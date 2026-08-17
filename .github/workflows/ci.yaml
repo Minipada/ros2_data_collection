@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # DC 2.0 (Jazzy) CI (#249). This branch only builds the jazzy line (external Vector
 # shipper, C++ dc_bridge). The humble-line `industrial_ci`/Docker workflow this repo used
 # to run doesn't apply here and

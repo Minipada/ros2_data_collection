@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Supervisor: spawns a program (the vendored Vector binary in production) and restarts
 // it if it dies. Deliberately agnostic to what it supervises (see tests) so the restart
 // logic is exercised without a real Vector binary.

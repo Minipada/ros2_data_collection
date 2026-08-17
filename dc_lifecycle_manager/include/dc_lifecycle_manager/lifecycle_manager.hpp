@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: 2019 Intel Corporation
+// SPDX-FileCopyrightText: 2022 Samsung Research America
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: Apache-2.0
+// Derived from nav2_lifecycle_manager.
+
 #ifndef DC_LIFECYCLE_MANAGER__LIFECYCLE_MANAGER_HPP_
 #define DC_LIFECYCLE_MANAGER__LIFECYCLE_MANAGER_HPP_
 

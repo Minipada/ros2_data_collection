@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Raw-topic bringup (#227): `dc_bridge` alone, collecting the ROS graph itself.
 
 The DC 2.0 equivalent of the original "only start the destination server" idea. Nothing

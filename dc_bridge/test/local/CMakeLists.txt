@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Standalone CMake for fast local iteration on the ROS-independent core (no ROS/colcon
 # needed) — mirrors what ament_add_gtest will build in the package CMakeLists. Not part
 # of the ament build; used via `cmake -S dc_bridge/test/local` in the dev container.

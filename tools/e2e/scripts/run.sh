@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # One-command zero-loss E2E harness (#249). From the repo root:
 #
 #   ./tools/e2e/scripts/run.sh

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Unit tests for dc_common::FileScratchRing (#285, part of #282's pre-event circular-buffer
 // capture). No node, no rclcpp::init(): exercised purely against a tmp-dir fixture (RAII
 // cleanup per test), following the pattern used in dc_bridge/test/retention_test.cpp.

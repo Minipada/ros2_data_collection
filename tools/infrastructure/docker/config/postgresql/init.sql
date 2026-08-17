@@ -1,3 +1,7 @@
+-- SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+--
+-- SPDX-License-Identifier: MPL-2.0
+
 -- Pre-created tables for the DC 2.0 demo infrastructure's PostgreSQL destinations.
 -- dc_bridge's `postgres` destination is Vector's built-in `postgres` sink (see
 -- dc_bridge/src/render.cpp), which maps each top-level key of a Record's JSON

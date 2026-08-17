@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 # Entrypoint for the tools/e2e/Containerfile "dc" image: starts the synthetic
 # reference-workload generator (tools/e2e/scripts/workload_generator.py) and the real
 # DC stack (dc_bringup.launch.py) side by side, exactly like a robot would run

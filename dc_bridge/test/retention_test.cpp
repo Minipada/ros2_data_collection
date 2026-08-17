@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
 // Exercises the retention sweep (#267) purely on disk with an injected
 // VerifiedEverywhereFn — no aws-sdk-cpp / cloud dependency, no real ObjectStore needed
 // (sweep() itself never calls Storage::store; only object_key()/name/url_prefix).

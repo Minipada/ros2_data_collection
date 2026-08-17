@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
 """Send QR-code inspection Records to PostgreSQL and object storage.
 
 Starts DC plus a robot state publisher for the camera-equipped TurtleBot3 URDF --

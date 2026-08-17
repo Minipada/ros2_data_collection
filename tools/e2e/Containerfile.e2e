@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+#
+# SPDX-License-Identifier: MPL-2.0
+
 # The zero-loss E2E harness's runtime layer: the synthetic reference-workload
 # generator, its params, and the entrypoint that launches the real DC stack alongside
 # it. A thin `FROM` on top of tools/e2e/Containerfile's built workspace image. CI's
