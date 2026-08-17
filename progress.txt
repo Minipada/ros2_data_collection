@@ -6867,3 +6867,26 @@ image already carries for `cv_bridge`.
   simulation harness's `detect` stage (it needs the full warehouse world under Nav2, tens of
   minutes on a GPU-less machine) — the `gt_err` assertion it adds is exercised by CI's `sim`
   job, not locally.
+
+- **Follow-up: the sim `detect` stage failed on the first run, and the cause was the ground
+  truth, not the pose.** `[sim] FAILED: no estimated code poses recorded (estimate_pose off, or
+  no CameraInfo)` — with the same run reporting `5 QR codes read over 5 stations`. Neither
+  named cause was real. `qrcodes.world`'s comments contain `--`, which XML forbids *inside* a
+  comment: libsdformat's TinyXML2 accepts the file, `xml.etree.ElementTree` rejects it outright
+  at line 82. `ground_truth_codes()` caught `ParseError` and returned `[]`, so `gt_err` was
+  never emitted whatever the pose was, and the check then blamed the two components furthest
+  from the fault. `lint_launch_files.read_code_planes()` already reads this same file correctly
+  and shows why: it strips comments with `re.sub(r"<!--.*?-->", ...)` first and never uses a
+  strict parser. `ground_truth_codes()` now does the same.
+- **Reading that reference properly turned up a second bug in the same function.** The world's
+  `<pose>` values are in the *world* frame; the estimated pose is transformed into the *map*
+  frame. `lint_launch_files` carries the measured offset as `WORLD_TO_MAP = (-7.300, 1.425)`,
+  so the comparison was silently off by 7.4 m in x. It is now imported from there rather than
+  copied, so the two readers of this world cannot drift apart. Verified against the installed
+  world inside the workspace image: 80 QR models, map-frame x -18.608..-12.498, which lines up
+  with the pallet blocks `WORLD_TO_MAP`'s own comment measures off `qrcodes.pgm`.
+- **The check now distinguishes its three outcomes** — no pose at all, poses but none in the
+  map frame (it prints the frames it did see), or a `gt_err` to compare — because the original
+  single message sent this investigation to the wrong component. Also aligned the asset's
+  printed size with `lint_launch_files`' own measured `CODE_HALF_W`/`CODE_HALF_H`: 0.362 m
+  across by **0.292** m down, not the 0.288 derived here from the texture geometry.

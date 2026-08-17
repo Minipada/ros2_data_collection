@@ -266,16 +266,25 @@ if has_stage detect; then
   # nearest QR model in the world file, so this asserts against the simulator's own
   # ground truth. The tolerance is deliberately loose: dc_simulation's qrcode_* asset
   # stretches a 290x365 texture over a square face, so its printed code is 0.362 m
-  # across and 0.288 m down and no single code_size is exact. A metre still catches
+  # across and 0.292 m down (lint_launch_files' measured CODE_HALF_W/CODE_HALF_H) and
+  # no single code_size is exact. A metre still catches
   # every failure worth catching here -- wrong frame, flipped axis, uninitialised
   # intrinsics -- which a decoded-payload check cannot.
+  #
+  # Three distinguishable outcomes, because the first version of this check reported all
+  # of them as "estimate_pose off, or no CameraInfo" and sent the investigation to the
+  # wrong component: the real cause was the ground-truth reader returning nothing.
+  poses=$(count_in_container 'grep -ac "code_pose=" /tmp/codes.log')
   best=$(rin 'grep -ao "gt_err=[0-9.]*" /tmp/codes.log | cut -d= -f2 | sort -g | head -1' 2>/dev/null | head -1 | tr -dc '0-9.' || true)
   if [ -n "${best:-}" ]; then
     log "best QR-code pose landed ${best} m from the world's own placement"
     awk -v e="$best" 'BEGIN { exit !(e < 1.0) }' \
       || fail "closest estimated code pose was ${best} m from any QR model in the world"
+  elif [ "${poses:-0}" -gt 0 ]; then
+    frames=$(rin 'grep -ao "frame=[^ ]*" /tmp/codes.log | sort -u | tr "\n" " "' 2>/dev/null || true)
+    fail "$poses code poses recorded but none in the map frame (frames seen: ${frames:-none}); the pose_frame TF lookup or the world ground truth is failing"
   else
-    fail "no estimated code poses recorded (estimate_pose off, or no CameraInfo)"
+    fail "no estimated code poses recorded: estimate_pose off, no CameraInfo on the camera_info topic, or the solve rejected every detection"
   fi
 fi
 

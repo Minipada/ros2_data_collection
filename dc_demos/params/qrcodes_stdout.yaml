@@ -54,7 +54,7 @@ measurement_server:
       detection_modules: ["barcode"]
       # Pose of each decoded code, in the map frame (#48). code_size is the printed QR
       # square on dc_simulation's qrcode_* asset: its 0.5x0.5 m face carries a 290x365
-      # texture whose code block measures 0.362 m across and 0.288 m down, so no single
+      # texture whose code block measures 0.362 m across and 0.292 m down, so no single
       # side length is exact -- see doc/src/dc/measurements/camera.md.
       estimate_pose: true
       code_size: 0.325
@@ -83,7 +83,7 @@ measurement_server:
       detection_modules: ["barcode"]
       # Pose of each decoded code, in the map frame (#48). code_size is the printed QR
       # square on dc_simulation's qrcode_* asset: its 0.5x0.5 m face carries a 290x365
-      # texture whose code block measures 0.362 m across and 0.288 m down, so no single
+      # texture whose code block measures 0.362 m across and 0.292 m down, so no single
       # side length is exact -- see doc/src/dc/measurements/camera.md.
       estimate_pose: true
       code_size: 0.325
