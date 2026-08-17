@@ -1,4 +1,5 @@
-"""Tests for the Group node's sync-timeout drop/emit_partial behaviour (#126).
+"""Tests for the Group node's sync-timeout drop/emit_partial behaviour (#126), plus the
+envelope fields a merged Record has to carry through at top level (`incident_id`, #291).
 
 Every test drives a real `GroupServer` through a real executor against real DDS topics —
 `message_filters` has no timeout of its own, so what is under test is precisely the
@@ -329,6 +330,45 @@ def test_throttle_of_zero_logs_every_timeout(harness):
 
     assert len(group.records) >= 3
     assert len(group.sync_timeout_warnings()) == len(group.records)
+
+
+def test_incident_id_is_lifted_to_the_merged_records_top_level(harness):
+    """#291: a released member's incident_id survives merging as a first-class field."""
+    # Nested under the member's `group_key` it would be `<group_key>.incident_id`, which no
+    # Destination table has a column for and the Postgres sink therefore drops.
+    group = harness(sync_timeout=SYNC_TIMEOUT, on_sync_timeout="emit_partial")
+    group.publish(0, {"used": 12.0, "incident_id": "incident-42"})
+    group.publish(1, {"free": 34.0, "incident_id": "incident-42"})
+
+    assert group.wait_for_records(1), "no Record published for a complete set"
+    payload = group.payloads()[0]
+
+    assert payload["incident_id"] == "incident-42"
+    # Lifted, not copied: it must not also stay behind inside the members' own data.
+    assert payload["a"] == {"used": 12.0}
+    assert payload["b"] == {"free": 34.0}
+
+
+def test_incident_id_is_absent_when_no_member_carries_one(harness):
+    """A Record collected outside an incident leaves the column NULL, not empty-string."""
+    group = harness(sync_timeout=SYNC_TIMEOUT, on_sync_timeout="emit_partial")
+    group.publish(0, {"used": 12.0})
+    group.publish(1, {"free": 34.0})
+
+    assert group.wait_for_records(1), "no Record published for a complete set"
+    assert "incident_id" not in group.payloads()[0]
+
+
+def test_partial_record_keeps_the_incident_id_of_the_member_that_arrived(harness):
+    """A window released by one Measurement while another is silent is still an incident."""
+    group = harness(sync_timeout=SYNC_TIMEOUT, on_sync_timeout="emit_partial")
+    group.publish(0, {"used": 12.0, "incident_id": "incident-7"})
+
+    assert group.wait_for_records(1), "no partial Record published for the incomplete set"
+    payload = group.payloads()[0]
+
+    assert payload["incident_id"] == "incident-7"
+    assert payload["partial"] is True
 
 
 def test_unknown_policy_falls_back_to_drop(harness):
