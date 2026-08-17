@@ -15,6 +15,7 @@ Usage:
 
 import json
 import math
+import pathlib
 import sys
 
 import rclpy
@@ -257,34 +258,41 @@ def ground_truth_codes(path=None):
     """Map-frame (x, y) of every QR-code model placed in the world.
 
     The world is the only ground truth for #48's pose estimation: a code's estimated
-    position is only meaningful next to where the simulator actually put it. Returns an
-    empty list rather than raising, so a recorder still logs detections if the world
-    moves.
+    position is only meaningful next to where the simulator actually put it.
+
+    Comments are stripped and the models read with regexes rather than ElementTree, the
+    same way lint_launch_files.read_code_planes() reads this file: qrcodes.world's
+    comments contain `--`, which XML forbids inside a comment, so libsdformat's lenient
+    TinyXML2 accepts the file but every strict parser rejects it outright.
 
     Args:
         path: the installed qrcodes.world; found via the ament index when omitted.
+
+    Returns:
+        A list of (x, y) in the map frame.
     """
-    # stdlib ElementTree, not defusedxml: the input is this repo's own world file,
-    # installed in the image the check runs in.
     import os
-    import xml.etree.ElementTree as ElementTree
+    import re
 
     from ament_index_python.packages import get_package_share_directory
 
-    try:
-        if path is None:
-            share = get_package_share_directory("dc_simulation")
-            path = os.path.join(share, "worlds", "qrcodes.world")
-        root = ElementTree.parse(path).getroot()
-    except (OSError, LookupError, ElementTree.ParseError):
-        return []
+    # WORLD_TO_MAP is measured off qrcodes.pgm; shared rather than copied so the two
+    # readers of this world cannot drift apart.
+    from lint_launch_files import WORLD_TO_MAP
+
+    if path is None:
+        path = os.path.join(get_package_share_directory("dc_simulation"), "worlds", "qrcodes.world")
+    world = re.sub(r"<!--.*?-->", "", pathlib.Path(path).read_text(), flags=re.S)
+
     codes = []
-    for model in root.iter("model"):
-        if not any("qrcode_" in (i.findtext("uri") or "") for i in model.iter("include")):
+    for body in re.findall(r"<model name=\"[^\"]+\">(.*?)</model>", world, re.S):
+        if not re.search(r"<uri>model://qrcode_[^<]*</uri>", body):
             continue
-        parts = (model.findtext("pose") or "").split()
-        if len(parts) >= 2:
-            codes.append((float(parts[0]), float(parts[1])))
+        pose = re.search(r"<pose>([^<]+)</pose>", body)
+        if not pose:
+            continue
+        values = [float(v) for v in pose.group(1).split()]
+        codes.append((values[0] + WORLD_TO_MAP[0], values[1] + WORLD_TO_MAP[1]))
     return codes
 
 

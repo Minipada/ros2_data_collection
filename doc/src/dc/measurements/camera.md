@@ -135,7 +135,7 @@ than a hint:
 - **Non-square codes.** `SOLVEPNP_IPPE_SQUARE` assumes the four corners bound a square. A
   stretched or rectangular code is solved to a compromise scale. `dc_simulation`'s own
   `qrcode_*` assets are exactly this case — a 290x365 texture over a 0.5 x 0.5 m face makes
-  the printed code 0.362 m across and 0.288 m down — which is why the demo sets `code_size`
+  the printed code 0.362 m across and 0.292 m down — which is why the demo sets `code_size`
   to a mid-value of 0.325 and why the simulation check tolerates a metre of error rather
   than centimetres.
 ```
