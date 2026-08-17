@@ -140,3 +140,19 @@ TEST(RecordRingBuffer, RepeatedEvictCallsConverge)
 
   EXPECT_TRUE(buf.empty());
 }
+
+TEST(RecordRingBuffer, ClearDropsEveryEntryRegardlessOfAge)
+{
+  RecordRingBuffer buf(std::chrono::seconds(10));
+  buf.push(R"({"n":"a"})", at(0));
+  buf.push(R"({"n":"b"})", at(1));
+
+  buf.clear();  // a consumer that has just released the whole window must not see it again.
+
+  EXPECT_TRUE(buf.empty());
+  EXPECT_EQ(buf.size(), 0u);
+  EXPECT_TRUE(buf.window().empty());
+
+  buf.push(R"({"n":"c"})", at(2));  // and the buffer is still usable afterwards.
+  EXPECT_EQ(json_of(buf.window()), std::vector<std::string>({ R"({"n":"c"})" }));
+}

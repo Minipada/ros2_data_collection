@@ -54,26 +54,29 @@ public:
    * @param  custom_keys Vector of JSON with custom keys
    * @param  buffer_duration_sec Seconds of history to buffer instead of publishing live; 0 (the
    * default) disables buffering and preserves normal live publishing (#287)
+   * @param  post_roll_duration_sec Seconds to keep publishing live after a flush, still tagged
+   * with the same incident_id; 0 (the default) means pre-roll only (#288)
+   * @param  cooldown_sec Seconds to ignore further FlushEvents once post-roll ends, before
+   * buffering re-arms itself; 0 (the default) re-arms immediately (#288)
    * @param  flush_topic Topic to receive the FlushEvent that releases the buffered window,
-   * tagging each released Record with the event's incident_id, then resumes live publishing
+   * tagging each released Record with the event's incident_id
    */
-  virtual void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
-                         const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
-                         std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
-                         const std::string& group_key, const std::string& topic_output, const int& polling_interval,
-                         const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
-                         const std::vector<std::string>& tags, const bool& init_collect,
-                         const int& init_max_measurements, const bool& include_measurement_name,
-                         const bool& include_measurement_plugin, const int& condition_max_measurements,
-                         const std::vector<std::string>& if_all_conditions,
-                         const std::vector<std::string>& if_any_conditions,
-                         const std::vector<std::string>& if_none_conditions, const std::string& gate_condition,
-                         const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
-                         const bool& nest, const bool& flatten, const std::string& save_local_base_path,
-                         const std::string& all_base_path, const std::string& all_base_path_expanded,
-                         const std::string& save_local_base_path_expanded, const std::string& run_id,
-                         const bool& run_id_enabled, const std::vector<json>& custom_keys,
-                         const double& buffer_duration_sec, const std::string& flush_topic) = 0;
+  virtual void
+  configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
+            const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
+            std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin, const std::string& group_key,
+            const std::string& topic_output, const int& polling_interval, const bool& debug,
+            const bool& enable_validator, const std::string& json_schema_path, const std::vector<std::string>& tags,
+            const bool& init_collect, const int& init_max_measurements, const bool& include_measurement_name,
+            const bool& include_measurement_plugin, const int& condition_max_measurements,
+            const std::vector<std::string>& if_all_conditions, const std::vector<std::string>& if_any_conditions,
+            const std::vector<std::string>& if_none_conditions, const std::string& gate_condition,
+            const std::vector<std::string>& remote_keys, const std::vector<std::string>& remote_prefixes,
+            const bool& nest, const bool& flatten, const std::string& save_local_base_path,
+            const std::string& all_base_path, const std::string& all_base_path_expanded,
+            const std::string& save_local_base_path_expanded, const std::string& run_id, const bool& run_id_enabled,
+            const std::vector<json>& custom_keys, const double& buffer_duration_sec,
+            const double& post_roll_duration_sec, const double& cooldown_sec, const std::string& flush_topic) = 0;
 
   /**
    * @brief Method to cleanup resources used on shutdown.

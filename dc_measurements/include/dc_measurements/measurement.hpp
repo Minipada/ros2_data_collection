@@ -14,13 +14,13 @@
 #include <utility>
 #include <vector>
 
-#include "dc_common/record_ring_buffer.hpp"
 #include "dc_core/condition.hpp"
 #include "dc_core/condition_set.hpp"
 #include "dc_core/measurement.hpp"
 #include "dc_interfaces/msg/condition.hpp"
 #include "dc_interfaces/msg/flush_event.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
+#include "dc_measurements/incident_releaser.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/create_timer_ros.h"
@@ -525,9 +525,9 @@ public:
     dc_interfaces::msg::StringStamped msg = collect();
     if (enabled_)
     {
-      if (buffering_active_)
+      if (releaser_)
       {
-        bufferSample(msg);
+        offerSample(msg);
       }
       else
       {
@@ -536,53 +536,55 @@ public:
     }
   }
 
-  // While buffering is active, collectAndPublish() calls this instead of publish(): the sample
-  // is enriched exactly as a live Record would be, then pushed into ring_buffer_ instead of
-  // being published, and the buffer is evicted down to buffer_duration_sec_ relative to now (#287).
-  void bufferSample(dc_interfaces::msg::StringStamped msg)
+  // With incident capture configured, collectAndPublish() calls this instead of publish(): the
+  // sample is enriched exactly as a live Record would be, then handed to the IncidentReleaser,
+  // which buffers it or (during post-roll) publishes it live through publishIncidentRecord() (#288).
+  void offerSample(dc_interfaces::msg::StringStamped msg)
   {
     if (msg.data.empty() || msg.data == "null")
     {
       return;
     }
     enrichMsg(msg);
-    auto now = std::chrono::system_clock::now();
-    ring_buffer_->push(msg.data, now);
-    ring_buffer_->evict(now);
+    releaser_->offer(msg.data, std::chrono::system_clock::now());
   }
 
-  // Releases the buffered window as Records tagged with the FlushEvent's incident_id, then
-  // turns buffering off for good -- re-arming and cooldown are separate follow-up slices, kept
-  // out of this one intentionally (#287).
+  // Emits one Record belonging to an incident -- either released from the pre-roll buffer (stamped
+  // with when it was collected, not when it was released) or collected live during post-roll.
+  // Publishes straight through data_pub_, bypassing publish()'s gate/counter logic: a Record
+  // captured for an incident was already unconditionally collected and isn't re-filtered on the
+  // way out.
+  void publishIncidentRecord(const std::string& record_json, const std::chrono::system_clock::time_point& stamp,
+                             const std::string& incident_id)
+  {
+    dc_interfaces::msg::StringStamped out;
+    out.group_key = group_key_;
+    out.header.stamp =
+        rclcpp::Time(std::chrono::duration_cast<std::chrono::nanoseconds>(stamp.time_since_epoch()).count());
+    try
+    {
+      json data_json = json::parse(record_json);
+      data_json["incident_id"] = incident_id;
+      out.data = data_json.dump(-1, ' ', true);
+    }
+    catch (json::parse_error& e)
+    {
+      RCLCPP_ERROR_STREAM(logger_,
+                          "Error parsing Record JSON while releasing incident " << incident_id << ": " << record_json);
+      return;
+    }
+    data_pub_->publish(out);
+  }
+
+  // A Trigger fired somewhere in the system: hand the event to the state machine, which releases
+  // the buffered window under this incident_id when armed and ignores the event otherwise (#288).
   void onFlushEvent(const dc_interfaces::msg::FlushEvent& event)
   {
-    if (!buffering_active_ || !ring_buffer_)
+    if (!releaser_)
     {
       return;
     }
-
-    for (const auto& entry : ring_buffer_->window())
-    {
-      dc_interfaces::msg::StringStamped out;
-      out.group_key = group_key_;
-      out.header.stamp =
-          rclcpp::Time(std::chrono::duration_cast<std::chrono::nanoseconds>(entry.stamp.time_since_epoch()).count());
-      try
-      {
-        json data_json = json::parse(entry.json);
-        data_json["incident_id"] = event.incident_id;
-        out.data = data_json.dump(-1, ' ', true);
-      }
-      catch (json::parse_error& e)
-      {
-        RCLCPP_ERROR_STREAM(logger_, "Error parsing buffered Record JSON on FlushEvent release: " << entry.json);
-        continue;
-      }
-      data_pub_->publish(out);
-    }
-
-    buffering_active_ = false;
-    ring_buffer_.reset();
+    releaser_->onFlush(event.incident_id, std::chrono::system_clock::now());
   }
 
   virtual dc_interfaces::msg::StringStamped collect() = 0;
@@ -602,7 +604,8 @@ public:
                  const std::string& save_local_base_path, const std::string& all_base_path,
                  const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
                  const std::string& run_id, const bool& run_id_enabled, const std::vector<json>& custom_keys,
-                 const double& buffer_duration_sec, const std::string& flush_topic) override
+                 const double& buffer_duration_sec, const double& post_roll_duration_sec, const double& cooldown_sec,
+                 const std::string& flush_topic) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -656,13 +659,16 @@ public:
         std::chrono::milliseconds(polling_interval_), [this] { collectAndPublish(); }, client_cb_group_);
 
     buffer_duration_sec_ = buffer_duration_sec;
-    buffering_active_ = buffer_duration_sec_ > 0.0;
+    post_roll_duration_sec_ = post_roll_duration_sec;
+    cooldown_sec_ = cooldown_sec;
     flush_topic_ = flush_topic.empty() ? std::string("/dc/flush") : flush_topic;
-    if (buffering_active_)
+    if (buffer_duration_sec_ > 0.0)
     {
-      ring_buffer_ =
-          std::make_shared<dc_common::RecordRingBuffer>(std::chrono::duration_cast<std::chrono::system_clock::duration>(
-              std::chrono::duration<double>(buffer_duration_sec_)));
+      releaser_ = std::make_shared<IncidentReleaser>(
+          durationFromSeconds(buffer_duration_sec_), durationFromSeconds(post_roll_duration_sec_),
+          durationFromSeconds(cooldown_sec_),
+          [this](const std::string& record_json, const std::chrono::system_clock::time_point& stamp,
+                 const std::string& incident_id) { publishIncidentRecord(record_json, stamp, incident_id); });
       flush_sub_ = node->create_subscription<dc_interfaces::msg::FlushEvent>(
           flush_topic_, 10, std::bind(&Measurement::onFlushEvent, this, std::placeholders::_1));
     }
@@ -699,7 +705,7 @@ public:
   {
     data_pub_.reset();
     flush_sub_.reset();
-    ring_buffer_.reset();
+    releaser_.reset();
     onCleanup();
   }
 
@@ -786,13 +792,15 @@ protected:
   // Tags
   std::vector<std::string> tags_;
 
-  // Buffering: pre-event circular-buffer capture (#287). While buffering_active_, samples go
-  // into ring_buffer_ instead of being published; a FlushEvent on flush_topic_ releases the
-  // buffered window and turns buffering off for the lifetime of this Measurement instance.
+  // Incident capture: pre-event circular-buffer capture (#287) driven by the IncidentReleaser
+  // state machine (#288). releaser_ is only created when buffer_duration_sec_ > 0; while it
+  // exists, collected samples go to it instead of publish(), and a FlushEvent on flush_topic_
+  // starts one buffer-release / post-roll / cooldown / re-arm cycle.
   double buffer_duration_sec_{ 0.0 };
-  bool buffering_active_{ false };
+  double post_roll_duration_sec_{ 0.0 };
+  double cooldown_sec_{ 0.0 };
   std::string flush_topic_;
-  std::shared_ptr<dc_common::RecordRingBuffer> ring_buffer_;
+  std::shared_ptr<IncidentReleaser> releaser_;
   rclcpp::Subscription<dc_interfaces::msg::FlushEvent>::SharedPtr flush_sub_;
 };
 

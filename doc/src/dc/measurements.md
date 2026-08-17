@@ -77,16 +77,35 @@ Each measurement is collected through a node and has these configuration paramet
 | **include_measurement_name**   | Include measurement name in the JSON data                                                    | bool        | false                                |
 | **include_measurement_plugin** | Include measurement plugin name in the JSON data                                             | bool        | false                                |
 | **buffer_duration_sec**        | Seconds of history to buffer instead of publishing live; 0 disables buffering and preserves normal live publishing | float | 0 |
-| **flush_topic**                | Topic to receive the `FlushEvent` (see [Triggers](./triggers.md)) that releases the buffered window, tagging each Record with the event's `incident_id`, then resumes live publishing | str | "/dc/flush" |
+| **post_roll_duration_sec**     | Seconds to keep publishing live after a flush, still tagged with the same `incident_id`; 0 means pre-roll only | float | 0 |
+| **cooldown_sec**               | Seconds to ignore further `FlushEvent`s once post-roll ends, before buffering re-arms itself; 0 re-arms immediately | float | 0 |
+| **flush_topic**                | Topic to receive the `FlushEvent` (see [Triggers](./triggers.md)) that releases the buffered window, tagging each Record with the event's `incident_id` | str | "/dc/flush" |
 
-```admonish info title="buffer_duration_sec and flush_topic: pre-event circular-buffer capture"
+```admonish info title="buffer_duration_sec and friends: pre-event circular-buffer capture"
 When `buffer_duration_sec` is set above 0, this Measurement stops publishing live: each
 collected sample is instead pushed into an in-memory ring buffer covering the last
-`buffer_duration_sec` seconds. On receiving a `FlushEvent` on `flush_topic` (published by a
-`dc_triggers` broadcast node when its Trigger fires), the whole buffered window is published
-at once, each Record tagged with the event's `incident_id`, and the Measurement then resumes
-live publishing for good — buffering does not re-arm. Post-roll capture, cooldown, and
-rate-limiting are not part of this behavior yet.
+`buffer_duration_sec` seconds. A `FlushEvent` on `flush_topic` (published by a `dc_triggers`
+broadcast node when its Trigger fires) then drives one incident-capture cycle:
+
+1. **Buffering** — the default, armed state: samples accumulate in the ring buffer and nothing
+   is published. Only in this state does a `FlushEvent` start a cycle.
+2. **Flushing** — the whole buffered window is published at once, oldest first, each Record
+   tagged with the event's `incident_id` and stamped with when it was *collected*, not when it
+   was released. The window is consumed, so the next incident releases its own history rather
+   than replaying this one.
+3. **PostRoll** — for `post_roll_duration_sec` after the flush, samples are published live as
+   they are collected, still tagged with the same `incident_id`, so the aftermath of the
+   incident is captured too. Left at its default 0, this phase is skipped entirely: pre-roll
+   only.
+4. **Cooldown** — for `cooldown_sec` after post-roll ends, further `FlushEvent`s are ignored, so
+   a flapping Trigger cannot produce a flood of overlapping incidents. Samples are buffered
+   again during this phase, so the next incident still gets a full pre-roll window.
+
+The Measurement then re-arms itself back to **Buffering** with no manual intervention — a
+second incident is captured exactly like the first. With both `post_roll_duration_sec` and
+`cooldown_sec` left at 0, a flush releases the pre-roll window and the Measurement is armed
+again immediately. Rate-limited release of the buffered window is not implemented yet: the
+whole window goes out in one burst.
 ```
 
 ```admonish info title="gate_condition vs. if_all/if_any/if_none_conditions"
