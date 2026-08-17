@@ -34,6 +34,10 @@ CREATE TABLE IF NOT EXISTS dc (
   nested boolean,
   tags jsonb,
   plugins jsonb,
+  -- The incident a Measurement released this Record under (#291). NULL for every Record
+  -- collected outside an incident, which is most of them; the UUID the Trigger broadcast
+  -- node minted for one firing otherwise, shared by every Record and File of that incident.
+  incident_id text,
   -- System (tb3_simulation_pgsql_minio: memory/os/uptime)
   used double precision,
   os text,

@@ -15,6 +15,11 @@ CREATE TABLE IF NOT EXISTS dc_records (
   date bigint,
   tag text,
   group_key text,
+  -- The incident a Measurement released this Record under (#291) — NULL unless the Record
+  -- came out of a buffered pre-roll window or the post-roll that follows it. A column, not a
+  -- payload key, so `WHERE incident_id = ...` is a real query; scripts/run_incident.sh is
+  -- what proves that end to end.
+  incident_id text,
   -- memory
   used double precision,
   -- os

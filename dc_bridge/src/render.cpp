@@ -182,6 +182,29 @@ std::string tag_condition(const std::set<std::string>& tags, const std::set<std:
   return out;
 }
 
+// Normalizes the Record envelope's `incident_id` (#291) for a Destination whose sink maps
+// top-level keys onto table columns.
+//
+// Vector's `postgres` sink has no column-mapping options of its own: it hands the event to
+// `jsonb_populate_record`, so a top-level key lands in the same-named column and anything
+// else is dropped. There is therefore no `columns = [...]` to write — this block is where the
+// generated config names `incident_id` as a field DC maps onto a column, which is what makes
+// the column part of the rendered contract (and what the render tests assert) rather than an
+// undocumented consequence of the key happening to be top-level.
+//
+// `to_string(...) ?? null` for the same reason the route predicates coerce `.tag`: VRL types
+// an event field as `any`. A Measurement whose own payload already carries a non-string
+// `incident_id` (an object, say) would otherwise reach the sink as a value the text column
+// cannot take and fail the whole insert batch; coerced, that Record still lands, with a NULL
+// in the column. Guarded by `exists` because `to_string(null)` is `""` — a Record that is not
+// part of an incident must leave the column NULL, not empty-string.
+std::string render_incident_id_normalization()
+{
+  return "  if exists(.incident_id) {\n"
+         "    .incident_id = to_string(.incident_id) ?? null\n"
+         "  }\n";
+}
+
 std::string render_normalize_source(const RenderConfig& config)
 {
   std::string out;
@@ -203,6 +226,10 @@ std::string render_normalize_source(const RenderConfig& config)
     else
     {
       out += "  ." + dest.time_key + " = format_timestamp!(.timestamp, format: \"%Y-%m-%dT%H:%M:%S%.9f\")\n";
+    }
+    if (std::holds_alternative<PostgresParams>(dest.kind))
+    {
+      out += render_incident_id_normalization();
     }
     out += "}\n";
   }

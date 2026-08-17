@@ -126,6 +126,59 @@ TEST(Render, FileAndConsoleDestinations)
   assert_matches_fixture(render(config), "file_and_console.toml");
 }
 
+// #291: `incident_id` is a first-class column, not a key buried in the payload. Vector's
+// postgres sink has no column-mapping options — a top-level event key lands in the
+// same-named column — so the mapping *is* this line of the normalize transform, and it must
+// be rendered for every postgres destination whatever its time_format.
+TEST(Render, PostgresDestinationsNormalizeIncidentIdIntoItsOwnColumn)
+{
+  for (auto tf : { TimeFormat::EpochNanos, TimeFormat::Double, TimeFormat::Iso8601 })
+  {
+    toml::table parsed = toml::parse(render(basic_config(tf)));
+    const std::string source(parsed["transforms"][NORMALIZE_TRANSFORM_ID]["source"].value_or(""));
+    EXPECT_NE(source.find("if exists(.incident_id) {"), std::string::npos) << source;
+    EXPECT_NE(source.find(".incident_id = to_string(.incident_id) ?? null"), std::string::npos) << source;
+  }
+}
+
+// One remap transform serves every destination, so the incident_id block has to sit inside
+// the branch guarding the postgres destination's own Tags — not at top level, where it would
+// also rewrite events no column-mapped sink ever sees.
+TEST(Render, IncidentIdNormalizationIsScopedToThePostgresDestinationsTags)
+{
+  auto config = config_with({
+      make_destination("pgsql", { "/dc/group/robot" }, TimeFormat::EpochNanos, postgres_kind()),
+      make_destination("debug_console", { "/dc/measurement/uptime" }, TimeFormat::EpochNanos, ConsoleParams{}),
+  });
+  toml::table parsed = toml::parse(render(config));
+  const std::string source(parsed["transforms"][NORMALIZE_TRANSFORM_ID]["source"].value_or(""));
+
+  const auto pg_branch = source.find("if includes([\"dc.group.robot\"], .tag) {");
+  const auto console_branch = source.find("if includes([\"dc.measurement.uptime\"], .tag) {");
+  const auto incident = source.find("if exists(.incident_id) {");
+  ASSERT_NE(pg_branch, std::string::npos) << source;
+  ASSERT_NE(console_branch, std::string::npos) << source;
+  ASSERT_NE(incident, std::string::npos) << source;
+  EXPECT_GT(incident, pg_branch) << source;
+  EXPECT_LT(incident, console_branch) << source;
+  // Exactly one destination is column-mapped, so exactly one block is rendered.
+  EXPECT_EQ(source.find("if exists(.incident_id) {", incident + 1), std::string::npos) << source;
+}
+
+// A config with no column-mapped sink has nothing to map incident_id onto; the field rides
+// along in the JSON payload as it always has.
+TEST(Render, NonPostgresDestinationsGetNoIncidentIdNormalization)
+{
+  auto config = config_with({
+      make_destination("local_log", { "/dc/group/robot" }, TimeFormat::EpochNanos,
+                       FileParams{ "/var/log/dc/records.log" }),
+      make_destination("debug_console", { "/dc/group/robot" }, TimeFormat::EpochNanos, ConsoleParams{}),
+  });
+  toml::table parsed = toml::parse(render(config));
+  const std::string source(parsed["transforms"][NORMALIZE_TRANSFORM_ID]["source"].value_or(""));
+  EXPECT_EQ(source.find("incident_id"), std::string::npos) << source;
+}
+
 TEST(Render, ConsoleSinkHasNoDiskBuffer)
 {
   auto config =
