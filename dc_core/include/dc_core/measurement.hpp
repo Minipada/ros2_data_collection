@@ -58,6 +58,9 @@ public:
    * with the same incident_id; 0 (the default) means pre-roll only (#288)
    * @param  cooldown_sec Seconds to ignore further FlushEvents once post-roll ends, before
    * buffering re-arms itself; 0 (the default) re-arms immediately (#288)
+   * @param  max_flush_rate_hz Ceiling on how fast the buffered window is emitted once a flush
+   * releases it, protecting Bridge/network bandwidth; 0 (the default) releases it in one burst
+   * (#289)
    * @param  flush_topic Topic to receive the FlushEvent that releases the buffered window,
    * tagging each released Record with the event's incident_id
    */
@@ -76,7 +79,8 @@ public:
             const std::string& all_base_path, const std::string& all_base_path_expanded,
             const std::string& save_local_base_path_expanded, const std::string& run_id, const bool& run_id_enabled,
             const std::vector<json>& custom_keys, const double& buffer_duration_sec,
-            const double& post_roll_duration_sec, const double& cooldown_sec, const std::string& flush_topic) = 0;
+            const double& post_roll_duration_sec, const double& cooldown_sec, const double& max_flush_rate_hz,
+            const std::string& flush_topic) = 0;
 
   /**
    * @brief Method to cleanup resources used on shutdown.

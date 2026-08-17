@@ -128,6 +128,7 @@ protected:
   std::vector<double> measurement_buffer_duration_sec_;
   std::vector<double> measurement_post_roll_duration_sec_;
   std::vector<double> measurement_cooldown_sec_;
+  std::vector<double> measurement_max_flush_rate_hz_;
   std::vector<std::string> measurement_flush_topic_;
   std::string save_local_base_path_;
   std::string save_local_base_path_expanded_;
