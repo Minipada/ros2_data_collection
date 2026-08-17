@@ -6453,3 +6453,29 @@ payload. User stories 9 and 19 of #282.
   merge description and the partial-Record notes; `tools/e2e/README.md` gains the scenario.
 - **Not touched, deliberately**: the Streamlit demo dashboard (#282 puts incident browsing UI
   out of scope) and `CONTEXT.md`'s glossary (#345 owns the **Incident** entry).
+- **Verified**: `podman run` against the `localhost/dc-workspace` Jazzy image with this
+  worktree bind-mounted over `/root/ws/src/ros2_data_collection`, as in #284-#290. `colcon
+  build --packages-select dc_util dc_core dc_common dc_interfaces dc_measurements dc_group
+  dc_triggers dc_lifecycle_manager dc_bringup dc_bridge` finished all 10 packages with zero
+  warnings (14min38s of it `dc_measurements` alone -- every measurement/condition plugin
+  recompiles because they all include `measurement.hpp`), then `colcon test --packages-select
+  dc_bridge dc_group dc_common dc_measurements` + `colcon test-result --all`: **360 tests, 0
+  errors, 0 failures, 0 skipped**, including `render_test` 51 (was 48) and `dc_group`'s
+  pytest 15 (was 12).
+- **The E2E scenario was actually run**, not just written: the container was `podman commit`ed
+  into an image (`--change 'CMD []'` -- the long-lived iteration container's `sleep infinity`
+  CMD would otherwise be handed to `entrypoint.sh` and on to `ros2 launch` as arguments),
+  `Containerfile.e2e` built on top of it, and `DC_E2E_IMAGE=... ./tools/e2e/scripts/
+  run_incident.sh` run against real Postgres. Every gate passed: the text column exists, 5
+  live rows while the armed Measurement had shipped 0, and **16 rows returned by `WHERE
+  incident_id = 'e2e-incident-0001'`** -- the ~12-Record 6s pre-roll window plus the ~4
+  Records of 2s post-roll -- with the never-armed Measurement's rows still NULL.
+- **A real bug the first run caught**, worth recording because the same pattern is in
+  `run_retention.sh`: gating on `pg_isready` is not enough. The postgres image applies
+  `/docker-entrypoint-initdb.d` against a *temporary* server which it then shuts down and
+  restarts, and `pg_isready` answers yes to that one -- so the first query landed mid-shutdown
+  ("FATAL: the database system is shutting down") and `set -e` killed the run. The gate is now
+  `until psql -tAc "SELECT to_regclass('public.dc_records')" | grep -q dc_records`, which can
+  only be true once the real server is up *and* init.sql has been applied. `run_retention.sh`
+  gets away with `pg_isready` only because its first query happens minutes later; not changed
+  here, to keep this diff scoped.

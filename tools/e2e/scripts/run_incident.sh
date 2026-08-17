@@ -124,8 +124,13 @@ podman run -d --network host --name "$PG_C" \
   -v "$E2E_DIR/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro" \
   docker.io/library/postgres:13 >/dev/null
 
-timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
-  || { log "Postgres never became ready"; exit 1; }
+# Deliberately not `pg_isready`: the postgres image runs /docker-entrypoint-initdb.d against a
+# *temporary* server that is then shut down and restarted, and pg_isready answers yes to that
+# one. Waiting for `dc_records` to resolve instead gates on the only state that matters — the
+# real server is up and init.sql has been applied — and cannot match the throwaway one, whose
+# shutdown otherwise lands in the middle of the first query below.
+timeout 120 bash -c "until podman exec $PG_C psql -U dc -d dc -tAc \"SELECT to_regclass('public.dc_records')\" 2>/dev/null | grep -q dc_records; do sleep 2; done" \
+  || { log "Postgres never came up with sql/init.sql applied"; exit 1; }
 
 # The column has to be a column. A table without it would make every assertion below fail
 # for a reason that has nothing to do with the pipeline, so say so here instead.
