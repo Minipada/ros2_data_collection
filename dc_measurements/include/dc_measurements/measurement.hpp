@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cmath>
 #include <ctime>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <mutex>
@@ -15,6 +16,7 @@
 #include <utility>
 #include <vector>
 
+#include "dc_common/file_scratch_ring.hpp"
 #include "dc_core/condition.hpp"
 #include "dc_core/condition_set.hpp"
 #include "dc_core/measurement.hpp"
@@ -542,16 +544,168 @@ public:
   // which buffers it or (during post-roll) publishes it live through publishIncidentRecord() (#288).
   void offerSample(dc_interfaces::msg::StringStamped msg)
   {
+    const auto now = std::chrono::system_clock::now();
     if (msg.data.empty() || msg.data == "null")
     {
       // Nothing to offer, but the phase deadlines and a rate-limited release still need driving.
       const std::lock_guard<std::mutex> lock(releaser_mutex_);
-      releaser_->tick(std::chrono::system_clock::now());
+      releaser_->tick(now);
       return;
     }
     enrichMsg(msg);
     const std::lock_guard<std::mutex> lock(releaser_mutex_);
-    releaser_->offer(msg.data, std::chrono::system_clock::now());
+    // Drive the phase transitions before deciding what to do with this sample's Files: during
+    // post-roll the Record is published live and its Files are left exactly where the Measurement
+    // wrote them, which is what the Bridge has always picked up.
+    releaser_->tick(now);
+    if (releaser_->state() != IncidentState::PostRoll)
+    {
+      stageSampleFiles(msg, now);
+    }
+    releaser_->offer(msg.data, now);
+  }
+
+  // A buffered Record's Files, staged (#290). Called for every sample the releaser is about to
+  // buffer rather than publish: each File the Record references is moved into the scratch ring and
+  // the Record rewritten to point at the staged copy, then the ring is aged like the Record ring
+  // buffer it shadows, so an armed Measurement's Files stay bounded by buffer_duration_sec instead
+  // of piling up in the save path with no Record to ever carry them to the Bridge.
+  //
+  // Caller holds releaser_mutex_.
+  void stageSampleFiles(dc_interfaces::msg::StringStamped& msg, const std::chrono::system_clock::time_point& now)
+  {
+    json data_json;
+    try
+    {
+      data_json = json::parse(msg.data);
+    }
+    catch (json::parse_error& e)
+    {
+      // enrichMsg() already logged whatever made this unparsable; buffer it as-is.
+      return;
+    }
+    if (stageRecordFiles(data_json, now))
+    {
+      msg.data = data_json.dump(-1, ' ', true);
+    }
+    // Rolling deletion of the aged-out staged Files -- the disk-backed half of the same eviction
+    // the ring buffer does to their Records, driven with the same `now` and the same window, so
+    // the two stay in step. Safe to run mid-release: onFlushEvent() released the window being
+    // drained out of the ring's ownership before the drain started.
+    if (file_scratch_ring_)
+    {
+      file_scratch_ring_->evict(now);
+    }
+  }
+
+  // Stage every File `value` references, rewriting each local_paths entry to its staged copy.
+  // Returns whether anything was staged. Walks the Record the same way dc_bridge's
+  // parse_file_group() does, so exactly the paths the Bridge would have uploaded are the ones
+  // that move: local_paths at any depth (a `nested` Measurement puts it under its own name),
+  // never base64 (inline content, not a path).
+  bool stageRecordFiles(json& value, const std::chrono::system_clock::time_point& stamp)
+  {
+    if (!value.is_object())
+    {
+      return false;
+    }
+
+    bool staged = false;
+    auto local_paths_it = value.find("local_paths");
+    if (local_paths_it != value.end() && local_paths_it->is_object())
+    {
+      for (auto it = local_paths_it->begin(); it != local_paths_it->end(); ++it)
+      {
+        staged = stageOneFile(*it, stamp) || staged;
+      }
+    }
+
+    for (auto it = value.begin(); it != value.end(); ++it)
+    {
+      const std::string& key = it.key();
+      if (key == "local_paths" || key == "remote_paths" || key == "base64")
+      {
+        continue;
+      }
+      // A `flatten`ed Record has no nested objects left: its keys are JSON pointers, so the File
+      // paths show up as "/local_paths/raw" (or "/<name>/local_paths/raw" when also nested).
+      if (it->is_string() && key.find("/local_paths/") != std::string::npos)
+      {
+        staged = stageOneFile(*it, stamp) || staged;
+        continue;
+      }
+      staged = stageRecordFiles(*it, stamp) || staged;
+    }
+    return staged;
+  }
+
+  // Move one File into the scratch ring and rewrite `path_value` to the staged copy.
+  bool stageOneFile(json& path_value, const std::chrono::system_clock::time_point& stamp)
+  {
+    if (!path_value.is_string())
+    {
+      return false;
+    }
+    const std::string original = path_value.get<std::string>();
+    if (original.empty())
+    {
+      return false;
+    }
+
+    try
+    {
+      const auto staged_path = scratchRing()->stage(original, stamp);
+      // Staging *moves* the File: the Record referencing the original is buffered, not published,
+      // so nothing will ever pick that original up -- neither the Bridge (which never sees the
+      // Record) nor its retention sweep. Leaving it behind would grow the save path without bound
+      // for as long as the Measurement stays armed, which is exactly what the bounded ring exists
+      // to prevent. The copy the ring made is what the released Record points at, and it uploads
+      // to the unchanged remote_paths key the Measurement computed at collection time.
+      std::error_code ec;
+      std::filesystem::remove(original, ec);
+      path_value = staged_path.string();
+      return true;
+    }
+    catch (const std::filesystem::filesystem_error& e)
+    {
+      RCLCPP_ERROR_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
+                                   "Measurement " << measurement_name_ << ": could not stage File " << original
+                                                  << " into the incident scratch ring (" << e.what()
+                                                  << "); buffering the Record with the File left in place.");
+      return false;
+    }
+  }
+
+  // The scratch ring, created on the first Record that actually references a File so the many
+  // Measurements that produce none never grow a scratch directory. Caller holds releaser_mutex_.
+  const std::shared_ptr<dc_common::FileScratchRing>& scratchRing()
+  {
+    if (!file_scratch_ring_)
+    {
+      file_scratch_ring_ =
+          std::make_shared<dc_common::FileScratchRing>(scratchDir(), durationFromSeconds(buffer_duration_sec_));
+    }
+    return file_scratch_ring_;
+  }
+
+  // Where staged Files live: one stable directory per Measurement, next to the Files themselves
+  // (same filesystem, so staging is a cheap local move) but outside the dated save tree. The
+  // literal prefix of save_local_base_path is used -- everything up to its first strftime token --
+  // so the scratch directory doesn't roll over every hour the way the save path does.
+  std::filesystem::path scratchDir() const
+  {
+    std::string base = save_local_base_path_expanded_;
+    const auto token = base.find('%');
+    if (token != std::string::npos)
+    {
+      const auto slash = base.rfind('/', token);
+      base = (slash == std::string::npos) ? std::string() : base.substr(0, slash);
+    }
+    if (base.empty())
+    {
+      base = std::filesystem::temp_directory_path().string();
+    }
+    return std::filesystem::path(base) / ".dc_incident_scratch" / measurement_name_;
   }
 
   // Emits one Record belonging to an incident -- either released from the pre-roll buffer (stamped
@@ -589,8 +743,28 @@ public:
     {
       return;
     }
+    const auto now = std::chrono::system_clock::now();
     const std::lock_guard<std::mutex> lock(releaser_mutex_);
-    releaser_->onFlush(event.incident_id, std::chrono::system_clock::now());
+    releaser_->tick(now);
+    // Whether this event starts a cycle has to be read before onFlush() acts on it, since acting
+    // on it is exactly what makes isArmed() false.
+    const bool starts_cycle = releaser_->isArmed();
+    if (file_scratch_ring_ && starts_cycle)
+    {
+      // Staged Files that have aged out are not part of the window this incident releases (their
+      // Records were evicted from the ring buffer too): delete them first, so what survives to
+      // release() below is exactly what the released Records reference.
+      file_scratch_ring_->evict(now);
+    }
+    releaser_->onFlush(event.incident_id, now);
+    if (file_scratch_ring_ && starts_cycle)
+    {
+      // The released Records are on their way to the Bridge, which owns their Files from here
+      // (intent queue, upload, retention sweep, delete_when_sent). Stop tracking them so no later
+      // evict() can delete a File out from under an upload in flight -- #290's whole point being
+      // that the Bridge needs no change to ingest them, however old their timestamps are.
+      file_scratch_ring_->release();
+    }
   }
 
   virtual dc_interfaces::msg::StringStamped collect() = 0;
@@ -733,6 +907,14 @@ public:
     {
       const std::lock_guard<std::mutex> lock(releaser_mutex_);
       releaser_.reset();
+      if (file_scratch_ring_)
+      {
+        // The buffered Records go with the releaser, so the Files they referenced would be
+        // orphaned in the scratch directory: nothing is left to publish them. Released ones are
+        // untracked by now (onFlushEvent()) and are the Bridge's, so purge() can't touch them.
+        file_scratch_ring_->purge();
+        file_scratch_ring_.reset();
+      }
     }
     onCleanup();
   }
@@ -833,8 +1015,14 @@ protected:
   rclcpp::Subscription<dc_interfaces::msg::FlushEvent>::SharedPtr flush_sub_;
   // Paces a rate-limited release; only created when max_flush_rate_hz_ > 0 (#289).
   rclcpp::TimerBase::SharedPtr release_timer_;
+  // The Files half of incident capture (#290): while the releaser buffers a Record instead of
+  // publishing it, the Files that Record references are moved in here and the Record rewritten to
+  // point at the staged copies, which age out on the same window as the Records themselves.
+  // Created lazily by scratchRing(), on the first Record that references a File at all.
+  std::shared_ptr<dc_common::FileScratchRing> file_scratch_ring_;
   // The releaser is reached from three concurrent paths -- the polling timer, the FlushEvent
-  // subscription and release_timer_ -- so every entry into it is serialized here.
+  // subscription and release_timer_ -- so every entry into it, and into the scratch ring that
+  // shadows it, is serialized here.
   std::mutex releaser_mutex_;
 };
 

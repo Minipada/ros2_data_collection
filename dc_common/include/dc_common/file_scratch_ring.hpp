@@ -35,7 +35,9 @@ struct ScratchedFile
  * copies older than the configured window, from disk and from window(). window() reports the
  * current contents as an ordered list of (path, timestamp), oldest first. Same push/evict/read
  * shape as RecordRingBuffer, and the same "evict is caller-driven, not push-driven" contract: the
- * window is relative to a caller-supplied "now", not to the last stage() call.
+ * window is relative to a caller-supplied "now", not to the last stage() call. Two ways out
+ * besides evict(): release() hands the window on without deleting anything (the staged copies now
+ * belong to whoever the caller passed them to), purge() deletes the lot regardless of age.
  *
  * Part of pre-event circular-buffer capture (#282) -- exercised purely against a tmp directory in
  * tests, same as RecordRingBuffer against an injected clock.
@@ -93,6 +95,41 @@ public:
   std::vector<ScratchedFile> window() const
   {
     return std::vector<ScratchedFile>(entries_.begin(), entries_.end());
+  }
+
+  /**
+   * @brief Hand the current window on: returns it oldest-first and stops tracking it, deleting
+   * nothing from disk. The RecordRingBuffer::clear() analogue -- what the ring "forgetting" an
+   * entry means for a File is "someone else owns it now", not "delete it".
+   *
+   * Called when an incident releases the buffered window (#290): from then on the staged copies
+   * belong to whoever the released Records were handed to (the Bridge's Files pipeline -- upload,
+   * retention sweep, delete_when_sent), so a later evict() must not delete a File out from under
+   * an upload in flight.
+   */
+  std::vector<ScratchedFile> release()
+  {
+    std::vector<ScratchedFile> released(entries_.begin(), entries_.end());
+    entries_.clear();
+    return released;
+  }
+
+  /**
+   * @brief Delete every staged File still tracked, from disk and from window(), whatever its age.
+   *
+   * The counterpart of release(): used when the Records referencing the staged copies are being
+   * dropped rather than published (a lifecycle cleanup), so nothing will ever pick them up and
+   * leaving them behind would just orphan them on disk. Tolerates a File already gone, same as
+   * evict().
+   */
+  void purge()
+  {
+    for (const auto& entry : entries_)
+    {
+      std::error_code ec;
+      std::filesystem::remove(entry.path, ec);
+    }
+    entries_.clear();
   }
 
   std::size_t size() const

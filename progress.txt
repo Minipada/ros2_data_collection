@@ -6241,3 +6241,101 @@ incident doesn't also have to push its entire pre-roll window through the Bridge
   long-standing local-environment ones: `poetry-requirements` (no `poetry` module on this
   host) and `black` on the pre-existing violation in `tools/e2e/scripts/verify_zero_loss.py`,
   reverted again here to keep this diff scoped, exactly as in the #285-#288 sessions.
+
+## #290 - Wire FileScratchRing into File-producing Measurements
+
+Fifth implementation slice of #282 (Pre-event circular-buffer capture via a new Trigger
+plugin), on top of #285's `FileScratchRing`, #287's flush wiring, #288's `IncidentReleaser`
+and #289's rate limit. Records were already buffered and released as an incident; this slice
+makes the *Files* those Records reference follow them, so a File-producing Measurement
+(camera, map, ip_camera, ...) can be armed without either losing its Files or filling the
+disk with them. **No `dc_bridge` production change**: a released Record is an ordinary Files
+Record that happens to be older than usual, and the existing intent queue / uploader /
+retention path ingests it unchanged -- which is now pinned down by a test rather than
+asserted.
+
+- **`dc_common/include/dc_common/file_scratch_ring.hpp`** gains the two ways out of the ring
+  that wiring it into a Measurement actually needs, beside `evict()`:
+  - `release()` returns the window oldest-first and stops tracking it **without deleting
+    anything** -- the `RecordRingBuffer::clear()` analogue, since "forget this entry" for a
+    File means "someone else owns it now", not "delete it". Called when an incident releases
+    the window: from then on the staged copies belong to the Bridge (upload, retention sweep,
+    `delete_when_sent`), so no later `evict()` can delete one out from under an upload in
+    flight.
+  - `purge()` deletes every staged File still tracked whatever its age -- the counterpart,
+    for when the Records referencing them are dropped rather than published (lifecycle
+    cleanup), where leaving them behind would just orphan them on disk.
+- **`dc_measurements/include/dc_measurements/measurement.hpp`**:
+  - `offerSample()` now `tick()`s the releaser first and, unless the machine is in `PostRoll`,
+    runs the sample through `stageSampleFiles()` before offering it. During post-roll the
+    Record is published live, so its Files stay exactly where the Measurement wrote them --
+    the path the Bridge has always picked up.
+  - `stageRecordFiles()` walks the enriched Record the same way `dc_bridge`'s
+    `parse_file_group()` does -- `local_paths` at any depth (a `nested` Measurement puts it
+    under its own name), never `base64` (inline content, not a path) -- plus the JSON-pointer
+    keys a `flatten`ed Record carries instead (`/local_paths/raw`), so exactly the paths the
+    Bridge would have uploaded are the ones that move.
+  - `stageOneFile()` **moves** the File into the ring (`stage()` copies, then the original is
+    removed) rather than copying it. Deliberate, and the one judgement call in this slice: the
+    Record referencing the original is buffered, not published, so nothing will ever pick that
+    original up -- not the Bridge (which never sees the Record), not its retention sweep
+    (which only knows about pending intents). Copying would leave an armed Measurement growing
+    the save path without bound, which is exactly what the bounded ring exists to prevent. A
+    failed stage (source gone, disk full) is caught, logged throttled, and the Record is
+    buffered with the File left in place -- degraded, never dropped.
+  - Eviction is driven from the same call with the same `now` and the same window as the ring
+    buffer's own `evict()`, so a staged File is deleted from disk at the moment its Record
+    ages out of the window. Safe to run mid-release because `onFlushEvent()` releases the
+    window out of the ring's ownership *before* the (possibly rate-limited, possibly long)
+    drain starts.
+  - `onFlushEvent()` reads `isArmed()` before `onFlush()` acts on it (acting on it is what
+    makes it false), `evict()`s first so aged-out staged Files -- whose Records the ring buffer
+    evicted too -- are deleted rather than handed on, then `release()`s exactly what the
+    released Records reference.
+  - `cleanup()` `purge()`s the ring alongside resetting the releaser; released Files are
+    already untracked, so purge cannot touch anything the Bridge owns. The ring is created
+    lazily by `scratchRing()`, on the first Record that references a File at all, so the many
+    Measurements that produce none never grow a scratch directory.
+  - `scratchDir()` = `<literal prefix of save_local_base_path>/.dc_incident_scratch/<name>/`:
+    same filesystem as the Files themselves (staging is a local move), outside the dated save
+    tree, and truncated at the first strftime token so the scratch directory doesn't roll over
+    every hour the way the save path does. No new parameter -- nothing in the issue asks for
+    one, and the derived path needs no plumbing through `configure()`.
+  - `file_scratch_ring_` is touched only under the existing `releaser_mutex_`, which already
+    serializes the polling timer, the FlushEvent subscription and #289's release timer.
+- **Tests**:
+  - `dc_common/test/file_scratch_ring_test.cpp` (10 -> 14 cases): `release()` hands the window
+    on and a later `evict()` well past the window still doesn't delete it; `release()` on an
+    empty ring; `purge()` deletes fresh and aged entries alike; `purge()` tolerates a File
+    already gone.
+  - `dc_measurements/test/test_measurement_buffering.cpp` (5 -> 7 cases). The fixture now owns
+    a tmp directory and points `save_local_base_path` at it, and `useFileProducingRecord()`
+    turns the Dummy Measurement into a File-producing one by giving it a camera-shaped Record
+    (`local_paths` + the `remote_paths` key). `spinProducingUntil()`/`spinProducing()` put the
+    File back as soon as the Measurement has consumed it, the way a real one writes a fresh
+    File every collection -- no race, since the Measurement's polling timer runs inside
+    `spin_some()` on the test thread.
+    - `FileProducingMeasurementStagesFilesWhileArmedAndReleasesTheStagedCopies`: nothing
+      published while armed but Files accumulate in the scratch directory; on flush every
+      released Record carries the incident_id, references a staged copy (parent == scratch
+      dir) that exists with unmodified contents, and keeps its original `remote_paths` key --
+      staging moves the File, it does not rename its Destination; and 1.5s of further staging
+      past the 1s window leaves the released copies untouched (the `release()` criterion).
+    - `RollingEvictionDeletesAgedOutScratchFilesFromDisk`: 0.3s window, 50ms polling, ~24
+      Files produced over 1.2s -- every File staged in the first 400ms is gone from the ring
+      *and from disk* 800ms later, the directory stays bounded (<= 10 entries), and with the
+      producer stopped the source File is gone from the save path after the next collection,
+      which is the "moves, not copies" assertion.
+  - `dc_bridge/test/uploader_test.cpp` gains `IncidentReleasedScratchFilesAreIngestedUnmodified`
+    -- the integration criterion. It stages a File with the *real* `FileScratchRing` (so what
+    the Bridge is handed is what a released Record actually carries), stamps it 5 minutes in
+    the past, `release()`s it, adds the `incident_id` `publishIncidentRecord()` would, and runs
+    it through the unchanged `Uploader`: uploaded byte-for-byte under the unchanged remote key,
+    `file_status` row pointing at the staged path, `delete_when_sent` cleaning it up. The only
+    dc_bridge change is a `<test_depend>dc_common</test_depend>` + `find_package`/
+    `ament_target_dependencies` for the gtests -- no production code.
+- **Docs**: `doc/src/dc/measurements.md`'s buffering admonish block gains a "Files follow their
+  Records" paragraph -- where staged Files live, that staging moves rather than copies and why,
+  that the scratch directory rolls on the same `buffer_duration_sec` window, that `remote_paths`
+  is untouched so each File uploads where it would have anyway, that post-roll Files are never
+  staged, and that the Bridge needs no configuration for any of it.

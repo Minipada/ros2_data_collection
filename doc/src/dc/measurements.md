@@ -107,6 +107,23 @@ broadcast node when its Trigger fires) then drives one incident-capture cycle:
    a flapping Trigger cannot produce a flood of overlapping incidents. Samples are buffered
    again during this phase, so the next incident still gets a full pre-roll window.
 
+Files follow their Records. A Measurement that produces Files (camera, map, …) normally leaves
+them under `save_local_base_path` for the Bridge to upload as soon as the Record naming them is
+published — but an armed Measurement publishes nothing, so every File it produces while buffering
+(also during cooldown, and while a rate-limited release is still draining) is instead *moved* into
+a scratch directory beside the save path,
+`<save_local_base_path>/.dc_incident_scratch/<measurement_name>/`, and the buffered Record is
+rewritten to reference the staged copy. That scratch directory rolls on the same
+`buffer_duration_sec` window as the Records themselves: a staged File is deleted from disk at the
+same moment its Record ages out of the ring buffer, so an armed Measurement's Files stay bounded
+instead of accumulating images no Record will ever carry to the Bridge. On release the staged
+copies are handed on with the Records referencing them — `remote_paths` is untouched, so each File
+uploads to exactly the Destination key it was collected under — and the scratch ring stops
+tracking them, leaving the Bridge's usual retention sweep and `delete_when_sent` to clean them up.
+The Bridge needs no configuration for any of this: a released Record is an ordinary Files Record
+that happens to be older than usual. Files collected during **PostRoll** are published live and
+never staged at all.
+
 The Measurement then re-arms itself back to **Buffering** with no manual intervention — a
 second incident is captured exactly like the first. With both `post_roll_duration_sec` and
 `cooldown_sec` left at 0, a flush releases the pre-roll window and the Measurement is armed
