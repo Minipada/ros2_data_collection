@@ -7105,3 +7105,67 @@ unrelated — whole quarter turns never crop. The perspective/tilt half of the #
 (100% vs. 0% for `zbar` at 35% skew) was independently measured and stands unchanged.
 
 No change to `camera.cpp`: nothing to mitigate, so no new parameter and no per-frame cost.
+
+## #360 - Two ROS-free modules in dc_common: StateTransitionDetector and BatteryCycleAccumulator
+
+The Measurements that record operational facts — battery (#361), intervention (#362), mission —
+all turn a stream of samples into transitions. That logic is the part worth testing hard and the
+part with nothing to do with ROS, so both modules land in `dc_common` beside
+`record_ring_buffer.hpp` and `file_scratch_ring.hpp`: header-only, no `rclcpp`, driven straight
+from gtest — the same core/adapter split ADR-0007 makes for the Bridge. Neither owns a clock;
+every timestamp arrives as an argument, so a test drives a whole shift in microseconds and
+shutdown behaviour is reproducible. `dc_common`'s `package.xml` still declares no ROS
+dependency, only `ament_cmake` + `ament_cmake_gtest`.
+
+**`StateTransitionDetector<State>`** (`include/dc_common/state_transition_detector.hpp`).
+`update(state, at)` returns `std::optional<StateTransition<State>>` — `from`, `to`, `at`, the
+`dwell` of `from`, and a `sequence` counting from 1. Nullopt for a repeated state (a Measurement
+polling at 10 Hz emits nothing until the mode changes) and nullopt for the very first sample,
+which has no previous state to report; the dwell of an unbroken run is still counted from the
+first sample of that run, not the last. Generic over the state type, so `driving_type`'s mode
+strings and a mission's outcome enum both fit — refactoring `driving_type` itself onto it stays
+out of scope, per the issue.
+
+The open-interval case has its own return type rather than a sentinel: `openInterval(now)` gives
+`OpenInterval<State>` (state, when entered, elapsed as of `now`, and the sequence of the
+transition that entered it — 0 for the first state ever seen). An interval that never ended
+therefore cannot come back as a `StateTransition` at all, which is what stops a takeover still
+running at shutdown being averaged in as a zero-length one. A second constructor seeds a state
+known to be held since a given time. Out-of-order samples clamp dwell at zero rather than
+reporting a negative duration downstream.
+
+**`BatteryCycleAccumulator`** (`include/dc_common/battery_cycle_accumulator.hpp`).
+`update(percentage, status, at)` takes `std::optional<double>` percent on a 0–100 scale and a
+`PowerSupplyStatus` whose values match `sensor_msgs/BatteryState`'s `POWER_SUPPLY_STATUS_*`
+constants — so #361's adapter is a cast and a ×100, while nothing here depends on that package.
+It returns a `BatteryUpdate` carrying at most one boundary crossing: `started` on the sample that
+opens a charging session, `ended` on the one that closes it.
+
+Two decisions worth recording. **Sessions are delimited by status alone**, never by a percentage
+threshold, so a percentage bouncing across any plausible threshold opens nothing; and an
+`Unknown` status carries no information about the charger, so it neither opens nor closes a
+session — a momentary status dropout mid-charge stays one session rather than becoming two.
+**Cycles come from accumulated discharge**, not from counting charges: every drop in percentage
+adds to a running total and a completed cycle is 100 points of it, so two half discharges are one
+cycle and the opportunity-charging pattern a fleet robot actually runs (ten 10-point top-ups) is
+one cycle, not ten. Each session reports its boundaries and `preceding_discharge_depth`, the
+discharge accumulated since the *previous* session ended — reset at session end rather than at
+session start, so the depth covers exactly the time off the charger and a dip while charging is
+noise as far as that number goes (it still counts toward the lifetime total).
+
+`ChargingSession` models "still open" the same way the detector does, structurally: `ended` is an
+`std::optional<TimePoint>`, `open()` is `!ended`, and `duration(now)` falls back to `now` while
+open. There is no state in which a running session reports a zero duration. Percentages at both
+boundaries are optional because `sensor_msgs/BatteryState` leaves the field unset often enough
+that a session with unknown boundaries is still worth recording — which is also the shape #361
+needs for "missing fields are absent, not null-filled".
+
+**Verification.** 24 new gtest cases (`test/state_transition_detector_test.cpp` 11,
+`test/battery_cycle_accumulator_test.cpp` 13), asserting only through the public interface — no
+private members, no call ordering. Both are added to the existing `foreach(test ...)` loop in
+`dc_common/CMakeLists.txt`, so `colcon test --packages-select dc_common` runs all four binaries:
+13/14/11/11, 0 failures. The ROS-free claim was checked rather than assumed: both test files
+compile and pass under plain `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror` against
+`-lgtest -lgtest_main` in a container with `/opt/ros` and the DC workspace deleted and an empty
+environment (`env -i`) — no ament, no `rclcpp`, no message packages. `prek run --all-files
+--skip build-doc` is green.
