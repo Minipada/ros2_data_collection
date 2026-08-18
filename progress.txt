@@ -7355,3 +7355,56 @@ of `configure()`/`collectAndPublish()`; pluginlib resolves those through the ame
 with `buffer_duration_sec` apparently ignored -- an ABI mismatch, not a bug. A full `colcon build`
 (which installs) is the only honest local run. `--parallel-workers 1` with `MAKEFLAGS=-j1` was
 needed to keep the container inside available memory; the default parallelism OOM-killed it twice.
+
+## #357 - The MOV.AI warehouse model: made verbatim again rather than replaced
+
+#357 proposed deleting MOV.AI's warehouse mesh and rebuilding it from primitives, the way
+#268 handled the `aws_robomaker_*` props. That was scoped against two objections to
+CC-BY-NC-ND-4.0 in an MPL-2.0 tree — NonCommercial and NoDerivatives. Only one of them
+turned out to be real, and it had a much cheaper fix, so this is the reduced scope: the
+model stays, byte-identical to upstream.
+
+**What we had actually changed.** The issue asserted `model.sdf` "has been modified
+locally"; git could not confirm it, because `ee8bf18` imported the model already in its
+current state. Diffing against Fuel (`MovAi/Warehouse`, the only version there — `/2` and
+`/3` are 404, and its `modify_date` predates our import by nine months, so upstream drift
+is ruled out) says the edits were:
+
+- `model.sdf` and `model.config`: SDF spec `1.9` -> `1.7`, almost certainly for the humble
+  line's sdformat9, which stops at 1.7. Harmonic's sdformat14 reads 1.9 and upconverts to
+  1.11.
+- `model.sdf`: extra spaces before one inline comment.
+- Five textures and four thumbnails losslessly re-encoded — JPEGs baseline -> progressive,
+  `ground.png` RGBA -> grayscale. Decoded with Pillow, every one is **pixel-identical** to
+  upstream, so this was an optimiser pass (no such hook survives in
+  `.pre-commit-config.yaml` today), not an edit.
+- `warehouse.dae` and `warehouse_colision.stl`: untouched, byte-identical.
+
+So no geometry and not one pixel was ever changed. The NoDerivatives exposure was a spec-version
+downgrade and a compression pass — thin, but not worth arguing, and free to undo.
+
+**What shipped.** All seven retained files restored from Fuel and verified against a
+second, independent download: `cmp` says byte-identical, all nine files. `thumbnails/` is
+deleted rather than restored — CC BY-NC-ND 2(a)(1)(A) licenses sharing "in whole or in
+part", so a verbatim subset is fine, nothing references them (the only `thumbnail` hits in
+the tree are the unrelated Uploader feature from #256), and upstream's `3.png` is 2326 KB,
+which would trip `check-added-large-files --maxkb=2000`. The model drops 8.6 MB -> 3.0 MB.
+`REUSE.toml` gains a two-line warning that these files must stay byte-identical, and its
+copyright line now credits Filipe Almeida alongside MOV.AI, per the `model.config` author.
+
+**What did not change, deliberately.** `dc_simulation/package.xml` still declares
+CC-BY-NC-ND-4.0, because the model is still under it. NonCommercial is untouched by this
+work and is the half that actually reaches users: it binds anyone who clones DC, not the
+maintainer, so a company evaluating DC by running the demo world is still doing something
+the licence forbids. #357's original acceptance criteria ("no CC-BY-NC-ND asset remains",
+`package.xml` updated) are therefore *not* met and should not be read as met — closing that
+gap still means replacing the mesh.
+
+**Verification.** `uvx reuse lint` compliant (734/734). `gz sdf -k` calls the restored
+`model.sdf` valid under sdformat 14.9.0. `gz sim -s -r --iterations 300` on
+`qrcodes.world`: exit 0, **zero** `[Err]` lines. The full `warehouse.launch.py headless`
+path, with the reverted model bind-mounted over the image's installed copy, spawns the
+robot ("Entity creation successful") with zero `[ERROR]`/`[FATAL]`; the two gz `[Err]`
+lines it does print ("collision with name[collision] already exists", from the TurtleBot3
+spawn) appear identically on a baseline run of the unmodified image, so they are
+pre-existing. `prek run --all-files --skip build-doc` green, all 24 hooks.

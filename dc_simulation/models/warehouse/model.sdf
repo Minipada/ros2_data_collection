@@ -1,5 +1,5 @@
 <?xml version='1.0'?>
-<sdf version='1.7'>
+<sdf version='1.9'>
   <model name='warehouse'>
     <pose>0 0 0 0 0 0</pose>
     <self_collide>false</self_collide>
@@ -25,7 +25,7 @@
         </geometry>
       </visual>
       <visual name="drop_area_visual">
-        <pose>0 0 0.101 0 0 0</pose>        <!-- x y z R P Y -->
+        <pose>0 0 0.101 0 0 0</pose> <!-- x y z R P Y -->
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
