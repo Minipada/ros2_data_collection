@@ -166,8 +166,9 @@ Robot measurements:
 1. [Camera images](../measurements/camera.md)
 2. [Command velocities](../measurements/cmd_vel.md)
 3. [Distance traveled](../measurements/distance_traveled.md)
-4. [Positions](../measurements/position.md)
-5. [Speed](../measurements/speed.md)
+4. [Driving type](../measurements/driving_type.md)
+5. [Positions](../measurements/position.md)
+6. [Speed](../measurements/speed.md)
 
 Environment measurements:
 
@@ -254,6 +255,7 @@ dc_bridge:
           "/dc/measurement/camera",
           "/dc/measurement/cmd_vel",
           "/dc/measurement/distance_traveled",
+          "/dc/measurement/driving_type",
           "/dc/measurement/position",
           "/dc/measurement/speed",
           # Environment
