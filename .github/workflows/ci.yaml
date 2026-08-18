@@ -15,6 +15,7 @@
 #
 #   build-workspace (build + colcon test + coverage) ─┬─▶ sim               (pull dc-workspace, simulation smoke check)
 #                                                      └─▶ build-e2e-image ─▶ e2e   (pull dc-e2e, zero-loss harness)
+#   kpi-views (standalone: SQL + a throwaway Postgres, no workspace image needed)
 #
 # e2e calls the same tools/e2e/scripts/run.sh a developer runs locally, driving the
 # harness with plain podman (no compose) so nothing extra is installed on the runner;
@@ -310,6 +311,23 @@ jobs:
             echo "push $E2E_REF attempt $attempt failed; retrying in 10s"; sleep 10
           done
           exit 1
+
+  # The KPI definitions are SQL, not workspace code: this needs a database and nothing else.
+  kpi-views:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/0.12.5/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Fixture test for the KPI views
+        run: ./tools/infrastructure/scripts/test_kpi_views.sh
 
   e2e:
     needs: [build-workspace, build-e2e-image]

@@ -15,4 +15,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - ./config/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # Numbered targets: the entrypoint runs these in name order, and the KPI views need
+      # the tables to exist first.
+      - ./config/postgresql/init.sql:/docker-entrypoint-initdb.d/10_init.sql:ro
+      - ../sql/kpi_views.sql:/docker-entrypoint-initdb.d/20_kpi_views.sql:ro

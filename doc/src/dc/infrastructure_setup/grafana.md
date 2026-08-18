@@ -19,6 +19,14 @@ Execute:
   --install-type=native
 ```
 
+## What comes up with it
+
+Datasource and dashboards are provisioned from
+`tools/infrastructure/docker/config/grafana/` — no manual import. The PostgreSQL datasource
+(uid `dc_postgres`) points at the [PostgreSQL](./postgresql.md) container, and three
+dashboards ship: **Home**, **Robot**, and **KPI** (availability and uptime, backed by the
+[KPI views](../kpi_views.md)).
+
 ## Credentials
 
 | User  | Password | Port |
@@ -26,6 +34,6 @@ Execute:
 | admin | admin    | 3000 |
 
 ## How to use
-Natively, by accessing [http://localhost:80/adminer](http://localhost:80/adminer), and in docker, by accessing [http://localhost:8080](http://localhost:8080), you will be able to see this page:
+Open [http://localhost:3000](http://localhost:3000) and log in; the provisioned dashboards are under *Dashboards*:
 
-![Grafana](../../images/adminer.png)
+![Grafana](../../images/grafana-1.png)
