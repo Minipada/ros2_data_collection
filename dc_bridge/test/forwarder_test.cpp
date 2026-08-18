@@ -19,6 +19,7 @@
 #include <msgpack.hpp>
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <random>
 #include <string>
 #include <thread>
 #include <vector>
@@ -155,6 +156,121 @@ void read_frame_and_ack(int fd)
   pk.pack(std::string("ack"));
   pk.pack(chunk_id);
   ::send(fd, ack_buf.data(), ack_buf.size(), 0);
+}
+
+// --- Acknowledgement-policy mock ingest peer (#366) ---------------------------------
+//
+// Real robots ack over a link with tens of milliseconds of RTT, packet loss, and a
+// bufferbloated/slow-draining receive path — none of which loopback (the rest of this
+// file) ever exercises. A policy turns the three questions that raises about the
+// Forwarder — unacked window depth, backpressure classification, resend-under-delay —
+// into deterministic unit tests: no container, no network, just a peer that
+// acknowledges on a schedule instead of immediately or never. Every existing test above
+// is this policy's degenerate case (delay=0, never_ack_probability=0).
+struct AckPolicy
+{
+  // Delay applied before acknowledging a received chunk — models acknowledgement RTT.
+  std::chrono::milliseconds ack_delay{ 0 };
+  // Fraction of received chunks that are never acknowledged — models a lost ack.
+  double never_ack_probability{ 0.0 };
+  // Bytes read per recv() before sleeping drain_pause; 0 = read as fast as available.
+  // Models a peer that is draining its socket slowly rather than one that stopped
+  // reading altogether (drain_pause with drain_chunk_bytes == 0 would never actually
+  // throttle, since one recv() would drain everything available).
+  std::size_t drain_chunk_bytes{ 0 };
+  std::chrono::milliseconds drain_pause{ 0 };
+};
+
+// Runs `policy` against one already-accepted connection until the peer closes/errors or
+// `stop` is set. Every chunk id the frame parser completes is appended to `received` (in
+// wire order, so a resend that duplicates a chunk id shows up twice); every chunk id
+// actually acknowledged is appended to `acked`. Uses a real msgpack::unpacker (exactly
+// like Forwarder's own drain_acks()) so a small drain_chunk_bytes that splits one frame
+// across several recv() calls is still parsed correctly, rather than requiring every
+// frame to land in a single read.
+void run_ack_policy_peer(int conn_fd, const AckPolicy& policy, std::vector<std::string>& received,
+                         std::vector<std::string>& acked, std::mutex& mutex, std::atomic<bool>& stop)
+{
+  std::mt19937 rng{ std::random_device{}() };
+  std::uniform_real_distribution<double> unit{ 0.0, 1.0 };
+  msgpack::unpacker unpacker;
+
+  // A short receive timeout, not a blocking recv(): once the client under test goes idle
+  // (e.g. everything already acked), a blocking recv() would never return and `stop`
+  // would never be re-checked, hanging the test's own srv.join() forever.
+  timeval rcv_timeout{ 0, 100000 };  // 100ms
+  ::setsockopt(conn_fd, SOL_SOCKET, SO_RCVTIMEO, &rcv_timeout, sizeof(rcv_timeout));
+
+  while (!stop.load())
+  {
+    const std::size_t to_read = policy.drain_chunk_bytes == 0 ? std::size_t{ 8192 } : policy.drain_chunk_bytes;
+    unpacker.reserve_buffer(to_read);
+    ssize_t n = ::recv(conn_fd, unpacker.buffer(), to_read, 0);
+    if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+    {
+      continue;  // no data within the receive timeout; re-check `stop` and try again
+    }
+    if (n <= 0)
+    {
+      return;  // peer closed or errored
+    }
+    unpacker.buffer_consumed(static_cast<std::size_t>(n));
+    if (policy.drain_pause.count() > 0)
+    {
+      std::this_thread::sleep_for(policy.drain_pause);
+    }
+
+    msgpack::object_handle oh;
+    while (unpacker.next(oh))
+    {
+      msgpack::object top = oh.get();
+      if (top.type != msgpack::type::ARRAY || top.via.array.size < 3)
+      {
+        continue;
+      }
+      msgpack::object option = top.via.array.ptr[2];
+      std::string chunk_id;
+      if (option.type == msgpack::type::MAP)
+      {
+        for (std::uint32_t i = 0; i < option.via.map.size; ++i)
+        {
+          if (option.via.map.ptr[i].key.as<std::string>() == "chunk")
+          {
+            chunk_id = option.via.map.ptr[i].val.as<std::string>();
+          }
+        }
+      }
+      if (chunk_id.empty())
+      {
+        continue;
+      }
+      {
+        std::lock_guard<std::mutex> lock(mutex);
+        received.push_back(chunk_id);
+      }
+      if (unit(rng) < policy.never_ack_probability)
+      {
+        continue;
+      }
+      if (policy.ack_delay.count() > 0)
+      {
+        std::this_thread::sleep_for(policy.ack_delay);
+      }
+      msgpack::sbuffer ack_buf;
+      msgpack::packer<msgpack::sbuffer> pk(ack_buf);
+      pk.pack_map(1);
+      pk.pack(std::string("ack"));
+      pk.pack(chunk_id);
+      if (::send(conn_fd, ack_buf.data(), ack_buf.size(), MSG_NOSIGNAL) < 0)
+      {
+        return;
+      }
+      {
+        std::lock_guard<std::mutex> lock(mutex);
+        acked.push_back(chunk_id);
+      }
+    }
+  }
 }
 
 }  // namespace
@@ -468,5 +584,347 @@ TEST(Forwarder, WindowBoundDropsOldestRecordsWithWarning)
   EXPECT_FALSE(last_warning.empty());
 
   stop.store(true);
+  srv.join();
+}
+
+// #366: the drop-with-warning mechanism above is already covered by a peer that never
+// acks at all. What's untested is the *shipped default* bound (10000 records) at an
+// acknowledgement delay representative of a real link — this is that measurement.
+TEST(Forwarder, WindowDepthStaysWellBelowShippedDefaultBoundAtRealisticAckDelay)
+{
+  MockServer server;
+  std::atomic<bool> stop{ false };
+  std::vector<std::string> received, acked;
+  std::mutex mutex;
+  AckPolicy policy;
+  policy.ack_delay = std::chrono::milliseconds(50);  // representative WiFi/uplink ack RTT
+
+  std::thread srv([&]() {
+    int c = ::accept(server.listen_fd, nullptr, nullptr);
+    if (c >= 0)
+    {
+      run_ack_policy_peer(c, policy, received, acked, mutex, stop);
+      ::close(c);
+    }
+  });
+
+  ForwarderConfig cfg;  // shipped defaults: max_unacked_records = 10000
+  cfg.host = "127.0.0.1";
+  cfg.port = server.port;
+  std::atomic<int> warnings{ 0 };
+  cfg.on_warning = [&](const std::string&) { ++warnings; };
+  Forwarder forwarder(cfg);
+
+  const int kRecords = 20;
+  std::size_t peak_depth = 0;
+  for (int i = 0; i < kRecords; ++i)
+  {
+    forwarder.send(make_record("dc.test", R"({"n": 1})"));
+    peak_depth = std::max(peak_depth, forwarder.unacked_count());
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));  // ~100 Hz, a realistic Measurement rate
+  }
+
+  poll_until(std::chrono::seconds(5), [&]() {
+    forwarder.poll();
+    return forwarder.unacked_count() == 0;
+  });
+
+  stop.store(true);
+  srv.join();
+
+  // In-flight volume ~= rate * ack delay: at 100 Hz / 50ms that's ~5 records, nowhere
+  // near the shipped 10000-record bound.
+  EXPECT_LE(peak_depth, 20u) << "unacked window depth at a realistic rate/delay should stay small";
+  EXPECT_EQ(warnings.load(), 0) << "the shipped default bound must not fire at a realistic bandwidth-delay product";
+}
+
+// #366: unlike WindowBoundDropsOldestRecordsWithWarning (a peer that never acks at all),
+// this peer acks every chunk — just too slowly to keep the window inside a small bound
+// once the send rate outruns the ack turnaround. Demonstrates the drop valve fires from
+// delay alone, not only from a dead/absent peer, and that the window still converges
+// once the burst ends.
+TEST(Forwarder, WindowBoundIsExceededAtAWorseRateDelayCombination)
+{
+  MockServer server;
+  std::atomic<bool> stop{ false };
+  std::vector<std::string> received, acked;
+  std::mutex mutex;
+  AckPolicy policy;
+  policy.ack_delay = std::chrono::milliseconds(300);  // long relative to the burst below
+
+  std::thread srv([&]() {
+    int c = ::accept(server.listen_fd, nullptr, nullptr);
+    if (c >= 0)
+    {
+      run_ack_policy_peer(c, policy, received, acked, mutex, stop);
+      ::close(c);
+    }
+  });
+
+  ForwarderConfig cfg;
+  cfg.host = "127.0.0.1";
+  cfg.port = server.port;
+  cfg.max_unacked_records = 5;
+  cfg.max_unacked_bytes = 1024 * 1024;
+  cfg.warn_interval = std::chrono::milliseconds(0);
+  std::atomic<int> warnings{ 0 };
+  cfg.on_warning = [&](const std::string&) { ++warnings; };
+  Forwarder forwarder(cfg);
+
+  // A burst well faster than the 300ms ack delay: every record above the bound of 5 is
+  // sent before the first ack can possibly have arrived.
+  for (int i = 0; i < 10; ++i)
+  {
+    forwarder.send(make_record("dc.test", R"({"n": 1})"));
+  }
+
+  EXPECT_EQ(forwarder.unacked_count(), 5u) << "the bound must cap the window even though the peer is actively acking";
+  EXPECT_GT(warnings.load(), 0) << "exceeding the bound via delay alone must still warn";
+
+  bool converged = poll_until(std::chrono::seconds(5), [&]() {
+    forwarder.poll();
+    return forwarder.unacked_count() == 0;
+  });
+  stop.store(true);
+  srv.join();
+  EXPECT_TRUE(converged) << "once the burst ends, the window should still drain to zero — the bound doesn't wedge it";
+}
+
+// #366: distinguishes a peer that is slow to drain its socket (retryable backpressure,
+// connection kept) from one that has gone away (Io, connection dropped) — the two error
+// kinds a real congested/bufferbloated link and a dead peer must not be confused as.
+TEST(Forwarder, SlowDrainingPeerIsBackpressureWithConnectionRetained)
+{
+  MockServer server;
+  std::atomic<bool> stop{ false };
+  std::vector<std::string> received, acked;
+  std::mutex mutex;
+  AckPolicy policy;
+  policy.drain_chunk_bytes = 16;                       // read a few bytes at a time...
+  policy.drain_pause = std::chrono::milliseconds(50);  // ...pausing between reads
+
+  std::thread srv([&]() {
+    int c = ::accept(server.listen_fd, nullptr, nullptr);
+    if (c >= 0)
+    {
+      run_ack_policy_peer(c, policy, received, acked, mutex, stop);
+      ::close(c);
+    }
+  });
+
+  ForwarderConfig cfg;
+  cfg.host = "127.0.0.1";
+  cfg.port = server.port;
+  cfg.write_timeout = std::chrono::milliseconds(20);  // shorter than the peer's drain cadence
+  Forwarder forwarder(cfg);
+
+  nlohmann::json big;
+  big["blob"] = std::string(200000, 'x');
+  Record big_record{ "dc.test", 1700000000ULL, 0u, big };
+
+  bool saw_backpressure = false;
+  for (int i = 0; i < 30 && !saw_backpressure; ++i)
+  {
+    try
+    {
+      forwarder.send(big_record);
+    }
+    catch (const ForwarderError& e)
+    {
+      if (e.kind() == ForwarderErrorKind::Backpressure)
+      {
+        saw_backpressure = true;
+      }
+    }
+  }
+
+  // EXPECT (not ASSERT): `srv` is a joinable std::thread still running run_ack_policy_peer,
+  // and an early return here without stop.store()+srv.join() would call std::terminate()
+  // on the way out, taking the whole test binary down instead of just failing this test.
+  EXPECT_TRUE(saw_backpressure) << "a peer that drains slowly should eventually stall a write past write_timeout";
+  if (saw_backpressure)
+  {
+    EXPECT_TRUE(forwarder.is_connected()) << "backpressure must not drop the connection — the peer may just be slow";
+  }
+
+  stop.store(true);
+  srv.join();
+}
+
+// #366: an ack that doesn't arrive within ack_timeout triggers a resend carrying the
+// SAME chunk id (UnackedRecordResendsAfterReconnect above covers the reconnect trigger;
+// this covers the timeout trigger). If the original, merely-delayed ack then arrives
+// after the resend, the peer has seen the chunk twice — a wire duplicate, not a loss —
+// and the window must still converge to zero rather than getting stuck or amplifying.
+TEST(Forwarder, ResendAfterAckTimeoutProducesDuplicateThenConverges)
+{
+  MockServer server;
+  std::atomic<bool> stop{ false };
+  std::vector<std::string> received, acked;
+  std::mutex mutex;
+  AckPolicy policy;
+  policy.ack_delay = std::chrono::milliseconds(300);  // longer than ack_timeout below
+
+  std::thread srv([&]() {
+    int c = ::accept(server.listen_fd, nullptr, nullptr);
+    if (c >= 0)
+    {
+      run_ack_policy_peer(c, policy, received, acked, mutex, stop);
+      ::close(c);
+    }
+  });
+
+  ForwarderConfig cfg;
+  cfg.host = "127.0.0.1";
+  cfg.port = server.port;
+  cfg.ack_timeout = std::chrono::milliseconds(100);
+  Forwarder forwarder(cfg);
+
+  forwarder.send(make_record("dc.test", R"({"n": 1})"));
+
+  // Poll past ack_timeout so the Forwarder resends the still-unacked record at least
+  // once before the peer's 300ms delayed ack for the ORIGINAL send has a chance to land.
+  bool resent = poll_until(std::chrono::milliseconds(500), [&]() {
+    forwarder.poll();
+    std::lock_guard<std::mutex> lock(mutex);
+    return received.size() >= 2;
+  });
+  // EXPECT (not ASSERT): see SlowDrainingPeerIsBackpressureWithConnectionRetained above —
+  // `srv` must always be stopped and joined before this test function can return.
+  EXPECT_TRUE(resent) << "an unacked record past ack_timeout should be resent, duplicating it on the wire";
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (received.size() >= 2)
+    {
+      EXPECT_EQ(received[0], received[1]) << "the resend must carry the same chunk id as the original send";
+    }
+  }
+
+  bool converged = poll_until(std::chrono::seconds(2), [&]() {
+    forwarder.poll();
+    return forwarder.unacked_count() == 0;
+  });
+  stop.store(true);
+  srv.join();
+  EXPECT_TRUE(converged) << "the duplicate ack(s) for the same chunk id must still clear the window, not wedge it";
+}
+
+// #366: handle_ack_object() finds the acked entry by chunk id via linear search, not by
+// position — this pins that an ack arriving out of send order evicts only the record it
+// actually names, leaving the other's exact byte count in the window.
+TEST(Forwarder, OutOfOrderAckEvictsOnlyTheAckedRecord)
+{
+  MockServer server;
+  std::atomic<bool> ack_a{ false };
+
+  std::thread srv([&]() {
+    int c = ::accept(server.listen_fd, nullptr, nullptr);
+
+    // Both frames may arrive in a single recv() (they're written back to back with
+    // nothing forcing a boundary), so parse incrementally with a real unpacker rather
+    // than assuming one recv() call == one frame.
+    msgpack::unpacker unpacker;
+    std::string chunk_a, chunk_b;
+    while (chunk_a.empty() || chunk_b.empty())
+    {
+      unpacker.reserve_buffer(4096);
+      ssize_t n = ::recv(c, unpacker.buffer(), 4096, 0);
+      if (n <= 0)
+      {
+        return;
+      }
+      unpacker.buffer_consumed(static_cast<std::size_t>(n));
+      msgpack::object_handle oh;
+      while (unpacker.next(oh))
+      {
+        msgpack::object top = oh.get();
+        std::string chunk_id;
+        if (top.type == msgpack::type::ARRAY && top.via.array.size >= 3 &&
+            top.via.array.ptr[2].type == msgpack::type::MAP)
+        {
+          const msgpack::object& option = top.via.array.ptr[2];
+          for (std::uint32_t i = 0; i < option.via.map.size; ++i)
+          {
+            if (option.via.map.ptr[i].key.as<std::string>() == "chunk")
+            {
+              chunk_id = option.via.map.ptr[i].val.as<std::string>();
+            }
+          }
+        }
+        if (chunk_a.empty())
+        {
+          chunk_a = chunk_id;
+        }
+        else if (chunk_b.empty())
+        {
+          chunk_b = chunk_id;
+        }
+      }
+    }
+
+    // Ack B first — out of send order.
+    msgpack::sbuffer ack_buf;
+    msgpack::packer<msgpack::sbuffer> pk(ack_buf);
+    pk.pack_map(1);
+    pk.pack(std::string("ack"));
+    pk.pack(chunk_b);
+    ::send(c, ack_buf.data(), ack_buf.size(), 0);
+
+    while (!ack_a.load())
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    msgpack::sbuffer ack_buf_a;
+    msgpack::packer<msgpack::sbuffer> pk_a(ack_buf_a);
+    pk_a.pack_map(1);
+    pk_a.pack(std::string("ack"));
+    pk_a.pack(chunk_a);
+    ::send(c, ack_buf_a.data(), ack_buf_a.size(), 0);
+    ::close(c);
+  });
+
+  ForwarderConfig cfg;
+  cfg.host = "127.0.0.1";
+  cfg.port = server.port;
+  Forwarder forwarder(cfg);
+
+  // Different payload sizes so record A's and record B's frame byte counts differ,
+  // making the eviction unambiguous from unacked_bytes() alone.
+  Record record_a{ "dc.test", 1700000000ULL, 0u, nlohmann::json::parse(R"({"n": 1})") };
+  nlohmann::json big;
+  big["blob"] = std::string(500, 'x');
+  Record record_b{ "dc.test", 1700000000ULL, 0u, big };
+
+  forwarder.send(record_a);
+  forwarder.send(record_b);
+  // EXPECT (not ASSERT) throughout: `srv` is a joinable std::thread whose lambda blocks
+  // on `ack_a`, and an ASSERT's early return without joining it would call
+  // std::terminate() on the way out of this test function, taking the whole binary down
+  // instead of just failing this one test.
+  EXPECT_EQ(forwarder.unacked_count(), 2u);
+
+  // A 22-char placeholder chunk id: generate_chunk_id() base64-encodes 16 random bytes
+  // without padding (ceil(16*8/6) = 22 chars), always this length regardless of the
+  // random content, and msgpack's fixstr encoding costs the same regardless of a
+  // string's actual characters — so this reproduces the exact frame byte count
+  // Forwarder used for its real (random) chunk id.
+  const std::string placeholder_chunk_id(22, '0');
+  const std::size_t expected_a_bytes = Forwarder::frame(record_a, placeholder_chunk_id).size();
+
+  bool b_evicted = poll_until(std::chrono::seconds(5), [&]() {
+    forwarder.poll();
+    return forwarder.unacked_count() == 1;
+  });
+  EXPECT_TRUE(b_evicted) << "the out-of-order ack for B should evict exactly B";
+  if (b_evicted)
+  {
+    EXPECT_EQ(forwarder.unacked_bytes(), expected_a_bytes) << "record A, not B, should remain in the window";
+  }
+
+  ack_a.store(true);
+  poll_until(std::chrono::seconds(5), [&]() {
+    forwarder.poll();
+    return forwarder.unacked_count() == 0;
+  });
   srv.join();
 }

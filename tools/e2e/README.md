@@ -182,6 +182,43 @@ broadcast node: that topic is the contract Measurements subscribe to, `dc_trigge
 its own tests for minting the event, and the broadcast node is not in `dc_bringup`'s
 launch yet. Not run by `ci.yaml`, same as the retention scenario.
 
+## Degraded-network scenario (#366)
+
+A fourth scenario, proving the zero-loss guarantee above holds under stated network
+conditions instead of only over intra-container loopback:
+
+```sh
+./tools/e2e/scripts/run_degraded.sh                         # loopback profile (baseline)
+DC_E2E_PROFILE=poor-wifi ./tools/e2e/scripts/run_degraded.sh
+```
+
+Same `dc-e2e` image and reference workload as `run.sh` (`params/e2e_degraded_params.yaml`
+is byte-for-byte `params/e2e_params.yaml` except for the two Destination hosts — see that
+file's header), but Postgres and RustFS run on their own bridge network instead of
+`--network host`, so the path to them can be shaped without shaping the host itself. A
+named profile (`scripts/network_profiles.py`: `loopback`, `good-wifi`, `poor-wifi`,
+`site-uplink` — one declarative place, so two runs of the same name are comparable) is
+applied as a `tc netem` qdisc on Postgres's and RustFS's own interfaces, via a short-lived
+helper container that joins their network namespace (`--network container:<name>
+--cap-add=NET_ADMIN`) rather than granting either image any capability itself. A shaping
+pre-check measures the actual TCP connect-time round trip before any workload runs
+(`scripts/measure_rtt.py`) and hard-fails the run if the measurement isn't consistent with
+the requested profile — a degraded run must never pass silently as loopback because
+shaping failed to apply. Partway through the run, a LINK fault (`tc netem loss 100%` on
+both Destinations, then restored) proves the network going away is handled distinctly from
+`run.sh`'s container stop/restart — nothing here resets Forwarder state. The network
+conditions a run used, plus the measured pre-check round trip, are written to
+`tools/e2e/.run/conditions.json` and folded into `verify_zero_loss.py`'s report — a result
+is never separable from the conditions that produced it.
+
+Not wired into `ci.yaml`, same as the retention and incident scenarios below: whether it
+gates merges is left for once its runtime and stability are measured (#366's own "Out of
+Scope"). The Forwarder's own unacked-window-depth, backpressure-classification, and
+resend-under-delay behaviour under acknowledgement delay is covered separately and much
+more cheaply at `dc_bridge/test/forwarder_test.cpp`'s existing mock-ingest-peer seam (an
+`AckPolicy` describing when/whether a chunk gets acknowledged) — no container needed for
+that; see that file for the corresponding unit tests.
+
 ## Layout
 
 - `Containerfile` — builds the full DC workspace (every `dc_*` package, all C++ since
@@ -260,6 +297,14 @@ launch yet. Not run by `ci.yaml`, same as the retention scenario.
   `dc-e2e` image.
 - `params/e2e_incident_params.yaml` / `scripts/run_incident.sh` — the incident-capture
   scenario (#291) described above, likewise reusing the same `dc-e2e` image.
+- `params/e2e_degraded_params.yaml` / `scripts/run_degraded.sh` — the degraded-network
+  scenario (#366) described above; a fourth sibling harness, reusing the same `dc-e2e`
+  image and `verify_zero_loss.py`, but its own bridge network so the path to the
+  Destinations can be shaped.
+- `scripts/network_profiles.py` — the named network conditions (#366) `run_degraded.sh`
+  applies, in one declarative place also meant for #323's limits harness to reuse.
+- `scripts/measure_rtt.py` — stdlib TCP connect-time sampler (#366), used both for
+  Destination readiness polling and the shaping pre-check `run_degraded.sh` never skips.
 
 ## `.dockerignore`
 
