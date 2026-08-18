@@ -7408,3 +7408,78 @@ robot ("Entity creation successful") with zero `[ERROR]`/`[FATAL]`; the two gz `
 lines it does print ("collision with name[collision] already exists", from the TurtleBot3
 spawn) appear identically on a baseline run of the unmodified image, so they are
 pre-existing. `prek run --all-files --skip build-doc` green, all 24 hooks.
+
+## #357 (continued) - Replacing the mesh outright, not just restoring it
+
+The previous entry restored the MOV.AI mesh verbatim, curing NoDerivatives but leaving
+NonCommercial in place — `dc_simulation/package.xml` kept declaring CC-BY-NC-ND-4.0, so
+#357's actual acceptance criteria ("no CC-BY-NC-ND-4.0 asset remains") were explicitly
+unmet. This entry does that part: the mesh is gone, replaced with primitive geometry, the
+way #268 replaced the `aws_robomaker_*` props.
+
+**The mesh was not a simple box.** `warehouse_colision.stl` is 3192 triangles, 30m x 50m x
+12.6m — a gabled building with roof trusses and support columns, not the kind of thing you
+eyeball into boxes. Its visual counterpart, `warehouse.dae`, is more useful: Blender-exported
+COLLADA keeps its node names, so `Wall1`-`Wall4`, `roof`, `celling_collum` and the floor came
+out through `trimesh`'s scene graph as clean axis-aligned rectangles once the transforms were
+resolved (never by hand — Blender's export order made a manual read of the raw matrices
+unreliable). Result: a plain rectangular room, floor to 30x50m, long walls (`Wall1`/`Wall2`,
+15cm thick) at x=+-15, short walls (`Wall3`/`Wall4`, 5cm thick) at y=+-25, walls 10m to the
+eave line with a gable above that.
+
+**Why height didn't matter but position did.** `dc_simulation/maps/qrcodes.{pgm,yaml}` is a
+pre-baked static map Nav2/AMCL localizes against — SLAM'd once from this exact building,
+per `qrcodes.world`'s own header comment, with `lint_launch_files.py`'s `WORLD_TO_MAP`
+offset and every camera/waypoint calibration measured off it. Get the wall *footprint*
+wrong and AMCL drifts against live scans that no longer match the prior; get the wall
+*height* wrong and nothing happens, because a 2D lidar only ever sees whatever intersects
+its one scan plane, metres below any roof. So the rebuild kept the real (x,y) footprint and
+threw the gable/trusses/columns away as functionally irrelevant — in scope with the issue's
+own wording, "local primitive geometry (walls, floor)".
+
+**The map caught a wall I'd have gotten wrong.** Sampling `qrcodes.pgm` at the four walls'
+predicted world positions (converting local -> world via the model's own `<pose>` in
+`qrcodes.world`, then world -> map via `WORLD_TO_MAP`) put west/east/north at 21/21, 21/21,
+15/15 sample points occupied — clean. South wall: 2 of 5 samples free. A contiguous-run
+scan of the occupied pixels along that row found why: two solid segments, local x
+[-15.04,-7.54] and [7.46,14.96], with nothing between them — a 15m loading-dock opening,
+symmetric about x=0. That lines up exactly with a pair of support columns the DAE's
+`celling_collum` geometry placed at x~=+-7.5, which I'd otherwise have written off as
+decorative — they're the door jambs. `model.sdf`'s south wall is two 7.5m segments, not one
+30m one, because of this. No other wall had a gap (full-length contiguous runs on all
+three).
+
+**What shipped.** `dc_simulation/models/warehouse/`: `model.sdf` (floor + 4-and-a-half
+walls, 6 collision/visual box pairs, `sdf version="1.6"`, matching #268's placeholder
+convention), `model.config` documents the simplification and the map-fidelity check. The
+`meshes/` directory — visual assets, textures, the STL, all of it — is deleted.
+`dc_simulation/package.xml` drops `<license>CC-BY-NC-ND-4.0</license>`.
+`REUSE.toml`'s dedicated `dc_simulation/models/warehouse/**` block is removed, falling
+back to the general `dc_simulation/models/**` MPL-2.0 catch-all — same as every #268
+placeholder. `LICENSES/CC-BY-NC-ND-4.0.txt` deleted once `reuse lint` flagged it unused.
+Package goes from 3.0 MB (the verbatim restore) to 12 KB.
+
+**Verification.** `uvx reuse lint`: compliant, CC-BY-NC-ND-4.0 no longer appears in the
+project's used-licenses list at all. `gz sdf -k`: valid under sdformat 14.9.0, 12
+collision/visual elements as expected. `warehouse.launch.py headless`, model bind-mounted
+over the image's installed copy: zero `[ERROR]`/`[FATAL]`, the same two pre-existing gz
+`[Err]` lines as the unmodified baseline (TurtleBot3 spawn artifact, confirmed identical on
+a completely clean container). `tools/sim/scripts/lint_launch_files.py`'s SDF and launch
+checks pass with the model mounted; its unrelated failures (`waffle.model` duplicate-
+collision warning, cam_topics bridging, a `camera_stations` import error) reproduce
+byte-for-byte on a totally unmodified `dc-workspace:latest` container with no mounts at
+all, confirming they're pre-existing image/source staleness, not this change — same
+finding as a live `tb3_qrcodes.launch.py` run, which hit an unrelated pre-existing bug (see
+below) before I could exercise AMCL directly.
+
+Quantitative footprint check against the pre-baked map, described above: 21/21, 21/21,
+15/15, 8/8, 8/8 sample points occupied across west/east/north/south-west/south-east; 14/15
+points in the reconstructed doorway free (the one hit is plausibly a nearby prop, not a
+wall). `prek run --all-files --skip build-doc` green, all 24 hooks.
+
+**Found, not fixed (out of scope for #357):** `dc_simulation/worlds/qrcodes.world` has
+literal `--` inside XML comments (e.g. "unchanged -- sdformat 1.10's own default"), which
+is illegal under strict XML well-formedness and breaks `xacro`'s expat parser — reproduces
+identically on a stock, unmodified container, unrelated to anything here. It only bites
+`tb3_qrcodes.launch.py` (which pipes the world file through `xacro`); `warehouse.launch.py`
+never hits it, since gz-sim's own SDF parser is lenient about it. Worth its own issue.

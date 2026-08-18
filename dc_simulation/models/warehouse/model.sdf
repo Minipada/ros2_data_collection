@@ -1,43 +1,143 @@
-<?xml version='1.0'?>
-<sdf version='1.9'>
-  <model name='warehouse'>
-    <pose>0 0 0 0 0 0</pose>
-    <self_collide>false</self_collide>
-    <!-- BASE_LINK FRAME -->
-    <link name='warehouse_base'>
-      <pose>0 0 0 0 0 0</pose>
-      <collision name='warehouse_collision'>
-        <pose>0 0 0 0 0 0</pose>
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="warehouse">
+    <static>true</static>
+    <link name="warehouse_base">
+      <collision name="floor_collision">
+        <pose>0 0 0.05 0 0 0</pose>
         <geometry>
-          <mesh>
-            <scale>1 1 1</scale>
-            <uri>meshes/warehouse_colision.stl</uri>
-          </mesh>
+          <box>
+            <size>30 50 0.1</size>
+          </box>
         </geometry>
       </collision>
-      <visual name='warehouse_visual'>
-        <pose>0 0 0 0 0 0</pose>
+      <visual name="floor_visual">
+        <pose>0 0 0.05 0 0 0</pose>
         <geometry>
-          <mesh>
-            <scale>1 1 1</scale>
-            <uri>meshes/warehouse.dae</uri>
-          </mesh>
+          <box>
+            <size>30 50 0.1</size>
+          </box>
         </geometry>
+        <material>
+          <ambient>0.5 0.5 0.52 1</ambient>
+          <diffuse>0.5 0.5 0.52 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
       </visual>
-      <visual name="drop_area_visual">
-        <pose>0 0 0.101 0 0 0</pose> <!-- x y z R P Y -->
+
+      <collision name="wall_west_collision">
+        <pose>-14.925 0 5.1 0 0 0</pose>
         <geometry>
-          <mesh>
-            <scale>1 1 1</scale>
-            <uri>meshes/warehouse.dae</uri>
-            <submesh>
-              <name>drop1</name>
-              <center>true</center>
-            </submesh>
-          </mesh>
+          <box>
+            <size>0.15 50 10</size>
+          </box>
         </geometry>
+      </collision>
+      <visual name="wall_west_visual">
+        <pose>-14.925 0 5.1 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.15 50 10</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.75 0.75 0.72 1</ambient>
+          <diffuse>0.75 0.75 0.72 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+
+      <collision name="wall_east_collision">
+        <pose>14.925 0 5.1 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.15 50 10</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="wall_east_visual">
+        <pose>14.925 0 5.1 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.15 50 10</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.75 0.75 0.72 1</ambient>
+          <diffuse>0.75 0.75 0.72 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+
+      <collision name="wall_north_collision">
+        <pose>0 24.975 5.1 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>30 0.05 10</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="wall_north_visual">
+        <pose>0 24.975 5.1 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>30 0.05 10</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.75 0.75 0.72 1</ambient>
+          <diffuse>0.75 0.75 0.72 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+
+      <!-- South wall has a 15m loading-dock opening centred at x=0, flanked by door-jamb
+           columns at x=+-7.5 (measured off the pre-baked localization map's occupied
+           cells, dc_simulation/maps/qrcodes.pgm — see model.config). Two segments, not
+           one wall, so the gap stays open. -->
+      <collision name="wall_south_west_collision">
+        <pose>-11.25 -24.975 5.1 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>7.5 0.05 10</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="wall_south_west_visual">
+        <pose>-11.25 -24.975 5.1 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>7.5 0.05 10</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.75 0.75 0.72 1</ambient>
+          <diffuse>0.75 0.75 0.72 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+
+      <collision name="wall_south_east_collision">
+        <pose>11.25 -24.975 5.1 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>7.5 0.05 10</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="wall_south_east_visual">
+        <pose>11.25 -24.975 5.1 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>7.5 0.05 10</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.75 0.75 0.72 1</ambient>
+          <diffuse>0.75 0.75 0.72 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
       </visual>
     </link>
-    <static>1</static>
   </model>
 </sdf>

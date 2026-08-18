@@ -109,13 +109,6 @@ path = "dc_simulation/models/MonitorAndKeyboard/**"
 SPDX-FileCopyrightText = "Open Robotics"
 SPDX-License-Identifier = "CC-BY-4.0"
 
-# NoDerivatives: keep these byte-identical to the Fuel original (MovAi/Warehouse v1).
-# Shipping a subset is licensed; editing a file is not. Thumbnails were dropped on those terms.
-[[annotations]]
-path = "dc_simulation/models/warehouse/**"
-SPDX-FileCopyrightText = "Filipe Almeida, MOV.AI"
-SPDX-License-Identifier = "CC-BY-NC-ND-4.0"
-
 # From the Gazebo Classic model database (osrf/gazebo_models), which is CC-BY-3.0 as a
 # whole; cutout_wall's model.config still credits its OSRF author.
 [[annotations]]
