@@ -17,9 +17,9 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
-# RecordRingBuffer / FileScratchRing (#285): header-only, ROS-free utilities, same shape as
-# dc_core's condition_set.hpp -- no compiled library needed, just the headers on the include
-# path.
+# RecordRingBuffer / FileScratchRing (#285), StateTransitionDetector / BatteryCycleAccumulator
+# (#360): header-only, ROS-free utilities, same shape as dc_core's condition_set.hpp -- no
+# compiled library needed, just the headers on the include path.
 install(
   DIRECTORY include/
   DESTINATION include/
@@ -29,7 +29,8 @@ ament_export_include_directories(include)
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
 
-  foreach(test record_ring_buffer_test file_scratch_ring_test)
+  foreach(test record_ring_buffer_test file_scratch_ring_test state_transition_detector_test
+          battery_cycle_accumulator_test)
     ament_add_gtest(${PROJECT_NAME}_${test} test/${test}.cpp)
     target_include_directories(${PROJECT_NAME}_${test} PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
