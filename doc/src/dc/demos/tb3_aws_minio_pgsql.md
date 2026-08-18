@@ -140,6 +140,8 @@ FROM dc_files WHERE kind = 'file_status' ORDER BY updated_at DESC LIMIT 100
 
 See `tools/infrastructure/docker/config/grafana/dashboards/robot.json` for every panel's exact query.
 
+The **KPI** dashboard is the operations view of the same data: availability and uptime per robot over whatever time range the dashboard is set to, computed by the [KPI views](../kpi_views.md) rather than by any panel query of its own. It populates from this demo's `uptime` Measurement with no extra configuration.
+
 That's it! Now you can collect your data!
 
 ## Understanding the configuration

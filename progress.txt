@@ -6982,3 +6982,69 @@ in the cached `localhost/dc-workspace:latest` image (this worktree bind-mounted)
 generator parses them. Negative test: a new `.cpp` with no header now fails (`no license
 identifier` / `no copyright notice`), which the catch-all draft did not. Not run: `build-doc`
 (docs container, `doc.yaml` owns it in CI).
+
+## #304 - Starter KPI views and a provisioned Grafana dashboard
+
+DC produced Records but nothing that turned them into the numbers an operations team
+reports on. The whole path now exists — Records in PostgreSQL, SQL definitions over them in
+the repo, and a Grafana dashboard provisioned with the demo — on data the `uptime`
+Measurement already emits. The point of the slice is the conventions, not the metric: where
+definitions live (`tools/infrastructure/sql/kpi_views.sql`), how they reach a database, and
+how one is tested. Every metric is computed in SQL; the robot ships nothing new.
+
+**Availability, defined once.** Each uptime Record vouches for the time back to the previous
+one, capped at a grace period (`dc_kpi_max_gap()`, 30 s — the demos poll every 5 s) and
+clipped to the window. So a heartbeat that never misses reports 100 %, and only a silence
+longer than the grace period costs anything: a 5-minute outage inside a 15-minute window
+leaves 630 of 900 seconds covered, 70 %. Four objects, each built on the one before it:
+`dc_kpi_uptime_samples` (the wide `dc` table narrowed to uptime Records, plus each Record's
+predecessor), `dc_kpi_availability(from, to [, max_gap])`, `dc_kpi_availability_5m` for
+charting, and `dc_kpi_max_gap()` so the grace period has exactly one home.
+
+**The window is a function argument, not a view predicate.** A plain view cannot aggregate
+over a window the caller chooses — a `WHERE` on a column the `GROUP BY` consumed has nowhere
+to go. `dc_kpi_availability()` takes `(window_start, window_end)` and clips coverage to them,
+which is also what makes the Grafana panels honest: they pass `$__timeFrom()`/`$__timeTo()`,
+so the number always describes the range on screen. `dc_kpi_availability_5m` is the same
+metric pre-bucketed for the chart, filtered with `$__timeFilter(bucket_start)`. One caveat
+worth knowing: a robot whose Records stopped before the window starts drops out of the
+result rather than reporting 0 %, because nothing in the database tells it apart from a
+robot that was never deployed — that needs a fleet registry, which DC has none of.
+
+**Applied two ways, deliberately.** `docker-compose.postgresql.yaml` mounts the tables and
+the KPI file into the init directory as `10_init.sql`/`20_kpi_views.sql` (the entrypoint runs
+them in name order, and the views need the tables), so a fresh demo comes up with both.
+PostgreSQL runs that directory only on an empty data directory, though, so an already-built
+database would never see them — `tools/infrastructure/scripts/apply_kpi_views.bash` applies
+the same file to any host/port/user/database, with `psql` when installed and a `postgres`
+container otherwise. Every object is `CREATE OR REPLACE`, so re-running it is how a changed
+definition ships: no robot is touched.
+
+**The dashboard.** `config/grafana/dashboards/kpi.json` (uid `dc-kpi`, "ROS 2 Data
+Collection - KPI") joins Home and Robot in the existing file provider — availability,
+uptime, unreported time and Record count as stats over the dashboard's range, availability
+in 5-minute buckets, reported uptime per Record, and a per-robot table. Default range
+`now-1h`, refresh 30s, so a demo that just started fills the view.
+
+**Verification.** The fixture test (`tools/infrastructure/test/test_kpi_views.py`, 10 cases)
+seeds a known heartbeat and asserts what comes back: full availability for an unbroken
+sequence, 630/900 for a 5-minute silence, 100 % for a silence inside the grace period, three
+different windows over the same Records, per-robot separation, latest uptime reading,
+Records outside the window, an empty window, and the bucketed view's `[1.0, 5/300, 1.0,
+1.0]`. It applies `init.sql` + `kpi_views.sql` into a schema of its own, so it also proves
+both files apply cleanly; `tools/infrastructure/scripts/test_kpi_views.sh` brings up a
+throwaway Postgres with Podman and runs it, and a standalone `kpi-views` CI job runs that
+script (SQL needs no workspace image).
+
+The demo path was run for real, not just reasoned about: a Postgres container with the
+compose file's exact two mounts came up with all four objects in `public`; Grafana 9.5.2
+with this repo's provisioning listed the KPI dashboard alongside Home and Robot without an
+import; and every one of the seven panels' queries, macros included, was executed through
+Grafana's own `/api/ds/query` against seeded Records — all seven returned data (13 buckets
+over the seeded hour, 721 sample points), which is the "populated chart without further
+configuration" criterion checked rather than asserted. `prek run --all-files --skip
+build-doc` is green (clang-format also formats JSON — the dashboard carries its wrapping),
+and `mdbook build` is clean. That last one turned up an existing orphan: linking the Grafana
+infrastructure page from the new docs failed link-check because it was never in `SUMMARY.md`
+— it is now, and its "How to use" section no longer describes Adminer with an Adminer
+screenshot.

@@ -25,6 +25,8 @@ dev = [
   # Keep in step with the ruff-pre-commit rev in .pre-commit-config.yaml.
   "ruff>=0.16.3,<0.17",
   "codespell>=2.4.2",
+  # tools/infrastructure/test (the KPI views' fixture test).
+  "pytest>=8.3",
   # dc_demos' Streamlit dashboard (dc_demos/dc_demos/streamlit_dashboard).
   "streamlit>=1.40",
   "pandas>=2.2",
