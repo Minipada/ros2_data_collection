@@ -601,5 +601,61 @@
       <joint_name>wheel_right_joint</joint_name>
     </plugin>
 
+    <!--
+      #364: libgz-sim8-linearbatteryplugin-system.so ships in the workspace image
+      already; ros_gz_bridge already converts gz.msgs.BatteryState to
+      sensor_msgs/msg/BatteryState (see config/warehouse_bridge.yaml). This is the
+      model-side half — a battery that discharges once the robot has driven at all
+      (LinearBatteryPlugin's own rule: current draw latches on at the first nonzero
+      wheel command and never resets itself) and recharges on a service call, which
+      models/charging_dock/model.sdf turns into "when the robot noses up to the dock".
+
+      Real TB3-Waffle spec is an 11.1 V Li-ion pack of about 1.8 Ah — kept here because
+      it costs nothing, unlike the capacity, which would need on the order of two hours
+      of continuous driving to show a real discharge. Rates matter more than realism, so
+      capacity is 0.05 Ah instead, sized against power_load and charging_time below so a
+      full discharge-then-recharge cycle fits in a couple of minutes of demo time rather
+      than an afternoon:
+
+      - power_load 18.0 W draws about 1.62 A at 11.1 V (I = P / V). Emptying a 0.05 Ah
+        pack at 1.62 A takes capacity / I =~ 111 s of driving.
+      - charging_time 0.02 h (72 s) is the SDF parameter's own unit (hours to go from
+        empty to full at the derived charging current, I = capacity / charging_time =
+        2.5 A here — above the 1.62 A discharge current, as gz-sim's own
+        linear_battery_demo.sdf recommends). LinearBatteryPlugin stops adding that
+        current once state of charge passes 90%, so reaching the cap from empty takes
+        about 0.9 * 72 s =~ 65 s; the charging_dock model's TriggeredPublisher waits 90 s
+        before calling recharge/stop, comfortably past that.
+
+      invert_current_sign is set because sensor_msgs/BatteryState documents positive
+      current as charging and negative as discharging, the opposite of gz's own internal
+      sign (a plain discharge current is positive; charging current is subtracted, so it
+      only ever pushes the raw current negative). Nav2's opennav_docking
+      SimpleChargingDock decides is_charging_ from `current > charging_threshold_`
+      (0.5 A default) — without the inversion, the reported current would be negative
+      while actually charging and dc_demos/params/qrcodes_nav.yaml's
+      use_battery_status: true would never see a charge.
+
+      fix_issue_225 reports percentage on a 0-100 scale rather than gz's un-fixed 0-1,
+      matching dc_measurements' battery plugin's own percentage_scale default of 100.0
+      (plugins/measurements/json/battery.json, #361) — built for exactly this gz-sim
+      quirk, since ros_gz_bridge copies the percentage field straight through with no
+      rescaling (see convert/sensor_msgs.hpp upstream).
+    -->
+    <plugin filename="gz-sim-linearbatteryplugin-system" name="gz::sim::systems::LinearBatteryPlugin">
+      <battery_name>linear_battery</battery_name>
+      <voltage>11.1</voltage>
+      <open_circuit_voltage_constant_coef>11.1</open_circuit_voltage_constant_coef>
+      <open_circuit_voltage_linear_coef>-2.0</open_circuit_voltage_linear_coef>
+      <capacity>0.05</capacity>
+      <resistance>0.07</resistance>
+      <smooth_current_tau>2.0</smooth_current_tau>
+      <fix_issue_225>true</fix_issue_225>
+      <invert_current_sign>true</invert_current_sign>
+      <power_load>18.0</power_load>
+      <enable_recharge>true</enable_recharge>
+      <charging_time>0.02</charging_time>
+    </plugin>
+
   </model>
 </sdf>

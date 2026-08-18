@@ -7629,3 +7629,65 @@ SQL cannot parse.
 
 The demo still has no teleop topic, so a takeover has to be produced by hand for now — wiring one
 in is a follow-up, as #362 says.
+
+## #364 - Publish battery state in the simulation, so battery Records have a source in the demo
+
+Model and bridge-configuration only, as the issue called for — `libgz-sim8-linearbatteryplugin-
+system.so` and `ros_gz_bridge`'s `gz.msgs.BatteryState` → `sensor_msgs/msg/BatteryState`
+conversion both already ship; nothing here is new C++/Python.
+
+**`worlds/waffle.model`** grows a `LinearBatteryPlugin`. It discharges once the robot has driven
+at all (the plugin's own rule — current draw latches on at the first nonzero wheel command and
+never resets) and recharges over `gz.msgs.Boolean` services. Real TB3-Waffle spec (11.1 V Li-ion,
+~1.8 Ah) is kept where it costs nothing; `capacity` is shrunk to 0.05 Ah so a full
+discharge-then-recharge cycle fits a couple of minutes of demo time instead of an afternoon —
+`power_load` 18.0 W (≈1.62 A discharge, ≈111 s to empty) and `charging_time` 0.02 h (≈65 s to
+reach the plugin's 90% charging cap). `invert_current_sign` is required, not cosmetic:
+`sensor_msgs/BatteryState` documents positive current as charging, gz's own internal sign is the
+opposite, and `opennav_docking::SimpleChargingDock` decides `is_charging_` from
+`current > charging_threshold_` — without the flag it would never see a charge. `fix_issue_225`
+reports `percentage` on 0-100 rather than gz's 0-1, matching #361's battery plugin's own
+`percentage_scale` default of 100.0 (built for exactly this quirk, since `ros_gz_bridge` copies
+the field straight through unscaled).
+
+**Docking/undocking without new code.** `LinearBatteryPlugin` only starts/stops recharging on its
+own services and has no idea what a dock is; nothing shipped in gz-sim detects "left the dock"
+either. `models/charging_dock/model.sdf` is a new placeholder model — a vertical contact pad (the
+robot noses up to it rather than driving over it, sidestepping chassis ground-clearance
+uncertainty) plus a `TouchPlugin` + two `TriggeredPublisher` plugins: contact for 1 s calls
+`recharge/start`; 90 s later (comfortably past the ≈65 s charge-up above) a second plugin calls
+`recharge/stop` *and* re-arms the `TouchPlugin`'s single-use trigger via its own `/enable`
+service, so the next visit fires again. Placed in `qrcodes.world` 0.8 m ahead of
+`warehouse.launch.py`'s default spawn pose, on open floor; the world also gained the
+`gz-sim-contact-system` plugin the pad's `<sensor type="contact">` needs to produce any data at
+all.
+
+**Bridge and demo wiring.** `config/warehouse_bridge.yaml` bridges
+`/model/turtlebot3_waffle/battery/linear_battery/state` to ROS `battery_state` — not this file's
+usual unscoped-gz-name convention, but the fixed, unqualified topic name
+`opennav_docking::SimpleChargingDock` subscribes to, so `dc_demos/params/qrcodes_nav.yaml`'s
+`docking_server.use_battery_status` could flip from `false` to `true` (it was `false` only because
+nothing published the topic).
+
+**Verification.** `gz sdf -k` (via the prebuilt `dc-workspace` image, models bind-mounted over the
+installed copies): both `qrcodes.world` and `waffle.model` valid, no structural errors.
+`tools/sim/scripts/lint_launch_files.py`: SDF and bridge-vs-demo-params checks pass; the two
+`tb3_simulation_*.launch.py` failures (missing `nav2_bringup` demo assets) and the
+`qrcodes_waypoint_follower` import error are pre-existing artifacts of a partial bind-mount
+(python source not mounted), not regressions — confirmed by re-running against an unmodified
+container. Live end-to-end check, `warehouse.launch.py headless:=True` in that same container: at
+spawn, `battery_state` reads 100%/`FULL`; driving toward the pad flips it to `DISCHARGING` with
+`current` negative (confirms the sign inversion); on contact, `/dock/touched` fires and status
+flips to `CHARGING` immediately, though `current` keeps trending toward the pure-discharge value
+until state of charge actually crosses under 90% (correct — `LinearBatteryPlugin` only subtracts
+charging current below that threshold, docking while still >90% charged is a label-only no-op);
+once SoC crossed 90% mid-test, `current` swung from -1.66 A to +0.20 A within a couple of samples
+and `percentage` turned from falling to climbing — the full recharge path confirmed working
+end-to-end, not just wired.
+
+Left for later, out of this issue's scope: no `dc_demos` params file configures the battery
+Measurement plugin against the new `battery_state` topic (#361 shipped no demo wiring either), and
+the one-way `qrcodes_waypoint_follower.py` patrol never actually returns to the dock, so the cycle
+above is demonstrated by manual driving, not the autonomous demo — the issue's acceptance
+criteria ask for the capability and documented rates, not a scripted docking sequence nav2's own
+`docking_server` config still calls a "never docks" placeholder for.
