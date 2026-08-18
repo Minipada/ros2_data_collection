@@ -28,6 +28,7 @@
   - [Dummy](./dc/measurements/dummy.md)
   - [Distance traveled](./dc/measurements/distance_traveled.md)
   - [Driving type](./dc/measurements/driving_type.md)
+  - [Intervention](./dc/measurements/intervention.md)
   - [IP Camera](./dc/measurements/ip_camera.md)
   - [Map](./dc/measurements/map.md)
   - [Memory](./dc/measurements/memory.md)

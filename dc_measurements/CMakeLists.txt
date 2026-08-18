@@ -151,6 +151,9 @@ list(APPEND dc_measurement_plugin_libs dc_distance_traveled_measurement)
 add_library(dc_driving_type_measurement SHARED plugins/measurements/driving_type.cpp)
 list(APPEND dc_measurement_plugin_libs dc_driving_type_measurement)
 
+add_library(dc_intervention_measurement SHARED plugins/measurements/intervention.cpp)
+list(APPEND dc_measurement_plugin_libs dc_intervention_measurement)
+
 add_library(dc_ip_camera_measurement SHARED plugins/measurements/ip_camera.cpp)
 list(APPEND dc_measurement_plugin_libs dc_ip_camera_measurement)
 
@@ -322,6 +325,7 @@ set(tests
   test_measurement_integer_equal
   test_measurement_integer_inferior
   test_measurement_integer_superior
+  test_measurement_intervention
   test_measurement_ip_camera
   test_measurement_list_bool_equal
   test_measurement_list_double_equal

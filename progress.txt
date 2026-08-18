@@ -7546,3 +7546,86 @@ packs on distinct topics producing distinct Records. Documented in
 
 The simulation still publishes no `BatteryState` (#364), so there is no demo showing real charge
 state — as the issue anticipated, the tests publish synthetic `BatteryState` themselves.
+
+## #362 - Intervention Measurement: human takeovers, as a projection of driving-mode transitions
+
+"How often did somebody have to walk over and rescue it" is the question that decides whether a
+deployment is trusted, and DC could not answer it. The signal was already there: `driving_type`
+emits a closed set of modes, and every transition out of `autonomous` into a human-driven one *is*
+an intervention. So `intervention` is a **projection of that signal, not a second detector** — it
+reads the same mode source `driving_type` reads and hands it to `dc_common::StateTransitionDetector`
+(#360, merged separately). The two cannot disagree about when the robot was autonomous, because
+there is only one thing deciding.
+
+**The Record shape follows the KPI contract #369 already merged, not the other way round.**
+`dc_kpi_intervention_events`/`dc_kpi_intervention_rate` (`tools/infrastructure/sql/kpi_views.sql`)
+were written against #362's acceptance criteria before this Measurement existed, and they read
+exact column names: `from_mode`, `to_mode`, `previous_duration`, `"sequence"`, `"open"`, matched
+against the literal strings `autonomous`/`manual`/`teleop`. So the takeover boundary is fixed, not
+configurable via parameters — a custom human-mode name would silently never count downstream. A
+start Record fires when the mode leaves `autonomous` for `manual` or `teleop` (`open: true`); an
+end Record fires when it returns (`open: false`). Both carry `previous_duration`, the dwell of
+`from_mode` — on a start Record that's how long the robot had been autonomous before the takeover,
+on an end Record it's exactly the takeover's own length, because `from_mode` is whichever mode just
+ended either way (one field serves both, matching the SQL comment "only an end carries a length" —
+the value is present on both rows, but only the end row's is a takeover duration). `sequence` is
+the transition's own number from `StateTransitionDetector`, passed straight through — the same
+"pull the number from the accumulator, don't reinvent one" pattern `battery.cpp` uses with
+`session.sequence`.
+
+**A takeover still open when collection stops just never gets a matching end Record.** There is no
+special shutdown emission: the AC ("marked open ... cannot be averaged as a zero") falls out of the
+Record shape by construction, since `dc_kpi_intervention_rate`'s duration/rate math is filtered on
+`is_end` — an unclosed takeover simply contributes no duration, ever, the same as if it had never
+been queried. `onCleanup()` still logs the open interval's elapsed time (via
+`detector_.openInterval()`) for operator visibility, but that's a log line, not a Record.
+
+Nothing is published on a poll that saw no boundary — `publish()` already treats an empty Record as
+"nothing to report" (#279). A transition that isn't a boundary (autonomy → `unknown` because the
+mode signal went stale, or one human mode replacing another directly) produces no Record and is
+silently absorbed — the detector still counts it in `sequence`, so a boundary Record's sequence
+number can jump by more than one without anything having been dropped; only a *smaller* jump than
+what actually happened between two known boundaries would indicate a real drop.
+
+**One extraction**, `dc_measurements/include/dc_measurements/driving_mode_source.hpp`, lifts
+`driving_type`'s mode-source half (both shapes: a dedicated `mode_topic` mapped through
+`value_mapping_from`/`value_mapping_to`, or inference from whichever of `velocity_topics` last
+published, with `velocity_timeout_s` staleness) out verbatim, so `intervention` and `driving_type`
+configure identically and cannot read the mode differently. `driving_type.cpp` goes from 168 lines
+to 43 and its five existing tests pass unchanged, which is the check that the lift was
+behaviour-preserving. It holds the node's *clock*, not the node — the node owns the Measurement
+that owns this, so a strong node reference back would be a cycle. (`StateTransitionDetector`
+itself needed no extraction here: #360 landed it in `dc_common` independently while this branch was
+in flight, and this PR rebased onto that rather than shipping a second copy.)
+
+**What shipped.** `dc_measurements/{plugins/measurements,include/dc_measurements/plugins/
+measurements}/intervention.{cpp,hpp}`, registered in `measurement_plugin.xml` and `CMakeLists.txt`
+like every other plugin; `plugins/measurements/json/intervention.json` validated through the
+existing `validateSchema()` path (`open` boolean, everything else required, both mode fields
+constrained to `driving_type.json`'s closed set). `test/test_measurement_intervention.cpp`, 3
+gtests over the real lifecycle node and real `Twist` publishers: the happy path (autonomous, then
+a teleop takeover, then back — start Record with `open: true`, end Record with `open: false`, its
+`sequence` exactly one past the start's since nothing else changed mode in between, and exactly two
+Records total); a takeover open at shutdown (one Record, still the original start with `open:
+true`, and `deactivate()`/`cleanup()` inventing nothing); and a mode signal that never arrives (no
+Records at all). Docs: `doc/src/dc/measurements/intervention.md`, linked from `SUMMARY.md`.
+
+**Verification.** `colcon build` + `colcon test` for `dc_common`, `dc_measurements` (and their
+dependency chain — `dc_core`, `dc_util`, `dc_interfaces`, `dc_lifecycle_manager`) inside
+`localhost/dc-workspace:latest`, rebuilt from source: the shipped image's install space predates
+`dc_core/condition_set.hpp` (#284) and segfaulted `Measurement::configure()` for *any* plugin,
+refactored or not, until the dependency chain was rebuilt from the worktree — nothing in the
+plugin needed changing once that was diagnosed. `prek run --all-files --skip build-doc` green.
+
+**Rebase note.** This branch was implemented before #360 (`StateTransitionDetector`) and #369
+(the KPI views reading its output) landed on `jazzy`; both merged while this PR was in flight. The
+first draft carried its own copy of `StateTransitionDetector` with a different field-naming
+convention (`seq`/`previous_dwell`/`state: "open"/"closed"` string) and its own choice of Record
+shape, invented before the KPI contract existed. Rebasing swapped in the merged
+`StateTransitionDetector` (dropping the duplicate), and the plugin/schema/docs/tests above were
+rewritten to the field names `dc_kpi_intervention_events` actually reads — `from_mode`, `to_mode`,
+`previous_duration`, `sequence`, `open` — rather than shipping a Record shape the already-merged
+SQL cannot parse.
+
+The demo still has no teleop topic, so a takeover has to be produced by hand for now — wiring one
+in is a follow-up, as #362 says.
