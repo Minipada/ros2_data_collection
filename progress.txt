@@ -7483,3 +7483,66 @@ is illegal under strict XML well-formedness and breaks `xacro`'s expat parser �
 identically on a stock, unmodified container, unrelated to anything here. It only bites
 `tb3_qrcodes.launch.py` (which pipes the world file through `xacro`); `warehouse.launch.py`
 never hits it, since gz-sim's own SDF parser is lenient about it. Worth its own issue.
+
+## #361 - Add Measurement: battery — percentage, voltage, current, charge sessions and cycles
+
+DC recorded what the computer was doing and nothing about what powers the robot. It now reads
+`sensor_msgs/BatteryState` and reports charge percentage, voltage and current on the polling
+interval, plus one Record when a charging session starts and one when it ends — charging is
+unavailable time, and that is the fact an operations team schedules around.
+
+**Facts, not metrics.** Every Record carries an `event` field naming which of three it is:
+`sample` (the periodic reading), `charge_session_start` (with the depth of the discharge that
+preceded it) and `charge_session_end` (with the session's duration and the percentage points
+gained). "Charging started after a discharge of 62 %", never "battery availability is 87 %" —
+aggregation stays in the SQL views, where the window is a query parameter.
+
+**Built on #360's `BatteryCycleAccumulator`, landed on `jazzy` while this branch was in flight.**
+#361 declares #360 a blocker; #360 merged first (#367, header-only, no ROS dependency, next to
+`record_ring_buffer.hpp`) with its own `ChargingSession`/`BatteryUpdate` API — sessions delimited
+by `power_supply_status` alone (never a percentage threshold, so noise can't flap them), an
+`Unknown` status neither opening nor closing a session, and cycles accumulated from discharge
+depth so two half discharges are one cycle. Rebasing this branch onto that pulled the accumulator
+straight from upstream and this Measurement was adapted to its actual shape rather than the one
+drafted before #360 merged: `openSession()`/`ChargingSession::duration()` instead of the earlier
+draft's own getters, `completedCycles()` returning a whole `uint64_t` (not a fractional double),
+and no per-instance `full_cycle_percent` (the accumulator's cycle size is a fixed constant) or
+`discharge_duration_sec` (the accumulator doesn't track a discharge's start time, only its depth)
+— both dropped from the plugin, the schema and the docs to match what's actually available.
+
+**The plugin stays a thin adapter.** Subscribes, delegates, serialises. `sensor_msgs/BatteryState`
+leaves most fields optional and signals "unmeasured" with NaN, so a NaN field is *left out* of the
+Record instead of written as `null` — a pack reporting nothing but a voltage still produces a
+valid Record. Before the topic publishes at all, no Record is emitted: a gap means no battery
+data, not a battery at 0 %. `power_supply_health` is reported when the pack sends one, and
+`health_percentage` (`capacity` against `design_capacity`) only when it sends both.
+
+`topic` is a parameter, so a robot with two packs runs one Measurement per pack with its own
+`topic_output` — a test asserts exactly that. `percentage_scale` (default 100.0) covers the
+drivers that publish 0-100 where the message specifies 0-1.
+
+**Session boundaries ride the normal path.** A boundary is queued when it happens and leaves on
+the next poll, one Record per poll, keeping the timestamp of the moment it happened rather than of
+the poll that carried it. So it goes through `publish()` like everything else — Conditions, gate,
+incident buffering, Group — instead of being published straight from the subscription callback,
+which under the node's `MultiThreadedExecutor` would race the polling timer. Everything the two
+callbacks share is behind a mutex, and the queue is capped (oldest dropped, warning throttled) so
+a pathologically flapping pack cannot grow it without bound.
+
+**Schema.** `plugins/measurements/json/battery.json`, validated through the existing
+`validateSchema("dc_measurements", ...)` path: strict where the views look (`event` always;
+`power_supply_status` on a sample; `session_id` and `discharge_depth_percent` on a session start;
+`session_id` and `duration_sec` on a session end), permissive everywhere the hardware decides.
+`percentage` is bounded 0-100, which also catches a mis-set `percentage_scale`.
+
+**Verification.** `dc_common`'s accumulator is #360's own suite, unmodified here. `dc_measurements`
+gets 5 gtest cases over the live plugin: the happy path (percentage/voltage/current/health/
+health_percentage + schema validation), the input topic that never publishes (no Record at all),
+an almost-empty `BatteryState` (fields absent, not null, schema passes), a full charging session
+(start with a 62-point discharge depth, end with duration and 66 points gained, then a
+`completed_cycles` still at 0 since a single 62-point discharge is under one full cycle), and two
+packs on distinct topics producing distinct Records. Documented in
+`doc/src/dc/measurements/battery.md`, listed in `SUMMARY.md` and the plugin table.
+
+The simulation still publishes no `BatteryState` (#364), so there is no demo showing real charge
+state — as the issue anticipated, the tests publish synthetic `BatteryState` themselves.

@@ -20,6 +20,7 @@ set(dependencies
   pluginlib
   rclcpp_components
   rclcpp_lifecycle
+  sensor_msgs
   std_msgs
   tf2
   tf2_geometry_msgs
@@ -120,6 +121,9 @@ add_library(dc_string_match_condition SHARED plugins/conditions/string_match.cpp
 list(APPEND dc_condition_plugin_libs dc_string_match_condition)
 
 # Measurement plugins
+add_library(dc_battery_measurement SHARED plugins/measurements/battery.cpp)
+list(APPEND dc_measurement_plugin_libs dc_battery_measurement)
+
 add_library(dc_camera_measurement SHARED plugins/measurements/camera.cpp)
 list(APPEND dc_measurement_plugin_libs dc_camera_measurement)
 
@@ -301,6 +305,7 @@ set(tests
   test_barcode_rotation
   test_code_pose
   test_incident_releaser
+  test_measurement_battery
   test_measurement_bool_equal
   test_measurement_buffering
   test_measurement_camera

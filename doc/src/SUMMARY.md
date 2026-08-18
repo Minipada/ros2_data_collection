@@ -20,6 +20,7 @@
 - [Data Pipeline](./dc/data_pipeline.md)
 - [Lifecycle Manager](./dc/lifecycle_manager.md)
 - [Measurements](./dc/measurements.md)
+  - [Battery](./dc/measurements/battery.md)
   - [Camera](./dc/measurements/camera.md)
   - [Command velocity](./dc/measurements/cmd_vel.md)
   - [CPU](./dc/measurements/cpu.md)
