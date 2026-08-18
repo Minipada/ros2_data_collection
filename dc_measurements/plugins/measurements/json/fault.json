@@ -68,7 +68,8 @@
       "type": "string"
     },
     "duration_s": {
-      "description": "Seconds the whole fault lasted. Present only on the clear Record, and only when 'fault_started_at' is known",
+      "description":
+          "Seconds the whole fault lasted. Present only on the clear Record, and only when 'fault_started_at' is known",
       "type": "number",
       "minimum": 0
     }

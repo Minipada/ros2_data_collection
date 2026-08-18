@@ -80,7 +80,7 @@ protected:
   }
 
   static diagnostic_msgs::msg::DiagnosticStatus makeStatus(const std::string& name, uint8_t level,
-                                                            const std::string& message)
+                                                           const std::string& message)
   {
     diagnostic_msgs::msg::DiagnosticStatus status;
     status.name = name;
