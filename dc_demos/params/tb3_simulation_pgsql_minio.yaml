@@ -19,6 +19,7 @@ dc_bridge:
           "/dc/measurement/camera",
           "/dc/measurement/cmd_vel",
           "/dc/measurement/distance_traveled",
+          "/dc/measurement/driving_type",
           "/dc/measurement/position",
           "/dc/measurement/speed",
           # Environment
@@ -78,6 +79,7 @@ measurement_server:
         "camera",
         "cmd_vel",
         "distance_traveled",
+        "driving_type",
         "position",
         "speed",
         # Environment
@@ -157,6 +159,19 @@ measurement_server:
       condition_max_measurements: 0
       include_measurement_name: true
       init_collect: false
+    # Nav2's smoothed output is the only command source the simulation has, so the mode is
+    # autonomous while it publishes and unknown otherwise. A real deployment adds its teleop
+    # topic here to tell a takeover apart from an idle robot.
+    driving_type:
+      plugin: "dc_measurements/DrivingType"
+      topic_output: "/dc/measurement/driving_type"
+      polling_interval: 5000
+      velocity_topics: ["/cmd_vel"]
+      velocity_modes: ["autonomous"]
+      velocity_timeout_s: 1.0
+      enable_validator: true
+      init_collect: true
+      include_measurement_name: true
     cmd_vel:
       plugin: "dc_measurements/CmdVel"
       enable_validator: true

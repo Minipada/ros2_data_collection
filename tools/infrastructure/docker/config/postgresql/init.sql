@@ -73,6 +73,22 @@ CREATE TABLE IF NOT EXISTS dc (
   -- (tb3_simulation_pgsql_minio); told apart by `name`. Nested under the `speed`/`cmd_vel`
   -- jsonb columns above instead when the Records go through a Group (qrcodes_minio_pgsql).
   computed double precision,
+  -- Operational events the KPI views read (tools/infrastructure/sql/kpi_views.sql):
+  -- driving_type.cpp's current mode, and the transition Records the intervention (#362)
+  -- and fault (#365) Measurements emit. Both are StateTransitionDetector projections, so
+  -- they share previous_duration (how long the state just left was held), `sequence` (a
+  -- dropped Record is a gap, not a wrong duration) and `open` (collection stopped inside
+  -- the interval, so it has no duration rather than a zero one).
+  mode text,
+  from_mode text,
+  to_mode text,
+  component text,
+  from_level text,
+  to_level text,
+  reason text,
+  previous_duration double precision,
+  sequence bigint,
+  open boolean,
   -- Infrastructure (tcp_health.cpp)
   host text,
   port integer,

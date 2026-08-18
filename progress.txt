@@ -7169,3 +7169,77 @@ compile and pass under plain `g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror` a
 `-lgtest -lgtest_main` in a container with `/opt/ros` and the DC workspace deleted and an empty
 environment (`env -i`) — no ament, no `rclcpp`, no message packages. `prek run --all-files
 --skip build-doc` is green.
+
+## #363 - Utilisation, intervention rate and MTBF/MTTR views; mission success rate deferred
+
+#304 shipped one metric — availability and uptime — through the whole path (`dc_kpi_*` naming,
+a view that normalises the wide `dc` table per Measurement, the window as a function argument,
+a bucketed view for charting, a fixture test, provisioned panels). This finishes the starter
+set except for the one metric whose contract nobody has agreed yet.
+
+**Utilisation.** `dc_kpi_driving_samples` narrows `dc` to `driving_type` Records, each carrying
+the `speed` the robot last reported at or before it (correlated lookup bounded by
+`dc_kpi_max_gap()`, so a stale speed vouches for one grace period and no more).
+`dc_kpi_utilisation(from, to [, max_gap [, min_speed]])` credits time exactly the way
+`dc_kpi_availability()` does and splits it four ways — `autonomous_seconds`, `manual_seconds`,
+`teleop_seconds`, `unknown_seconds`, which add up to `reported_seconds` so the ratio can be
+checked against its parts. Productive is *moving under a known mode*: `manual` and `teleop`
+count (a human driving the robot is still the robot being used), `unknown` does not. **No speed
+Record in the window makes `utilisation` NULL, not 0 %** — a deployment collecting
+`driving_type` but not `speed` has unreported movement, not zero movement, and `speed_samples`
+is in the output so the two are distinguishable. It does not claim to measure useful work: a
+robot standing still to inspect something reads as idle, which needs the Mission Measurement.
+
+**Intervention rate.** `dc_kpi_intervention_events` derives `is_start` (leaving `autonomous`
+for `manual`/`teleop`) and `is_end` (returning to it) from the modes a Record names, so the
+shape of the metric is in one place. `dc_kpi_intervention_rate()` reports both denominators —
+`per_autonomous_hour` off `dc_kpi_utilisation()`'s `autonomous_seconds`, `per_km` off summed
+`distance_traveled` — because they fail differently: a robot parked all shift has no autonomous
+hours, a robot doing tight manoeuvring has hours but no kilometres. A denominator nothing
+reported gives NULL, never a rate over zero. Only an end Record carries a duration, so a
+takeover still running is counted in `interventions` and absent from
+`mean_intervention_seconds` rather than a zero in it.
+
+**MTBF/MTTR.** `dc_kpi_reliability(from, to [, failure_levels])` averages the fault Records'
+own `previous_duration`: healthy time before a raise is MTBF, time in a failure level before a
+clear is MTTR. `failure_levels` defaults to `ARRAY['ERROR','STALE']` and is a query parameter,
+so a deployment that treats a silent component as reportable-but-not-broken passes
+`ARRAY['ERROR']`. Three consequences the tests pin: `ERROR → STALE` is neither a raise nor a
+clear (a component that goes quiet while already broken is still one fault); `WARN` is not a
+failure, so `OK → WARN → ERROR` is one failure timed from the last healthy state; a fault never
+cleared counts in `failures` and `open_faults` and is left out of `mttr_seconds`. **Grouped by
+component, never rolled up per robot** — "the robot is down" is a policy over components that
+nothing here knows, and averaging independent components reports a number for a failure mode no
+component has.
+
+**Mission success rate is deliberately not here.** #305 — what a Mission Measurement consumes,
+how far a nav2 adapter infers, what the escape-hatch message in `dc_interfaces` looks like — is
+an open design decision that explicitly needs a human. A view written first would pin the
+contract from the reporting end, which is the wrong end. `doc/src/dc/kpi_views.md` says so in
+its own section rather than leaving a gap to rediscover.
+
+**The Records the views read.** `intervention` (#362) and `fault` (#365) do not exist yet, so
+their views return no rows until those Measurements land — which is fine, and is why the
+fixture test seeds the Records directly. Both are `StateTransitionDetector` projections and
+therefore share a column vocabulary, added to
+`tools/infrastructure/docker/config/postgresql/init.sql`: `previous_duration` (how long the
+state just left was held), `sequence` (a dropped Record is a detectable gap, not a wrong
+duration) and `open`, plus `mode`, `from_mode`/`to_mode`, and
+`component`/`from_level`/`to_level`/`reason`. Vector's `postgres` sink maps a Record's keys onto
+existing columns and silently drops the rest, so the columns have to exist before the
+Measurements do. `open` is reported, never load-bearing: correctness comes from only end/clear
+Records carrying a duration.
+
+**Verification.** `tools/infrastructure/test/test_kpi_views.py` goes from 10 to 29 cases, ~19
+new across the three metrics — the missing-speed NULL, a speed Record older than the grace
+period, another robot's speed, an open takeover, a missing denominator, `ERROR → STALE`, `WARN`,
+a never-cleared fault, the `failure_levels` parameter, and each bucketed view.
+`./tools/infrastructure/scripts/test_kpi_views.sh` is 29 passed. Every one of the dashboard's
+16 panel queries was run against a live PostgreSQL with the Grafana macros expanded, not just
+eyeballed. `prek run --all-files --skip build-doc` is green.
+
+**Demo.** `driving_type` is enabled in `tb3_simulation_pgsql_minio.yaml` off Nav2's `/cmd_vel`
+— the only command source the simulation has, so the mode is `autonomous` while Nav2 publishes
+and `unknown` otherwise — and routed to the `pgsql` Destination, so the utilisation panels
+populate on the existing demo. The intervention and fault panels stay empty until #362/#365,
+for the same reason a battery panel would.
