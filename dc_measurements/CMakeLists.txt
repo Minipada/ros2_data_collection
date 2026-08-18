@@ -148,6 +148,9 @@ list(APPEND dc_measurement_plugin_libs dc_dummy_measurement)
 add_library(dc_distance_traveled_measurement SHARED plugins/measurements/distance_traveled.cpp)
 list(APPEND dc_measurement_plugin_libs dc_distance_traveled_measurement)
 
+add_library(dc_fault_measurement SHARED plugins/measurements/fault.cpp)
+list(APPEND dc_measurement_plugin_libs dc_fault_measurement)
+
 add_library(dc_driving_type_measurement SHARED plugins/measurements/driving_type.cpp)
 list(APPEND dc_measurement_plugin_libs dc_driving_type_measurement)
 
@@ -321,6 +324,7 @@ set(tests
   test_measurement_driving_type
   test_measurement_dummy
   test_measurement_exist
+  test_measurement_fault
   test_measurement_gate_condition
   test_measurement_integer_equal
   test_measurement_integer_inferior

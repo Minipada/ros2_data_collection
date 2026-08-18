@@ -52,6 +52,14 @@ SPDX-License-Identifier: MPL-2.0
         </class>
     </library>
 
+    <library path="dc_fault_measurement">
+        <class name="dc_measurements/Fault" type="dc_measurements::Fault" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_fault
+            </description>
+        </class>
+    </library>
+
     <library path="dc_dummy_measurement">
         <class name="dc_measurements/Dummy" type="dc_measurements::Dummy" base_class_type="dc_core::Measurement">
             <description>

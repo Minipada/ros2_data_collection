@@ -7770,3 +7770,81 @@ remains for a first real run to confirm.
 
 `tools/e2e/README.md` documents the new scenario and its layout entries; `Containerfile.e2e` gained
 `COPY` lines for `measure_rtt.py` (already needed by `run_degraded.sh`'s readiness/pre-check steps).
+
+## #365 - Add Measurement: fault -- raise and clear events from diagnostics, so MTBF and MTTR have a source
+
+`diagnostics` records snapshots: every poll writes the current `DiagnosticStatus` level, so the
+database holds `ERROR, ERROR, ERROR…` and recovering "when did this break, when was it fixed"
+means scanning for where a value changed in SQL -- exactly the failure mode transition Records
+exist to prevent. `fault` subscribes to the same `/diagnostics` topic and emits a Record only when
+a component's level actually changes, following intervention's precedent (#362, merged to `jazzy`
+while this branch was in flight): a separate Measurement projecting `diagnostics`'s signal rather
+than a mode on it, so a deployment already collecting snapshots keeps them unchanged, and one that
+wants only faults doesn't have to collect snapshots to get them.
+
+**Built on #360's `StateTransitionDetector`, one instance per watched component** (`std::map<name,
+StateTransitionDetector<uint8_t>>`), so components fault and recover independently -- a noisy
+`wifi` link flapping does not touch `motor_driver`'s sequence. Each transition is classified by
+where it starts/ends relative to `OK`: **raise** (left `OK`, opens a fault, `state: "open"`,
+`fault_started_at` recorded), **change** (between two non-`OK` levels, e.g. `WARN` to `ERROR`,
+still open, `fault_started_at` unchanged) and **clear** (back to `OK`, `state: "closed"`, carries
+`duration_s` and the same `fault_started_at` as the raise, so the pair joins downstream for MTTR;
+MTBF is the gap between successive raises). Levels are reported by name (`OK`/`WARN`/`ERROR`/
+`STALE`) rather than the raw integer, so `STALE` (a silent component) is never mistaken for `ERROR`
+(a broken one) in a query. `reason` is `DiagnosticStatus.message` on the entering status.
+
+**A fault still open at shutdown is never invented a duration.** No synthetic clear Record is
+published in `onCleanup()` (which only logs a warning per component still faulted, mirroring
+intervention's shutdown handling) -- the fault's last real Record already carries `state: "open"`
+and no `duration_s`, so it cannot be read as a zero-length outage. `seq` increments by one across
+every watched component (not per-component), so a dropped Record is a detectable gap in one global
+stream rather than a silently shortened outage. `names` (default: watch everything seen) filters
+which components are tracked at all, so one noisy, unwatched component cannot grow the detector map
+or flood the pipeline -- the DiagnosticArray callback also caps its pending-Records queue at 64,
+oldest dropped first, the same flood guard `battery.cpp`'s charging-session events use, since the
+callback and the polling timer run on different callback groups under the node's
+`MultiThreadedExecutor`.
+
+**A component already faulted on its very first observed sample gets no `fault_started_at`.** The
+detector treats the first sample as a baseline, not a transition (matching every other
+`StateTransitionDetector` consumer), so a component that starts life mid-fault has no recorded
+start -- consistent with intervention's same behavior for a takeover already under way when
+collection begins.
+
+**Schema.** `dc_measurements/plugins/measurements/json/fault.json`, validated through the existing
+`validateSchema("dc_measurements", ...)` path: `seq`, `component`, `event`, `from_level`,
+`to_level`, `previous_level_duration_s`, `reason` and `state` always required; `fault_started_at`
+and `duration_s` present only where the Record's `event` makes them meaningful.
+
+**Verification.** 5 gtest cases over the live plugin in `dc_measurements/test/
+test_measurement_fault.cpp`: a raise (component stays `OK` first and produces nothing, then
+transitions and the Record's fields, `state` and schema are checked), a clear (pairs with the
+preceding raise via `fault_started_at`, carries `duration_s`), a change that is not a clear
+(`WARN` to `ERROR`, stays open, `fault_started_at` unmoved), a flapping component (four alternating
+transitions, `seq` 1-4, events `raise, clear, raise, clear`), and a fault open at shutdown (one
+Record, `state: "open"`, no `duration_s`, nothing manufactured by `stopCollection()`). Registered in
+`dc_measurements/CMakeLists.txt` (library `dc_fault_measurement`, test `test_measurement_fault`)
+and `measurement_plugin.xml`. Documented in `doc/src/dc/measurements/fault.md`, listed in
+`SUMMARY.md` and the plugin table in `doc/src/dc/measurements.md`.
+
+Pushed and opened a PR (#374) before the local `colcon build`/`colcon test` run (`tools/e2e/
+scripts/build.sh`) finished, at the user's explicit request, so CI's own build runs in parallel
+with local verification rather than after it. CI's `build-workspace` job caught a real bug the
+local run (which separately hit "no space left on device" in this sandbox, an environment
+constraint unrelated to the code) hadn't reached yet: 4 of the 5 `test_measurement_fault` cases
+timed out, because `StateTransitionDetector` treats a component's very first observed sample as a
+baseline rather than a transition -- those four tests published the "raising" status as the very
+first sample ever seen for their component, so the detector correctly produced no Record and every
+subsequent `publishUntilRecord()` wait for it wired downstream timed out. Only the first test
+happened to publish `OK` first (to also assert "staying put produces nothing"), which incidentally
+established the baseline its own raise then relied on. Fixed by adding `establishOkBaseline()` and
+calling it before each test's first real transition; `build-workspace` (which runs `colcon test`)
+passed on the next CI run.
+
+`#362` (intervention) and `#364` (battery state in the simulation) both merged into `jazzy` while
+this branch was in flight, both touching `dc_measurements/CMakeLists.txt`'s `add_library`/test
+list the same way this issue does. Rebased onto `origin/jazzy`: `CMakeLists.txt` and
+`measurement_plugin.xml` merged cleanly (non-overlapping insertion points), `doc/src/SUMMARY.md`
+and this file needed manual conflict resolution to keep both sides' entries. `#366` (degraded
+network conditions testing) then merged into `jazzy` too, mid-rebase, conflicting with this file
+alone (both entries append at the same tail); rebased again, keeping both entries in issue order.
