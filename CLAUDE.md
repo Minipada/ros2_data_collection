@@ -43,8 +43,11 @@ are already recorded there rather than in code comments.
 ```bash
 colcon build                 # requires a sourced ROS 2 workspace; see doc/src/dc/setup.md
 uv sync                      # Python deps: pyproject.toml + uv.lock, no requirements.txt
-prek run --all-files --skip build-doc   # ruff, doc build, yaml/json/xml checks, … — see .pre-commit-config.yaml
+git add -A && prek run --all-files --skip build-doc   # see .pre-commit-config.yaml
 ```
+
+`--all-files` means all *tracked* files: an unstaged new file is skipped silently, so a
+formatting break in it only surfaces in CI (#359). Stage first, hence the `git add -A`.
 
 Python tooling is **prek + uv**, not pre-commit + poetry (same move as `~/dev/monorepo`),
 and lint/format is **ruff only** (`[tool.ruff]` in `pyproject.toml`). There are no

@@ -29,9 +29,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # --from-ref below diffs against the base branch, which a shallow clone lacks.
+          fetch-depth: 0
 
       # Installs prek, caches hook environments, runs `prek run --show-diff-on-failure`.
+      # A PR is checked over its own diff (`base...HEAD`); a push to jazzy re-checks the
+      # whole tree, so nothing a PR never touched can rot unnoticed.
       - uses: j178/prek-action@v3.0.0
         with:
           prek-version: 0.4.14
-          extra-args: --all-files --skip build-doc
+          extra-args: ${{ github.event_name == 'pull_request' && format('--from-ref origin/{0} --to-ref HEAD --skip build-doc', github.base_ref) || '--all-files --skip build-doc' }}
