@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="charging_dock">
+    <static>true</static>
+    <link name="link">
+      <!-- A vertical pad, not a floor plate: the robot noses up against it rather than
+           driving over it, so contact does not depend on how much ground clearance the
+           chassis happens to have. Sized to cover waffle.model's base_collision box
+           (0.265 x 0.265 x 0.089 m, centred 0.048 m up) with margin on every side. -->
+      <collision name="pad_collision">
+        <pose>0 0 0.15 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.05 0.4 0.3</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="pad_visual">
+        <pose>0 0 0.15 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.05 0.4 0.3</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.1 0.6 0.15 1</ambient>
+          <diffuse>0.1 0.6 0.15 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+      <sensor name="dock_contact" type="contact">
+        <contact>
+          <collision>pad_collision</collision>
+        </contact>
+        <update_rate>30</update_rate>
+      </sensor>
+    </link>
+
+    <!--
+      Docking/undocking without any new node: LinearBatteryPlugin (waffle.model) only
+      starts and stops recharging in response to its own recharge/start and
+      recharge/stop services, and neither it nor any other shipped gz-sim system
+      detects "robot left the dock" on its own. Two config-only plugins bridge that gap:
+
+      - TouchPlugin fires once, "/dock/touched" (true), after 1 s of continuous contact
+        between this pad and a turtlebot3_waffle collision, then disables itself (its own
+        documented behaviour — it is a single-use plugin).
+      - The first TriggeredPublisher below turns that into a recharge/start call.
+      - The second waits <delay_ms> (comfortably longer than the time
+        worlds/waffle.model's <charging_time> needs to reach the 90% cap
+        LinearBatteryPlugin stops injecting current at), then calls recharge/stop *and*
+        re-arms the TouchPlugin via its /dock/enable service, so the next visit fires
+        again. If the robot is still parked on the pad when that happens, contact never
+        broke, so TouchPlugin's 1 s timer restarts immediately and the pad fires another
+        short charge pulse — harmless (SoC is already at/near the cap) and stops as soon
+        as the robot drives off.
+
+      recharge/start and recharge/stop are plain gz-transport services with no reply
+      payload (advertised without a response type), the same shape the recharge/enable
+      service TouchPlugin advertises for itself uses — `gz.msgs.Empty` as `repType` here
+      matches gz-sim's own linear_battery_demo.sdf, which documents calling these
+      exact service shapes by hand.
+    -->
+    <plugin filename="gz-sim-touchplugin-system" name="gz::sim::systems::TouchPlugin">
+      <target>turtlebot3_waffle</target>
+      <namespace>dock</namespace>
+      <time>1.0</time>
+      <enabled>true</enabled>
+    </plugin>
+
+    <plugin filename="gz-sim-triggered-publisher-system" name="gz::sim::systems::TriggeredPublisher">
+      <input type="gz.msgs.Boolean" topic="/dock/touched">
+        <match>data: true</match>
+      </input>
+      <service name="/model/turtlebot3_waffle/battery/linear_battery/recharge/start"
+        reqType="gz.msgs.Boolean" repType="gz.msgs.Empty" timeout="1000"
+        reqMsg="data: true">
+      </service>
+    </plugin>
+
+    <plugin filename="gz-sim-triggered-publisher-system" name="gz::sim::systems::TriggeredPublisher">
+      <input type="gz.msgs.Boolean" topic="/dock/touched">
+        <match>data: true</match>
+      </input>
+      <!-- See worlds/waffle.model's <charging_time> comment for the 90 s figure. -->
+      <delay_ms>90000</delay_ms>
+      <service name="/model/turtlebot3_waffle/battery/linear_battery/recharge/stop"
+        reqType="gz.msgs.Boolean" repType="gz.msgs.Empty" timeout="1000"
+        reqMsg="data: true">
+      </service>
+      <service name="/dock/enable"
+        reqType="gz.msgs.Boolean" repType="gz.msgs.Empty" timeout="1000"
+        reqMsg="data: true">
+      </service>
+    </plugin>
+  </model>
+</sdf>

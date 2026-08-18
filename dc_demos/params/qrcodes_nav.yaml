@@ -422,7 +422,11 @@ docking_server:
       docking_threshold: 0.05
       staging_x_offset: -0.7
       use_external_detection_pose: false
-      use_battery_status: false
+      # Was false because nothing published sensor_msgs/BatteryState -- the demo still
+      # never docks, but battery_state now has a real source (waffle.model's
+      # LinearBatteryPlugin, bridged in dc_simulation/config/warehouse_bridge.yaml,
+      # #364), so SimpleChargingDock's is_charging_ check has something to subscribe to.
+      use_battery_status: true
       use_stall_detection: false
     docks: ["home_dock"]
     home_dock:

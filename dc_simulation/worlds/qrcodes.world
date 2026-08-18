@@ -33,6 +33,11 @@ SPDX-License-Identifier: MPL-2.0
     </plugin>
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster">
     </plugin>
+    <!-- Required for models/charging_dock's <sensor type="contact"> to populate
+         ContactSensorData at all -- without this system loaded, the sensor is declared
+         but never actually detects anything (#364). -->
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact">
+    </plugin>
 
     <!--
       Gazebo Classic resolved "model://ground_plane" and "model://sun"
@@ -186,6 +191,20 @@ SPDX-License-Identifier: MPL-2.0
       <pose>-5.96 -1.64 -0.094592 0 0 0</pose>
       <include>
         <uri>model://warehouse</uri>
+      </include>
+    </model>
+
+    <!-- #364: a battery charging pad for waffle.model's LinearBatteryPlugin (see
+         models/charging_dock/model.sdf for the docking/undocking mechanism). Placed
+         0.8 m ahead of warehouse.launch.py's default spawn pose (-7.3, 1.37, yaw 0), on
+         open floor clear of both the warehouse structure and the QR-coded pallets --
+         close enough for a short manual `cmd_vel` drive to reach it (see README.md's
+         "Battery" section for the exact command). tb3_qrcodes.launch.py spawns
+         elsewhere in this same world, so reaching the dock there means driving there. -->
+    <model name="charging_dock">
+      <pose>-6.5 1.37 0 0 0 0</pose>
+      <include>
+        <uri>model://charging_dock</uri>
       </include>
     </model>
 

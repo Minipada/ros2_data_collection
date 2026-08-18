@@ -27,11 +27,66 @@ simulation moved to gz-sim:
 | `/scan` | `gpu_lidar` sensor |
 | `/imu` | `imu` sensor |
 | `/{left,right}_intel_realsense_r200_depth/{image_raw,camera_info,depth/image_raw}` | two `rgbd_camera` sensors |
+| `/battery_state` | `LinearBatteryPlugin` (`worlds/waffle.model`) — see "Battery" below |
 
 Every sensor sets `<gz_frame_id>` to the matching link in `dc_description`'s URDF.
 Without it gz-sensors stamps messages with the scoped sensor name, which is not a TF
 frame, and every tf2 `MessageFilter` downstream — AMCL, both Nav2 costmaps — silently
 drops the message.
+
+## Battery
+
+`worlds/waffle.model` carries a `gz-sim-linearbatteryplugin-system` battery
+(`libgz-sim8-linearbatteryplugin-system.so`, already in the workspace image). It
+discharges once the robot has driven at all — the plugin's own rule, not a `dc_simulation`
+choice: current draw latches on at the first nonzero wheel command and never resets
+itself — and recharges when it is told to over `gz.msgs.Boolean` services, which
+`models/charging_dock/model.sdf` turns into "when the robot noses up to a pad in the
+world" using two stock gz-sim systems (`TouchPlugin`, `TriggeredPublisher`) and no new
+code. `ros_gz_bridge` re-publishes the plugin's own `.../battery/linear_battery/state`
+topic as ROS `battery_state`, the unqualified name `opennav_docking`'s
+`SimpleChargingDock` subscribes to (`dc_demos/params/qrcodes_nav.yaml`'s
+`docking_server.use_battery_status`, on since #364).
+
+**Rates, and why.** The real TurtleBot3-Waffle spec — an 11.1 V Li-ion pack, about
+1.8 Ah — is kept where it costs nothing (`voltage`), but not for `capacity`: at the real
+size, a visible discharge needs on the order of two hours of continuous driving. Rates
+matter more than realism here, so `capacity` is 0.05 Ah, sized against `power_load` and
+`charging_time` so one discharge-then-recharge cycle fits in a couple of minutes:
+
+- `power_load` 18.0 W draws about 1.62 A at 11.1 V (`I = P / V`). Emptying 0.05 Ah at
+  1.62 A takes `capacity / I` ≈ 111 s of driving.
+- `charging_time` 0.02 h (72 s) is the SDF parameter's own unit — hours to go from empty
+  to full at the derived charging current (`capacity / charging_time`, 2.5 A here, above
+  the 1.62 A discharge current as gz-sim's own `linear_battery_demo.sdf` recommends).
+  `LinearBatteryPlugin` stops adding that current past 90% state of charge, so reaching
+  the cap from empty takes about `0.9 * 72 s` ≈ 65 s; `charging_dock/model.sdf`'s
+  `TriggeredPublisher` waits 90 s before calling `recharge/stop`, comfortably past that.
+
+**Docking mechanism.** `models/charging_dock/model.sdf` places a contact-sensor pad 0.8 m
+ahead of `warehouse.launch.py`'s default spawn pose. A `TouchPlugin` fires once when a
+`turtlebot3_waffle` collision has touched the pad continuously for 1 s, and two
+`TriggeredPublisher` plugins turn that into a `recharge/start` call and, after the 90 s
+above, a `recharge/stop` call plus re-arming the `TouchPlugin` for the next visit. Try it
+by hand against `warehouse.launch.py` (headless or not):
+
+```bash
+gz topic -e -t /model/turtlebot3_waffle/battery/linear_battery/state   # watch it discharge
+gz topic -t /cmd_vel -m gz.msgs.Twist -p "linear: {x: 0.3}"            # drive to the dock
+```
+
+**Sign convention.** `sensor_msgs/BatteryState` documents positive `current` as charging,
+negative as discharging; gz's own internal sign is the opposite (a plain discharge
+current is positive, and charging current is *subtracted*, so it only ever pushes the
+raw value negative). `LinearBatteryPlugin`'s `invert_current_sign` flips it, because
+`SimpleChargingDock` decides `is_charging_` from `current > charging_threshold_` (0.5 A
+default) — without the inversion it would never see a charge.
+
+**Percentage scale.** `fix_issue_225` reports `percentage` on a 0–100 scale rather than
+gz's un-fixed 0–1. That matches `dc_measurements`' battery plugin's own
+`percentage_scale` default of 100.0 (`plugins/measurements/json/battery.json`, #361) —
+built for exactly this gz-sim quirk, since `ros_gz_bridge` copies the field straight
+through with no rescaling of its own.
 
 ## What the robot's topics cost to collect
 
