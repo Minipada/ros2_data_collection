@@ -147,9 +147,9 @@ The values above are the defaults, and they matter:
   everything twice, under two different Tags.
 - **High-rate sensor types are excluded**, by type rather than by name (a camera topic is
   not reliably called anything in particular). One 640×480 `sensor_msgs/msg/Image` is
-  roughly 900 kB of JSON numbers; at 30 Hz nothing downstream is sized for it. Override
-  the list deliberately if you want them — DC will not stop you, but read the next
-  section first.
+  900 kB on the wire and roughly 3.7 MB once every pixel byte is a JSON number; at 30 Hz
+  nothing downstream is sized for it. Override the list deliberately if you want them —
+  DC will not stop you, but read the next section first.
 
 To replace a list, write the replacement; note that an *empty* YAML list (`[]`) cannot be
 loaded by rclcpp (it has no inferable element type), so use a pattern that matches
@@ -198,38 +198,68 @@ acknowledged (see [Destinations](./destinations.md#delivery-guarantees)).
 
 ### How much data is this?
 
-Measured against a TurtleBot3-Waffle-shaped workload — the topic mix
-`dc_simulation`'s warehouse world bridges out, at the rates those sensors actually run
-(IMU 100 Hz, odom/tf/joint_states 50 Hz, camera 30 Hz, cmd_vel 20 Hz, lidar 10 Hz,
-battery 1 Hz) — collected into a `file` Destination:
+These figures come off a **simulated robot**, not a spreadsheet:
+`tools/sim/scripts/measure_raw_volume.sh` boots `dc_simulation`'s warehouse world, drives
+the TurtleBot3-Waffle in a slow circle, points a Bridge in raw mode at its live topics,
+and reports what a `file` Destination stored, per Tag. Everything below is one run of it —
+re-run it after anything that changes what a Record costs. It is a local tool, not a CI
+gate; its header explains the three configurations and why its rates are counted in
+*simulated* seconds.
 
-| Configuration | Stored |
+Rates are that world's Waffle's: IMU 200 Hz, odometry and TF 30 Hz (the `DiffDrive`
+plugin), lidar and both RGBD cameras 5 Hz. `/cmd_vel` and `/clock` are left out — the
+first is the benchmark's own driving, the second exists only because the robot is
+simulated.
+
+| Configuration | Shipped |
 |---|---|
-| **Defaults** (10 Hz cap, sensor types excluded) | 19 kB/s — **67 MB/hour, 1.6 GB/day** |
-| …plus `scan` and `tf` re-enabled | ≈ 4.3 GB/day |
-| …plus the 640×480 camera re-enabled | ≈ **1.6 TB/day** |
+| **Defaults** (10 Hz cap, sensor types excluded) | 24 kB/s — **86 MB/hour, 2.1 GB/day** |
+| …plus `scan` and `tf` re-enabled | 69 kB/s — **5.9 GB/day** |
+| …plus both 1280×720 cameras re-enabled | ≈ **9.5 TB/day**, if anything could carry it |
 
 Per-Record cost, which is what to multiply by your own topics' rates:
 
-| Message | Bytes per Record |
-|---|---|
-| `geometry_msgs/msg/Twist` | 202 |
-| `sensor_msgs/msg/JointState` (2 joints) | 326 |
-| `sensor_msgs/msg/Imu` | 488 |
-| `nav_msgs/msg/Odometry` | 605 |
-| `tf2_msgs/msg/TFMessage` (2 transforms) | 547 |
-| `sensor_msgs/msg/LaserScan` (360 ranges + intensities) | 2 585 |
-| `sensor_msgs/msg/Image` (640×480 `rgb8`) | **1 843 521** |
+| Topic (message) | Publishes at | Bytes per Record |
+|---|---|---|
+| `/joint_states` (`JointState`, 2 joints) | 1 000 Hz † | 355 |
+| `/tf` (`TFMessage`, 1 transform) | 30 Hz | 406 |
+| `…/camera_info` (`CameraInfo`) | 5 Hz | 581 |
+| `/odom` (`Odometry`) | 30 Hz | 669 |
+| `/imu` (`Imu`) | 200 Hz | 767 |
+| `/scan` (`LaserScan`, 360 ranges + intensities) | 5 Hz | 7 878 |
+| `…/image_raw` (`Image`, 1280×720 `rgb8`) | 5 Hz | **10 981 032** |
 
-The last row is the whole argument for the default type exclusions: one VGA frame costs
-as much as ~3 000 odometry Records, and JSON roughly **doubles** a byte array (every
-pixel byte becomes `"0,"`).
+† the simulator's `JointStatePublisher` runs every physics step; a real driver is far
+slower. It makes no difference to the total, which is the point of the next paragraph.
 
-**The size cap will not save you from a camera** — and it should not be asked to. That
-same 640×480 frame is 921 600 bytes on the wire, *under* the default
-`max_message_size_bytes` of 1 MiB, so it passes the size gate and lands as 1.8 MB of
-JSON. It is `exclude_types` that keeps images out, and removing that list removes the
-protection entirely.
+**The rate cap is what makes the first row affordable, not the topic list.** A topic
+publishing faster than `max_rate_hz` contributes `bytes_per_record × 10` per second no
+matter how fast it actually runs, so `joint_states` at 1 000 Hz and `imu` at 200 Hz cost
+3.6 kB/s and 7.7 kB/s respectively. Only the topics *below* the cap — the 5 Hz sensors —
+bill at their real rate, which is why re-enabling one 5 Hz lidar (7.9 kB per Record, 40
+kB/s, 3.5 GB/day) nearly triples the total on its own.
+
+The last row is the whole argument for the default type exclusions: one 1280×720 frame
+costs as much as ~16 000 odometry Records. JSON does not merely double a byte array —
+`10 981 032` bytes for a 2 764 800-byte frame is **four times** the wire size, because
+most pixel values print as three digits and a comma.
+
+Two cameras at 5 Hz is 110 MB/s of Records, and **nothing in the pipeline carries that**,
+which is why that row says "if anything could carry it": in the run it comes from, the
+Shipper refused 475 of the 894 Records offered to it (`dropped … 475 shipper`, 53 %). The
+collapse was not confined to the images either — `imu` arrived at 4 Hz instead of 200 and
+`odom` at 0.7 Hz instead of 30, because the Bridge spent the window serializing frames.
+Collecting a camera raw does not cost you a camera's worth of storage; it costs you the
+rest of your collection.
+
+**The size cap will not save you from a camera** — and it should not be asked to. A
+640×480 `rgb8` frame is 921 600 bytes on the wire, *under* the default
+`max_message_size_bytes` of 1 MiB, so it passes the size gate and lands as megabytes of
+JSON. (This world's 1280×720 frames are three times that and the default cap does drop
+them whole — which is why the benchmark's camera profile has to lift it to measure
+anything at all. Relying on that is a collection policy that silently switches on the day
+someone fits a smaller sensor.) It is `exclude_types` that keeps images out, and removing
+that list removes the protection entirely.
 
 The tempting fix — lower the size cap until frames stop fitting — is a bad trade, because
 **the two limits fail differently**:

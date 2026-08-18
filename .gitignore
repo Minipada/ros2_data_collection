@@ -280,6 +280,7 @@ cython_debug/
 # scratch state, not source.
 .ci-ws/
 tools/e2e/.run/
+tools/sim/.run/
 
 # dc_bridge local core test build dir (fast-iteration cmake, not colcon)
 dc_bridge/test/local/build/

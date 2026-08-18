@@ -7243,3 +7243,62 @@ eyeballed. `prek run --all-files --skip build-doc` is green.
 and `unknown` otherwise — and routed to the `pgsql` Destination, so the utilisation panels
 populate on the existing demo. The intervention and fault panels stay empty until #362/#365,
 for the same reason a battery panel would.
+
+## #326 - Sim-backed benchmark for raw-mode collection volume
+
+`raw_topics.md`'s "How much data is this?" numbers came from a hand-written topic emulation:
+plausible rates typed into a generator, not a robot. Now they come off the simulated Waffle.
+`tools/sim/scripts/measure_raw_volume.sh` boots `dc_simulation`'s warehouse world headless,
+drives the robot in a slow circle, runs `dc_bridge` in raw mode against its live topics in
+three configurations (`tools/sim/params/raw_{defaults,sensors,camera}.yaml`) and reports
+per-Tag Records, bytes, bytes/Record, publish rate and a projected GB/day. Local and
+informational, in the spirit of `measure_resources.sh` — deliberately not in `ci.yaml`, which
+would pay minutes of gz-sim boot per PR for a number nobody asserts a threshold on.
+
+**The measurement's one real problem: the simulator does not run at real time.** This world
+sits at RTF ~0.04 on 8 CPUs with software rendering, so every wall-clock rate it produces is
+the renderer's number, not the robot's — and worse, `raw.max_rate_hz` limits Records per
+*wall* second, so at that factor the 10 Hz default fires against topics publishing at 250 Hz
+of simulated time (the first trial: 14 859 forwarded, 3 799 dropped rate). Measuring "the
+defaults" that way measures the box. The resolution splits the two halves of the number:
+the profiles collect with the limiter **off**, so every published message becomes a Record;
+the window is counted in *simulated* seconds sampled off `/clock` either side of it; and the
+report multiplies exact bytes-per-Record by `min(published_hz, 10)` — the rate raw mode
+would ship at on a robot where the limiter binds on real time. Bytes per Record are exact
+regardless of how slowly the world runs, and that is what the projection rests on.
+
+Reused rather than reimplemented, per the issue: `check_raw()`'s volume accounting moved to
+`tools/e2e/scripts/raw_volume.py` (`Volume`, `summarize_by_tag()`, `project()`), which the
+E2E verifier now calls for the same `stored_bytes`/`bytes_per_record`/`projected_mb_per_day`
+keys it published before (verified identical against a fixture). One wrinkle the sim exposed:
+with `time_key: "date"`, a Record's sink timestamp is the *message's* header stamp — sim time
+under a simulator, and the Bridge's wall clock for headerless messages, so spans across the
+two are meaningless. Hence `arrival_rates=False` for the sim reporter, which takes its window
+from `/clock` instead. Ten fixture tests (`tools/e2e/test/test_raw_volume.py`) pin the
+accounting; a standalone `raw-volume` CI job runs them (stdlib only, no image, no simulator).
+
+**What the run says.** Defaults: 24 kB/s, 2.1 GB/day. Plus `scan` and `tf`: 5.9 GB/day — the
+lidar alone is 3.5 GB/day at 7 878 bytes a Record and 5 Hz, because it publishes *below* the
+cap and so bills at its real rate, while `imu` at 200 Hz and `joint_states` at 1 000 Hz are
+decimated to 10. Per-Record: JointState 355, TFMessage 406, CameraInfo 581, Odometry 669,
+Imu 767, LaserScan (360 ranges + intensities) 7 878, and a 1280×720 `rgb8` Image **10 981 032**
+— four times its wire size, not the doubling the old text claimed, because most pixel bytes
+print as three digits and a comma.
+
+The camera profile's finding is the one worth having: it is not that images are expensive, it
+is that **the pipeline collapses**. Two cameras at 5 Hz is 110 MB/s of Records; the Shipper
+refused 475 of the 894 offered (53 %), and the rest of the collection went down with them —
+`imu` arrived at 4 Hz instead of 200, `odom` at 0.7 instead of 30, because the Bridge spent
+the window serializing frames. The old doc's "≈1.6 TB/day" reads as a storage bill; the
+measured behaviour is that you lose the robot's other telemetry first. That is now in the
+doc, along with the fact that this world's 2.7 MB frames are *over* the 1 MiB
+`max_message_size_bytes` default (the camera profile has to lift it to measure anything),
+which makes the existing "the size cap will not save you from a camera" argument concrete
+rather than hypothetical.
+
+Verified by running it: three profiles, each a fresh container from the workspace image, with
+the Bridge's own drop counters extracted per run as the fidelity check (`dropped 0 rate /
+0 oversize / 0 shipper / 0 undecodable` for `sensors`; the camera profile's 53 % is reported
+as a warning and folded into the doc rather than hidden). `prek run --all-files --skip
+build-doc` is green, `mdbook build` clean, and `tools/sim/.run/` — which `run.sh` has been
+writing to since #279 without ever being ignored — is now in `.gitignore`.
