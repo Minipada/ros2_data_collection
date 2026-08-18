@@ -15,7 +15,6 @@ SPDX-License-Identifier: MPL-2.0
   <license>Apache-2.0</license>
   <license>CC-BY-3.0</license>
   <license>CC-BY-4.0</license>
-  <license>CC-BY-NC-ND-4.0</license>
 
   <exec_depend>dc_description</exec_depend>
   <!-- Ships the TurtleBot3 meshes worlds/waffle.model's visuals reference
