@@ -33,6 +33,18 @@ Without it gz-sensors stamps messages with the scoped sensor name, which is not 
 frame, and every tf2 `MessageFilter` downstream — AMCL, both Nav2 costmaps — silently
 drops the message.
 
+## What the robot's topics cost to collect
+
+```bash
+./tools/sim/scripts/measure_raw_volume.sh     # per-Tag bytes, rates and a GB/day
+```
+
+Boots this world headless, drives the robot, runs `dc_bridge` in raw mode against its
+topics and reports what each one is worth in stored bytes — the source of the figures in
+[Raw topic collection](../doc/src/dc/raw_topics.md#how-much-data-is-this). Local and
+informational, never a CI gate; see the script's header for the profiles and why its rates
+are counted in simulated seconds.
+
 ## Running headless, without a GPU
 
 The rendering sensors (`gpu_lidar` and both `rgbd_camera`s) **do** work with no GPU and

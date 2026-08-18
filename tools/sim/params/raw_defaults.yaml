@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Profile `defaults` of the sim-backed raw-volume benchmark (#326): dc_bringup's shipped
+# dc_raw_params.yaml, pointed at a `file` Destination the harness can measure.
+#
+# The two departures from the shipped defaults are the Destination (a file instead of the
+# console) and `/clock` and `/cmd_vel` in `exclude` — both exist only because the robot is
+# simulated and driven by the benchmark, so collecting them would put simulator artefacts
+# in a figure that claims to describe a robot. See tools/sim/scripts/measure_raw_volume.sh.
+dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "/root/.dc/buffer"
+
+    destinations: ["raw_file"]
+    raw_file:
+      type: file
+      receives: records
+      # No `inputs`: raw mode routes to this Destination by Tag namespace, not by topic.
+      path: "/root/.dc/raw/records.ndjson"
+      time_key: "date"
+
+    raw:
+      enabled: true
+      destination: "raw_file"
+      include: ["^/"]
+      exclude:
+        - "^/rosout$"
+        - "^/parameter_events$"
+        - "^/dc/measurement/"
+        - "^/dc/group/"
+        - "^/clock$"
+        - "^/cmd_vel$"
+      exclude_types:
+        - "^sensor_msgs/msg/(Image|CompressedImage|PointCloud|PointCloud2|LaserScan)$"
+        - "^tf2_msgs/msg/TFMessage$"
+      rescan_interval_secs: 5.0
+      qos_depth: 10
+      # Deliberately uncapped, unlike the shipped default of 10: `max_rate_hz` limits
+      # Records per *wall-clock* second, and a world that runs at a few percent of real
+      # time would meet that limit at a sim-time rate ~25x the one a robot publishes at,
+      # measuring the simulator's slowness instead of the robot's traffic. Collect every
+      # message, measure the rate in simulated seconds, and let the report apply the
+      # default cap to the projection (report_raw_volume.py --max-rate-hz).
+      max_rate_hz: 0.0
+      max_message_size_bytes: 1048576
+      tag_prefix: "dc.raw."
+
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
