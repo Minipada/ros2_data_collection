@@ -115,6 +115,16 @@ protected:
     }
   }
 
+  // The detector treats a component's very first observed sample as a baseline, not a transition
+  // (matching every other StateTransitionDetector consumer): no Record comes out of it, and the
+  // level it carries never fires again since nothing is left to compare against. Every test that
+  // wants to observe an actual "raise" therefore has to establish OK as the baseline first.
+  void establishOkBaseline(const std::string& name)
+  {
+    publishDiagnostics(makeStatus(name, diagnostic_msgs::msg::DiagnosticStatus::OK, "nominal"));
+    spinFor(std::chrono::milliseconds(100));
+  }
+
   // Republishes `status` until a *new* Record matching `predicate` shows up, so a best-effort
   // sample lost before the plugin subscribed doesn't make the test flaky.
   nlohmann::json publishUntilRecord(const diagnostic_msgs::msg::DiagnosticStatus& status,
@@ -200,6 +210,7 @@ TEST_F(MeasurementFaultTest, ReturningToOkClearsTheFaultAndReportsItsDuration)
   declareCommonParameters();
   startLifecycleNode();
   waitForSubscriber("/test/diagnostics");
+  establishOkBaseline("motor_driver");
 
   const auto error = makeStatus("motor_driver", diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Motor fault");
   const auto raise = publishUntilRecord(error, isEvent("raise"));
@@ -223,6 +234,7 @@ TEST_F(MeasurementFaultTest, WorseningLevelIsAChangeNotAClearAndKeepsTheFaultOpe
   declareCommonParameters();
   startLifecycleNode();
   waitForSubscriber("/test/diagnostics");
+  establishOkBaseline("motor_driver");
 
   const auto warn = makeStatus("motor_driver", diagnostic_msgs::msg::DiagnosticStatus::WARN, "Motor warm");
   const auto raise = publishUntilRecord(warn, isEvent("raise"));
@@ -245,6 +257,7 @@ TEST_F(MeasurementFaultTest, FlappingComponentGetsOneRecordPerTransitionWithIncr
   declareCommonParameters();
   startLifecycleNode();
   waitForSubscriber("/test/diagnostics");
+  establishOkBaseline("wifi");
 
   const auto ok = makeStatus("wifi", diagnostic_msgs::msg::DiagnosticStatus::OK, "Link up");
   const auto warn = makeStatus("wifi", diagnostic_msgs::msg::DiagnosticStatus::WARN, "Weak signal");
@@ -272,6 +285,7 @@ TEST_F(MeasurementFaultTest, FaultOpenAtShutdownStaysOpenAndReportsNoDuration)
   declareCommonParameters();
   startLifecycleNode();
   waitForSubscriber("/test/diagnostics");
+  establishOkBaseline("motor_driver");
 
   const auto error = makeStatus("motor_driver", diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Motor fault");
   publishUntilRecord(error, isEvent("raise"));
