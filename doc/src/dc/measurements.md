@@ -165,6 +165,7 @@ error is logged: it blocks collection when listed in `if_all_conditions` or
 
 | Name                                                     | Description                                                                                             |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| [Battery](./measurements/battery.md)                     | Charge percentage, voltage and current of a pack, plus charging sessions and completed cycles            |
 | [Camera](./measurements/camera.md)                       | Camera images, images can be rotated and inspected to detect content in images. They are saved as files |
 | [Command velocity](./measurements/cmd_vel.md)            | Command velocity: navigation commands                                                                   |
 | [CPU](./measurements/cpu.md)                             | CPU statistics                                                                                          |

@@ -1,0 +1,181 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Battery",
+  "description":
+      "Battery state of one pack: charge percentage, voltage and current on the polling interval, plus a Record at each charging session boundary",
+  "properties": {
+    "event": {
+      "description": "What this Record is: a periodic reading, or a charging session boundary",
+      "type": "string",
+      "enum": [
+        "sample",
+        "charge_session_start",
+        "charge_session_end"
+      ]
+    },
+    "power_supply_status": {
+      "description": "Charging state reported by the pack",
+      "type": "string",
+      "enum": [
+        "unknown",
+        "charging",
+        "discharging",
+        "not_charging",
+        "full"
+      ]
+    },
+    "percentage": {
+      "description": "Charge percentage, 0-100",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "voltage": {
+      "description": "Pack voltage in Volt",
+      "type": "number"
+    },
+    "current": {
+      "description": "Pack current in Ampere, negative when discharging",
+      "type": "number"
+    },
+    "charge": {
+      "description": "Current charge in Ah",
+      "type": "number"
+    },
+    "capacity": {
+      "description": "Capacity in Ah the pack holds today",
+      "type": "number"
+    },
+    "design_capacity": {
+      "description": "Capacity in Ah the pack was built to hold",
+      "type": "number"
+    },
+    "health_percentage": {
+      "description": "Capacity against design capacity, 0-100. Absent unless the hardware reports both",
+      "type": "number",
+      "minimum": 0
+    },
+    "temperature": {
+      "description": "Pack temperature in degrees Celsius",
+      "type": "number"
+    },
+    "present": {
+      "description": "Whether the pack is present",
+      "type": "boolean"
+    },
+    "power_supply_health": {
+      "description": "Health reported by the pack. Absent when the hardware reports it as unknown",
+      "type": "string"
+    },
+    "power_supply_technology": {
+      "description": "Cell chemistry. Absent when the hardware reports it as unknown",
+      "type": "string"
+    },
+    "location": {
+      "description": "Where the pack is mounted, as the hardware reports it",
+      "type": "string"
+    },
+    "serial_number": {
+      "description": "Pack serial number, as the hardware reports it",
+      "type": "string"
+    },
+    "completed_cycles": {
+      "description":
+          "Completed charge cycles since the Measurement started, accumulated from discharge depth: two half discharges are one cycle",
+      "type": "integer",
+      "minimum": 0
+    },
+    "session_id": {
+      "description":
+          "Charging session this Record belongs to, counted from 1. Present on a session boundary, and on a sample taken while a session is open",
+      "type": "integer",
+      "minimum": 1
+    },
+    "duration_sec": {
+      "description": "How long the charging session lasted",
+      "type": "number",
+      "minimum": 0
+    },
+    "discharge_depth_percent": {
+      "description":
+          "Percentage points discharged since the previous session ended (or since the first sample, for the first session)",
+      "type": "number",
+      "minimum": 0
+    },
+    "start_percentage": {
+      "description": "Charge percentage when the session started",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "end_percentage": {
+      "description": "Charge percentage when the session ended",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "charged_percent": {
+      "description": "Percentage points gained over the session",
+      "type": "number"
+    }
+  },
+  "required": [
+    "event"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "sample"
+          }
+        },
+        "required": [
+          "event"
+        ]
+      },
+      "then": {
+        "required": [
+          "power_supply_status"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "charge_session_start"
+          }
+        },
+        "required": [
+          "event"
+        ]
+      },
+      "then": {
+        "required": [
+          "session_id",
+          "discharge_depth_percent"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "charge_session_end"
+          }
+        },
+        "required": [
+          "event"
+        ]
+      },
+      "then": {
+        "required": [
+          "session_id",
+          "duration_sec"
+        ]
+      }
+    }
+  ],
+  "type": "object"
+}
