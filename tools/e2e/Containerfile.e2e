@@ -19,6 +19,9 @@ COPY params/e2e_params.yaml /opt/e2e/e2e_params.yaml
 COPY params/e2e_passthrough_sink.toml /opt/e2e/e2e_passthrough_sink.toml
 COPY params/e2e_mcap_sink.toml /opt/e2e/e2e_mcap_sink.toml
 COPY scripts/mcap_summary.py /opt/e2e/mcap_summary.py
+# run_degraded.sh (#366): stdlib-only, run as one-off containers on its shaped bridge
+# network for readiness polling and the shaping pre-check (see measure_rtt.py's header).
+COPY scripts/measure_rtt.py /opt/e2e/measure_rtt.py
 COPY scripts/entrypoint.sh /opt/e2e/entrypoint.sh
 RUN chmod +x /opt/e2e/entrypoint.sh
 

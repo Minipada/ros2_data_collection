@@ -786,6 +786,14 @@ def main() -> int:
         help="newline-delimited JSON extracted from the raw (#227) `file` Destination",
     )
     parser.add_argument("--report", default=None, help="write a JSON report to this path")
+    parser.add_argument(
+        "--conditions-file",
+        default=None,
+        help="JSON file (e.g. from run_degraded.sh, #366) describing the network conditions "
+        "this run was verified under; merged into --report's 'conditions' key unchanged. A "
+        "result is never separable from the conditions that produced it — omitted, the report "
+        "carries no 'conditions' key at all, rather than implying an unstated (loopback) one.",
+    )
     args = parser.parse_args()
 
     pg = args.postgres_container
@@ -817,6 +825,9 @@ def main() -> int:
     check_raw(args.raw_file, boundaries, violations, notes, details)
 
     report = {"pass": not violations, "violations": violations, "notes": notes, "details": details}
+    if args.conditions_file:
+        with open(args.conditions_file) as f:
+            report["conditions"] = json.load(f)
     if args.report:
         with open(args.report, "w") as f:
             json.dump(report, f, indent=2)

@@ -7691,3 +7691,82 @@ the one-way `qrcodes_waypoint_follower.py` patrol never actually returns to the 
 above is demonstrated by manual driving, not the autonomous demo — the issue's acceptance
 criteria ask for the capability and documented rates, not a scripted docking sequence nav2's own
 `docking_server` config still calls a "never docks" placeholder for.
+
+## #366 - Prove the pipeline under degraded network conditions: delayed acks and a shaped Destination link
+
+Every DC reliability claim to date was proven over intra-container loopback: microsecond RTT,
+zero loss, unbounded bandwidth, and a fault model where a Destination is either up or a stopped
+process. Real robots reach their Destinations over WiFi and a site uplink. This closes that gap
+at the two seams the PRD identified, without changing anything about the pipeline being measured.
+
+**Forwarder acknowledgement-policy mock peer (`dc_bridge/test/forwarder_test.cpp`).** The
+existing mock shipper ingest peer gains a test-only `AckPolicy` (ack delay, a probability of
+never acknowledging, a throttled drain rate) and a `run_ack_policy_peer()` driver built on a real
+`msgpack::unpacker` — same parsing discipline as Forwarder's own `drain_acks()`, so a drain rate
+that splits one frame across several `recv()` calls still parses correctly. Five new gtest cases:
+unacked window depth stays small (not the shipped 10000-record bound) at a realistic 100 Hz/50ms
+rate-delay combination; the same bound is exceeded by rate-vs-delay alone (not just a peer that
+never acks at all) and still converges once the burst ends; a slow-draining peer is classified as
+Backpressure with the connection retained, distinguishing it from a peer that's gone (Io, drops
+the connection); a resend past `ack_timeout` duplicates the chunk on the wire and the window still
+clears once the delayed original ack lands; an out-of-order ack evicts exactly the record it names
+(pinned via a 22-char placeholder chunk id — `generate_chunk_id()` base64-encodes 16 bytes without
+padding, always that length regardless of content).
+
+Two real bugs surfaced building this, both in the *test* harness, not Forwarder: the initial
+`run_ack_policy_peer` used a blocking `recv()` with no timeout, so once a test's client went idle
+the peer thread never re-checked its `stop` flag and `srv.join()` hung forever (fixed with a
+100ms `SO_RCVTIMEO`); and three tests used `ASSERT_*` ahead of `stop.store(true); srv.join()`,
+so a failing assertion returned early without joining a still-running `std::thread`, which
+`std::terminate()`s the whole test binary on destruction — fixed by demoting those to `EXPECT_*`
+with guarded follow-on checks, so one failing assertion reports as one failing test instead of
+aborting the entire suite. Built and run 5x against a scoped rebuild (dc_common + dc_bridge
+mounted over `localhost/dc-workspace:latest`, since a full `colcon build` wasn't warranted for a
+test-only change) — 17/17 passing, no flakiness, after `prek`'s `clang-format` reformatted the new
+code.
+
+**Network profile definitions (`tools/e2e/scripts/network_profiles.py`).** One declarative place
+for named, fixed conditions — `loopback` (unshaped), `good-wifi`, `poor-wifi`, `site-uplink` — each
+a `delay_ms`/`jitter_ms`/`loss_pct`/optional `rate_kbit`, with a CLI (`--shell` for a bash `eval`,
+`--tc-args` for a `tc qdisc ... netem` argument list, `--json`). An unknown name is a `ValueError`
+naming the known profiles, never a silent default. 10 pytest cases
+(`tools/e2e/test/test_network_profiles.py`).
+
+**`tools/e2e/scripts/run_degraded.sh` — the E2E sibling scenario.** Reuses `run.sh`'s image,
+reference workload shape, and `verify_zero_loss.py` unmodified, but Postgres/RustFS run on their
+own bridge network (`dc_e2e_deg_net`) instead of `--network host`, since nothing can be shaped
+without shaping the host itself under `--network host`. `params/e2e_degraded_params.yaml` is
+byte-for-byte `e2e_params.yaml` except the two Destination hosts (container-name DNS instead of
+`127.0.0.1`) — the Bridge-to-Shipper socket stays same-container loopback and out of scope, per
+the PRD.
+
+Traffic shaping was the PRD's stated single largest technical risk and was established first,
+empirically, before anything was built on it: rootless podman + `--cap-add=NET_ADMIN` on a
+short-lived helper container that joins a target's network namespace (`--network
+container:<name>`) can add a `tc netem` qdisc to that target's `eth0` with **no capability
+required on the target container itself** — verified with disposable alpine containers (a peer's
+measured RTT rose from <1ms to ~128ms after `netem delay 100ms 20ms loss 5%` was applied to the
+target's own interface from the joining helper). `run_degraded.sh` applies this via a
+`SHAPER_IMAGE` (alpine + iproute2, built once and cached) and `set_qdisc`/`clear_qdisc` helpers
+that track per-container qdisc state to choose `tc qdisc add` vs `change`. A shaping pre-check
+(`scripts/measure_rtt.py` — stdlib TCP connect-time sampling, since the Postgres/RustFS images
+ship neither `ping` nor `iputils`) measures the actual round trip before any workload runs and
+hard-fails the run if it isn't consistent with the requested profile, so a degraded run can never
+silently pass as loopback. A LINK fault (`tc netem loss 100%` on both Destinations, then restored)
+is induced partway through the run — the network disappearing without either process dying, a
+fault type distinct from `run.sh`'s container stop/restart, which resets Forwarder state and so
+tests something else. Conditions (profile + measured pre-check RTT) are written to
+`tools/e2e/.run/conditions.json`; `verify_zero_loss.py` gained one additive `--conditions-file`
+flag that folds that file into its report unchanged — no existing verification logic touched.
+
+Not wired into `ci.yaml`, matching the existing precedent for `run_retention.sh`/`run_incident.sh`
+(neither is CI-gating either) and the PRD's own "Out of Scope": whether this gates merges is left
+for once its runtime and stability are measured. The full container-network E2E path (bridge
+network + shaped Postgres/RustFS + the real DC stack under a degraded profile) was not run
+end-to-end here — the shaping *mechanism* was verified empirically in isolation (see above) and
+the script was built directly on that verified mechanism, but a full `run_degraded.sh` execution
+needs a full workspace image build (tens of minutes) that wasn't run as part of this session; that
+remains for a first real run to confirm.
+
+`tools/e2e/README.md` documents the new scenario and its layout entries; `Containerfile.e2e` gained
+`COPY` lines for `measure_rtt.py` (already needed by `run_degraded.sh`'s readiness/pre-check steps).
