@@ -333,6 +333,7 @@ set(tests
   test_measurement_random
   test_measurement_same_as_previous
   test_measurement_serial_interface
+  test_measurement_shared_flush
   test_measurement_speed
   test_measurement_storage
   test_measurement_string_match

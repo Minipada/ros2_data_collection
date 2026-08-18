@@ -7302,3 +7302,56 @@ the Bridge's own drop counters extracted per run as the fidelity check (`dropped
 as a warning and folded into the doc rather than hidden). `prek run --all-files --skip
 build-doc` is green, `mdbook build` clean, and `tools/sim/.run/` — which `run.sh` has been
 writing to since #279 without ever being ignored — is now in `.gitignore`.
+
+## #345 - One FlushEvent releasing several Measurements under a shared incident_id
+
+Test-only slice of #282. Every test #287/#288/#289/#290 left behind drives a *single* `dummy`
+Measurement, so the behavior that justifies broadcasting the flush on a topic at all -- several
+Measurements releasing their windows off one event, all under one `incident_id` -- was resting on
+inference from single-Measurement runs. It isn't broken; it is now covered.
+
+**`dc_measurements/test/test_measurement_shared_flush.cpp`** (new, registered in `CMakeLists.txt`).
+A sibling of `test_measurement_buffering.cpp` rather than an extension of it: that fixture builds a
+one-Measurement server with one subscription, and the fan-out contract needs three Measurements on
+one node, so the fixture is a different shape (the `spinFor`/`spinUntil` helpers come along, the
+rest doesn't). The new fixture runs `dummy_fast` (50ms polling), `dummy_slow` (150ms) and
+`dummy_live` on one `MeasurementServer`, the first two buffering on the same **non-default**
+`flush_topic` (`/dc/incident_flush`, so the test also covers pointing several Measurements at a
+topic of the deployment's choosing -- user story 22), the third with no `buffer_duration_sec`.
+
+- `OneFlushEventReleasesEveryBufferedWindowUnderOneIncidentId` -- both buffer silently over the same
+  600ms, one `FlushEvent` releases both, and *every* Record of both windows carries exactly the
+  `incident_id` the event carried (string-compared, not merely "has the field"). The two windows
+  hold different Record counts, since the polling intervals differ -- asserted, so the test would
+  notice the two Measurements collapsing into one stream.
+- `AMeasurementWithoutBufferingIsUnaffectedByTheFlush` -- `dummy_live` publishes live throughout,
+  keeps publishing across the same `FlushEvent`, and not one of its Records carries an
+  `incident_id`. `flush_sub_` is only created when `buffer_duration_sec > 0`, so it is subscribed to
+  nothing; this is the behavioral proof of that.
+
+Both release paths run with `max_flush_rate_hz` at 20Hz: `data_pub_` is `KeepLast(1)`, so an unpaced
+window leaves the middleware delivering only its last Record (#289's finding, and the same reason
+#290's File test paces its release).
+
+**`CONTEXT.md`: nothing to do.** The issue's third acceptance criterion asked for an **Incident**
+glossary entry, noting the word was only defined in passing inside **Trigger**. That was true when
+#345 was filed and has since been fixed by #292 (commit `1ac1973`): `CONTEXT.md` carries a full
+**Incident** entry -- the flush cycle, pre-roll plus post-roll, `incident_id` as a top-level envelope
+field and a Postgres column, with its own _Avoid_ list -- and the pipeline summary below it names
+Incident too. Criterion already met on the branch, so the file is untouched here.
+
+**Verification.** `colcon build` + `colcon test` for `dc_measurements` inside
+`localhost/dc-workspace:latest` over this worktree: the package builds clean under `-Werror` and
+**176 tests, 0 errors, 0 failures** -- the 2 new cases included, `test_measurement_buffering` and
+`test_incident_releaser` unchanged. The new binary was also run 10 times in a row with no flake,
+which matters for timing-based lifecycle tests. `prek run --all-files --skip build-doc` is green
+(clang-format reflowed one constructor call).
+
+One trap worth recording for the next agent verifying a `dc_measurements` change locally: rebuilding
+only the test target and running it straight out of `build/` silently tests the **installed** code,
+not yours. `measurement.hpp` is header-only, so every Measurement plugin `.so` carries its own copy
+of `configure()`/`collectAndPublish()`; pluginlib resolves those through the ament index, i.e. from
+`install/`, and `LD_LIBRARY_PATH` does not override it. Against a stale install the new tests failed
+with `buffer_duration_sec` apparently ignored -- an ABI mismatch, not a bug. A full `colcon build`
+(which installs) is the only honest local run. `--parallel-workers 1` with `MAKEFLAGS=-j1` was
+needed to keep the container inside available memory; the default parallelism OOM-killed it twice.
