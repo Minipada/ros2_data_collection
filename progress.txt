@@ -7048,3 +7048,60 @@ and `mdbook build` is clean. That last one turned up an existing orphan: linking
 infrastructure page from the new docs failed link-check because it was never in `SUMMARY.md`
 — it is now, and its "How to use" section no longer describes Adminer with an Adminer
 screenshot.
+
+## #297 - ZXing-C++ and QR codes rotated 30-45 degrees in-plane: there is no such bug
+
+The issue asked, in order: does a newer ZXing-C++ fix the reported in-plane rotation failure,
+does it matter in practice, and if so is a bounded rotation-retry worth its per-frame cost. The
+answers turn out to be no, no, and moot — **the reported limitation does not exist**. #123 and
+the `camera.md` warning it left behind were both measuring the harness, not the library.
+
+**What the report claimed.** ZXing-C++ fails to decode `qrcode_0001.png` rotated 30-45°
+in-plane, returning a spurious `MicroQRCode`/`ChecksumError` instead of the real `QRCode`;
+root-caused as "a genuine finder-pattern-search limitation of this ZXing-C++ version at these
+specific angles for this code geometry, not a tunable `ReaderOptions` setting", after ruling out
+interpolation blur, module size, every `Binarizer`, and `tryDownscale`.
+
+**What is actually happening.** The benchmark rotated the demo texture *inside its own 290x365
+bounds*. The code's module area is 210 px at (45, 100) — the printed label takes the rest of the
+height, so the code sits above the centre the rotation turns about. Swing that and a corner of
+the module area, finder pattern and all, leaves the frame. Forward-mapping the four module
+corners through the same `getRotationMatrix2D` the harness used says exactly when:
+
+    0deg: 0/4 corners outside     30deg: 1/4 outside     60deg: 1/4 outside
+   15deg: 0/4 corners outside     45deg: 1/4 outside     75deg: 1/4 outside
+                                                         90deg: 0/4 outside
+
+which is, to the angle, the reported pass/fail pattern. A QR the frame has cut a finder pattern
+off is unreadable at any angle by any decoder. The ruled-out causes were all ruled out correctly;
+the one variable nobody varied was the frame.
+
+**Confirmed against the production library, not a binding.** A standalone C++ program calling
+`ZXing::ReadBarcodes` the way `camera.cpp` does, compiled inside `localhost/dc-workspace:latest`
+against the exact `libzxing-dev 2.2.1-3` `rosdep` resolves on Noble/Jazzy:
+
+    clipped (rotated in the texture's own bounds)  0:ok 15:ok 30:MISS 45:MISS 60:MISS 75:MISS 90:ok
+    fully framed (padded to the diagonal)          0:ok 15:ok 30:ok   45:ok   60:ok   75:ok   90:ok
+
+Same result from the PyPI bindings at 2.3.0 and 3.1.1: identical to 2.2.1 in both columns. So
+**there is nothing for a newer release to fix** — no vendoring, no `rosdep` pin, and the
+rotation-retry mitigation is not just too expensive, it would not work: re-rotating an image
+whose corner was already cropped cannot put the pixels back.
+
+**What shipped.** `dc_measurements/test/test_barcode_rotation.cpp`, two tests over the real
+reader, no `dc_simulation` asset dependency (it reconstructs the texture's layout to the pixel
+with ZXing's own writer, the way `test_code_pose` already does):
+
+- `DecodesACodeAtEveryInPlaneRotation` — fully framed, decodes at every 5° from 0° to 90°. This
+  is the assertion the old claim would fail.
+- `LosesACodeTheFrameClips` — rotated inside the texture's own bounds, asserts decode succeeds
+  **iff** all four module corners stay inside the frame, so the test pins the cause and not just
+  the symptom. Both pass against `libzxing` 2.2.1 in the workspace image.
+
+The `camera.md` admonish block went from a `warning` describing a library defect to an `info`
+describing the framing requirement that actually matters: keep the whole code plus its quiet
+zone in the image, and in-plane angle is a non-issue. It also notes `rotation_angle` is
+unrelated — whole quarter turns never crop. The perspective/tilt half of the #123 comparison
+(100% vs. 0% for `zbar` at 35% skew) was independently measured and stands unchanged.
+
+No change to `camera.cpp`: nothing to mitigate, so no new parameter and no per-frame cost.

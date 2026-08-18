@@ -298,6 +298,7 @@ install(DIRECTORY plugins/measurements/json
 )
 
 set(tests
+  test_barcode_rotation
   test_code_pose
   test_incident_releaser
   test_measurement_bool_equal
@@ -359,9 +360,10 @@ if(BUILD_TESTING)
       ${library_name}
       )
   endforeach()
-  # Only this test encodes a QR code (ZXing's writer) to render one back through the
-  # camera model; every other test gets the reader transitively or not at all.
+  # These two encode a QR code (ZXing's writer) to read one back; every other test gets
+  # the reader transitively or not at all.
   target_link_libraries(${PROJECT_NAME}_test_code_pose ZXing::ZXing)
+  target_link_libraries(${PROJECT_NAME}_test_barcode_rotation ZXing::ZXing)
 endif()
 
 ament_export_include_directories(include)
