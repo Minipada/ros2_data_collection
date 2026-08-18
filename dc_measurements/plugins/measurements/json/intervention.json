@@ -32,17 +32,20 @@
       ]
     },
     "previous_duration": {
-      "description": "Seconds 'from_mode' had been held: on a start Record, how long the robot had been autonomous before the takeover; on an end Record, how long the takeover itself lasted",
+      "description":
+          "Seconds 'from_mode' had been held: on a start Record, how long the robot had been autonomous before the takeover; on an end Record, how long the takeover itself lasted",
       "type": "number",
       "minimum": 0
     },
     "sequence": {
-      "description": "Monotonically increasing transition number, so a dropped Record is detectable rather than silently corrupting a duration",
+      "description":
+          "Monotonically increasing transition number, so a dropped Record is detectable rather than silently corrupting a duration",
       "type": "integer",
       "minimum": 1
     },
     "open": {
-      "description": "true on a start Record, false on an end Record -- a takeover still open when collection stops simply never gets a matching end Record, so it cannot be averaged as a zero",
+      "description":
+          "true on a start Record, false on an end Record -- a takeover still open when collection stops simply never gets a matching end Record, so it cannot be averaged as a zero",
       "type": "boolean"
     }
   },
