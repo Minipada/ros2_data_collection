@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Intervention",
+  "description": "A human takeover, derived from driving-mode transitions: one Record when it starts, one when it ends",
+  "properties": {
+    "event": {
+      "description": "'start' when autonomy handed over to a human, 'end' when the robot went back to autonomous",
+      "type": "string",
+      "enum": [
+        "start",
+        "end"
+      ]
+    },
+    "from_mode": {
+      "description": "Driving mode that was left",
+      "type": "string",
+      "enum": [
+        "autonomous",
+        "manual",
+        "teleop",
+        "unknown"
+      ]
+    },
+    "to_mode": {
+      "description": "Driving mode that was entered",
+      "type": "string",
+      "enum": [
+        "autonomous",
+        "manual",
+        "teleop",
+        "unknown"
+      ]
+    },
+    "previous_duration": {
+      "description": "Seconds 'from_mode' had been held: on a start Record, how long the robot had been autonomous before the takeover; on an end Record, how long the takeover itself lasted",
+      "type": "number",
+      "minimum": 0
+    },
+    "sequence": {
+      "description": "Monotonically increasing transition number, so a dropped Record is detectable rather than silently corrupting a duration",
+      "type": "integer",
+      "minimum": 1
+    },
+    "open": {
+      "description": "true on a start Record, false on an end Record -- a takeover still open when collection stops simply never gets a matching end Record, so it cannot be averaged as a zero",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "event",
+    "from_mode",
+    "to_mode",
+    "previous_duration",
+    "sequence",
+    "open"
+  ],
+  "type": "object"
+}
