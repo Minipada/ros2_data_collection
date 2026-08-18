@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Fault",
+  "description":
+      "A component's diagnostic level change, derived from /diagnostics: one Record per transition, so MTBF and MTTR have a source instead of scanning periodic snapshots for where a value changed",
+  "properties": {
+    "seq": {
+      "description":
+          "Monotonically increasing number of this Record, across every watched component, so a dropped Record is detectable rather than silently shortening an outage",
+      "type": "integer",
+      "minimum": 1
+    },
+    "component": {
+      "description": "Reporting component name (DiagnosticStatus.name)",
+      "type": "string"
+    },
+    "event": {
+      "description":
+          "'raise' when the component left OK, 'clear' when it returned to OK, 'change' for a transition between two non-OK levels (e.g. WARN to ERROR)",
+      "type": "string",
+      "enum": [
+        "raise",
+        "clear",
+        "change"
+      ]
+    },
+    "from_level": {
+      "description": "Level the component left",
+      "type": "string",
+      "enum": [
+        "OK",
+        "WARN",
+        "ERROR",
+        "STALE"
+      ]
+    },
+    "to_level": {
+      "description": "Level the component entered",
+      "type": "string",
+      "enum": [
+        "OK",
+        "WARN",
+        "ERROR",
+        "STALE"
+      ]
+    },
+    "previous_level_duration_s": {
+      "description": "Seconds 'from_level' had been held before this transition",
+      "type": "number",
+      "minimum": 0
+    },
+    "reason": {
+      "description": "DiagnosticStatus.message reported alongside the new level",
+      "type": "string"
+    },
+    "state": {
+      "description":
+          "'open' while the fault is still under way (a raise or a change), 'closed' once it clears -- a fault still open when collection stops keeps its last Record marked 'open' and no duration, so it cannot be read as a zero-length outage",
+      "type": "string",
+      "enum": [
+        "open",
+        "closed"
+      ]
+    },
+    "fault_started_at": {
+      "description":
+          "When the currently open fault started (ISO 8601, UTC), carried on every Record belonging to it so a raise and its eventual clear can be joined. Absent when the component was already faulted on its very first observed sample, since no start was ever seen",
+      "type": "string"
+    },
+    "duration_s": {
+      "description": "Seconds the whole fault lasted. Present only on the clear Record, and only when 'fault_started_at' is known",
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "seq",
+    "component",
+    "event",
+    "from_level",
+    "to_level",
+    "previous_level_duration_s",
+    "reason",
+    "state"
+  ],
+  "type": "object"
+}
