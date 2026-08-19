@@ -6,6 +6,7 @@ project(dc_measurements)
 
 set(dependencies
   action_msgs
+  controller_manager_msgs
   cv_bridge
   dc_common
   dc_core
@@ -203,6 +204,9 @@ list(APPEND dc_measurement_plugin_libs dc_position_measurement)
 add_library(dc_random_measurement SHARED plugins/measurements/random.cpp)
 list(APPEND dc_measurement_plugin_libs dc_random_measurement)
 
+add_library(dc_ros2_control_status_measurement SHARED plugins/measurements/ros2_control_status.cpp)
+list(APPEND dc_measurement_plugin_libs dc_ros2_control_status_measurement)
+
 add_library(dc_serial_interface_measurement SHARED plugins/measurements/serial_interface.cpp)
 list(APPEND dc_measurement_plugin_libs dc_serial_interface_measurement)
 
@@ -356,6 +360,7 @@ set(tests
   test_measurement_permissions
   test_measurement_position
   test_measurement_random
+  test_measurement_ros2_control_status
   test_measurement_same_as_previous
   test_measurement_serial_interface
   test_measurement_shared_flush

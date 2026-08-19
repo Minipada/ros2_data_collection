@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Ros2ControlStatus",
+  "description":
+      "A controller or hardware component crossing into or out of the ros2_control `active` lifecycle state, derived from the controller manager's `~/activity` topic: one Record when it starts, one when it ends",
+  "properties": {
+    "seq": {
+      "description":
+          "Monotonically increasing number of this Record, across every controller and hardware component, so a dropped Record is detectable rather than silently shortening an outage",
+      "type": "integer",
+      "minimum": 1
+    },
+    "component_type": {
+      "description": "Whether 'component' names a controller or a hardware component",
+      "type": "string",
+      "enum": [
+        "controller",
+        "hardware_component"
+      ]
+    },
+    "component": {
+      "description": "Reporting controller or hardware component name",
+      "type": "string"
+    },
+    "event": {
+      "description": "'start' when the component entered 'active', 'end' when it left 'active'",
+      "type": "string",
+      "enum": [
+        "start",
+        "end"
+      ]
+    },
+    "from_state": {
+      "description": "Lifecycle state the component left",
+      "type": "string",
+      "enum": [
+        "unconfigured",
+        "inactive",
+        "active",
+        "finalized",
+        "configuring",
+        "cleaningup",
+        "shuttingdown",
+        "activating",
+        "deactivating",
+        "errorprocessing",
+        "unknown"
+      ]
+    },
+    "to_state": {
+      "description": "Lifecycle state the component entered",
+      "type": "string",
+      "enum": [
+        "unconfigured",
+        "inactive",
+        "active",
+        "finalized",
+        "configuring",
+        "cleaningup",
+        "shuttingdown",
+        "activating",
+        "deactivating",
+        "errorprocessing",
+        "unknown"
+      ]
+    },
+    "previous_state_duration_s": {
+      "description":
+          "Seconds 'from_state' had been held: on a start Record, how long the component had been out of 'active' before this; on an end Record, how long it had been 'active'",
+      "type": "number",
+      "minimum": 0
+    },
+    "open": {
+      "description":
+          "true on a start Record, false on an end Record -- a component still active when collection stops simply never gets a matching end Record, so it cannot be averaged as a zero",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "seq",
+    "component_type",
+    "component",
+    "event",
+    "from_state",
+    "to_state",
+    "previous_state_duration_s",
+    "open"
+  ],
+  "type": "object"
+}

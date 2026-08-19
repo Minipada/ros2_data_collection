@@ -40,6 +40,7 @@
   - [Permissions](./dc/measurements/permissions.md)
   - [Position](./dc/measurements/position.md)
   - [Random](./dc/measurements/random.md)
+  - [ROS2 control status](./dc/measurements/ros2_control_status.md)
   - [Serial interface](./dc/measurements/serial_interface.md)
   - [Speed](./dc/measurements/speed.md)
   - [Storage](./dc/measurements/storage.md)
