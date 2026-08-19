@@ -8692,3 +8692,63 @@ reading the code (the repo's established verification standard):
   ticket, the specific line that failed is now confirmed compiling-clean against the
   actual error message -- though a full `colcon build`/`colcon test` pass is still owed
   to CI, since this sandbox still has no ROS 2 toolchain to run one.
+
+### #390 - Reusable websocket JSON client for dc_measurements
+
+- Added `dc_common::WebSocketJsonClient` (`dc_common/include/dc_common/websocket_json_client.hpp`):
+  a header-only, ROS-free client that connects to a `ws://host[:port][/path]` URL, sends/receives
+  JSON text frames, and reconnects with exponential backoff on a dropped connection -- the
+  transport Open-RMF's task-state API (#391, blocked by this ticket) needs, generic enough for any
+  future out-of-ROS-graph Measurement to reuse rather than rolling its own. Built on Boost.Beast +
+  Boost.Asio (already a transitive dependency via `dc_util`/`dc_bridge`, added here directly to
+  `dc_common`'s `package.xml`/`CMakeLists.txt` alongside `nlohmann-json-dev`) running its own
+  `io_context` on a background thread, so `connect()`/`send()`/`disconnect()` never block the
+  caller. Lifecycle shape matches every other Measurement's `create_subscription()`/teardown pair:
+  a plugin calls `connect()` from `onConfigure()` and `disconnect()` from `onCleanup()`/`cleanup()`
+  (`dc_measurements::Measurement`, `dc_core::Measurement`) -- no new lifecycle plumbing needed, and
+  no RMF-specific parsing lives here, matching the ticket's transport-only scope; `wss://` (TLS) is
+  explicitly out of scope too (would only change `doConnect()`'s stream type).
+- `WebSocketJsonClient::Options` is a free struct (`WebSocketJsonClientOptions`), not nested in the
+  class despite being used as `WebSocketJsonClient::Options` via a type alias -- GCC/Clang both
+  reject a nested struct's own default member initializers being used in a default argument of the
+  *enclosing* class's constructor (a real compile error caught by manually compiling against the
+  cached `dc-workspace` image's installed Boost/nlohmann/gtest, not by reading the code).
+- Every async completion handler (resolve/connect/handshake/read/reconnect-timer) carries a
+  generation counter, bumped on every `connect()`/`disconnect()`, and bails out if it no longer
+  matches: without it, a resolver lookup still in flight when `disconnect()` runs could have its
+  completion delivered *after* a later `connect()` starts (asio doesn't cancel an in-flight resolve
+  just because the io_context stopped and restarted), racing that new session's own `ws_`.
+- **Two real hangs found and fixed by actually running the tests**, not just reading the code --
+  full `colcon build`+`colcon test` in this sandbox's podman got stuck in a 36-minute from-source
+  `aws_sdk_vendor` rebuild (the cached `dc-workspace` image's apt layer got invalidated by
+  `build.sh`'s date-stamped `APT_CACHEBUST`), so verification instead compiled/linked/ran the new
+  gtest directly against that same cached image's already-installed Boost 1.83/nlohmann/gtest with
+  the identical `-Wall -Wextra -Wpedantic -Werror -Wdeprecated` flags `dc_package()` uses -- close
+  enough to the real CMake build to trust, and fast enough to actually run repeatedly:
+  1. `disconnect()`'s `closeStream()` called a *synchronous* `ws_->close()` (graceful WS close
+     handshake) while `doRead()` always keeps exactly one `async_read` outstanding on the same
+     stream (it re-arms itself at the end of every read). Beast doesn't support a concurrent
+     read-family operation and a close on one stream; the sync close silently never completed a
+     real handshake, so the peer never saw a close frame and stayed blocked forever waiting for
+     one. Fixed by having `closeStream()` just close the transport directly instead of attempting
+     a graceful handshake -- safe and immediate since it always runs on `io_thread_` itself, which
+     is what actually owns the pending `async_read`.
+  2. The test fixture's `EchoServer` used a synchronous `accept()`/`read()` loop on a background
+     thread, with `dropConnection()`/`stop()` calling `.close()` on that same socket/acceptor from
+     the *test* thread. Closing a fd out from under a thread already blocked in a raw syscall on it
+     does not reliably unblock that call on Linux -- confirmed empirically (hung consistently,
+     reproduced with a minimal standalone repro outside gtest to isolate it from gtest itself).
+     Rewritten to be fully async (`async_accept`/`async_read`/`async_write` driven by `ioc_.run()`
+     on its own thread), with `dropConnection()`/`stop()` posting their `close()` calls onto that
+     `io_context` instead -- Boost.Asio *does* guarantee closing a socket safely cancels a pending
+     operation on the same io_context regardless of which thread calls close(), the same pattern
+     `WebSocketJsonClient::disconnect()` already relies on.
+- `dc_common/test/websocket_json_client_test.cpp`: 7 gtests against a local fixture echo server
+  (no ROS node, no rclcpp::init(), per #360's ROS-free-unit precedent) -- connect/send/receive a
+  real JSON round trip; reconnection after a dropped connection, proven by a second successful
+  send/receive after the reconnect rather than just the state flipping back to Connected (a
+  stale/half-open socket could do that too); `disconnect()` stopping reconnection and being
+  idempotent; safe to call before any `connect()`; and reconnecting to a *different* URL on the
+  same instance after a `disconnect()`. Verified stable across 5 shuffled repeat runs.
+- Not wired into any Measurement plugin: interpreting a JSON schema over this transport (starting
+  with Open-RMF's `TaskState`) is #391's job, per this ticket's explicit scope boundary.
