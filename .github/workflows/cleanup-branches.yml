@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Cancels any CI still running against a closed PR's branch, then deletes the branch once
+# merged. Prefer this over the repo's "Automatically delete head branches" setting (off):
+# a workflow also catches in-flight/queued runs that setting alone wouldn't stop.
+
+name: Cleanup merged branches
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel in-flight runs for the closed branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH_NAME: ${{ github.head_ref }}
+          SELF_RUN_ID: ${{ github.run_id }}
+        run: |
+          for status in in_progress queued; do
+            ids=$(gh run list --repo "$REPO" --branch "$BRANCH_NAME" --status "$status" --json databaseId --jq '.[].databaseId')
+            for id in $ids; do
+              [ "$id" = "$SELF_RUN_ID" ] && continue # never cancel ourselves
+              gh run cancel "$id" --repo "$REPO" || echo "run ${id} no longer cancellable — already finished"
+            done
+          done
+
+      - name: Delete merged branch
+        if: github.event.pull_request.merged == true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH_NAME: ${{ github.head_ref }}
+        run: gh api -X DELETE "repos/${REPO}/git/refs/heads/${BRANCH_NAME}"
