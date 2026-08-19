@@ -8544,3 +8544,89 @@ reading the code (the repo's established verification standard):
 - `git add -A && prek run --all-files --skip build-doc` passes clean. Same caveat as
   the last two entries: no `colcon`/ROS 2 toolchain in this sandbox to actually run the
   test locally — the next CI run is what confirms this.
+
+### #389 - Add the Mission Measurement: FollowWaypoints adapter
+
+- New `dc_measurements` plugin `mission_nav2_follow_waypoints` (class
+  `MissionNav2FollowWaypoints`), reusing #387's `mission_start`/`mission_end` Record
+  schema/conventions for nav2's `FollowWaypoints` action instead of `NavigateToPose`.
+  Neither #387 nor #305 (the ADR #387 is blocked by) has landed any code yet — #389 is
+  explicitly not blocked by #387's implementation, so this reads the Record schema
+  straight out of #387's issue body's "Implementation Decisions" section and adapts it to
+  `FollowWaypoints`' own goal/result shape (confirmed against the real
+  `ros-navigation/navigation2` `main` branch: `FollowWaypoints.action` and
+  `WaypointStatus.msg`, not the stale/older definitions cached in another worktree's
+  scratchpad from a previous session).
+- **Design decision, confirmed with the user before implementing**: this Measurement is a
+  passive watcher, not a commander -- it never sends a `FollowWaypoints` goal itself.
+  Whatever already dispatches missions (`nav2_simple_commander`, a WMS, ...) keeps doing
+  that; this only observes, matching every other Measurement's read-only relationship to
+  what it reports on, and not competing with `dc_demos/dc_demos/qrcodes_waypoint_follower.py`
+  (which already sends `FollowWaypoints` goals of its own). Concretely this means
+  `rclcpp_action::Client`'s typed API is unusable here -- it only reports on goals the
+  client itself sent -- so the plugin subscribes directly to `<action>/_action/status`
+  (`action_msgs/msg/GoalStatusArray`, the same type for every action) for accept/terminal
+  boundaries, and calls `<action>/_action/get_result`
+  (`nav2_msgs::action::FollowWaypoints::Impl::GetResultService`) directly for the
+  terminal Result once a goal it is following reaches one -- both public, standard parts
+  of the ROS 2 action wire protocol usable by any client, sender or not.
+- **Known, documented gap versus the issue's literal acceptance criteria**:
+  `number_of_loops` lives only on the Goal, which the ROS 2 action protocol never
+  re-publishes anywhere a third party can read it, and `rclcpp_action::Client` has no
+  supported way to attach to a goal it did not send either. A passive watcher structurally
+  cannot report it, so it is omitted from the Record/schema, with the reasoning recorded
+  in the plugin header's class comment and a "Known limitation" section in the doc page --
+  the alternative (the Measurement sending its own goal) would make a data-collection
+  plugin responsible for driving navigation, which conflicts with `CLAUDE.md`'s framing of
+  DC as a telemetry pipeline.
+- ROS-free core: `dc_measurements::MissionFollowWaypointsTracker`
+  (`mission_follow_waypoints_tracker.hpp`), built on the existing
+  `dc_common::StateTransitionDetector<std::string>` (#360, the same block
+  `intervention`/`fault` use) with the active goal_id as the tracked state (empty = idle).
+  Seeded idle at construction with an explicit timestamp so the very first mission this
+  instance ever observes is reported as a real transition rather than being silently
+  absorbed as the detector's baseline sample. Encapsulates the `outcome` derivation rule
+  from #387 (`SUCCEEDED` status + non-zero `error_code` => `failed`, not `succeeded`) so
+  it's covered by ROS-free unit tests (`mission_follow_waypoints_tracker_test.cpp`,
+  mirroring `battery_cycle_accumulator_test.cpp`'s standalone style) rather than only by
+  the ROS-level integration test.
+- `outcome`/`reason`/`error_code`/`duration_sec`/`missed_waypoints` follow #387's schema
+  conventions exactly (`reason`/`error_code` required together, only when `outcome` is
+  `failed`/`aborted`); `missed_waypoints` is nav2's own `WaypointStatus[]` carried through
+  (index/status/error_code/error_msg, pose dropped -- not part of this schema).
+  `mission_type` is always `"follow_waypoints"` on both Records (JSON Schema `const`).
+- New JSON Schema `dc_measurements/plugins/measurements/json/mission_nav2_follow_waypoints.json`,
+  validated in both the integration test and referenced from the doc page.
+- Integration test (`test_measurement_mission_nav2_follow_waypoints.cpp`) adapts #387's
+  planned "fake action server" pattern to the passive-watcher design: a real
+  `rclcpp_action::Server<FollowWaypoints>` fixture stands in for nav2, and a real
+  `rclcpp_action::Client<FollowWaypoints>` fixture stands in for whatever commands it,
+  completely independent of the plugin under test -- which only ever watches, exactly as
+  in a real deployment. Covers: accepted goal -> `mission_start`; succeeded -> `mission_end`
+  with no `reason`; `SUCCEEDED` status with non-zero `error_code` -> `outcome: failed` with
+  `missed_waypoints` populated; a real cancel request driven through the commander (so the
+  server-side goal handle legally reaches `CANCELING` before `canceled()` is called --
+  `canceled()` is not a legal transition directly out of `EXECUTING`) -> `outcome:
+  cancelled`; `abort()` -> `outcome: aborted` with `reason`/`error_code`; a mission still
+  open at shutdown gets no closing Record. Every emitted Record is validated against the
+  schema.
+- New `dc_measurements` dependencies: `nav2_msgs` (the action definition; `action_msgs`
+  and `unique_identifier_msgs` resolve transitively through it, matching
+  `dc_lifecycle_manager`'s existing precedent of depending on `nav2_msgs` alone for the
+  same kind of transitive message types) and `rclcpp_action` (needed only by the
+  integration test's fake server/client, not by the plugin itself, which uses raw
+  `rclcpp::Subscription`/`rclcpp::Client` -- added to the package's shared `dependencies`
+  list the same way `nav2_util` already is despite most plugins not using it directly).
+- Doc page `doc/src/dc/measurements/mission_nav2_follow_waypoints.md`, linked from
+  `doc/src/SUMMARY.md`, matching `battery.md`/`intervention.md`'s structure plus the
+  `number_of_loops` limitation section.
+- `git add -A && prek run --all-files --skip build-doc` passes clean (clang-format
+  auto-reformatted the new C++ files on the first pass, re-staged after).
+- **Not done / left for CI**: no `colcon build`/`colcon test` run in this sandbox -- no
+  ROS 2 install here (same disk-space constraint noted in #242/#243's entries above), so
+  the exact `nav2_msgs::action::FollowWaypoints::Impl::GetResultService` nested-type usage,
+  the manual `_action/status`/`_action/get_result` wiring, and the fake-action-server
+  test's `rclcpp_action` API calls are unverified by an actual compile. Written against
+  documented, stable ROS 2 action-protocol behavior and cross-checked against this
+  repo's one existing `rclcpp_action` usage (`dc_lifecycle_manager`), but a real build is
+  needed to close the loop.
