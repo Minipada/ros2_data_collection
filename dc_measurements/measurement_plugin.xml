@@ -200,6 +200,14 @@ SPDX-License-Identifier: MPL-2.0
         </class>
     </library>
 
+    <library path="dc_slam_toolbox_quality_measurement">
+        <class name="dc_measurements/SlamToolboxQuality" type="dc_measurements::SlamToolboxQuality" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_slam_toolbox_quality
+            </description>
+        </class>
+    </library>
+
     <library path="dc_speed_measurement">
         <class name="dc_measurements/Speed" type="dc_measurements::Speed" base_class_type="dc_core::Measurement">
             <description>

@@ -485,5 +485,77 @@ FROM dc_kpi_fault_events e
 WHERE e.from_level IS NOT NULL
 GROUP BY 1, 2, 3;
 
+-- The wide `dc` table narrowed to the slam_toolbox_quality Measurement's single-shot
+-- loop-closure Records (#394). The source topic carries nothing but its own occurrence, so
+-- there is nothing more to project than when it happened.
+CREATE OR REPLACE VIEW dc_kpi_loop_closure_events AS
+SELECT
+  COALESCE(d.robot_name, 'unknown') AS robot_name,
+  to_timestamp(d.date / 1e9) AS event_time
+FROM dc d
+WHERE d.name = 'slam_toolbox_quality'
+  AND d.event = 'loop_closure'
+  AND d.date IS NOT NULL;
+
+-- Loop closures per hour of the window, per robot, plus how long it's been since the last one
+-- as of window_end -- a growing gap is a localization-drift risk indicator on its own, distinct
+-- from the rate. last_loop_closure looks past window_start (unlike the interventions/faults
+-- rate functions) because "how long since" is meaningless clipped to the window: a robot with no
+-- loop closure yet in a short window would otherwise read as recently corrected instead of never.
+CREATE OR REPLACE FUNCTION dc_kpi_loop_closure_rate(
+  window_start timestamptz,
+  window_end timestamptz
+)
+RETURNS TABLE (
+  robot_name text,
+  loop_closures bigint,
+  window_seconds double precision,
+  per_hour double precision,
+  last_loop_closure timestamptz,
+  seconds_since_last double precision
+)
+LANGUAGE sql
+STABLE
+AS $$
+  WITH counted AS (
+    SELECT e.robot_name, count(*)::bigint AS loop_closures
+    FROM dc_kpi_loop_closure_events e
+    WHERE e.event_time >= window_start AND e.event_time <= window_end
+    GROUP BY e.robot_name
+  ),
+  last_seen AS (
+    SELECT e.robot_name, max(e.event_time) AS last_loop_closure
+    FROM dc_kpi_loop_closure_events e
+    WHERE e.event_time <= window_end
+    GROUP BY e.robot_name
+  ),
+  robots AS (
+    SELECT counted.robot_name FROM counted
+    UNION SELECT last_seen.robot_name FROM last_seen
+  )
+  SELECT
+    r.robot_name,
+    COALESCE(c.loop_closures, 0),
+    EXTRACT(EPOCH FROM (window_end - window_start))::double precision,
+    (
+      COALESCE(c.loop_closures, 0) /
+      NULLIF(EXTRACT(EPOCH FROM (window_end - window_start)) / 3600.0, 0)
+    )::double precision,
+    l.last_loop_closure,
+    EXTRACT(EPOCH FROM (window_end - l.last_loop_closure))::double precision
+  FROM robots r
+  LEFT JOIN counted c ON c.robot_name = r.robot_name
+  LEFT JOIN last_seen l ON l.robot_name = r.robot_name
+$$;
+
+-- Loop closures bucketed hourly for charting, the same bucket size interventions and faults use.
+CREATE OR REPLACE VIEW dc_kpi_loop_closures_1h AS
+SELECT
+  to_timestamp(floor(EXTRACT(EPOCH FROM e.event_time) / 3600) * 3600) AS bucket_start,
+  e.robot_name,
+  count(*)::bigint AS loop_closures
+FROM dc_kpi_loop_closure_events e
+GROUP BY 1, 2;
+
 -- The lookup every object above starts from.
 CREATE INDEX IF NOT EXISTS dc_name_date_idx ON dc (name, date);

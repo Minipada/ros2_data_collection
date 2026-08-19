@@ -150,6 +150,56 @@
       ],
       "title": "Group completion status",
       "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "dc_postgres"
+      },
+      "description":
+          "slam_toolbox_quality's pose covariance diagonal (#394) — localization confidence over time. Blank until the Measurement lands.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "dc_postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql":
+              "SELECT to_timestamp(date / 1e9) AS \"time\", covariance_x, covariance_y, covariance_yaw FROM dc WHERE name = 'slam_toolbox_quality' AND event = 'sample' ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Localization covariance trend",
+      "type": "timeseries"
     }
   ],
   "refresh": "",

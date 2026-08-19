@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SlamToolboxQuality",
+  "description":
+      "Localization quality from slam_toolbox: a pose sample with covariance on the polling interval, plus a Record on every loop closure",
+  "properties": {
+    "event": {
+      "description": "What this Record is: a periodic pose sample, or a loop closure occurrence",
+      "type": "string",
+      "enum": [
+        "sample",
+        "loop_closure"
+      ]
+    },
+    "x": {
+      "description": "Robot x position in the pose topic's frame, metres",
+      "type": "number"
+    },
+    "y": {
+      "description": "Robot y position in the pose topic's frame, metres",
+      "type": "number"
+    },
+    "yaw": {
+      "description": "Robot heading in the pose topic's frame, radians",
+      "type": "number"
+    },
+    "covariance_x": {
+      "description":
+          "Pose covariance diagonal term for x, metres squared. Localization confidence: higher is less certain",
+      "type": "number",
+      "minimum": 0
+    },
+    "covariance_y": {
+      "description": "Pose covariance diagonal term for y, metres squared",
+      "type": "number",
+      "minimum": 0
+    },
+    "covariance_yaw": {
+      "description": "Pose covariance diagonal term for yaw, radians squared",
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "event"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "sample"
+          }
+        },
+        "required": [
+          "event"
+        ]
+      },
+      "then": {
+        "required": [
+          "x",
+          "y",
+          "yaw",
+          "covariance_x",
+          "covariance_y",
+          "covariance_yaw"
+        ]
+      }
+    }
+  ],
+  "type": "object"
+}

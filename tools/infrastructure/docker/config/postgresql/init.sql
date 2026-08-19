@@ -89,6 +89,19 @@ CREATE TABLE IF NOT EXISTS dc (
   previous_duration double precision,
   sequence bigint,
   open boolean,
+  -- slam_toolbox_quality.cpp's Records (#394): `event` tags which of the two Record shapes a
+  -- row is (shared with battery.cpp's own `event`, told apart by `name`), and
+  -- x/y/yaw/covariance_* carry the `sample` shape -- distinct columns from position.cpp's own
+  -- x/y/yaw (never enumerated above, see the note at the top of this file) only in the sense
+  -- that the postgres sink maps by column name regardless of `name`, so both are told apart by
+  -- `name = 'slam_toolbox_quality'` in the KPI views that read them.
+  event text,
+  x double precision,
+  y double precision,
+  yaw double precision,
+  covariance_x double precision,
+  covariance_y double precision,
+  covariance_yaw double precision,
   -- Infrastructure (tcp_health.cpp)
   host text,
   port integer,

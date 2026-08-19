@@ -437,6 +437,62 @@ def test_the_bucketed_intervention_view_charts_the_same_events(db):
     assert buckets[0]["mean_intervention_seconds"] == pytest.approx(60.0)
 
 
+# --- Loop closure rate ------------------------------------------------------------------
+
+
+def loop_closure(db, offset):
+    """One slam_toolbox_quality loop_closure Record (#394): a single-shot occurrence."""
+    db.execute(
+        "INSERT INTO dc (date, name, robot_name, event) VALUES (%s, %s, %s, %s)",
+        (int(at(offset).timestamp()) * 10**9, "slam_toolbox_quality", ROBOT, "loop_closure"),
+    )
+
+
+def loop_closure_rate(db, start, end):
+    """dc_kpi_loop_closure_rate() over [start, end], keyed by robot."""
+    db.execute("SELECT * FROM dc_kpi_loop_closure_rate(%s, %s)", (at(start), at(end)))
+    return {row["robot_name"]: row for row in db.fetchall()}
+
+
+def test_loop_closure_rate_is_per_hour(db):
+    loop_closure(db, 400)
+    loop_closure(db, 700)
+    loop_closure(db, 1900)  # outside the window
+
+    kpi = loop_closure_rate(db, 300, 900)[ROBOT]
+
+    assert kpi["loop_closures"] == 2
+    assert kpi["window_seconds"] == pytest.approx(600.0)
+    assert kpi["per_hour"] == pytest.approx(12.0)
+
+
+def test_seconds_since_last_looks_past_the_window_start(db):
+    # The only loop closure is well before the window: "how long since" would be meaningless
+    # clipped to the window, so it looks at everything up to window_end instead.
+    loop_closure(db, 100)
+
+    kpi = loop_closure_rate(db, 300, 900)[ROBOT]
+
+    assert kpi["loop_closures"] == 0
+    assert kpi["last_loop_closure"] == at(100)
+    assert kpi["seconds_since_last"] == pytest.approx(800.0)
+
+
+def test_a_robot_with_no_loop_closures_ever_reports_nothing(db):
+    assert loop_closure_rate(db, 300, 900) == {}
+
+
+def test_the_bucketed_loop_closure_view_charts_the_same_events(db):
+    loop_closure(db, 400)
+    loop_closure(db, 460)
+    loop_closure(db, 4000)  # the next hour bucket
+
+    db.execute("SELECT * FROM dc_kpi_loop_closures_1h ORDER BY bucket_start")
+    buckets = db.fetchall()
+
+    assert [row["loop_closures"] for row in buckets] == [2, 1]
+
+
 # --- MTBF and MTTR ---------------------------------------------------------------------
 
 
