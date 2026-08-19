@@ -8827,3 +8827,67 @@ reading the code (the repo's established verification standard):
   same instance after a `disconnect()`. Verified stable across 5 shuffled repeat runs.
 - Not wired into any Measurement plugin: interpreting a JSON schema over this transport (starting
   with Open-RMF's `TaskState`) is #391's job, per this ticket's explicit scope boundary.
+## #395 - ros2_control status Measurement: start/end Records from the controller manager's activity topic
+
+`ros2_control_status` (class `Ros2ControlStatus`) subscribes to the controller manager's own
+`~/activity` topic (`controller_manager_msgs/ControllerManagerActivity`, transient-local QoS,
+republished on every controller/hardware-component lifecycle change -- verified against
+`controller_manager.cpp`'s actual publisher: `rclcpp::QoS(1).reliable().transient_local()` on
+`~/activity`, not a guessed name/QoS) rather than polling `list_controllers`/
+`list_hardware_components`. Each controller and hardware component gets its own
+`dc_common::StateTransitionDetector<uint8_t>`, keyed by name in two maps (`controller_detectors_`,
+`hardware_component_detectors_`), mirroring Fault's per-component detector map exactly -- the
+message arrives as a callback carrying the *entire* current snapshot (like `DiagnosticArray`), not
+one change at a time, so `processEntries()` runs every entry through its own detector the same way
+`Fault::diagnosticsCb` does.
+
+**Record shape borrows Intervention's vocabulary, not Fault's.** A Record fires only on the
+boundary the issue calls out -- entering `active` (`"event": "start"`) or leaving it
+(`"event": "end"`) -- not on every lifecycle transition; a transition between two non-`active`
+states (e.g. `unconfigured` to `inactive` during startup) is absorbed silently, the same way
+Intervention drops a mode change that isn't a takeover boundary. `previous_state_duration_s` is the
+transition's own `dwell`, meaning both things at once exactly like Intervention's
+`previous_duration`: on a start Record, how long the component was out of `active` before this; on
+an end Record, how long it had just been `active`. `open` is `true`/`false` for start/end. A
+component still active when collection stops simply never gets a synthetic end Record (`onCleanup`
+only logs a warning per component, via each detector's `state()`), so it can't be averaged as a
+zero -- same contract as Intervention and Fault.
+
+State labels (`from_state`/`to_state`) are produced from the lifecycle state *id* through a local
+`stateLabel()` switch over `lifecycle_msgs::msg::State`'s primary/transition constants, not read
+from the message's own `label` field -- the detector only remembers the id it last held, not the
+label string that came with it, so the `from` side of a transition is reconstructed the same way
+`Fault::levelName()` turns a `DiagnosticStatus` level back into a name.
+
+**What shipped.** `dc_measurements/{plugins/measurements,include/dc_measurements/plugins/
+measurements}/ros2_control_status.{cpp,hpp}`, registered in `measurement_plugin.xml` and
+`CMakeLists.txt` like every other plugin; `controller_manager_msgs` added to `package.xml` and
+CMake's shared `dependencies` list (confirmed resolvable: a from-scratch `rosdep install` inside
+the workspace container resolved it with no missing-key errors). `plugins/measurements/json/
+ros2_control_status.json` validated through the existing `validateSchema()` path. `test/
+test_measurement_ros2_control_status.cpp`, 5 gtests over the real lifecycle node and a real
+`ControllerManagerActivity` publisher: entering `active` from a non-active baseline (start Record,
+`open: true`); leaving `active` (end Record, `open: false`, positive `previous_state_duration_s`);
+a transition between two non-active states producing no Record; hardware components tracked
+independently of controllers (own `component_type`); and a component still active at shutdown
+(one Record, no synthetic close). Docs: `doc/src/dc/measurements/ros2_control_status.md`, linked
+from `SUMMARY.md` (alphabetically between Random and Serial interface).
+
+**Verification gap, disclosed rather than papered over.** A from-scratch `colcon build` +
+`colcon test` inside `localhost/dc-workspace:latest` (rebuilt from the worktree, the same process
+#362/#365 used) was started to confirm this compiles and its gtests pass, but the host's shared
+podman storage was at 97% full (`/home` -- 13G free, 60GB "reclaimable" spread across ~200 images
+belonging to other issues'/sessions' verification runs); the build got past a from-scratch
+`aws_sdk_vendor` rebuild (the daily `APT_CACHEBUST` had invalidated that layer's cache -- 35 min)
+and then failed committing the next layer with "no space left on device". A dangling-image-only
+`podman image prune` was run (safe -- no tagged/in-use image touched) but freed negligible space,
+since the reclaimable size podman reports is mostly layers still shared with tagged images. Given
+the shared-host risk of a more aggressive prune (deleting another session's tagged verification
+image) and the time already spent, this was not retried locally; `prek run --all-files --skip
+build-doc` was run instead (clang-format reformatted the new files once, then green) and the code
+was reviewed by hand against Fault/Intervention's already-merged, already-tested patterns plus the
+real upstream `controller_manager_msgs`/`lifecycle_msgs` message definitions fetched from
+`ros-controls/ros2_control` and `ros2/rcl_interfaces` on GitHub. CI's `build-workspace` job (a
+GitHub-hosted runner, not this disk-constrained sandbox) is the actual `colcon build`/`colcon test`
+gate for this PR -- flagging here so a reviewer knows local verification stopped short of running
+the new tests, not that they were run and passed.
