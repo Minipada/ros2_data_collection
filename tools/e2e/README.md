@@ -254,12 +254,43 @@ the retention/incident/degraded scenarios above.
 
 The saturation probe (`scripts/saturation_probe.py`, #377) is a third piece landed
 alongside it: a pure function over a window of ack-latency/unacked-window-depth/disk-
-buffer observations, checked in the PRD's stated priority order and unit-tested alone,
-with no container or ramp controller of its own yet.
+buffer observations, checked in the PRD's stated priority order and unit-tested alone.
+
+The ramp controller (`scripts/ramp_controller.py`, #379) is the fourth. Given a driver, a
+probe, and a `RampPolicy` of ascending load levels, `find_knee()` drives each level in
+turn and asks the probe whether it saturated, stopping at the first tripped level and
+reporting the knee: the highest level whose verdict stayed clear, plus the level that
+tripped it. A policy whose every level stays clear is reported as `BOUND_NOT_FOUND`
+rather than a fabricated ceiling at the top of the ramp — the failure mode #323's PRD
+calls out as mattering most. The controller touches no I/O and knows nothing about what a
+"level" means (a connection count, a rate, an upload concurrency, …); `driver` and `probe`
+are plain callables, so `test_ramp_controller.py` covers it entirely with in-process
+fakes, including the ramp-policy boundary cases (first step, last step, a single-step
+ramp).
+
+The curve reporter (`scripts/curve_reporter.py`, #380) is the fifth. It turns a set of
+per-axis runs — each an ascending sequence of levels tried, whether each level was
+actually driven and measured or is a projected `EXTRAPOLATED` point, its real-vs-
+synthetic composition, and a CPU/memory/disk `ResourceSample` where one was taken — into
+a stable, diffable `CurveReport` (`build_report()`) plus a human-readable summary
+(`render_summary()`). It is a pure function, decoupled from `ramp_controller`/
+`saturation_probe` the same way those two are decoupled from each other: no I/O, no
+containers, its own `RunOutcome` mirroring `RampOutcome`'s values. `build_report()` sorts
+axes by name and each axis's points by level so the same set of runs always yields the
+same report regardless of collection order — required for a diff between two runs to
+show only a real change. The binding constraint at saturation (CPU, memory, or disk) is
+the resource that peaked highest across a run's *measured* points only (CPU-then-memory-
+then-disk as the deterministic tie-break), and is reported as unavailable rather than
+guessed when the axis never saturated or its knee has no accompanying resource sample. An
+extrapolated point never carries a resource sample in either the structured report or the
+summary — labelling every point `measured`/`extrapolated` in both is how the reporter
+avoids presenting a projection as a measurement, per #323's PRD.
+`tools/e2e/test/test_curve_reporter.py` covers all of this against synthetic run data
+alone.
 
 ## Two-tier topology composer (#381)
 
-The fourth piece of #323's limits harness: brings up, with plain podman on a dedicated
+The sixth piece of #323's limits harness: brings up, with plain podman on a dedicated
 bridge network, the topology #323's PRD is ultimately sized around — a private site where
 robots have no direct path to the cloud, and an edge server aggregates their Records and
 forwards them upstream:
@@ -402,7 +433,16 @@ above.
 - `scripts/saturation_probe.py` — the limits harness's saturation verdict (#377, part of
   #323): a pure function over a window of ack-latency/unacked-window-depth/disk-buffer
   observations, checked in the PRD's stated priority order and unit-tested alone, with
-  no container or ramp controller of its own yet.
+  no container of its own.
+- `scripts/ramp_controller.py` — the limits harness's ramp controller (#379, part of
+  #323): given a driver, a probe, and an ascending `RampPolicy`, drives load level by
+  level until the probe trips and reports the knee, or `BOUND_NOT_FOUND` if it never
+  does. No I/O, no container; unit-tested with fake drivers/probes alone.
+- `scripts/curve_reporter.py` — the limits harness's curve reporter (#380, part of
+  #323): a pure function turning a set of per-axis runs into a stable, diffable
+  structured report plus a human-readable summary naming the binding constraint (CPU,
+  memory, or disk) at saturation, with every point labelled measured or extrapolated.
+  No I/O, no container; unit-tested against synthetic run data alone.
 - `scripts/run_limits_two_tier.sh` / `params/e2e_limits_params.yaml` /
   `params/e2e_limits_forward_sink.toml` — the two-tier topology composer (#381, part of
   #323) described above: N real DC stacks + M synthetic senders through an aggregating

@@ -7964,6 +7964,111 @@ that the ramp controller, curve reporter, and topology composer #323 describes a
 the load driver and the already-landed saturation probe (#377) are separate,
 not-yet-implemented pieces of that epic.
 
+## #379 - Limits harness: ramp controller (drive load to the knee)
+
+`tools/e2e/scripts/ramp_controller.py`: `find_knee(driver, probe, policy)`, no I/O, no
+containers — the third of #323's four "deep" modules, after the saturation probe (#377)
+and the synthetic load driver (#378).
+
+**Interface**: `driver` and `probe` are plain callables (`Driver = Callable[[float],
+object]`, `Probe = Callable[[object], SaturationVerdict]`, the latter a `Protocol`
+needing only a `saturated: bool` property — matches `saturation_probe.Verdict` without
+importing that module at all). `RampPolicy(levels=...)` holds the ascending sequence of
+load levels to try; `__post_init__` rejects an empty one. `find_knee()` walks the
+levels in order, calling `probe(driver(level))` at each one, and stops driving the
+instant a verdict comes back saturated — it never continues loading the system past the
+level that tripped it. This is deliberately axis-agnostic per the PRD ("the ramp
+controller and the saturation probe are axis-agnostic"): the controller has no opinion
+on whether a "level" is a connection count, a per-robot rate, or an upload concurrency,
+which is what lets a fifth axis reuse it later at zero controller cost.
+
+**Result shape** (`RampResult`): `outcome` (`KNEE_FOUND`/`BOUND_NOT_FOUND`),
+`highest_clear_level` (the highest level tried whose verdict stayed clear, `None` only
+when the very first level tried already saturated), `tripped_level` and
+`tripped_verdict` (both `None` exactly when `outcome` is `BOUND_NOT_FOUND` — a ramp that
+never saturates gets no ceiling value at all, satisfying the issue's most important
+failure mode: "never a fabricated ceiling"), and `levels_tried`. `highest_clear_level`
+is still populated on `BOUND_NOT_FOUND` (the top of the ramp that stayed clear) but is
+informational only — a caller has to read `outcome` to know it isn't a knee.
+
+**Test coverage** (`tools/e2e/test/test_ramp_controller.py`, 10 cases, all with
+in-process fake drivers/probes, no `saturation_probe` import needed): the issue's four
+acceptance criteria verbatim (saturates at a known level → that level as `tripped_level`
+with the prior level as `highest_clear_level`; never saturates within bounds →
+`BOUND_NOT_FOUND` with both tripped fields `None`; saturates immediately at the lowest
+level → that level reported, not an empty result; a driver call-count assertion proving
+the controller stops driving load the instant it trips), the three named ramp-policy
+boundaries (first step, last step, single-step ramp, each in both the saturates- and
+stays-clear directions where applicable), and the empty-policy rejection.
+
+`tools/e2e/README.md`'s "Synthetic load driver (#378)" section gained the ramp
+controller's own paragraph (renamed conceptually to cover both #377 and #379 now
+landed) and a matching entry in Layout; the curve reporter and topology composer remain
+the two not-yet-implemented pieces of #323.
+
+## #380 - Limits harness: curve reporter (stable, diffable saturation report)
+
+`tools/e2e/scripts/curve_reporter.py`: a pure function turning a set of per-axis ramp
+runs into a stable, diffable structured report plus a human-readable summary — the
+fourth of #323's four "deep" modules, after the saturation probe (#377), the load
+driver (#378), and the ramp controller (#379). Only the topology composer (integration)
+remains unimplemented in that epic.
+
+**Interface**: input is a `Sequence[AxisRun]`, one per axis (shipper fan-in, single-robot
+ceiling, uploader concurrency, drain rate, …). Each `AxisRun` carries the axis name and
+unit, a `RunOutcome` (`KNEE_FOUND`/`BOUND_NOT_FOUND`, mirroring `RampOutcome`'s values
+without importing `ramp_controller` — the same decoupling `ramp_controller` uses for
+`saturation_probe.Verdict`), `highest_clear_level`/`tripped_level`, and an ascending
+sequence of `LevelResult`s. Each `LevelResult` states its own `PointKind`
+(`MEASURED`/`EXTRAPOLATED`), its `RunComposition` (real DC stacks vs. synthetic
+senders), and an optional `ResourceSample` (cpu/mem/disk percentages from the existing
+resource sampler) — `None` by construction for an `EXTRAPOLATED` point, since there is
+nothing measured to report for a level that was never driven. `build_report()` is the
+entry point: no I/O, no containers, no dependency on `ramp_controller`/
+`saturation_probe`.
+
+**Stability**: `build_report()` sorts axes by name and each axis's points by level, so
+the same set of runs produces the same `CurveReport` regardless of the order runs were
+collected or handed in — the issue's first acceptance criterion, verified both by
+calling it twice on identical input and by calling it on the same runs in two different
+orders and diffing the JSON. `to_json()` additionally serialises with `sort_keys=True`
+so key order is never a source of a spurious diff either.
+
+**Binding constraint**: `_binding_constraint()` picks the resource (CPU, memory, or
+disk) whose usage peaked highest across a run's *measured* points only — never guessed
+from an extrapolated point, and never reported at all when the axis never saturated
+(`BOUND_NOT_FOUND`) or its knee has no accompanying resource sample (`KNEE_FOUND` but no
+measured `ResourceSample`, e.g. the sampler wasn't wired up for that run). Ties break
+CPU-then-memory-then-disk, the same order the PRD lists the three resources in.
+
+**Honesty**: every `LevelResult` — measured or extrapolated — is labelled as such in
+both the structured `AxisReport.points` and `render_summary()`'s per-point line, and an
+extrapolated point is rendered as "not measured" rather than with fabricated
+cpu/mem/disk figures. Composition (real stacks vs. synthetic senders) is likewise
+reported per point, not just per axis, since a ramp's real/synthetic mix can itself
+change level to level (e.g. the shipper-fan-in axis's "level" often *is* a growing
+synthetic-sender count against a fixed handful of real stacks).
+
+**Test coverage** (`tools/e2e/test/test_curve_reporter.py`, 19 cases, synthetic run data
+only, no containers/network): the issue's four acceptance criteria — identical input
+produces an identical report and identical JSON across two calls and across two input
+orderings; points within an axis always come out ascending by level regardless of input
+order; the binding constraint correctly names CPU, memory, or disk depending on which
+peaked highest across a run's measured points, with an explicit tie-break test and two
+"no constraint to report" cases (bound not found; knee found but nothing measured);
+measured vs. extrapolated points are distinguishable in both the structured report
+(extrapolated points carry no `ResourceSample`) and the rendered summary text (exact
+`[measured]`/`[extrapolated]` substring assertions, including the "not measured" text
+for a fabrication-free extrapolated line) — plus composition-per-point assertions,
+structural validation (`AxisRun` rejects an empty `points` sequence or an unnamed axis,
+`RunComposition`/`ResourceSample` reject negative values), and a multi-axis case
+proving each axis's binding constraint is computed independently of the others.
+
+`tools/e2e/README.md` gained the curve reporter's own paragraph after the ramp
+controller's (in the "Synthetic load driver (#378)" section, which now covers all four
+deep modules) and a matching entry in Layout; the topology composer remains the one
+not-yet-implemented piece of #323.
+
 ### #381 - Limits harness: two-tier topology composer (aggregating Shipper stack)
 
 - Added `tools/e2e/scripts/run_limits_two_tier.sh`, a new sibling E2E scenario (podman,
