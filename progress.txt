@@ -9038,3 +9038,69 @@ the new tests, not that they were run and passed.
   close the "colcon build succeeds" and "gtest suite passes" acceptance criteria formally. `prek
   run --all-files --skip build-doc` passed for every changed file (JSON/YAML/XML syntax,
   clang-format, copyright headers, ROS package metadata) as a substitute check.
+
+### #394 - Add the slam_toolbox quality Measurement
+
+- Added `dc_measurements/SlamToolboxQuality` (`slam_toolbox_quality.{hpp,cpp}`), combining
+  two of slam_toolbox's native ROS 2 topics into one plugin: `/pose`
+  (`geometry_msgs/PoseWithCovarianceStamped`), polled on the ordinary interval for a
+  `sample` Record carrying `x`/`y`/`yaw` and the pose covariance diagonal
+  (`covariance_x`/`covariance_y`/`covariance_yaw`, indices 0/7/35 of the 6x6 matrix); and
+  `/slam_toolbox/loop_closure_event` (`slam_toolbox/LoopClosureEvent`) for a single-shot
+  `loop_closure` Record per occurrence. Followed `battery.cpp`'s pending-events convention
+  exactly: the loop closure callback queues a timestamp, `collect()` drains one queued event
+  per poll ahead of the periodic sample, so it travels the same publish path (Conditions,
+  incident buffering, Group) as every other Record.
+- `LoopClosureEvent` carries only its own stamp (`builtin_interfaces/Time stamp` — verified
+  against the real message definition on the `ros2` branch of
+  github.com/SteveMacenski/slam_toolbox, not guessed), so the Record body has nothing beyond
+  `event`; the plugin uses its own clock at callback time rather than the message's stamp,
+  since the two are close enough in practice and the Record only needs to say *that* a
+  closure happened, matching the acceptance criterion's "timestamp only" framing.
+- **Real dependency, not a workaround**: `slam_toolbox` (the full package — it ships no
+  lighter `_msgs`-only split the way nav2 does) is a plain `<depend>`/`find_package` in
+  `dc_measurements`, linked only to the new plugin's own target the way `ZXing`/ffmpeg
+  already are for camera/ip_camera. Considered a `rclcpp::GenericSubscription` to dodge the
+  heavy transitive deps (ceres, suitesparse, Qt5, rviz) instead, but that only defers the
+  same dependency to runtime dlopen of slam_toolbox's own typesupport library — this
+  Measurement is only meaningful on a robot already running slam_toolbox for real SLAM, so
+  the dependency is already present wherever it would run, and the generic-subscription
+  route would only have made *this repo's* tests harder to write for no real decoupling.
+- Test (`test_measurement_slam_toolbox_quality.cpp`) follows the `battery` test's structure:
+  a `MeasurementServer` with two publishers (`/test/pose`, `/test/loop_closure_event`),
+  covering the periodic sample (pose + covariance), the "nothing published yet" gap, and the
+  single-shot loop-closure Record (published once, not republished, since it must produce
+  exactly one Record) — every case validated against the installed JSON Schema.
+- Registered everywhere a Measurement plugin needs it: `CMakeLists.txt` (library target,
+  `dependencies` list, test list), `measurement_plugin.xml`, `package.xml`.
+- **KPI value wired through, not left for later** (this issue's acceptance criteria asked
+  for it explicitly, unlike battery's own event Records, which have no KPI view yet):
+  added `dc_kpi_loop_closure_events`/`dc_kpi_loop_closure_rate(from, to)`/
+  `dc_kpi_loop_closures_1h` to `tools/infrastructure/sql/kpi_views.sql`, following the
+  `intervention`/`fault` views' conventions. `seconds_since_last` deliberately looks past
+  `window_start` (unlike every other rate function here) — clipped to the window it would
+  read a robot with no loop closure yet in a short window as "just corrected" instead of
+  "never corrected". Added a fixture-test section to
+  `tools/infrastructure/test/test_kpi_views.py` (`loop_closure()`/`loop_closure_rate()`
+  helpers + 4 cases), and `event`/`x`/`y`/`yaw`/`covariance_x`/`covariance_y`/`covariance_yaw`
+  columns to `tools/infrastructure/docker/config/postgresql/init.sql` (reusing `event` from
+  `battery.cpp` and `x`/`y`/`yaw` names already implied-but-unused by `position.cpp`, told
+  apart by `name = 'slam_toolbox_quality'` the same way every other Measurement sharing a
+  column name is).
+- Grafana: added "Loop closures per hour" (`dc_kpi_loop_closures_1h`) and "Time since last
+  loop closure" (`dc_kpi_loop_closure_rate`) panels to the KPI dashboard
+  (`dashboards/kpi.json`), and a "Localization covariance trend" panel querying `dc` directly
+  (`dashboards/robot.json`), matching that dashboard's existing raw-telemetry panels
+  (speed/cmd_vel) rather than going through a view, since it's a plain trend with no
+  aggregation.
+- Doc page `doc/src/dc/measurements/slam_toolbox_quality.md` added and linked from
+  `SUMMARY.md`; `doc/src/dc/kpi_views.md` gained a "Loop closure rate" section, a row in the
+  "What it defines" table, the grants list, and the "What the data has to look like" table,
+  matching every other KPI already documented there.
+- **Not done**: no live demo runs slam_toolbox in this repo yet, so the new dashboard panels
+  are blank until one does (labeled as such in their panel descriptions, matching how the
+  `intervention`/`fault` panels already read before those Measurements existed) — wiring an
+  actual slam_toolbox-based demo is out of scope for this ticket, which asked for the
+  Measurement plus KPI/panel wiring, not a new demo. `colcon build`/`colcon test` could not
+  be run in this sandbox (no ROS install, same constraint noted since #242); `prek run
+  --all-files --skip build-doc` passed clean on every changed file instead.
