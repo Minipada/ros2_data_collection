@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FastddsStats",
+  "description":
+      "Periodic sample of eProsima Fast DDS's own Statistics Module: discovered entity counts, latency, throughput, RTPS packet counts, and physical-layer (host/user/process) data for the polling interval since the previous sample. Fast-DDS-specific: only emitted when the deployment runs Fast DDS as its RMW",
+  "properties": {
+    "event": {
+      "description": "What this Record is: always a periodic reading for this Measurement",
+      "type": "string",
+      "enum": [
+        "sample"
+      ]
+    },
+    "domain_id": {
+      "description": "DDS domain this Measurement monitors",
+      "type": "integer",
+      "minimum": 0
+    },
+    "participant_count": {
+      "description": "DomainParticipants discovered in the domain at collection time",
+      "type": "integer",
+      "minimum": 0
+    },
+    "datawriter_count": {
+      "description": "DataWriters discovered in the domain at collection time",
+      "type": "integer",
+      "minimum": 0
+    },
+    "datareader_count": {
+      "description": "DataReaders discovered in the domain at collection time",
+      "type": "integer",
+      "minimum": 0
+    },
+    "latency_ns_mean": {
+      "description":
+          "Mean write-to-notification latency (nanoseconds) across every matched DataWriter/DataReader pair, over the window since the previous sample. Absent when no pair reported data in the window",
+      "type": "number",
+      "minimum": 0
+    },
+    "publication_throughput_bytes_per_sec_mean": {
+      "description":
+          "Mean data rate (bytes/second) sent across every DataWriter, over the window since the previous sample. Absent when no DataWriter reported data in the window",
+      "type": "number",
+      "minimum": 0
+    },
+    "subscription_throughput_bytes_per_sec_mean": {
+      "description":
+          "Mean data rate (bytes/second) received across every DataReader, over the window since the previous sample. Absent when no DataReader reported data in the window",
+      "type": "number",
+      "minimum": 0
+    },
+    "rtps_packets_sent": {
+      "description": "RTPS packets sent by every participant, summed over the window since the previous sample",
+      "type": "integer",
+      "minimum": 0
+    },
+    "rtps_packets_lost": {
+      "description": "RTPS packets lost by every participant, summed over the window since the previous sample",
+      "type": "integer",
+      "minimum": 0
+    },
+    "participants": {
+      "description": "Every DomainParticipant discovered in the domain at collection time",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Participant name, as Fast DDS reports it",
+            "type": "string"
+          },
+          "guid": {
+            "description": "Participant GUID",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "hosts": {
+      "description": "Names of the hosts running the participants discovered in the domain (physical-layer data)",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "users": {
+      "description": "Names of the OS users running the participants discovered in the domain (physical-layer data)",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "processes": {
+      "description": "Names of the processes running the participants discovered in the domain (physical-layer data)",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "event",
+    "domain_id",
+    "participant_count",
+    "datawriter_count",
+    "datareader_count"
+  ],
+  "type": "object"
+}

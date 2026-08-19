@@ -68,6 +68,21 @@ find_package(yaml-cpp REQUIRED)
 pkg_search_module(AVFORMAT REQUIRED libavformat)
 pkg_search_module(AVUTIL REQUIRED libavutil)
 
+# fastdds_stats (#392): eProsima's Fast-DDS-statistics-backend has no rosdep/apt key -- it isn't
+# released as a binary package for any distro (checked against rosdistro's rosdep/base.yaml and
+# jazzy/distribution.yaml) -- and reading Fast DDS's own Statistics Module only means anything
+# when the deployment actually runs Fast DDS as its RMW. So this plugin is optional: found here,
+# built here; not found, skipped with a clear message rather than failing the whole workspace.
+# Install it from source per https://fast-dds-statistics-backend.readthedocs.io (also requires
+# Fast DDS itself built with -DFASTDDS_STATISTICS=ON) if this Measurement is wanted; see
+# doc/src/dc/measurements/fastdds_stats.md.
+find_package(fastdds_statistics_backend QUIET CONFIG)
+if(fastdds_statistics_backend_FOUND)
+  message(STATUS "fastdds_statistics_backend found: building the fastdds_stats Measurement plugin")
+else()
+  message(STATUS "fastdds_statistics_backend not found: skipping the fastdds_stats Measurement plugin")
+endif()
+
 dc_package()
 
 set(library_name measurement_server_core)
@@ -156,6 +171,11 @@ list(APPEND dc_measurement_plugin_libs dc_distance_traveled_measurement)
 
 add_library(dc_fault_measurement SHARED plugins/measurements/fault.cpp)
 list(APPEND dc_measurement_plugin_libs dc_fault_measurement)
+
+if(fastdds_statistics_backend_FOUND)
+  add_library(dc_fastdds_stats_measurement SHARED plugins/measurements/fastdds_stats.cpp)
+  list(APPEND dc_measurement_plugin_libs dc_fastdds_stats_measurement)
+endif()
 
 add_library(dc_driving_type_measurement SHARED plugins/measurements/driving_type.cpp)
 list(APPEND dc_measurement_plugin_libs dc_driving_type_measurement)
@@ -253,6 +273,9 @@ target_link_libraries(dc_camera_measurement ZXing::ZXing opencv_calib3d)
 target_include_directories(dc_ip_camera_measurement PRIVATE ${AVFORMAT_INCLUDE_DIRS} ${AVUTIL_INCLUDE_DIRS})
 target_link_directories(dc_ip_camera_measurement PRIVATE ${AVFORMAT_LIBRARY_DIRS} ${AVUTIL_LIBRARY_DIRS})
 target_link_libraries(dc_ip_camera_measurement ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES})
+if(fastdds_statistics_backend_FOUND)
+  target_link_libraries(dc_fastdds_stats_measurement fastdds_statistics_backend)
+endif()
 foreach(condition_plugin ${dc_condition_plugin_libs})
   ament_target_dependencies(${condition_plugin} ${dependencies})
   target_compile_definitions(${condition_plugin} PRIVATE BT_PLUGIN_EXPORT)
@@ -378,6 +401,12 @@ set(tests
   mission_follow_waypoints_tracker_test
   test_mission_nav2_through_poses_core
 )
+
+# The plugin lib doesn't exist without the library, and this test would only ever report a
+# timeout failure -- registered alongside dc_fastdds_stats_measurement itself, not unconditionally.
+if(fastdds_statistics_backend_FOUND)
+  list(APPEND tests test_measurement_fastdds_stats)
+endif()
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
