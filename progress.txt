@@ -7890,3 +7890,76 @@ No CLI and no `__main__`, unlike `network_profiles.py`/`measure_rtt.py`: the iss
 this to the verdict function alone, with the ramp controller (#379) and the other axis
 issues (#378, #380-386) that will call it left as separate work. `tools/e2e/README.md`'s
 Layout section gained one entry.
+
+## #378 - Limits harness: synthetic load driver (shipper ingest protocol sender)
+
+`tools/e2e/scripts/load_driver.py`: a standalone Python sender for #323's limits harness
+that speaks the shipper ingest protocol directly — the same msgpack-over-TCP Forward Mode
+frames, chunk-id/acknowledgement option included, that `dc_bridge`'s Forwarder emits (see
+`dc_bridge/src/forwarder.cpp`/`forwarder.hpp`) — closely enough that a Shipper's `fluent`
+ingest listener cannot distinguish it from a real Bridge at the socket.
+
+**Interface** (`LoadDriverConfig` → `run()`/`run_sync()` → `LoadDriverResult`): given a
+host/port, a connection count, a **per-connection** Record rate (not divided across
+connections — user story 2 of #323's PRD frames the rate as "my fleet's actual emission
+rate", i.e. one robot's own rate, so connection count and per-connection rate stay
+independent axes for the eventual fan-in vs. single-robot-ceiling scenarios), and a
+duration, it opens that many concurrent `asyncio` TCP connections, emits frames at that
+rate on each, and returns a `LedgerEntry` (connection_id, seq, tag, chunk_id, frame
+bytes, sent_at, payload) for every frame sent plus an `AckObservation`
+(chunk_id → latency_s, or `None` if never acked before the run's drain grace period)
+for every one of them — one observation per ledger entry, always, so "never acked" is
+never silently indistinguishable from "not sent". `frame()`/`generate_chunk_id()` are
+exposed standalone for the wire-format tests. A CLI (`--connections`/`--rate`/
+`--duration`/`--tag`/`--ledger-out`) prints a JSON summary and exits non-zero if any
+frame went unacked.
+
+**Wire format**: `[tag, [[EventTime, record]], {"chunk": chunk_id}]`, matching
+`Forwarder::frame()` field-for-field — including the EventTime extension (msgpack ext
+type `0x00`, 4 bytes big-endian seconds + 4 of big-endian nanoseconds) `forwarder.cpp`
+added for #308's sub-second precision. `test_load_driver.py`'s wire-format tests pin the
+exact same `fixext8`/type/byte-order bytes `forwarder_test.cpp`'s
+`expected_event_time_bytes()` pins for the C++ side, so a mismatch there is caught
+without needing a container.
+
+**Standalone test coverage** (`tools/e2e/test/test_load_driver.py`, 12 cases, no
+container/ROS): wire-format correctness (mirrors `forwarder_test.cpp`'s
+`FrameIsWellFormedWithCorrectTag`/`FrameCarriesSubSecondPrecisionAsEventTime`/etc.
+exactly), chunk-id uniqueness, and behavioural tests against an in-process fake
+fluent-protocol listener (real `asyncio` sockets on loopback, a real `msgpack.Unpacker`
+so a frame split across reads still parses — same spirit as `forwarder_test.cpp`'s
+`MockServer`): every sent frame gets exactly one ledger entry and one observation,
+frames spread across every connection, never-acked frames report `latency_s=None`
+rather than being dropped, a slow ack within the drain window still resolves, and a
+custom `payload_fn` reaches the wire. Found and fixed a real flake in the *test harness*
+itself along the way: Python 3.12 changed `asyncio.Server.wait_closed()` to also wait
+for already-completed connection-handler tasks to be reaped, and that wait was observed
+to hang indefinitely well past the handler actually returning (reproduced independently
+of this test with a 10-line repro) — the fake server's `stop()` now just calls
+`close()` without awaiting `wait_closed()`.
+
+**Integration test** (`tools/e2e/scripts/run_load_driver_shipper_test.sh`, the
+acceptance criterion a mock can't satisfy): pulls `docker.io/timberio/vector:<ver>-debian`
+at the exact version `vector_vendor/CMakeLists.txt` pins (read out of that file with
+`grep`, not duplicated as a second source of truth), runs it standalone with a bare
+`fluent` source + global `acknowledgements.enabled = true` (matching exactly how
+`render.cpp` turns acks on for the real Bridge) and a `file` sink, points the driver at
+it over `--network host`, and asserts (1) the driver's own summary reports zero unacked
+frames, and (2) the driver's ledger and Vector's own decoded NDJSON output name the
+*exact same set* of `(connection_id, seq)` pairs — proven both ways (no ledger entry
+missing from Vector's output, no record in Vector's output absent from the ledger), not
+just a matching count. Verified manually end-to-end in this sandbox (real `podman pull`
+of the pinned image succeeded; two runs, 160 and 450 frames, both 100% acked with the
+ledger matching Vector's output 1:1). Not wired into `ci.yaml`, same as
+`run_retention.sh`/`run_incident.sh`/`run_degraded.sh` — a sibling standalone scenario.
+
+**New dependency**: `msgpack>=1.0` added to `pyproject.toml` (`uv lock` re-run,
+`uv.lock` updated) — the same protocol family `dc_bridge`'s Forwarder uses via
+msgpack-cxx on the C++ side, needed here since the driver runs standalone via `uv run`
+outside any ROS/colcon build.
+
+`tools/e2e/README.md` gained a "Synthetic load driver (#378)" section (after the
+degraded-network scenario, before Layout) documenting both scripts and noting explicitly
+that the ramp controller, curve reporter, and topology composer #323 describes alongside
+the load driver and the already-landed saturation probe (#377) are separate,
+not-yet-implemented pieces of that epic.
