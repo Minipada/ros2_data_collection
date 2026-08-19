@@ -15,6 +15,7 @@ set(dependencies
   diagnostic_msgs
   geometry_msgs
   lifecycle_msgs
+  moveit_msgs
   nav2_msgs
   nav2_util
   nlohmann_json
@@ -164,6 +165,9 @@ list(APPEND dc_measurement_plugin_libs dc_intervention_measurement)
 
 add_library(dc_ip_camera_measurement SHARED plugins/measurements/ip_camera.cpp)
 list(APPEND dc_measurement_plugin_libs dc_ip_camera_measurement)
+
+add_library(dc_manipulation_measurement SHARED plugins/measurements/manipulation.cpp)
+list(APPEND dc_measurement_plugin_libs dc_manipulation_measurement)
 
 add_library(dc_map_measurement SHARED plugins/measurements/map.cpp)
 list(APPEND dc_measurement_plugin_libs dc_map_measurement)
@@ -349,6 +353,7 @@ set(tests
   test_measurement_list_double_equal
   test_measurement_list_integer_equal
   test_measurement_list_string_equal
+  test_measurement_manipulation
   test_measurement_map
   test_measurement_memory
   test_measurement_mission_nav2_follow_waypoints

@@ -31,6 +31,7 @@
   - [Fault](./dc/measurements/fault.md)
   - [Intervention](./dc/measurements/intervention.md)
   - [IP Camera](./dc/measurements/ip_camera.md)
+  - [Manipulation](./dc/measurements/manipulation.md)
   - [Map](./dc/measurements/map.md)
   - [Memory](./dc/measurements/memory.md)
   - [Mission (nav2 FollowWaypoints)](./dc/measurements/mission_nav2_follow_waypoints.md)

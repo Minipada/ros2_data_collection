@@ -76,6 +76,14 @@ SPDX-License-Identifier: MPL-2.0
         </class>
     </library>
 
+    <library path="dc_manipulation_measurement">
+        <class name="dc_measurements/Manipulation" type="dc_measurements::Manipulation" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_manipulation
+            </description>
+        </class>
+    </library>
+
     <library path="dc_intervention_measurement">
         <class name="dc_measurements/Intervention" type="dc_measurements::Intervention" base_class_type="dc_core::Measurement">
             <description>

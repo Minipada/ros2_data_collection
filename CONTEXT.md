@@ -38,6 +38,15 @@ field of the Record envelope beside Tags, and its own column in a PostgreSQL Des
 "everything from this one event" is a query, not a timestamp range reconstructed by hand.
 _Avoid_: event (a Record is not an event), alert, incident report
 
+**Manipulation**:
+One MoveIt `MoveGroup` goal's lifecycle -- plan and execute a motion for one named planning
+group. Distinct from a **Mission**: a manipulation goal moves a robot arm, not a fleet, and the
+two are reported by separate Measurements with their own outcome vocabularies -- Manipulation
+carries MoveIt's own numeric `MoveItErrorCodes` verbatim, not Mission's nav2-derived
+succeeded/failed/cancelled/aborted split.
+_Avoid_: Mission (a fleet-level navigation task, not a manipulation goal); task (ambiguous with
+both)
+
 **Group**:
 A merge of Records from several Measurements into one Record, based on time proximity.
 

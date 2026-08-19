@@ -27,6 +27,7 @@ SPDX-License-Identifier: MPL-2.0
   <depend>ffmpeg</depend>
   <depend>geometry_msgs</depend>
   <depend>lifecycle_msgs</depend>
+  <depend>moveit_msgs</depend>
   <depend>nav2_msgs</depend>
   <depend>nav2_util</depend>
   <depend>nlohmann-json-dev</depend>
