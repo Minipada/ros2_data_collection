@@ -19,6 +19,7 @@ import json
 import os
 
 import rclpy
+from rcl_interfaces.msg import SetParametersResult
 from rclpy.duration import Duration
 from rclpy.node import Node
 from sensor_msgs.msg import Image
@@ -89,6 +90,26 @@ class WorkloadGenerator(Node):
         self._camera_tick = 0
         self._rate_hz = rate_hz
         self._camera_period_s = camera_period_s
+        self._synth_timer = None
+        # #383's single-robot-ceiling axis steps this node's rate live (`ros2 param set`)
+        # between ramp levels rather than restarting the container per level — a bare
+        # declared parameter has no effect on an already-created timer's period, so a
+        # callback that recreates the timer is required for the ramp to actually reach
+        # the publish rate.
+        self.add_on_set_parameters_callback(self._on_set_parameters)
+
+    def _on_set_parameters(self, params: list) -> SetParametersResult:
+        for param in params:
+            if param.name == "rate_hz" and param.value <= 0:
+                return SetParametersResult(successful=False, reason="rate_hz must be positive")
+        for param in params:
+            if param.name == "rate_hz":
+                self._rate_hz = param.value
+                if self._synth_timer is not None:
+                    self._synth_timer.cancel()
+                    self._synth_timer = self.create_timer(1.0 / self._rate_hz, self._tick_synth)
+                    self.get_logger().info(f"rate_hz changed live to {self._rate_hz}")
+        return SetParametersResult(successful=True)
 
     def _resume_counters(self) -> dict:
         """Continue each topic's counter from the ledger, so values never repeat.
@@ -147,7 +168,7 @@ class WorkloadGenerator(Node):
 
     def start(self) -> None:
         """Begin publishing. Call only after wait_for_pipeline() so value 0 is delivered."""
-        self.create_timer(1.0 / self._rate_hz, self._tick_synth)
+        self._synth_timer = self.create_timer(1.0 / self._rate_hz, self._tick_synth)
         self.create_timer(self._camera_period_s, self._tick_camera)
         self.get_logger().info(
             f"e2e workload generator: {len(self._names)} synth topics @ {self._rate_hz} Hz, "
