@@ -16,6 +16,7 @@ SPDX-License-Identifier: MPL-2.0
   <buildtool_depend>ament_cmake_ros</buildtool_depend>
 
   <depend>action_msgs</depend>
+  <depend>controller_manager_msgs</depend>
   <depend>cv_bridge</depend>
   <depend>dc_common</depend>
   <depend>dc_core</depend>

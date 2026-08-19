@@ -164,6 +164,14 @@ SPDX-License-Identifier: MPL-2.0
         </class>
     </library>
 
+    <library path="dc_ros2_control_status_measurement">
+        <class name="dc_measurements/Ros2ControlStatus" type="dc_measurements::Ros2ControlStatus" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_ros2_control_status
+            </description>
+        </class>
+    </library>
+
     <library path="dc_serial_interface_measurement">
         <class name="dc_measurements/SerialInterface" type="dc_measurements::SerialInterface" base_class_type="dc_core::Measurement">
             <description>
