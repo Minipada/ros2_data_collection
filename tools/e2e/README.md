@@ -219,6 +219,44 @@ more cheaply at `dc_bridge/test/forwarder_test.cpp`'s existing mock-ingest-peer 
 `AckPolicy` describing when/whether a chunk gets acknowledged) — no container needed for
 that; see that file for the corresponding unit tests.
 
+## Synthetic load driver (#378)
+
+The first piece of #323's limits harness: `scripts/load_driver.py` speaks the shipper
+ingest protocol directly — the same msgpack-over-TCP Forward Mode frames, chunk id and
+all, that `dc_bridge`'s Forwarder emits (see `dc_bridge/src/forwarder.cpp`) — closely
+enough that a Shipper's `fluent` ingest listener cannot tell it from a real Bridge at the
+socket. Given a target, a connection count, a per-connection Record rate, and a duration,
+it opens that many concurrent TCP connections, sends frames at that rate on each, and
+returns a sent-ledger plus per-frame acknowledgement-latency observations:
+
+```sh
+uv run tools/e2e/scripts/load_driver.py <host> <port> --connections 200 --rate 5 --duration 30
+```
+
+It has no ROS dependency and no DC stack dependency — it is what lets the eventual limits
+harness represent hundreds of robots on one developer machine alongside a handful of real
+DC stacks (see #323's PRD). `tools/e2e/test/test_load_driver.py` covers its wire format
+(pinned against `forwarder_test.cpp`'s own EventTime bytes) and its rate/ack/ledger
+behaviour against an in-process fake fluent listener, standalone, no container needed.
+Byte-compatibility with a *real* Shipper build is a separate, container-based claim a fake
+can't establish:
+
+```sh
+./tools/e2e/scripts/run_load_driver_shipper_test.sh
+```
+
+Pulls the exact Vector version `vector_vendor/CMakeLists.txt` pins, runs it as a bare
+`fluent` source (global acknowledgements on, exactly as `render.cpp` configures it for
+the real Bridge) plus a `file` sink, points the driver at it, and asserts every frame was
+accepted and acknowledged and that the driver's ledger names the exact same records
+Vector actually decoded — not just a matching count. Not wired into `ci.yaml`, same as
+the retention/incident/degraded scenarios above.
+
+The saturation probe (`scripts/saturation_probe.py`, #377) is the other piece landed so
+far. The ramp controller, curve reporter, and topology composer #323 describes alongside
+them are separate, not-yet-implemented pieces of that epic — the load driver above is
+complete and testable on its own without any of them.
+
 ## Layout
 
 - `Containerfile` — builds the full DC workspace (every `dc_*` package, all C++ since
