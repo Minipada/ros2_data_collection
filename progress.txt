@@ -8827,6 +8827,7 @@ reading the code (the repo's established verification standard):
   same instance after a `disconnect()`. Verified stable across 5 shuffled repeat runs.
 - Not wired into any Measurement plugin: interpreting a JSON schema over this transport (starting
   with Open-RMF's `TaskState`) is #391's job, per this ticket's explicit scope boundary.
+
 ## #395 - ros2_control status Measurement: start/end Records from the controller manager's activity topic
 
 `ros2_control_status` (class `Ros2ControlStatus`) subscribes to the controller manager's own
@@ -8891,3 +8892,75 @@ real upstream `controller_manager_msgs`/`lifecycle_msgs` message definitions fet
 GitHub-hosted runner, not this disk-constrained sandbox) is the actual `colcon build`/`colcon test`
 gate for this PR -- flagging here so a reviewer knows local verification stopped short of running
 the new tests, not that they were run and passed.
+
+## #393 - Add the Manipulation Measurement: MoveIt adapter
+
+- Added a new `dc_measurements` plugin, `manipulation` (class `Manipulation`), watching
+  MoveIt's `MoveGroup` action -- the first `ecosystem-measurements` (#396) plugin
+  actually implemented (#387's nav2 Mission adapter, its own closest precedent, is still
+  blocked on #305 and not built yet), and the first `dc_measurements` plugin of any kind
+  to talk to a ROS 2 action.
+- **Key architecture decision, worked out from first principles since there was no
+  precedent in this repo to copy**: the Measurement is a passive *observer* of the
+  action, not the client that sends the goal. It subscribes directly to the action's
+  standard `<action_name>/_action/status` topic (`action_msgs/GoalStatusArray`, published
+  for every goal regardless of which client sent it) to see a goal get accepted and reach
+  a terminal state, then calls the action's `<action_name>/_action/get_result` service --
+  a plain service any client may call given the goal's UUID, per the ROS 2 actions design,
+  not only the client that originally sent the goal -- to read `MoveGroup::Result`'s
+  `error_code`/`planning_time`. Verified `MoveGroup.action`'s and `MoveItErrorCodes.msg`'s
+  actual field layout against `moveit/moveit_msgs`'s `master` branch before writing any
+  code, rather than relying on memory. `group_name` is therefore this Measurement
+  instance's own configuration (`group_name` param, required) rather than something read
+  off the goal: `MoveGroup`'s `Goal` -- the only place a group name ever appears -- is
+  sent privately to the action server and never broadcast on any topic, so a structurally
+  passive observer cannot see it. `action_name` defaults to MoveIt's own conventional
+  `move_action`.
+- Goal tracking is a `std::map<goal_id_hex, {accepted_stamp, state}>` with two states
+  (`kOpen`, `kResultPending`); a resolved goal is erased rather than marked done, which
+  doubles as protection against the status topic's full-known-goal-list republishing a
+  goal this instance already reported the end of (an unknown key seen in a terminal state
+  is simply skipped, which also correctly means a goal whose accept was missed --
+  started watching mid-goal -- never gets a synthesized start it can't back up).
+- `manipulation_start`/`manipulation_end` Records carry `goal_id` (canonical hex UUID,
+  correlating the pair), `group_name`, `sequence` (monotonic, gap detection like
+  `fault`/`intervention`), and on the end Record: `outcome`, `error_code`,
+  `planning_time`, `duration_sec`. `outcome` is derived from `error_code` alone, per
+  #393's own acceptance criteria -- **not** Mission's nav2 cancelled/failed/aborted
+  three-way split: `SUCCESS` -> `succeeded`, `PREEMPTED` -> `cancelled` (the closest
+  thing MoveIt has), every other (necessarily negative) `MoveItErrorCodes` -> `failed`.
+- New JSON Schema `dc_measurements/plugins/measurements/json/manipulation.json`,
+  validated in tests exactly like every other Measurement's schema.
+- Test coverage (`test/test_measurement_manipulation.cpp`): a minimal
+  `rclcpp_action::Server<MoveGroup>` stub standing in for `move_group`, accepting every
+  goal and letting the test drive completion explicitly (`succeed`/`abort`/`canceled`
+  with a chosen `error_code`/`planning_time`), driven through a real
+  `rclcpp_action::Client<MoveGroup>` the test uses to send goals -- the Measurement under
+  test never sends anything, only observes, proving the passive-observer design actually
+  works end to end. Cases: goal accepted -> start Record; succeeded goal -> `succeeded`
+  end Record with correct `error_code`/`planning_time`/`duration_sec`; `PREEMPTED` ->
+  `cancelled`; another negative code -> `failed`; no goal sent -> no Records; collection
+  stopped with a goal still open -> only the start Record, no fabricated end. Every
+  emitted Record validated against the schema inline.
+- `CONTEXT.md` gained a `Manipulation` term in the Language section, explicitly
+  distinguishing it from `Mission` (a manipulation goal moves an arm, not a fleet) even
+  though `Mission` itself isn't built yet -- `Avoid` notes both `Mission` and `task`.
+- New doc page `doc/src/dc/measurements/manipulation.md` (added to `SUMMARY.md` between
+  Map and the rest), following the existing per-Measurement page template
+  (`intervention.md`/`battery.md`): description, the passive-observer rationale, the
+  outcome mapping, parameters table, inlined schema, example config and example Records.
+- **Not build-verified**: this sandboxed environment has no local ROS 2/colcon
+  installation and no cached `dc-workspace` container image to build against without a
+  slow cold-cache rebuild (moveit_msgs is a brand-new dependency, forcing an apt-layer
+  cache miss), so `colcon build`/`colcon test` were not run here. Every ROS 2/rclcpp_action
+  API call was checked line-by-line against known-correct signatures and against an
+  existing same-codebase precedent (`camera.cpp`'s `node->create_client<...>(name,
+  rclcpp::ServicesQoS(), client_cb_group_)` call matches this plugin's `get_result_client_`
+  construction exactly); `prek run --all-files --skip build-doc` (clang-format,
+  copyright/license, JSON/XML syntax, ROS 2 package metadata) passes clean on every new
+  and touched file. CI's `build-workspace` job is the first real compiler/test run this
+  code gets -- worth watching closely on the PR.
+- New `dc_measurements` dependencies: `action_msgs`, `moveit_msgs`, `rclcpp_action`,
+  `unique_identifier_msgs` (package.xml `<depend>` + CMakeLists.txt `dependencies`).
+  `moveit_msgs` is a standard bloom-released ROS 2 package with an upstream rosdistro
+  key, so no `rosdep/dc.yaml` entry was needed.
