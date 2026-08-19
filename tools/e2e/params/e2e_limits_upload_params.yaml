@@ -1,0 +1,112 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# The limits harness's Uploader concurrency axis scenario (#384, part of #323's epic).
+# Trimmed to only what this axis needs — the camera Measurement's File pipeline — rather
+# than the full Measurement suite params/e2e_params.yaml/e2e_limits_params.yaml carry:
+# this axis's claim is concurrency and custody of File uploads against one
+# object-storage Destination, not Record delivery, so there is nothing for the other
+# Measurements to add here (dc_bridge still renders a valid config with just
+# `pgsql_files`/`rustfs` declared — a Destination's own `receives`/`inputs` are what
+# create route branches, not the number of Measurement plugins enabled).
+#
+# Differs from e2e_limits_params.yaml (#381) in exactly the two ways this axis needs:
+#
+# - `files.delete_when_sent: true` — #381's two-tier scenario left this false (it never
+#   asserted delete-after-verify); this axis's whole point is asserting delete only
+#   fires after verification, so there is nothing to assert without it.
+# - `camera.polling_interval` (2s, not 15s) paired with `DC_E2E_CAMERA_PERIOD_S=2`
+#   (tools/e2e/scripts/run_upload_concurrency_axis.py sets this per container) — a
+#   faster capture cadence so N concurrent Bridge/Uploader processes produce enough
+#   uploads inside a short steady-state window to show a queue-depth/backlog trend at
+#   all. The image itself stays the same deliberately synthetic 64x64 solid-color
+#   picture workload_generator.py already produces (~12KB) — per #384's acceptance
+#   criteria, file *size* stays reduced-scale; only capture *rate* changes here.
+#
+# `pgsql_files`/`rustfs` point at the shared Postgres/RustFS containers
+# run_limits_upload_concurrency.sh stands up (dc-e2e-upload-postgres/
+# dc-e2e-upload-rustfs) — the same "Uploader bypasses Vector, talks to the Destination
+# host directly" bypass #381 already discovered and pointed e2e_limits_params.yaml's
+# equivalent block at.
+
+measurement_server:
+  ros__parameters:
+    # $DC_E2E_STACK_ID (set per container by run_upload_concurrency_axis.py, via
+    # dc_util::expand_env's generic $VARNAME expansion — not a DC code change) is
+    # load-bearing here, not cosmetic: Camera::getSavePath() (dc_measurements/plugins/
+    # measurements/camera.cpp) builds a capture's filename from wall-clock time
+    # truncated to whole seconds, with no PID/hostname/counter of its own. Every
+    # container in this axis runs the identical params file and the identical
+    # camera_period_s cadence, so without a per-container path component, two
+    # containers capturing within the same wall-clock second produce the exact same
+    # `local_path` string — verified empirically: run_upload_concurrency_axis.py's
+    # delete-after-verify assertion (keyed on local_path) tripped a false violation at
+    # concurrency 4 before this was added, because dc_files rows from two different
+    # containers' independent upload/verify/delete lifecycles were indistinguishable by
+    # local_path alone.
+    save_local_base_path: "$HOME/.dc/e2e/data/$DC_E2E_STACK_ID/%Y/%M/%D/%H"
+    all_base_path: "e2e"
+    measurement_plugins: ["camera"]
+
+    camera:
+      plugin: "dc_measurements/Camera"
+      polling_interval: 2000
+      cam_name: "e2e_camera"
+      cam_topic: "/dc/e2e/camera/image_raw"
+      draw_det_barcodes: false
+      save_raw_img: true
+      save_rotated_img: false
+      save_detections_img: false
+      save_raw_base64: false
+      save_rotated_base64: false
+      save_inspected_base64: false
+      remote_keys: ["rustfs"]
+      remote_prefixes: ["camera"]
+      group_key: "camera"
+
+dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/e2e/buffer"
+    destinations: ["pgsql_files", "rustfs"]
+
+    pgsql_files:
+      type: postgres
+      receives: records
+      # dc-e2e-upload-postgres, not 127.0.0.1: the Uploader writes File metadata
+      # directly over libpq, with no Vector hop, straight to
+      # run_limits_upload_concurrency.sh's shared Postgres over its own bridge network.
+      host: "dc-e2e-upload-postgres"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc_files"
+      time_key: "date"
+
+    rustfs:
+      type: s3
+      receives: files
+      inputs: ["/dc/measurement/camera"]
+      bucket: "dc-e2e"
+      # Same bypass as pgsql_files above — the Uploader's own AWS SDK client, not Vector.
+      endpoint: "http://dc-e2e-upload-rustfs:9000"
+      region: "us-east-1"
+      access_key_id: "rustfsadmin"
+      secret_access_key: "rustfsadmin"
+      force_path_style: true
+
+    files:
+      # The load-bearing difference from e2e_limits_params.yaml (#381): this axis
+      # asserts delete only fires after verification, which needs deletes to happen.
+      delete_when_sent: true
+      metadata_destination: "pgsql_files"
+
+    # Same-container loopback — never leaves the container regardless of topology.
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
+
+lifecycle_manager_dc:
+  ros__parameters:
+    node_names: ["measurement_server"]
+    transitions: [configure, activate]
