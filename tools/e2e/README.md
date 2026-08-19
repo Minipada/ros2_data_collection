@@ -263,8 +263,28 @@ mode #323's PRD calls out as mattering most. The controller touches no I/O and k
 nothing about what a "level" means (a connection count, a rate, an upload
 concurrency, …); `driver` and `probe` are plain callables, so `test_ramp_controller.py`
 covers it entirely with in-process fakes, including the ramp-policy boundary cases
-(first step, last step, a single-step ramp). The curve reporter and topology composer
-#323 describes alongside them are separate, not-yet-implemented pieces of that epic.
+(first step, last step, a single-step ramp).
+
+The curve reporter (`scripts/curve_reporter.py`, #380) turns a set of per-axis runs —
+each an ascending sequence of levels tried, whether each level was actually driven and
+measured or is a projected `EXTRAPOLATED` point, its real-vs-synthetic composition, and
+a CPU/memory/disk `ResourceSample` where one was taken — into a stable, diffable
+`CurveReport` (`build_report()`) plus a human-readable summary (`render_summary()`). It
+is a pure function, decoupled from `ramp_controller`/`saturation_probe` the same way
+those two are decoupled from each other: no I/O, no containers, its own `RunOutcome`
+mirroring `RampOutcome`'s values. `build_report()` sorts axes by name and each axis's
+points by level so the same set of runs always yields the same report regardless of
+collection order — required for a diff between two runs to show only a real change. The
+binding constraint at saturation (CPU, memory, or disk) is the resource that peaked
+highest across a run's *measured* points only (CPU-then-memory-then-disk as the
+deterministic tie-break), and is reported as unavailable rather than guessed when the
+axis never saturated or its knee has no accompanying resource sample. An extrapolated
+point never carries a resource sample in either the structured report or the summary —
+labelling every point `measured`/`extrapolated` in both is how the reporter avoids
+presenting a projection as a measurement, per #323's PRD.
+`tools/e2e/test/test_curve_reporter.py` covers all of this against synthetic run data
+alone. The topology composer #323 describes alongside these four modules is the one
+not-yet-implemented piece of that epic.
 
 ## Layout
 
@@ -360,6 +380,11 @@ covers it entirely with in-process fakes, including the ramp-policy boundary cas
   #323): given a driver, a probe, and an ascending `RampPolicy`, drives load level by
   level until the probe trips and reports the knee, or `BOUND_NOT_FOUND` if it never
   does. No I/O, no container; unit-tested with fake drivers/probes alone.
+- `scripts/curve_reporter.py` — the limits harness's curve reporter (#380, part of
+  #323): a pure function turning a set of per-axis runs into a stable, diffable
+  structured report plus a human-readable summary naming the binding constraint (CPU,
+  memory, or disk) at saturation, with every point labelled measured or extrapolated.
+  No I/O, no container; unit-tested against synthetic run data alone.
 
 ## `.dockerignore`
 
