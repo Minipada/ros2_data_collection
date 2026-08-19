@@ -252,10 +252,19 @@ accepted and acknowledged and that the driver's ledger names the exact same reco
 Vector actually decoded — not just a matching count. Not wired into `ci.yaml`, same as
 the retention/incident/degraded scenarios above.
 
-The saturation probe (`scripts/saturation_probe.py`, #377) is the other piece landed so
-far. The ramp controller, curve reporter, and topology composer #323 describes alongside
-them are separate, not-yet-implemented pieces of that epic — the load driver above is
-complete and testable on its own without any of them.
+The saturation probe (`scripts/saturation_probe.py`, #377) and the ramp controller
+(`scripts/ramp_controller.py`, #379) are the other two pieces landed so far. Given a
+driver, a probe, and a `RampPolicy` of ascending load levels, `find_knee()` drives each
+level in turn and asks the probe whether it saturated, stopping at the first tripped
+level and reporting the knee: the highest level whose verdict stayed clear, plus the
+level that tripped it. A policy whose every level stays clear is reported as
+`BOUND_NOT_FOUND` rather than a fabricated ceiling at the top of the ramp — the failure
+mode #323's PRD calls out as mattering most. The controller touches no I/O and knows
+nothing about what a "level" means (a connection count, a rate, an upload
+concurrency, …); `driver` and `probe` are plain callables, so `test_ramp_controller.py`
+covers it entirely with in-process fakes, including the ramp-policy boundary cases
+(first step, last step, a single-step ramp). The curve reporter and topology composer
+#323 describes alongside them are separate, not-yet-implemented pieces of that epic.
 
 ## Layout
 
@@ -346,7 +355,11 @@ complete and testable on its own without any of them.
 - `scripts/saturation_probe.py` — the limits harness's saturation verdict (#377, part of
   #323): a pure function over a window of ack-latency/unacked-window-depth/disk-buffer
   observations, checked in the PRD's stated priority order and unit-tested alone, with
-  no container or ramp controller of its own yet.
+  no container of its own.
+- `scripts/ramp_controller.py` — the limits harness's ramp controller (#379, part of
+  #323): given a driver, a probe, and an ascending `RampPolicy`, drives load level by
+  level until the probe trips and reports the knee, or `BOUND_NOT_FOUND` if it never
+  does. No I/O, no container; unit-tested with fake drivers/probes alone.
 
 ## `.dockerignore`
 

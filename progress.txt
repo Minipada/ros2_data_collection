@@ -7963,3 +7963,45 @@ degraded-network scenario, before Layout) documenting both scripts and noting ex
 that the ramp controller, curve reporter, and topology composer #323 describes alongside
 the load driver and the already-landed saturation probe (#377) are separate,
 not-yet-implemented pieces of that epic.
+
+## #379 - Limits harness: ramp controller (drive load to the knee)
+
+`tools/e2e/scripts/ramp_controller.py`: `find_knee(driver, probe, policy)`, no I/O, no
+containers — the third of #323's four "deep" modules, after the saturation probe (#377)
+and the synthetic load driver (#378).
+
+**Interface**: `driver` and `probe` are plain callables (`Driver = Callable[[float],
+object]`, `Probe = Callable[[object], SaturationVerdict]`, the latter a `Protocol`
+needing only a `saturated: bool` property — matches `saturation_probe.Verdict` without
+importing that module at all). `RampPolicy(levels=...)` holds the ascending sequence of
+load levels to try; `__post_init__` rejects an empty one. `find_knee()` walks the
+levels in order, calling `probe(driver(level))` at each one, and stops driving the
+instant a verdict comes back saturated — it never continues loading the system past the
+level that tripped it. This is deliberately axis-agnostic per the PRD ("the ramp
+controller and the saturation probe are axis-agnostic"): the controller has no opinion
+on whether a "level" is a connection count, a per-robot rate, or an upload concurrency,
+which is what lets a fifth axis reuse it later at zero controller cost.
+
+**Result shape** (`RampResult`): `outcome` (`KNEE_FOUND`/`BOUND_NOT_FOUND`),
+`highest_clear_level` (the highest level tried whose verdict stayed clear, `None` only
+when the very first level tried already saturated), `tripped_level` and
+`tripped_verdict` (both `None` exactly when `outcome` is `BOUND_NOT_FOUND` — a ramp that
+never saturates gets no ceiling value at all, satisfying the issue's most important
+failure mode: "never a fabricated ceiling"), and `levels_tried`. `highest_clear_level`
+is still populated on `BOUND_NOT_FOUND` (the top of the ramp that stayed clear) but is
+informational only — a caller has to read `outcome` to know it isn't a knee.
+
+**Test coverage** (`tools/e2e/test/test_ramp_controller.py`, 10 cases, all with
+in-process fake drivers/probes, no `saturation_probe` import needed): the issue's four
+acceptance criteria verbatim (saturates at a known level → that level as `tripped_level`
+with the prior level as `highest_clear_level`; never saturates within bounds →
+`BOUND_NOT_FOUND` with both tripped fields `None`; saturates immediately at the lowest
+level → that level reported, not an empty result; a driver call-count assertion proving
+the controller stops driving load the instant it trips), the three named ramp-policy
+boundaries (first step, last step, single-step ramp, each in both the saturates- and
+stays-clear directions where applicable), and the empty-policy rejection.
+
+`tools/e2e/README.md`'s "Synthetic load driver (#378)" section gained the ramp
+controller's own paragraph (renamed conceptually to cover both #377 and #379 now
+landed) and a matching entry in Layout; the curve reporter and topology composer remain
+the two not-yet-implemented pieces of #323.
