@@ -8301,3 +8301,114 @@ not-yet-implemented piece of #323.
 - Not wired into `ci.yaml`, same as every other narrow scenario script, and — like
   `run_limits_two_tier.sh` — needs that script's own topology bring-up working before it
   can run at all.
+
+## #384 - Limits harness: Uploader concurrency axis
+
+`tools/e2e/scripts/run_upload_concurrency_axis.py` + `run_limits_upload_concurrency.sh` +
+`params/e2e_limits_upload_params.yaml`: the ninth piece of #323's epic (#383 and #382
+merged first and already call `ramp_controller.find_knee()` end to end for their own
+axes — this was developed in parallel, not aware of that landing first) — ramps the
+number of concurrent Bridge/Uploader processes against one shared object-storage
+Destination until verify-then-delete falls behind, reporting the last sustainable
+concurrency level.
+
+**Why "process count" is the axis**: read `dc_bridge/src/uploader/uploader.hpp` and
+`bridge_node.cpp`'s full param schema before designing anything — the Uploader has no
+internal concurrency knob at all ("Synchronous (aws-sdk-cpp is blocking) — no async
+runtime", one `uploader_thread_` per Bridge process, no `concurrency`/`worker_count`
+param anywhere). Ramping "concurrency" therefore means starting N separate Bridge
+containers against shared Postgres/RustFS — the same topology `run_limits_two_tier.sh`
+(#381) already proved works for Files, whose header explicitly recorded that Files
+bypass that scenario's two-tier Shipper-relay chain (no Vector hop for the Uploader at
+all) and left true two-tier File coverage as a follow-up. This ticket is the
+single-tier concurrency-and-custody scenario #381 punted, not that follow-up.
+
+**`scripts/upload_saturation_probe.py`** (its own pure module, unit-tested alone, 11
+cases in `test/test_upload_saturation_probe.py`): a sibling to `saturation_probe.py`,
+not a reuse of it — that module's `Observation`/`evaluate()` are hard-wired to
+Shipper-specific fields (ack latency, unacked-window depth, disk-buffer bytes), and
+Files never touch the Shipper, so there is no ack latency to plug in. This axis's own
+two signals, checked in priority order with the same head/tail-mean-growth (not
+snapshot-threshold) discipline and the same outage-suppression rule as the original:
+(1) **upload queue depth** — `IntentQueue::size()`, already exposed by the Bridge's
+`~/ready` service (#265's existing "cheap observability hook" — no DC code changed to
+read it) — trending upward; (2) **verify-then-delete backlog** — files verified in
+`dc_files` (ADR-0005) with no later delete row for the same `local_path` yet — growing
+at steady state, suppressed while an outage is declared.
+
+**The driver** (`run_upload_concurrency_axis.py`, plugged into `find_knee()` unchanged
+per the acceptance criteria): per level, starts N Bridge containers (staggered, same
+reasoning as #381), waits for each one's `~/ready` service to respond, then samples
+queue depth (summed across the N containers via `podman exec ... ros2 service call
+/dc_bridge/ready std_srvs/srv/Trigger`) and the outstanding-verified-backlog count
+(queried via `verify_zero_loss.py`'s own `psql()`/`scalar_int()` helpers, reused rather
+than a second Postgres client) every few seconds for a steady-state window, tears the
+level's containers down, and returns the observation window to `find_knee()`. The
+result feeds `curve_reporter.build_report()` in its stable format (`AxisRun`/
+`LevelResult`/`RunComposition(real_stacks=N, synthetic_senders=0)`), same as every other
+already-landed module in the epic.
+
+**The two hard gates** (acceptance criteria 2): at every level actually driven, before
+that level's containers are torn down, two correctness checks run against `dc_files` —
+never folded into the saturation verdict, since a level can be correctness-broken
+without ever looking like a backpressure ceiling: (1) no `deleted=true` row for a
+`local_path` may exist without an earlier-or-equal `uploaded=true, deleted=false` row
+for the same path (delete-after-verify ordering, checked empirically across N
+concurrently-uploading processes writing to the shared table, not assumed from one
+process's own in-order code path); (2) every `group_complete` marker for the camera
+group names the expected file count. A violation raises immediately and aborts the
+whole ramp.
+
+**Deliberately synthetic/reduced scale** (acceptance criterion 3): file size stays the
+same 64x64 solid-color ~12KB image `workload_generator.py` already produces for every
+E2E scenario — untouched. Only capture *cadence* is sped up: `workload_generator.py`
+gained a `DC_E2E_CAMERA_PERIOD_S` env-var override on its `camera_period_s` ROS param
+(default 15.0s unchanged for every other scenario — it's started as a plain `python3`
+process by `entrypoint.sh`, not through `ros2 launch`, so there is no `--ros-args -p`
+hook to reach into it without either a code change or an env var, matching the file's
+own pre-existing `DC_E2E_LEDGER` convention), so N concurrent processes produce enough
+uploads inside a short steady-state window to show a trend at all. Any byte-volume
+implication of a reported ceiling is arithmetic, never presented as measured — same
+principle #323's PRD states explicitly for this axis.
+
+**Two real bugs found and fixed by actually running this against podman**, not by
+reading the code (the repo's established verification standard):
+1. The first "verify-then-delete backlog" query counted `uploaded=true AND
+   deleted=false` rows directly — wrong, because `dc_files` is an append-only event log
+   (Vector's `postgres` sink only ever `INSERT`s; a file's upload/verify row never
+   changes, and a later delete is a *separate* row for the same `local_path`). That
+   query therefore counted every verify event ever recorded, including ones long since
+   deleted — a figure that only ever grew, on a run that was actually healthy
+   throughout (delete_when_sent was firing correctly the whole time). Fixed to count
+   distinct `local_path`s verified with *no later delete row at all* for that path
+   (`_outstanding_verified_count()`).
+2. At concurrency 4, the delete-after-verify gate genuinely tripped — investigated
+   before accepting it as a finding, per #381's own precedent of not silently working
+   around a surprising result. Traced `Camera::getLocalPath()`/`getSavePath()`
+   (`dc_measurements/plugins/measurements/camera.cpp`) and confirmed a captured file's
+   `local_path` is built purely from wall-clock time truncated to whole seconds — no
+   PID, hostname, or counter of any kind. Every container in this axis runs the
+   identical params file and cadence, so two containers capturing within the same
+   wall-clock second produced byte-identical `local_path` strings — confirmed directly
+   against Postgres (`dc_files` showed a single path with 7 file_status rows across 4
+   containers). Not a DC-level Uploader bug: each container's own upload/verify/delete
+   sequence was internally correct: two independent lifecycles were indistinguishable
+   by `local_path` alone, a scenario-harness gap, not a pipeline one. Fixed with **no DC
+   code change** — `dc_util::expand_env()` is a generic `$VARNAME` expander (not
+   `$HOME`-specific), so `params/e2e_limits_upload_params.yaml`'s
+   `save_local_base_path` now includes `$DC_E2E_STACK_ID`, set per container by the
+   driver script; re-verified clean at concurrency 4 afterward (real dc_files rows
+   showed the correct `uploaded` → `deleted` ordering, `IntentQueue` retry/backoff
+   producing intermediate `missing_row` status entries before the real verify+delete
+   pair, exactly as designed).
+- **Verified end-to-end for real**, repeatedly, against the cached `dc-e2e:latest`
+  image (rebuilt once, cheaply — `Containerfile.e2e` is a thin layer over the cached
+  workspace image, so picking up the `workload_generator.py` env-var change needed no
+  colcon recompile): single-level and multi-level (1, 2, 4-way concurrency) runs, both
+  the pre-fix failure and the post-fix clean pass at concurrency 4, direct Postgres
+  inspection of `dc_files` to confirm the collision hypothesis and the fix. All 88
+  `tools/e2e/test/` cases (11 new) and `prek` (ruff/shellcheck/codespell/etc.) pass.
+- `tools/e2e/README.md` gained an "Uploader concurrency axis (#384)" section (after the
+  Shipper fan-in axis's #382 section — the last of the three merged this way, so it
+  gets the "ninth piece" framing, before Layout) plus Layout entries for the new files.
+- Not wired into `ci.yaml`, same as every other narrow scenario script.

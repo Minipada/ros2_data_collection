@@ -452,6 +452,68 @@ Not wired into `ci.yaml`, same as the other scenario scripts above — and, like
 `run_limits_two_tier.sh`'s own dependents, this axis needs that script's own topology
 bring-up already established working before it can run at all.
 
+## Uploader concurrency axis (#384)
+
+The ninth piece of #323's limits harness (developed in parallel with #383/#382, which
+merged first and already call `ramp_controller.find_knee()` end to end for their own
+axes): ramps the number of concurrent Bridge/Uploader processes against one shared
+object-storage Destination until verify-then-delete falls behind, reporting the last
+sustainable concurrency level.
+
+```sh
+./tools/e2e/scripts/run_limits_upload_concurrency.sh
+```
+
+The Uploader has no internal concurrency knob — `dc_bridge/src/uploader/uploader.hpp`
+says so directly ("Synchronous (aws-sdk-cpp is blocking) — no async runtime"), one
+`uploader_thread_` per Bridge process, and `bridge_node.cpp`'s full param schema declares
+none. "Concurrency" on this axis therefore means starting N separate Bridge/Uploader
+containers against a shared Postgres + RustFS on a dedicated bridge network — the same
+topology #381 already proved works for Files, whose header recorded that Files bypass
+that scenario's two-tier Shipper-relay chain entirely (no Vector hop at all) and left true
+two-tier File coverage as a follow-up. This axis is the single-tier concurrency-and-custody
+scenario #381 punted, not that follow-up.
+
+`scripts/run_upload_concurrency_axis.py` owns the ramp itself: it calls
+`ramp_controller.find_knee()` **unchanged**, driving load by starting/stopping N
+containers per level against `params/e2e_limits_upload_params.yaml` (a minimal params
+file carrying only the camera Measurement — this axis's claim is File concurrency and
+custody, not Record delivery), and feeds the result to `curve_reporter.build_report()` in
+its stable format. Per #384's acceptance criteria, file size stays the same deliberately
+synthetic 64x64 solid-color image every E2E scenario already produces (~12KB via
+`workload_generator.py`); only capture *cadence* is sped up per container
+(`DC_E2E_CAMERA_PERIOD_S`, a new env-var override on `workload_generator.py` — default
+15s is unchanged for every other scenario) so N processes produce enough uploads inside a
+short steady-state window to show a trend at all. Any byte-volume implication of a
+reported ceiling is arithmetic, never presented as measured.
+
+Since Files never touch the Shipper, `saturation_probe.py`'s ack-latency/unacked-window/
+disk-buffer signals don't apply here — `scripts/upload_saturation_probe.py` is this
+axis's own pure verdict function (unit-tested alone, no container, same structure and
+priority-ordering/outage-suppression discipline as its sibling) over two observables that
+exist for Files instead: the Bridge's own `~/ready` service, which already exposes its
+upload queue depth (#265's existing "cheap observability hook" — no DC code changed to
+add it) trending upward as the primary signal, and the verify-then-delete backlog —
+files verified in `dc_files` (ADR-0005) with no later delete row for the same
+`local_path` yet — growing at steady state (suppressed during a declared outage) as the
+secondary one. `dc_files` is an append-only event log, not a current-state table (Vector's
+`postgres` sink only ever `INSERT`s), so computing that backlog correctly means "verified
+with no *later* delete row exists", not "the verify row itself still says
+`deleted=false`" — the first version of this script got that wrong and reported a
+backlog that only ever grew, on a run that was actually healthy throughout; caught by
+running the script for real against a live stack, not by reading the code.
+
+At every level actually driven, two hard gates run against `dc_files` before that level's
+containers are torn down, never folded into the saturation verdict since they are
+correctness properties, not backpressure signals: no `deleted=true` row for a
+`local_path` may exist without an earlier-or-equal `uploaded=true, deleted=false` row for
+the same path (delete-after-verify ordering, checked empirically across N concurrently-
+uploading processes writing to the shared table, not just assumed from one process's own
+in-order code path), and every `group_complete` marker for the camera group names the
+expected file count. A violation raises immediately and aborts the whole ramp.
+
+Not wired into `ci.yaml`, same as every other narrow scenario above.
+
 ## Layout
 
 - `Containerfile` — builds the full DC workspace (every `dc_*` package, all C++ since
@@ -569,6 +631,15 @@ bring-up already established working before it can run at all.
   Shipper fan-in axis (#382, part of #323) described above: ramping robot count against
   #381's two-tier topology to the knee and proving the instrument itself against a
   deliberately constrained aggregating Shipper.
+- `scripts/upload_saturation_probe.py` — the Uploader concurrency axis's own saturation
+  verdict (#384, part of #323): a pure function, sibling to `saturation_probe.py` but
+  over queue-depth/verify-delete-backlog observations instead of ack latency, since
+  Files never touch the Shipper. No I/O, no container; unit-tested alone.
+- `scripts/run_upload_concurrency_axis.py` / `scripts/run_limits_upload_concurrency.sh` /
+  `params/e2e_limits_upload_params.yaml` — the Uploader concurrency axis (#384, part of
+  #323) described above: calls `ramp_controller.find_knee()` unchanged, ramping N
+  Bridge/Uploader containers against shared Postgres/RustFS and asserting
+  delete-after-verify ordering plus Group completion correctness at every level.
 
 ## `.dockerignore`
 

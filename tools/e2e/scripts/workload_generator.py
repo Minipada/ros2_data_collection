@@ -67,7 +67,16 @@ class WorkloadGenerator(Node):
         super().__init__("e2e_workload_generator")
         self.declare_parameter("num_synth_topics", NUM_SYNTH_TOPICS)
         self.declare_parameter("rate_hz", 1.0)
-        self.declare_parameter("camera_period_s", 15.0)
+        # Same env-var-override convention as LEDGER_PATH above: entrypoint.sh runs this
+        # generator as a plain python3 process, not through `ros2 launch`, so an
+        # E2E scenario has no `--ros-args -p` hook to reach into it — an env var is the
+        # only knob available without a code change per run. Default unchanged (15.0s)
+        # so every existing scenario's capture cadence is untouched; the upload
+        # concurrency axis (#384) needs a much shorter period to build meaningful
+        # Uploader backlog inside a short steady-state window.
+        self.declare_parameter(
+            "camera_period_s", float(os.environ.get("DC_E2E_CAMERA_PERIOD_S", 15.0))
+        )
 
         num_topics = self.get_parameter("num_synth_topics").value
         rate_hz = self.get_parameter("rate_hz").value
