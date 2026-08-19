@@ -7848,3 +7848,45 @@ list the same way this issue does. Rebased onto `origin/jazzy`: `CMakeLists.txt`
 and this file needed manual conflict resolution to keep both sides' entries. `#366` (degraded
 network conditions testing) then merged into `jazzy` too, mid-rebase, conflicting with this file
 alone (both entries append at the same tail); rebased again, keeping both entries in issue order.
+
+## #377 - Limits harness: saturation probe (verdict from an observation window)
+
+`tools/e2e/scripts/saturation_probe.py`: a pure function (`evaluate(window, bounds)`,
+no I/O, no containers) that decides whether the pipeline has saturated given a
+chronologically ordered window of `Observation`s (`ack_latency_s`,
+`unacked_window_depth`, `disk_buffer_bytes`, `outage_declared`) and a `SaturationBounds`
+config, returning a `Verdict` (`status`: not_saturated/saturated/insufficient_data,
+`binding_signal`, `reason`, `figures`).
+
+**Priority order matches the PRD (#323) exactly**, each signal checked only once every
+higher-priority one has failed to trip: (1) acknowledgement latency at/above
+`ack_latency_bound_s` for the trailing `ack_latency_sustain_samples` observations — the
+"staying there" requirement is a tail check, not a whole-window one, so a spike that has
+already recovered by the end of the window never trips it; (2) unacked-window depth
+whose second-half mean exceeds its first-half mean by `unacked_window_depth_growth_threshold`;
+(3) disk-buffer bytes growing the same head/tail way, but only when no observation in the
+window has `outage_declared` set — checked over the whole window, not just the tail, since
+a growth trend that started under an outage and hasn't finished unwinding isn't steady-state
+growth either. Buffer *level* alone is never read as a signal at any priority — only its
+trend, and only combined with the outage flag, per the PRD's explicit rejection of
+utilisation as a signal (a full/growing buffer during a declared outage is the buffer
+working correctly; the same growth with no outage declared means the Shipper is
+undersized).
+
+A window shorter than `min_observations` (default 4) returns `INSUFFICIENT_DATA`
+unconditionally, before any signal is evaluated — even a too-short window whose few
+samples already look saturated returns that, never a default healthy or saturated
+verdict.
+
+13 pytest cases in `tools/e2e/test/test_saturation_probe.py`, covering all six acceptance
+criteria plus the signal-priority ordering (latency beats a concurrently growing unacked
+window; unacked depth beats a concurrently growing disk buffer) and the
+utilisation-vs-trend distinction directly (a buffer that's high but flat never trips it).
+Run via `uv run pytest tools/e2e/test/` alongside the existing `test_network_profiles.py`/
+`test_measure_rtt.py`/`test_raw_volume.py` — no `colcon build` or container needed, matching
+the issue's "runs entirely as unit tests" criterion.
+
+No CLI and no `__main__`, unlike `network_profiles.py`/`measure_rtt.py`: the issue scopes
+this to the verdict function alone, with the ramp controller (#379) and the other axis
+issues (#378, #380-386) that will call it left as separate work. `tools/e2e/README.md`'s
+Layout section gained one entry.
