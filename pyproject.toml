@@ -10,6 +10,9 @@ authors = [{ name = "David Bensoussan", email = "d.bensoussan@proton.me" }]
 requires-python = ">=3.12"
 dependencies = [
   "mcap>=1.4",
+  # tools/e2e/scripts/load_driver.py (#378): the shipper ingest protocol's msgpack
+  # framing, same library family dc_bridge's Forwarder uses (msgpack-cxx) on the C++ side.
+  "msgpack>=1.0",
   # Jazzy's rclpy/cv_bridge are built against numpy 1.26; numpy 2 breaks that ABI.
   "numpy>=1.26,<2",
   "opencv-python>=4.9,<5",
