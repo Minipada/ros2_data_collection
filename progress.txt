@@ -8964,3 +8964,77 @@ the new tests, not that they were run and passed.
   `unique_identifier_msgs` (package.xml `<depend>` + CMakeLists.txt `dependencies`).
   `moveit_msgs` is a standard bloom-released ROS 2 package with an upstream rosdistro
   key, so no `rosdep/dc.yaml` entry was needed.
+
+### #392 - Add the Fast DDS statistics Measurement (Ecosystem Measurements epic #396)
+
+- Added a new `dc_measurements` plugin, `fastdds_stats` (class `dc_measurements::FastddsStats`),
+  linking against eProsima's `Fast-DDS-statistics-backend` C++ library to read Fast DDS's own
+  Statistics Module and emit it as a normal periodic-sample Record through the existing
+  Measurement -> Record -> Bridge -> Shipper -> Destination pipeline, matching `battery`'s
+  `sample`-event convention. `onConfigure()` calls `StatisticsBackend::init_monitor(domain_id)`
+  once; `collect()` then queries `get_entities`/`get_data`/`get_info` for the window since the
+  previous poll (mean write-to-notification latency across matched DataWriter/DataReader pairs,
+  mean publication/subscription throughput, summed RTPS packets sent/lost, and physical-layer
+  data -- discovered participants' name/guid plus the names of the hosts/users/processes running
+  them). A DataKind field is left absent, not zero, when nothing reported data in the window,
+  matching battery's `setIfMeasured` convention for hardware that doesn't report a value.
+- **Conditionally built, deliberately**: `fastdds_statistics_backend` has no rosdep/apt key on any
+  distro (checked against rosdistro's `rosdep/base.yaml` and `jazzy/distribution.yaml` directly --
+  neither lists it) and only means anything when the deployment runs Fast DDS as its RMW, so
+  `dc_measurements/CMakeLists.txt` does `find_package(fastdds_statistics_backend QUIET CONFIG)`
+  and only builds `dc_fastdds_stats_measurement` (and registers its test) when found, with a clear
+  `message(STATUS ...)` either way rather than failing the whole workspace build for every other
+  RMW/environment. `package.xml` deliberately does **not** `<depend>` on it for the same reason
+  (would break `rosdep install` everywhere else); the requirement is documented instead, in
+  `CMakeLists.txt`'s own comment and in the new doc page. `measurement_plugin.xml` still declares
+  the plugin unconditionally (static XML, no way to make it conditional) -- configuring
+  `dc_measurements/FastddsStats` without the library built fails pluginlib's load loudly (missing
+  library), which is the intended "documented plainly, not silently assumed" failure mode.
+- JSON Schema at `dc_measurements/plugins/measurements/json/fastdds_stats.json`, validated in
+  `dc_measurements/test/test_measurement_fastdds_stats.cpp` (only compiled/registered when the
+  library was found) using the same `MeasurementServer`/`expectValidatesAgainstSchema` pattern as
+  every other Measurement's tests -- adapted for this Measurement having no input topic to publish
+  to: it polls Fast-DDS-statistics-backend's own registry rather than subscribing, so the test
+  waits for a periodic `sample` Record instead of publishing one to trigger it.
+- Doc page `doc/src/dc/measurements/fastdds_stats.md` (linked from `SUMMARY.md` and the
+  `measurements.md` table), stating plainly this is Fast-DDS-specific and spelling out both real
+  prerequisites: Fast DDS itself built with `-DFASTDDS_STATISTICS=ON` (most distro/apt builds
+  don't enable it) and `fastdds_statistics_backend` installed from source.
+  - Also documented the true unit for each field, pulled from Fast DDS's own docs rather than
+    guessed: `latency_ns_mean` (nanoseconds, matching `network_latency`'s documented unit -- the
+    backend's own header comments don't state history2history_latency's unit explicitly, but it's
+    produced by the same RTPS-layer measurement mechanism) and the two throughput fields
+    (bytes/second, confirmed against `Fast-DDS-docs/docs/fastdds/statistics/dds_layer/
+    topic_names.rst`, not Mb/s as a first guess assumed).
+- **Demo-stack + Grafana wiring**, matching #304's provisioning convention: a new, dedicated,
+  hardware-free demo (`dc_demos/params/fastdds_stats_pgsql_grafana.yaml` +
+  `dc_demos/launch/fastdds_stats_pgsql_grafana.launch.py`, doc page
+  `doc/src/dc/demos/fastdds_stats_pgsql_grafana.md`, linked from `SUMMARY.md` and `demos.md`)
+  rather than adding this Measurement into the existing `tb3_simulation_pgsql_minio` demo --
+  that demo's `measurement_server` would fail to configure *at all* (pluginlib `PluginlibException`
+  is fatal in `measurement_server.cpp`'s `loadMeasurementPlugins()`) on every environment without
+  the library built, which is most of them; a separate demo keeps every existing demo working
+  unconditionally. Added the new top-level columns (`event`, `domain_id`, `participant_count`,
+  `datawriter_count`, `datareader_count`, `latency_ns_mean`,
+  `publication_throughput_bytes_per_sec_mean`, `subscription_throughput_bytes_per_sec_mean`,
+  `rtps_packets_sent`, `rtps_packets_lost`, `participants`/`hosts`/`users`/`processes` as `jsonb`)
+  to `tools/infrastructure/docker/config/postgresql/init.sql`'s `dc` table, since Vector's
+  `postgres` sink maps each Record's top-level JSON keys onto an existing column of the same name
+  rather than creating one. New dashboard
+  `tools/infrastructure/docker/config/grafana/dashboards/fastdds_stats.json` (auto-provisioned,
+  same `foldersFromFilesStructure` mechanism as `robot.json`/`kpi.json`): latency, throughput,
+  discovered-entity-count and RTPS packet panels as time series, plus a table of the most recent
+  sample's physical-layer data.
+- **Not done / left for a real build environment**: could not run a real `colcon build` or
+  `colcon test` here -- `fastdds_statistics_backend` isn't installed in this sandbox (no apt/rosdep
+  key exists to install it from, per the point above) and there is no running Fast DDS deployment
+  to query, matching the same disk/toolchain constraint #242/#243 hit. The C++ API calls
+  (`StatisticsBackend::init_monitor`/`get_entities`/`get_data`/`get_info`, the `DataKind`/
+  `EntityKind`/`StatisticKind` enumerators, `EntityId`'s interface, and `Info`/`StatisticsData`'s
+  actual types) were verified against eProsima's real headers
+  (`Fast-DDS-statistics-backend/include/fastdds_statistics_backend/...`) and API reference docs
+  fetched directly, not written from memory, but the plugin, its schema and its test still need a
+  real build (Fast DDS with `-DFASTDDS_STATISTICS=ON` + `fastdds_statistics_backend` installed) to
+  close the "colcon build succeeds" and "gtest suite passes" acceptance criteria formally. `prek
+  run --all-files --skip build-doc` passed for every changed file (JSON/YAML/XML syntax,
+  clang-format, copyright headers, ROS package metadata) as a substitute check.

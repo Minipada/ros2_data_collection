@@ -24,6 +24,11 @@ SPDX-License-Identifier: MPL-2.0
   <depend>dc_lifecycle_manager</depend>
   <depend>dc_util</depend>
   <depend>diagnostic_msgs</depend>
+  <!-- fastdds_statistics_backend (#392, fastdds_stats plugin) is deliberately not a <depend>: it
+       has no rosdep/apt key on any distro and is only meaningful when the deployment runs Fast
+       DDS as its RMW, so CMakeLists.txt finds it optionally and skips the plugin when it's
+       absent instead of failing `rosdep install`/the whole workspace build for everyone else.
+       See doc/src/dc/measurements/fastdds_stats.md. -->
   <depend>ffmpeg</depend>
   <depend>geometry_msgs</depend>
   <depend>lifecycle_msgs</depend>

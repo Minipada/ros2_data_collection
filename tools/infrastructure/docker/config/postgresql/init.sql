@@ -93,7 +93,24 @@ CREATE TABLE IF NOT EXISTS dc (
   host text,
   port integer,
   server_name text,
-  active boolean
+  active boolean,
+  -- Fast DDS statistics (fastdds_stats.cpp, #392, fastdds_stats_pgsql_grafana demo). `event` is
+  -- always "sample" for this Measurement -- listed for querying, unlike the Measurements above
+  -- that never populate it, none of which use this column.
+  event text,
+  domain_id integer,
+  participant_count integer,
+  datawriter_count integer,
+  datareader_count integer,
+  latency_ns_mean double precision,
+  publication_throughput_bytes_per_sec_mean double precision,
+  subscription_throughput_bytes_per_sec_mean double precision,
+  rtps_packets_sent bigint,
+  rtps_packets_lost bigint,
+  participants jsonb,
+  hosts jsonb,
+  users jsonb,
+  processes jsonb
 );
 
 -- File upload status + group-completion Records from dc_bridge's Uploader

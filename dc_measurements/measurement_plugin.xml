@@ -60,6 +60,18 @@ SPDX-License-Identifier: MPL-2.0
         </class>
     </library>
 
+    <!-- Only built/installed when fastdds_statistics_backend was found at configure time
+         (#392); see dc_measurements/CMakeLists.txt and doc/src/dc/measurements/fastdds_stats.md.
+         Configuring "dc_measurements/FastddsStats" without it built fails pluginlib's load with
+         a clear "library not found" error. -->
+    <library path="dc_fastdds_stats_measurement">
+        <class name="dc_measurements/FastddsStats" type="dc_measurements::FastddsStats" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_fastdds_stats
+            </description>
+        </class>
+    </library>
+
     <library path="dc_dummy_measurement">
         <class name="dc_measurements/Dummy" type="dc_measurements::Dummy" base_class_type="dc_core::Measurement">
             <description>

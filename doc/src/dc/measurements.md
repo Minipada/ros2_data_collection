@@ -171,6 +171,7 @@ error is logged: it blocks collection when listed in `if_all_conditions` or
 | [CPU](./measurements/cpu.md)                             | CPU statistics                                                                                          |
 | [Distance traveled](./measurements/distance_traveled.md) | Total distance traveled by the robot                                                                    |
 | [Dummy](./measurements/dummy.md)                         | Dummy event, for testing and debugging                                                                  |
+| [Fast DDS statistics](./measurements/fastdds_stats.md)   | eProsima Fast DDS's own Statistics Module: latency, throughput, RTPS packets, physical-layer data. Fast-DDS-specific |
 | [Fault](./measurements/fault.md)                         | Component diagnostic level transitions: one Record per raise, change or clear, a source for MTBF/MTTR   |
 | [IP Camera](./measurements/ip_camera.md)                 | IP camera videos as files                                                                               |
 | [Map](./measurements/map.md)                             | ROS map files (yaml and pgm) and metadata used by the robot to localize and navigate                    |

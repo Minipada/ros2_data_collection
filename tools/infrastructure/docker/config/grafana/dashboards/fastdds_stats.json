@@ -1,0 +1,272 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 4,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "dc_postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "auto"
+          },
+          "unit": "µs"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "dc_postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql":
+              "SELECT to_timestamp(date / 1e9) AS \"time\", latency_ns_mean / 1000.0 AS latency_us_mean FROM dc WHERE name = 'fastdds_stats' AND latency_ns_mean IS NOT NULL ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Write-to-notification latency (mean, DataWriter/DataReader pairs)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "dc_postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "auto"
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "dc_postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql":
+              "SELECT to_timestamp(date / 1e9) AS \"time\", publication_throughput_bytes_per_sec_mean AS publication, subscription_throughput_bytes_per_sec_mean AS subscription FROM dc WHERE name = 'fastdds_stats' AND (publication_throughput_bytes_per_sec_mean IS NOT NULL OR subscription_throughput_bytes_per_sec_mean IS NOT NULL) ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Publication and subscription throughput (mean)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "dc_postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "dc_postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql":
+              "SELECT to_timestamp(date / 1e9) AS \"time\", participant_count, datawriter_count, datareader_count FROM dc WHERE name = 'fastdds_stats' ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Discovered entities",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "dc_postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "dc_postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql":
+              "SELECT to_timestamp(date / 1e9) AS \"time\", rtps_packets_sent, rtps_packets_lost FROM dc WHERE name = 'fastdds_stats' AND (rtps_packets_sent IS NOT NULL OR rtps_packets_lost IS NOT NULL) ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "RTPS packets sent and lost",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "dc_postgres"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 5,
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "dc_postgres"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql":
+              "SELECT to_timestamp(date / 1e9) AS \"time\", hosts, users, processes, participants FROM dc WHERE name = 'fastdds_stats' ORDER BY date DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Physical layer (most recent sample)",
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "ROS 2 Data Collection - Fast DDS statistics",
+  "uid": "dc-fastdds-stats",
+  "version": 1,
+  "weekStart": ""
+}
