@@ -1,0 +1,263 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# The limits harness's two-tier topology scenario (#381, part of #323's epic). Otherwise
+# byte-for-byte params/e2e_params.yaml (same Measurement plugins, same synth/camera
+# workload — verify_zero_loss.py is reused unmodified and hard-requires this exact shape:
+# the 6 REAL_TAGS, memory's sub-1s polling for the timestamp-resolution check, the
+# camera/Files pipeline, and synth00-13 for the ledger/passthrough/mcap checks), except:
+#
+# - `pgsql_records` is replaced by `local_sink`, a `type: file` Destination. Its only job
+#   is to make dc_bridge render `dc.<tag>` route branches for the Measurement/synth
+#   topics (route branches come from a Destination's `inputs` — see render.cpp — there is
+#   no way to get one without declaring some Destination); it writes to a throwaway local
+#   path nothing reads. The actual "ship this to Postgres" job moves to
+#   e2e_limits_forward_sink.toml's injected `vector`-type sink (ADR-0003
+#   `custom_config_files` passthrough), which relays those same route branches on to
+#   run_limits_two_tier.sh's aggregating Shipper over the network instead of writing
+#   Records locally — this Bridge's own local Shipper never talks to the real Postgres at
+#   all, standing in for "a robot with no direct path to the cloud" (#323's motivating
+#   scenario).
+# - `pgsql_files`/`rustfs` point at run_limits_two_tier.sh's shared Postgres/RustFS
+#   containers by name (dc-e2e-limits-postgres/dc-e2e-limits-rustfs), not 127.0.0.1 — see
+#   that file's header for why: the Uploader talks to whatever `s3`/`postgres` Destination
+#   host is configured directly over AWS-SDK/libpq calls, with no Vector hop at all, so
+#   there is no way to route Files (bytes or metadata) through the aggregating Shipper
+#   without new DC code. Recorded as this ticket's discovery per its acceptance
+#   criteria — Files bypass the two-tier chain; only Measurement Records go through it.
+# - `custom_config_files` adds e2e_limits_forward_sink.toml alongside the existing
+#   passthrough/MCAP snippets.
+
+measurement_server:
+  ros__parameters:
+    save_local_base_path: "$HOME/.dc/e2e/data/%Y/%M/%D/%H"
+    all_base_path: "e2e"
+    measurement_plugins: ["memory", "os", "storage", "uptime", "tcp_health", "dummy", "synth00", "synth01", "synth02", "synth03", "synth04", "synth05", "synth06", "synth07", "synth08", "synth09", "synth10", "synth11", "synth12", "synth13", "camera"]
+
+    memory:
+      plugin: "dc_measurements/Memory"
+      polling_interval: 200
+      group_key: "memory"
+
+    os:
+      plugin: "dc_measurements/OS"
+      polling_interval: 1000
+      group_key: "os"
+
+    storage:
+      plugin: "dc_measurements/Storage"
+      polling_interval: 1000
+      path: "/tmp"
+      group_key: "storage"
+
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      polling_interval: 1000
+      group_key: "uptime"
+
+    tcp_health:
+      plugin: "dc_measurements/TCPHealth"
+      polling_interval: 1000
+      name: "vector_forward"
+      host: "127.0.0.1"
+      port: 24224
+      group_key: "tcp_health"
+
+    dummy:
+      plugin: "dc_measurements/Dummy"
+      polling_interval: 1000
+      group_key: "dummy"
+
+    camera:
+      plugin: "dc_measurements/Camera"
+      polling_interval: 15000
+      cam_name: "e2e_camera"
+      cam_topic: "/dc/e2e/camera/image_raw"
+      draw_det_barcodes: false
+      save_raw_img: true
+      save_rotated_img: false
+      save_detections_img: false
+      save_raw_base64: false
+      save_rotated_base64: false
+      save_inspected_base64: false
+      remote_keys: ["rustfs"]
+      remote_prefixes: ["camera"]
+      group_key: "camera"
+
+    synth00:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth00"
+      timer_based: true
+
+    synth01:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth01"
+      timer_based: true
+
+    synth02:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth02"
+      timer_based: true
+
+    synth03:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth03"
+      timer_based: true
+
+    synth04:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth04"
+      timer_based: true
+
+    synth05:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth05"
+      timer_based: true
+
+    synth06:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth06"
+      timer_based: true
+
+    synth07:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth07"
+      timer_based: true
+
+    synth08:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth08"
+      timer_based: true
+
+    synth09:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth09"
+      timer_based: true
+
+    synth10:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth10"
+      timer_based: true
+
+    synth11:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth11"
+      timer_based: true
+
+    synth12:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth12"
+      timer_based: true
+
+    synth13:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth13"
+      timer_based: true
+
+dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/e2e/buffer"
+    destinations: ["local_sink", "pgsql_files", "rustfs", "raw_file"]
+
+    # Creates the `dc.<tag>` route branches e2e_limits_forward_sink.toml's injected sink
+    # reads from — see this file's header. Writes locally and is never read back; the
+    # real egress for these Records is the injected `vector` sink below.
+    local_sink:
+      type: file
+      receives: records
+      inputs: ["/dc/measurement/memory", "/dc/measurement/os", "/dc/measurement/storage", "/dc/measurement/uptime", "/dc/measurement/tcp_health", "/dc/measurement/dummy", "/dc/measurement/synth00", "/dc/measurement/synth01", "/dc/measurement/synth02", "/dc/measurement/synth03", "/dc/measurement/synth04", "/dc/measurement/synth05", "/dc/measurement/synth06", "/dc/measurement/synth07", "/dc/measurement/synth08", "/dc/measurement/synth09", "/dc/measurement/synth10", "/dc/measurement/synth11", "/dc/measurement/synth12", "/dc/measurement/synth13"]
+      path: "/root/.dc/e2e/data/local_sink/records.ndjson"
+      time_key: "date"
+
+    pgsql_files:
+      type: postgres
+      receives: records
+      # dc-e2e-limits-postgres, not 127.0.0.1 — see this file's header: the Uploader
+      # writes File metadata directly, with no Vector hop, so it bypasses the two-tier
+      # chain and reaches run_limits_two_tier.sh's shared Postgres straight over the
+      # network (its own bridge network — see that script for why).
+      host: "dc-e2e-limits-postgres"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc_files"
+      time_key: "date"
+
+    rustfs:
+      type: s3
+      receives: files
+      inputs: ["/dc/measurement/camera"]
+      bucket: "dc-e2e"
+      # Same bypass as pgsql_files above — the Uploader's own AWS SDK client, not Vector.
+      endpoint: "http://dc-e2e-limits-rustfs:9000"
+      region: "us-east-1"
+      access_key_id: "rustfsadmin"
+      secret_access_key: "rustfsadmin"
+      force_path_style: true
+
+    # Raw / generic-subscription mode (#227): verify_zero_loss.py's check_raw() is
+    # unconditional, so this stays enabled here too, unchanged from e2e_params.yaml — it
+    # writes locally (a `file` Destination, same bypass reasoning as local_sink above)
+    # rather than through the two-tier chain, since it has nothing to do with this
+    # ticket's Measurement-Records-through-the-aggregator claim.
+    raw_file:
+      type: file
+      receives: records
+      path: "/root/.dc/e2e/data/raw/records.ndjson"
+      time_key: "date"
+
+    raw:
+      enabled: true
+      destination: "raw_file"
+      include: ["^/dc/e2e/synth/synth00$"]
+      exclude: ["^/rosout$", "^/parameter_events$", "^/dc/measurement/", "^/dc/group/"]
+      exclude_types: ["^sensor_msgs/msg/(Image|CompressedImage|PointCloud2)$"]
+      rescan_interval_secs: 1.0
+      max_rate_hz: 10.0
+
+    files:
+      delete_when_sent: false
+      metadata_destination: "pgsql_files"
+
+    custom_config_files: ["/opt/e2e/e2e_passthrough_sink.toml", "/opt/e2e/e2e_mcap_sink.toml", "/opt/e2e/e2e_limits_forward_sink.toml"]
+
+    # Same-container loopback (Bridge-to-own-local-Shipper) — never leaves the container,
+    # so this stays 127.0.0.1 regardless of topology (same reasoning as
+    # e2e_degraded_params.yaml).
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
+
+lifecycle_manager_dc:
+  ros__parameters:
+    node_names: ["measurement_server"]
+    transitions: [configure, activate]
