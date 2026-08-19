@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 3.8)
 project(dc_measurements)
 
 set(dependencies
+  action_msgs
   cv_bridge
   dc_common
   dc_core
@@ -13,17 +14,20 @@ set(dependencies
   diagnostic_msgs
   geometry_msgs
   lifecycle_msgs
+  nav2_msgs
   nav2_util
   nlohmann_json
   nlohmann_json_schema_validator
   PkgConfig
   pluginlib
+  rclcpp_action
   rclcpp_components
   rclcpp_lifecycle
   sensor_msgs
   std_msgs
   tf2
   tf2_geometry_msgs
+  unique_identifier_msgs
   yaml_cpp_vendor
 )
 
@@ -162,6 +166,9 @@ list(APPEND dc_measurement_plugin_libs dc_ip_camera_measurement)
 
 add_library(dc_map_measurement SHARED plugins/measurements/map.cpp)
 list(APPEND dc_measurement_plugin_libs dc_map_measurement)
+
+add_library(dc_mission_nav2_through_poses_measurement SHARED plugins/measurements/mission_nav2_through_poses.cpp)
+list(APPEND dc_measurement_plugin_libs dc_mission_nav2_through_poses_measurement)
 
 add_library(dc_memory_measurement SHARED
   plugins/measurements/memory.cpp
@@ -337,6 +344,7 @@ set(tests
   test_measurement_list_string_equal
   test_measurement_map
   test_measurement_memory
+  test_measurement_mission_nav2_through_poses
   test_measurement_moving
   test_measurement_network
   test_measurement_os
@@ -353,6 +361,7 @@ set(tests
   test_measurement_tcp_health
   test_measurement_thermal
   test_measurement_uptime
+  test_mission_nav2_through_poses_core
 )
 
 if(BUILD_TESTING)

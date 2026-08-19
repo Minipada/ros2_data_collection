@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MissionNav2ThroughPoses",
+  "description":
+      "One nav2 NavigateThroughPoses mission's lifecycle: a mission_start Record when the goal is first observed, a mission_end Record once it reaches a terminal state. Shares #387's NavigateToPose Record contract; mission_type distinguishes the source action",
+  "properties": {
+    "event": {
+      "description": "Which boundary of the mission this Record reports",
+      "type": "string",
+      "enum": [
+        "mission_start",
+        "mission_end"
+      ]
+    },
+    "mission_id": {
+      "description": "The nav2 goal UUID, stringified as lowercase hex",
+      "type": "string"
+    },
+    "mission_type": {
+      "description": "What kind of mission this was; the nav2 adapter always sets 'navigate_through_poses'",
+      "type": "string"
+    },
+    "sequence": {
+      "description":
+          "Monotonically increasing number of this Record, across every mission this Measurement instance has seen (not per mission_id), so a dropped Record is detectable",
+      "type": "integer",
+      "minimum": 1
+    },
+    "outcome": {
+      "description":
+          "How the mission ended. 'failed' is a non-zero NavigateThroughPoses::Result.error_code on an otherwise-succeeded goal status, distinct from 'aborted' (the goal status itself)",
+      "type": "string",
+      "enum": [
+        "succeeded",
+        "failed",
+        "cancelled",
+        "aborted"
+      ]
+    },
+    "reason": {
+      "description": "NavigateThroughPoses::Result.error_msg, verbatim. Present when outcome is 'failed' or 'aborted'",
+      "type": "string"
+    },
+    "error_code": {
+      "description": "NavigateThroughPoses::Result.error_code, carried through verbatim. Present alongside 'reason'",
+      "type": "integer",
+      "minimum": 0
+    },
+    "duration_sec": {
+      "description": "How long the mission ran, from when the goal was first observed to its terminal status",
+      "type": "number",
+      "minimum": 0
+    },
+    "recoveries": {
+      "description": "NavigateThroughPoses::Feedback.number_of_recoveries at mission completion, when feedback was seen",
+      "type": "integer",
+      "minimum": 0
+    },
+    "waypoint_statuses": {
+      "description":
+          "Aggregate counts of NavigateThroughPoses::Result.waypoint_statuses -- which poses in the job succeeded, were skipped, or failed -- kept as counts rather than the raw per-pose array to keep the Record flat",
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "completed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "skipped": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "total",
+        "completed",
+        "skipped",
+        "failed"
+      ]
+    }
+  },
+  "required": [
+    "event",
+    "mission_id",
+    "sequence"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "mission_end"
+          }
+        },
+        "required": [
+          "event"
+        ]
+      },
+      "then": {
+        "required": [
+          "outcome",
+          "duration_sec"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "mission_end"
+          },
+          "outcome": {
+            "enum": [
+              "failed",
+              "aborted"
+            ]
+          }
+        },
+        "required": [
+          "event",
+          "outcome"
+        ]
+      },
+      "then": {
+        "required": [
+          "reason",
+          "error_code"
+        ]
+      }
+    }
+  ],
+  "type": "object"
+}

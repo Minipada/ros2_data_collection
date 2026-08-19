@@ -33,6 +33,7 @@
   - [IP Camera](./dc/measurements/ip_camera.md)
   - [Map](./dc/measurements/map.md)
   - [Memory](./dc/measurements/memory.md)
+  - [Mission Nav2 (NavigateThroughPoses)](./dc/measurements/mission_nav2_through_poses.md)
   - [Network](./dc/measurements/network.md)
   - [OS](./dc/measurements/os.md)
   - [Permissions](./dc/measurements/permissions.md)
