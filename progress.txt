@@ -8411,6 +8411,81 @@ reading the code (the repo's established verification standard):
 - `tools/e2e/README.md` gained an "Uploader concurrency axis (#384)" section (after the
   Shipper fan-in axis's #382 section — the last of the three merged this way, so it
   gets the "ninth piece" framing, before Layout) plus Layout entries for the new files.
+
+### #385 - Limits harness: drain-rate axis
+
+- Added `tools/e2e/scripts/drain_rate_axis.py`: "how long does a backlog take to clear
+  once connectivity returns, as a function of load and outage length." Split along the
+  epic's own deep/integration line: `evaluate_cycle()` (pure, no I/O) runs each cycle's
+  outage-phase buffer-size window through `saturation_probe.evaluate()` with
+  `outage_declared=True` and raises `OutageMisreportedError` if that window is ever
+  reported saturated — a growing buffer during a declared outage is expected and must
+  never trip, and this is the *same* module and disk-buffer signal #377 defines, not a
+  bespoke check (one of #385's two acceptance criteria). The recovery-phase window reuses
+  the identical signal with `outage_declared=False` to decide the ramp's knee — except a
+  backlog that never fully drains (`drain_time_s is None`) is always reported saturated,
+  since a buffer that merely plateaus rather than growing wouldn't otherwise trip the
+  growth-trend check. `find_drain_rate_curve()` wires this into
+  `ramp_controller.find_knee()` unmodified, ramping ascending outage lengths at a fixed
+  stated load (callers vary load across invocations, `run_limits_two_tier.sh`'s own
+  REAL_STACKS/SYNTH_CONNECTIONS convention) and reporting the knee: the shortest outage
+  length whose backlog failed to drain within the wait bound (never fabricated —
+  `RunOutcome.BOUND_NOT_FOUND` when every tried outage length drains cleanly, matching
+  #379's rule). `build_axis_run()` turns that into curve_reporter's own `AxisRun` shape
+  unmodified (#385's other acceptance criterion) — `level` is the outage length in
+  seconds tried, matching the unit `tripped_level`/`highest_clear_level` are reported in;
+  the per-level *drain time* this axis exists to report has no field of its own in that
+  shared shape, so `main()` writes it alongside the curve report as a companion JSON
+  keyed by the same outage-length levels.
+- Added `tools/e2e/scripts/run_limits_drain_rate.sh`, the integration scenario: a
+  standalone Shipper under test (bare Vector, `fluent` source + `aws_s3` sink with a disk
+  buffer, no dc_bridge/ROS — same convention the two-tier composer's aggregating Shipper
+  and the load-driver byte-compatibility test both use) plus RustFS as the Destination it
+  can lose, on their own dedicated bridge network (`dc-e2e-drain-net`) rather than
+  `--network host` — RustFS never needs to be host-reachable at all here (only the
+  Shipper talks to it, over container-name DNS), so this sidesteps host port 9000
+  contention with any other scenario script's own RustFS entirely (found this the hard
+  way: a concurrent podman session on this dev machine was squatting host ports 9000 and
+  24224 mid-development, which is what motivated moving RustFS off the host network and
+  giving the Shipper's own fluent/metrics ports non-default values, 24236/9648, both
+  overridable). Induces each outage with the exact `podman stop` / wait / `podman start`
+  recipe `run.sh` itself uses on its own Postgres/RustFS containers — called directly via
+  `drain_rate_axis.py`'s subprocess calls rather than shelling out to `run.sh`, since
+  `run.sh`'s outage window is one step inside a much larger zero-loss run with its own
+  fixed gates; the *recipe* is reused, `run.sh` itself is untouched, satisfying #385's
+  "existing incident/outage scenario scaffolding, reused unmodified" acceptance
+  criterion literally.
+- **Real discovery, made empirically while building this and worth recording rather than
+  working around silently**: buffer size cannot be read as a filesystem stat on Vector's
+  buffer directory. `du -sb` on it was tried first; a live test run here showed the
+  `.dat` segment file staying pinned at its post-outage peak for over a minute of
+  continuous real deliveries to RustFS after the outage ended — Vector's on-disk buffer
+  format (a segment-based mmap log) does not shrink the file as events are acked, so
+  every drain would have looked like it never happened. Switched to scraping Vector's own
+  `internal_metrics` + `prometheus_exporter` sink (`vector_buffer_byte_size`), added to
+  the standalone Vector config (not a DC code change — #323's PRD already anticipates
+  exactly this: "the harness injects a metrics source and exporter ... for the duration
+  of a run"); verified against the same live buildup that this gauge tracks actual
+  pending bytes and reaches ~0 within seconds of the Destination coming back.
+- **Verified end-to-end for real**, not just read through: podman was available with
+  images already cached, so the full scenario was run repeatedly against real RustFS +
+  Vector containers. Confirmed both ramp outcomes for real: a short (20s) outage with a
+  generous wait bound produced `BOUND_NOT_FOUND` with a genuine measured drain time
+  (~752KB backlog, drained in ~8.1s); the same setup with a deliberately tiny wait bound
+  (3s) produced `KNEE_FOUND` at the first outage length tried, with the ramp correctly
+  never driving the second, longer outage length once the first tripped. In every run the
+  outage-phase window's real buffer growth (hundreds of KB) was correctly not
+  misreported as saturation. Confirmed clean teardown (no leftover containers/network)
+  after both success and forced-failure runs.
+- Added `tools/e2e/test/test_drain_rate_axis.py`: unit tests for the pure parts
+  (`evaluate_cycle`, `build_axis_run`, `find_drain_rate_curve`) with synthetic
+  `DrainCycleResult`/`Observation` data and fake drivers, no containers — mirroring
+  `test_ramp_controller.py`'s fakes-based approach, including a direct
+  `ramp_controller.find_knee()` comparison to confirm `find_drain_rate_curve()` is really
+  delegating to it rather than reimplementing ramp semantics.
+- `tools/e2e/README.md` gained a "Drain-rate axis (#385)" section (the tenth piece,
+  after the Uploader concurrency axis's #384 section — the last of #382/#383/#384 to
+  land — before Layout) plus a Layout entry for the two new scripts.
 - Not wired into `ci.yaml`, same as every other narrow scenario script.
 
 ### #388 - Add the Mission Measurement: NavigateThroughPoses adapter
