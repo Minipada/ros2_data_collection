@@ -8068,3 +8068,85 @@ proving each axis's binding constraint is computed independently of the others.
 controller's (in the "Synthetic load driver (#378)" section, which now covers all four
 deep modules) and a matching entry in Layout; the topology composer remains the one
 not-yet-implemented piece of #323.
+
+### #381 - Limits harness: two-tier topology composer (aggregating Shipper stack)
+
+- Added `tools/e2e/scripts/run_limits_two_tier.sh`, a new sibling E2E scenario (podman,
+  no compose, same cleanup/`DC_E2E_KEEP` convention as `run.sh`/`run_degraded.sh`) that
+  brings up: a shared Postgres + RustFS on a dedicated bridge network (container-name
+  DNS, `run_degraded.sh`'s own convention, not `--network host` — N real DC stacks all
+  binding the default Bridge-to-Shipper port would collide on a shared host netns); an
+  **aggregating Shipper** — a standalone Vector instance, no dc_bridge/ROS involved, with
+  a `type = "vector"` source (tier-1 ingress) and a `type = "fluent"` source (synthetic-
+  sender ingress) both feeding a `postgres` sink into the real `dc_records` table; **N
+  real DC stacks** (`params/e2e_limits_params.yaml`, each its own dc_bringup + dc_bridge
+  + local Shipper); and **M synthetic senders** (one `scripts/load_driver.py` invocation
+  against the aggregator's fluent port, #378). At a fixed, non-saturating load it reuses
+  `verify_zero_loss.py` **unmodified** against one representative real stack's ledger.
+- The two-tier mechanism: each real stack's own local Shipper has no Destination that
+  writes Records to the real Postgres. `e2e_limits_params.yaml` replaces the usual
+  `pgsql_records` with `local_sink`, a throwaway `type: file` Destination whose only job
+  is to make dc_bridge render the `dc.<tag>` route branches those topics need (a
+  Destination's `inputs` is the only thing that creates one — see `render.cpp`).
+  `params/e2e_limits_forward_sink.toml` — an ADR-0003 `custom_config_files` passthrough,
+  the same mechanism `e2e_passthrough_sink.toml`/`e2e_mcap_sink.toml` already use — wires
+  a `type = "vector"` sink to those same route branches, relaying them over the network
+  to the aggregating Shipper via Vector's own native inter-instance relay protocol (the
+  standard "agent Vector forwards to aggregator Vector" pattern; **not** a `fluent` sink,
+  which Vector doesn't have — confirmed against Vector's own sink reference before
+  writing any config). Verified directly against the pinned Vector build before writing
+  the ROS-side config at all: a standalone `fluent` source -> `vector` sink -> `vector`
+  source -> `file` sink chain relayed `load_driver.py` frames end to end with every
+  custom field intact, including the ack round trip. `pgsql_files`/`rustfs` (Files) point
+  straight at the real shared Postgres/RustFS instead of through the chain — see the
+  first discovery below.
+- **Verified end-to-end for real**, not just read through: podman was available in this
+  sandbox with the images already cached, so this was actually run — a `dc-e2e:latest`
+  image was rebuilt (`Containerfile.e2e` only, on top of the existing cached
+  `dc-workspace:latest` base — no colcon recompile needed, since this ticket touches no
+  dc_bridge/measurement_server C++) and the full scenario executed repeatedly against it.
+  Found and fixed two real bugs this way before it passed clean: (1) the
+  `measure_rtt.py`-based readiness polls (copied from `run_degraded.sh`'s own pattern)
+  never override `$DC_IMAGE`'s `ENTRYPOINT` (`entrypoint.sh`, which launches the full ROS
+  stack and appends any extra args to that launch command rather than running them
+  standalone) — replaced with a plain `--entrypoint bash` + `/dev/tcp` probe, which also
+  drops the dependency on `measure_rtt.py` happening to be baked into whatever image is
+  passed in; (2) `aws-cli` 2.36's `--endpoint-url` parser rejects a hostname containing
+  an underscore outright — this repo's established `dc_e2e_*` container-naming
+  convention (used unmodified by `run_degraded.sh` too) trips it, so this script's own
+  container/network names use hyphens (`dc-e2e-limits-*`) instead; volume names, never
+  used as a hostname, keep the usual underscored convention. With both fixed, a full run
+  (`REAL_STACKS=1`, default `SYNTH_CONNECTIONS=50`/`RATE_HZ=5`, default 30s steady state
+  + 15s drain) against the real image passed clean: `ZERO-LOSS VERIFICATION PASSED (25
+  sources checked, 0 violations)`.
+- **Two discoveries recorded** (in the script's own header and the README, not worked
+  around), matching this ticket's own "if that assumption turns out false, record it"
+  hedge on its no-new-DC-code acceptance criterion:
+  1. Files bypass the two-tier chain entirely. The Uploader — File bytes over its own AWS
+     SDK client, plus its own file-metadata Records — talks directly to whatever
+     `s3`/`postgres` Destination host is configured, with no Vector hop at all
+     (`bridge_node.cpp`'s `run_uploader_worker` never touches the rendered Vector
+     config); there is no way to route Files through the aggregating Shipper without new
+     DC code. Extending true two-tier coverage to Files is left as a follow-up.
+  2. The aggregating Shipper's one `postgres` sink is a shared bottleneck no single-tier
+     scenario has (each of those stacks writes straight to its own Postgres connection).
+     Verified empirically: two real stacks (`REAL_STACKS=2`, with and without a 5-10s
+     startup stagger between them) reliably produced far more at-least-once re-delivery
+     than one does — a direct Postgres query confirmed the "duplicates" are identical
+     `(date, value)` pairs, genuine at-least-once repeats, not loss — but enough of them
+     to trip `verify_zero_loss.py`'s zero-tolerance memory-timestamp-uniqueness check
+     (`check_timestamp_resolution`), which every other check in that script tolerates as
+     a note. `DC_E2E_LIMITS_REAL_STACKS` stays configurable (not hardcoded) since finding
+     exactly where that bottleneck sits is the ramp controller's job (#323's next piece),
+     not this composer's — but its default is 1 real stack so the scenario this ticket
+     asks for passes reliably on its own, matching #381's explicit "before any ramping
+     logic exists, at a fixed, non-saturating load" scope. Also initially misdiagnosed as
+     a `MeasurementServer::setRunId()` lifecycle race (a real, separate, pre-existing
+     `$HOME/run_id` counter-file behavior with no locking) before a staggered-startup
+     test ruled that theory out — noted here so a future investigation doesn't retread
+     that path.
+- `tools/e2e/README.md` gained a "Two-tier topology composer (#381)" section (after the
+  synthetic load driver's, before Layout) plus a Layout entry for the three new files.
+- Not wired into `ci.yaml`, same as every other narrow scenario script
+  (`run_retention.sh`/`run_incident.sh`/`run_degraded.sh`/
+  `run_load_driver_shipper_test.sh`).

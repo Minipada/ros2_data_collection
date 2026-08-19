@@ -252,39 +252,97 @@ accepted and acknowledged and that the driver's ledger names the exact same reco
 Vector actually decoded — not just a matching count. Not wired into `ci.yaml`, same as
 the retention/incident/degraded scenarios above.
 
-The saturation probe (`scripts/saturation_probe.py`, #377) and the ramp controller
-(`scripts/ramp_controller.py`, #379) are the other two pieces landed so far. Given a
-driver, a probe, and a `RampPolicy` of ascending load levels, `find_knee()` drives each
-level in turn and asks the probe whether it saturated, stopping at the first tripped
-level and reporting the knee: the highest level whose verdict stayed clear, plus the
-level that tripped it. A policy whose every level stays clear is reported as
-`BOUND_NOT_FOUND` rather than a fabricated ceiling at the top of the ramp — the failure
-mode #323's PRD calls out as mattering most. The controller touches no I/O and knows
-nothing about what a "level" means (a connection count, a rate, an upload
-concurrency, …); `driver` and `probe` are plain callables, so `test_ramp_controller.py`
-covers it entirely with in-process fakes, including the ramp-policy boundary cases
-(first step, last step, a single-step ramp).
+The saturation probe (`scripts/saturation_probe.py`, #377) is a third piece landed
+alongside it: a pure function over a window of ack-latency/unacked-window-depth/disk-
+buffer observations, checked in the PRD's stated priority order and unit-tested alone.
 
-The curve reporter (`scripts/curve_reporter.py`, #380) turns a set of per-axis runs —
-each an ascending sequence of levels tried, whether each level was actually driven and
-measured or is a projected `EXTRAPOLATED` point, its real-vs-synthetic composition, and
-a CPU/memory/disk `ResourceSample` where one was taken — into a stable, diffable
-`CurveReport` (`build_report()`) plus a human-readable summary (`render_summary()`). It
-is a pure function, decoupled from `ramp_controller`/`saturation_probe` the same way
-those two are decoupled from each other: no I/O, no containers, its own `RunOutcome`
-mirroring `RampOutcome`'s values. `build_report()` sorts axes by name and each axis's
-points by level so the same set of runs always yields the same report regardless of
-collection order — required for a diff between two runs to show only a real change. The
-binding constraint at saturation (CPU, memory, or disk) is the resource that peaked
-highest across a run's *measured* points only (CPU-then-memory-then-disk as the
-deterministic tie-break), and is reported as unavailable rather than guessed when the
-axis never saturated or its knee has no accompanying resource sample. An extrapolated
-point never carries a resource sample in either the structured report or the summary —
-labelling every point `measured`/`extrapolated` in both is how the reporter avoids
-presenting a projection as a measurement, per #323's PRD.
+The ramp controller (`scripts/ramp_controller.py`, #379) is the fourth. Given a driver, a
+probe, and a `RampPolicy` of ascending load levels, `find_knee()` drives each level in
+turn and asks the probe whether it saturated, stopping at the first tripped level and
+reporting the knee: the highest level whose verdict stayed clear, plus the level that
+tripped it. A policy whose every level stays clear is reported as `BOUND_NOT_FOUND`
+rather than a fabricated ceiling at the top of the ramp — the failure mode #323's PRD
+calls out as mattering most. The controller touches no I/O and knows nothing about what a
+"level" means (a connection count, a rate, an upload concurrency, …); `driver` and `probe`
+are plain callables, so `test_ramp_controller.py` covers it entirely with in-process
+fakes, including the ramp-policy boundary cases (first step, last step, a single-step
+ramp).
+
+The curve reporter (`scripts/curve_reporter.py`, #380) is the fifth. It turns a set of
+per-axis runs — each an ascending sequence of levels tried, whether each level was
+actually driven and measured or is a projected `EXTRAPOLATED` point, its real-vs-
+synthetic composition, and a CPU/memory/disk `ResourceSample` where one was taken — into
+a stable, diffable `CurveReport` (`build_report()`) plus a human-readable summary
+(`render_summary()`). It is a pure function, decoupled from `ramp_controller`/
+`saturation_probe` the same way those two are decoupled from each other: no I/O, no
+containers, its own `RunOutcome` mirroring `RampOutcome`'s values. `build_report()` sorts
+axes by name and each axis's points by level so the same set of runs always yields the
+same report regardless of collection order — required for a diff between two runs to
+show only a real change. The binding constraint at saturation (CPU, memory, or disk) is
+the resource that peaked highest across a run's *measured* points only (CPU-then-memory-
+then-disk as the deterministic tie-break), and is reported as unavailable rather than
+guessed when the axis never saturated or its knee has no accompanying resource sample. An
+extrapolated point never carries a resource sample in either the structured report or the
+summary — labelling every point `measured`/`extrapolated` in both is how the reporter
+avoids presenting a projection as a measurement, per #323's PRD.
 `tools/e2e/test/test_curve_reporter.py` covers all of this against synthetic run data
-alone. The topology composer #323 describes alongside these four modules is the one
-not-yet-implemented piece of that epic.
+alone.
+
+## Two-tier topology composer (#381)
+
+The sixth piece of #323's limits harness: brings up, with plain podman on a dedicated
+bridge network, the topology #323's PRD is ultimately sized around — a private site where
+robots have no direct path to the cloud, and an edge server aggregates their Records and
+forwards them upstream:
+
+```sh
+./tools/e2e/scripts/run_limits_two_tier.sh
+```
+
+A shared Postgres + RustFS (the real Destinations), an aggregating Shipper (a standalone
+Vector instance, `type = "vector"` + `type = "fluent"` sources, no dc_bridge/ROS
+involved), N real DC stacks (`params/e2e_limits_params.yaml`, each its own dc_bringup +
+dc_bridge + local Shipper), and M synthetic senders (one `scripts/load_driver.py`
+invocation, #378). At a fixed, non-saturating load, it reuses `verify_zero_loss.py`
+**unmodified** to prove Records survive the extra hop.
+
+Each real stack's own local Shipper has no Destination that writes to the real Postgres
+at all — `params/e2e_limits_forward_sink.toml` (an ADR-0003 `custom_config_files`
+passthrough, the same mechanism `e2e_passthrough_sink.toml`/`e2e_mcap_sink.toml` already
+use) wires a `type = "vector"` sink to the same `dc.<tag>` route branches a blessed
+Destination would, relaying them over the network to the aggregating Shipper via Vector's
+own native inter-instance protocol — the standard way to chain a local ("agent") Vector to
+a central ("aggregator") one. The aggregating Shipper's own `postgres` sink is the only
+thing that ever writes Measurement/synth Records into the real `dc_records` table. The M
+synthetic senders hit the aggregating Shipper's `fluent` source directly, adding the
+realistic connection count and byte rate #323's PRD calls for; their frames aren't
+`dc_records`-shaped, so they land on a separate `blackhole` sink and are verified via the
+driver's own sent/acked ledger instead of a Postgres row check.
+
+Two discoveries came out of implementing this, both recorded rather than worked around:
+
+1. **Files bypass the two-tier chain.** The Uploader — File bytes over its own AWS SDK
+   client, plus its own file-metadata Records — talks directly to whatever `s3`/
+   `postgres` Destination host is configured, with no Vector hop at all
+   (`dc_bridge/src/bridge_node.cpp`'s `run_uploader_worker` never touches the rendered
+   Vector config). There is no way to route Files through the aggregating Shipper without
+   new DC code, so `e2e_limits_params.yaml` points the Files-side Destinations straight at
+   the real shared Postgres/RustFS. Extending true two-tier coverage to Files is left as a
+   follow-up.
+2. **The aggregating Shipper's one `postgres` sink is a shared bottleneck N real stacks
+   don't have in any single-tier scenario** (each of those writes straight to its own
+   Postgres connection). Verified empirically: two real stacks reliably produced far more
+   at-least-once re-delivery than one does — past what `verify_zero_loss.py`'s
+   zero-tolerance memory-timestamp-uniqueness check accepts, even though every value still
+   arrived (the "duplicates" are identical `(date, value)` pairs, confirmed against
+   Postgres directly — genuine at-least-once repeats, not loss). `DC_E2E_LIMITS_REAL_STACKS`
+   stays configurable rather than hardcoded — finding exactly where that bottleneck sits is
+   the ramp controller's job (#323's next piece), not this composer's — but its default is
+   1 real stack so this script passes reliably on its own, matching #381's own scope
+   ("before any ramping logic exists, at a fixed, non-saturating load").
+
+Not wired into `ci.yaml`, same as the retention/incident/degraded/load-driver scenarios
+above.
 
 ## Layout
 
@@ -385,6 +443,10 @@ not-yet-implemented piece of that epic.
   structured report plus a human-readable summary naming the binding constraint (CPU,
   memory, or disk) at saturation, with every point labelled measured or extrapolated.
   No I/O, no container; unit-tested against synthetic run data alone.
+- `scripts/run_limits_two_tier.sh` / `params/e2e_limits_params.yaml` /
+  `params/e2e_limits_forward_sink.toml` — the two-tier topology composer (#381, part of
+  #323) described above: N real DC stacks + M synthetic senders through an aggregating
+  Shipper to shared Postgres/RustFS, reusing `verify_zero_loss.py` unmodified.
 
 ## `.dockerignore`
 

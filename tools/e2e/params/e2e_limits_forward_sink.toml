@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# #381's "remote-Shipper-target" hop: an ADR-0003 `custom_config_files` passthrough sink
+# — a component dc_bridge has no knowledge of, same mechanism as
+# e2e_passthrough_sink.toml/e2e_mcap_sink.toml — wired to the *same* public `dc.<tag>`
+# routes e2e_limits_params.yaml's `local_sink` Destination creates. Where those two
+# existing snippets are `file`/`socket` sinks that stay inside the container, this one is
+# `type = "vector"`: Vector's own native relay protocol, the standard mechanism for
+# chaining a local ("agent") Vector to a central ("aggregator") one — verified directly
+# against the pinned Vector build before this file was written (a `fluent` source ->
+# `vector` sink -> `vector` source -> `file` sink chain, relaying load_driver.py frames
+# end to end with every custom field intact).
+#
+# `address` names run_limits_two_tier.sh's aggregating Shipper container on that script's
+# own bridge network (container-name DNS, same convention as
+# e2e_degraded_params.yaml's Postgres/RustFS hosts) — never 127.0.0.1: this Bridge's own
+# local Shipper's only path to the real Postgres is through that remote hop, standing in
+# for a robot with no direct route to the cloud (#323's motivating scenario).
+[sinks.to_aggregator]
+type = "vector"
+inputs = ["dc.dc.measurement.memory", "dc.dc.measurement.os", "dc.dc.measurement.storage", "dc.dc.measurement.uptime", "dc.dc.measurement.tcp_health", "dc.dc.measurement.dummy", "dc.dc.measurement.synth00", "dc.dc.measurement.synth01", "dc.dc.measurement.synth02", "dc.dc.measurement.synth03", "dc.dc.measurement.synth04", "dc.dc.measurement.synth05", "dc.dc.measurement.synth06", "dc.dc.measurement.synth07", "dc.dc.measurement.synth08", "dc.dc.measurement.synth09", "dc.dc.measurement.synth10", "dc.dc.measurement.synth11", "dc.dc.measurement.synth12", "dc.dc.measurement.synth13"]
+address = "dc-e2e-limits-agg:6000"
+
+# Same reasoning as the passthrough/MCAP snippets' own buffer block: a snippet's sink
+# gets Vector's small in-memory default (500 events) unless it asks for the same disk
+# buffer a blessed Destination gets — this is the sink actually carrying the
+# at-least-once guarantee across the extra hop, so it needs real durability under an
+# aggregator outage, not just the two examples that stay local.
+[sinks.to_aggregator.buffer]
+type = "disk"
+max_size = 268435488
