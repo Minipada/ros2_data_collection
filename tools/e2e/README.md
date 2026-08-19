@@ -305,6 +305,10 @@ that; see that file for the corresponding unit tests.
   applies, in one declarative place also meant for #323's limits harness to reuse.
 - `scripts/measure_rtt.py` — stdlib TCP connect-time sampler (#366), used both for
   Destination readiness polling and the shaping pre-check `run_degraded.sh` never skips.
+- `scripts/saturation_probe.py` — the limits harness's saturation verdict (#377, part of
+  #323): a pure function over a window of ack-latency/unacked-window-depth/disk-buffer
+  observations, checked in the PRD's stated priority order and unit-tested alone, with
+  no container or ramp controller of its own yet.
 
 ## `.dockerignore`
 
