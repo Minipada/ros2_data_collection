@@ -8150,3 +8150,75 @@ not-yet-implemented piece of #323.
 - Not wired into `ci.yaml`, same as every other narrow scenario script
   (`run_retention.sh`/`run_incident.sh`/`run_degraded.sh`/
   `run_load_driver_shipper_test.sh`).
+
+### #383 - Limits harness: single-robot ceiling axis
+
+- `tools/e2e/scripts/single_robot_ceiling_driver.py` — the axis's driver adapter: given
+  a rate and a duration, `run_level()` returns the same shape `load_driver.py`'s
+  synthetic driver does (a sent-ledger plus per-entry ack-latency observations, `None`
+  for one never acked by the level's deadline) plus the windowed
+  `saturation_probe.Observation` samples the injected probe evaluates. Gets there by
+  polling a real stack instead of holding open a raw TCP connection: "sent" is a
+  synth-topic counter value `workload_generator.py` has published (read from its
+  ledger); "acked" is that same value having reached the destination Postgres table
+  (`dc_records WHERE source = topic AND value = ...`), the same natural key
+  `verify_zero_loss.py` already treats as ground truth. `RealStackHandle` (`set_rate()`,
+  `sample()`) is the only real-I/O seam, injected so the module is fully unit-tested
+  (`test_single_robot_ceiling_driver.py`, 9 tests) with a fake handle plus a virtual
+  clock (`now_fn`/`sleep_fn` on the config, so tests take no wall-clock time) — no
+  podman, no ROS, no network. One test drives `make_driver()`/`make_probe()` through the
+  **unmodified** `ramp_controller.find_knee()` end to end with a fake handle, directly
+  proving the adapter conforms to the ramp controller's `Driver`/`Probe` interface —
+  #383's first acceptance criterion.
+- **Discovery, recorded rather than hidden**: there is no per-frame acknowledgement
+  visible from outside `dc_bridge`'s own Forwarder→Shipper connection the way
+  `load_driver.py`'s raw TCP session gets one, so the reported ack latency here is a
+  poll-resolution *upper bound* on the real end-to-end delay (time between a value first
+  being seen published and first being seen arrived, both only known to sampling
+  resolution), not an exact per-record figure. Documented in the module's own docstring
+  and the README rather than presented as more precise than it is.
+- `tools/e2e/scripts/workload_generator.py` gained a parameter callback
+  (`add_on_set_parameters_callback`) so `rate_hz` can be stepped live via `ros2 param
+  set /e2e_workload_generator rate_hz <value>` between ramp levels — a bare declared
+  parameter has no effect on an already-created timer's period, so the callback cancels
+  and recreates the synth-publish timer on change. Rejects a non-positive rate rather
+  than silently accepting one that would divide-by-zero the timer period.
+- `tools/e2e/scripts/run_limits_single_robot_ceiling.py` — the orchestrator: wires a
+  real `PodmanRealStackHandle` (podman exec / `ros2 param set` / a `psql` query, via
+  `verify_zero_loss.py`'s own `psql()` helper — reused, not reimplemented) to
+  `make_driver()`/`make_probe()`, drives `ramp_controller.find_knee()`, and folds the
+  result plus each level's resource sample (`podman stats` CPU/mem, `df` on the Shipper
+  buffer path for disk) into `curve_reporter.py`'s `AxisRun`/`CurveReport` via a small
+  pure `build_axis_run()` helper. All parsing off command output (`parse_published_
+  values`/`parse_arrived_values`/`parse_disk_bytes`/`parse_podman_stats`/`parse_disk_
+  percent`) is factored out as pure functions and unit-tested against canned text
+  (`test_run_limits_single_robot_ceiling.py`, 12 tests) — the real subprocess-calling
+  `PodmanRealStackHandle` itself is not unit-tested, per #323's PRD's own testing
+  decision ("the topology composer and the scenario script are not unit-tested; running
+  them is the test").
+- `tools/e2e/scripts/run_limits_single_robot_ceiling.sh` — the topology script, a
+  sibling of `run.sh` (same one-real-stack Postgres+RustFS+DC-container shape,
+  `--network host`) rather than `run_limits_two_tier.sh` (no aggregating tier needed for
+  this axis). Ramps `DC_E2E_CEILING_LEVELS` (default `1,2,5,10,20,40,80` Records/s) via
+  the orchestrator above, then — **design decision**: asserts zero loss *once*,
+  cumulatively, after the whole ramp finishes and a drain window lets any backlog from
+  the final (possibly saturating) level land, reusing `verify_zero_loss.py`
+  **unmodified**, rather than after every individual clear level. Stopping and
+  restarting the stack between every ramp step to run that check (it needs the stack
+  stopped so passthrough/raw/MCAP output settle) would reset buffer/ROS state each time
+  and defeat the point of a continuous ramp; every sustainable level's traffic is a
+  strict subset of what the one cumulative, post-drain check covers, so a pass proves
+  zero loss at each of them individually — satisfying #383's "zero loss asserted at each
+  sustainable level via the existing verifier" criterion without reimplementing that
+  verifier's partial-ledger logic.
+- `tools/e2e/README.md` gained a "Single-robot ceiling axis (#383)" section (after the
+  two-tier composer's, before Layout) plus two Layout entries.
+- **Not done / left for CI**: this sandbox has `podman` but no `colcon`/ROS install (per
+  earlier entries in this log), so the podman/ROS-backed integration path
+  (`run_limits_single_robot_ceiling.sh` actually ramping a real built `dc-e2e` image)
+  was not run end to end here — only the pure driver-adapter and orchestrator logic
+  above, which is fully unit-tested (21 new tests; 98 total pass in `tools/e2e/test/`).
+  `shellcheck`/`ruff`/`prek --all-files` all pass. Running the real scenario once a
+  built image is available (CI, or a machine with more disk/`colcon`) is still needed to
+  close the loop on the podman/`ros2 param set`/`psql` seam itself.
+- Not wired into `ci.yaml`, same as every other narrow scenario script.

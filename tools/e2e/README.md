@@ -344,6 +344,57 @@ Two discoveries came out of implementing this, both recorded rather than worked 
 Not wired into `ci.yaml`, same as the retention/incident/degraded/load-driver scenarios
 above.
 
+## Single-robot ceiling axis (#383)
+
+The seventh piece: ramps one real DC stack's per-topic Record emission rate — through
+real Measurements, the real Bridge, and the stack's own local Shipper, rather than
+#378's socket-level synthetic sender — until the saturation probe trips, reporting the
+maximum sustained per-robot Record rate:
+
+```sh
+./tools/e2e/scripts/run_limits_single_robot_ceiling.sh
+```
+
+Brings up one real DC stack plus Postgres/RustFS (the same single-stack topology
+`run.sh` uses), then hands off to `scripts/run_limits_single_robot_ceiling.py`, which
+wires this axis's own driver adapter (`scripts/single_robot_ceiling_driver.py`) to the
+**unmodified** `ramp_controller.find_knee()`/`saturation_probe.evaluate()` — per #323's
+PRD, "the ramp controller and saturation probe are reused unchanged; only the driver
+adapter and topology wiring are new". The driver conforms to the same target/rate/
+duration → ledger-plus-latency interface `load_driver.py` implements, but gets there by
+polling the real stack instead of holding open a raw TCP connection: `set_rate()` steps
+`workload_generator.py`'s `rate_hz` parameter live via `ros2 param set` (the node now
+carries a parameter callback that recreates its publish timer on change, so a ramp step
+doesn't require restarting the container), and each poll compares the ledger-checked
+synth topic's published counter values against what has reached Postgres — the same
+natural key `verify_zero_loss.py` already treats as ground truth — plus the local
+Shipper's on-disk buffer size, direct evidence for the probe's disk-buffer-growth
+signal. Because there is no per-frame ack visible from outside `dc_bridge`'s own
+Forwarder/Shipper connection, the reported ack latency is a poll-resolution upper bound
+on the real end-to-end delay, not the exact per-record figure `load_driver.py`'s live
+TCP session gets — a discovery recorded in `single_robot_ceiling_driver.py`'s own
+docstring rather than presented as more precise than it is. The ramp result is folded
+into `curve_reporter.py`'s `AxisRun`/`CurveReport`, the same structured report every
+other axis in the epic produces.
+
+Zero loss is asserted once, cumulatively, after the whole ramp finishes and a drain
+window lets any backlog from the final (possibly saturating) level land, reusing
+`verify_zero_loss.py` **unmodified** — not after every individual clear level, which
+would mean stopping and restarting the stack (losing its buffer/ROS state) between
+every ramp step and defeating the point of a continuous ramp. Every sustainable level's
+traffic is a strict subset of what that one cumulative, post-drain check covers, so a
+pass proves zero loss at each of them individually.
+
+`tools/e2e/test/test_single_robot_ceiling_driver.py` covers the driver adapter with a
+fake `RealStackHandle` and a virtual clock — no podman, no ROS, no real time — including
+an end-to-end run through the unmodified `find_knee()`.
+`tools/e2e/test/test_run_limits_single_robot_ceiling.py` covers the orchestrator's pure
+parsing helpers and its find_knee-result-to-`AxisRun` folding logic; per #323's PRD
+("the topology composer and the scenario script are not unit-tested; running them is
+the test"), the real-I/O `PodmanRealStackHandle` itself and the shell script are
+exercised by actually running the scenario, not unit tests. Not wired into `ci.yaml`,
+same as the other scenario scripts above.
+
 ## Layout
 
 - `Containerfile` — builds the full DC workspace (every `dc_*` package, all C++ since
@@ -447,6 +498,16 @@ above.
   `params/e2e_limits_forward_sink.toml` — the two-tier topology composer (#381, part of
   #323) described above: N real DC stacks + M synthetic senders through an aggregating
   Shipper to shared Postgres/RustFS, reusing `verify_zero_loss.py` unmodified.
+- `scripts/single_robot_ceiling_driver.py` — the single-robot ceiling axis's driver
+  adapter (#383, part of #323) described above: conforms to `ramp_controller.py`'s
+  Driver interface and `load_driver.py`'s ledger-plus-latency return shape, sourced from
+  polling the real stack. No I/O of its own (an injected `RealStackHandle`); unit-tested
+  with a fake handle and a virtual clock alone.
+- `scripts/run_limits_single_robot_ceiling.py` / `scripts/run_limits_single_robot_ceiling.sh`
+  — the single-robot ceiling axis's orchestrator and topology script (#383, part of
+  #323): the real-I/O `RealStackHandle`, the find_knee-result-to-`AxisRun` folding, and
+  the one-real-stack podman topology, reusing `verify_zero_loss.py` unmodified after a
+  post-ramp drain.
 
 ## `.dockerignore`
 
