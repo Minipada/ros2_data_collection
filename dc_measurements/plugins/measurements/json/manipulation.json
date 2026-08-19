@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Manipulation",
+  "description":
+      "One MoveIt MoveGroup goal's lifecycle: a Record when it is accepted, one when it reaches a terminal state",
+  "properties": {
+    "event": {
+      "description": "Whether this Record is the start or the end of one manipulation goal",
+      "type": "string",
+      "enum": [
+        "manipulation_start",
+        "manipulation_end"
+      ]
+    },
+    "goal_id": {
+      "description": "The MoveGroup goal's own UUID, as a canonical hex string, correlating a start Record with its end",
+      "type": "string"
+    },
+    "group_name": {
+      "description":
+          "The planning group this Measurement instance watches, as configured -- not read off the goal, which is never broadcast",
+      "type": "string"
+    },
+    "sequence": {
+      "description":
+          "Monotonically increasing across every Record from this Measurement instance, so a dropped Record shows up as a gap",
+      "type": "integer",
+      "minimum": 1
+    },
+    "outcome": {
+      "description":
+          "Derived from MoveIt's own error_code: SUCCESS succeeds, PREEMPTED is the closest thing MoveIt has to cancelled, everything else fails",
+      "type": "string",
+      "enum": [
+        "succeeded",
+        "cancelled",
+        "failed"
+      ]
+    },
+    "error_code": {
+      "description": "MoveIt's own numeric MoveItErrorCodes, carried through verbatim",
+      "type": "integer"
+    },
+    "planning_time": {
+      "description": "Seconds MoveGroup spent planning, from MoveGroup::Result",
+      "type": "number",
+      "minimum": 0
+    },
+    "duration_sec": {
+      "description": "How long the goal took from accepted to terminal",
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "event",
+    "goal_id",
+    "group_name",
+    "sequence"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "manipulation_end"
+          }
+        },
+        "required": [
+          "event"
+        ]
+      },
+      "then": {
+        "required": [
+          "outcome",
+          "error_code",
+          "planning_time",
+          "duration_sec"
+        ]
+      }
+    }
+  ],
+  "type": "object"
+}
