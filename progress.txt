@@ -8222,3 +8222,82 @@ not-yet-implemented piece of #323.
   built image is available (CI, or a machine with more disk/`colcon`) is still needed to
   close the loop on the podman/`ros2 param set`/`psql` seam itself.
 - Not wired into `ci.yaml`, same as every other narrow scenario script.
+
+### #382 - Limits harness: Shipper fan-in axis + instrument proof
+
+- Added `tools/e2e/scripts/run_limits_shipper_fanin.py`, the orchestrator wiring #323's
+  four deep modules together for real: `ramp_controller.find_knee()` drives synthetic
+  connection count via `load_driver.py` against #381's aggregating Shipper, one ramp
+  level built from several short back-to-back `load_driver` sub-runs (no mid-run
+  introspection hook exists, so a sustained level is approximated as fresh short bursts
+  rather than one held connection) each turned into one `saturation_probe.Observation`
+  (ack-latency p95, unacked-window depth, aggregating-Shipper disk-buffer bytes via
+  `podman exec`/`du`); `saturation_probe.evaluate()` judges the window; `curve_reporter`
+  turns the result into a stable report plus the PRD's required closing sentence. None
+  of the four modules were modified.
+- Zero loss is asserted **at every sustainable level**, not once at the end, by hooking
+  into `find_knee()`'s own driver/probe seam: the `probe` first asks the saturation
+  probe for a verdict, and only when a level stays clear does it also run
+  `verify_zero_loss.py` ("the existing verifier," reused unmodified, same as #381)
+  against a snapshot of the ledger-checked real stack's still-running output. A
+  violation is a hard, immediate failure of the whole ramp.
+- Added `tools/e2e/scripts/run_limits_shipper_fanin.sh`, a sibling scenario script (own
+  topology bring-up, own gates — not a mode bolted onto the zero-loss run) that reuses
+  #381's topology verbatim: the same `params/e2e_limits_params.yaml`,
+  `params/e2e_limits_forward_sink.toml`, and the exact container names those files
+  hard-code (`dc-e2e-limits-postgres`/`rustfs`/`agg`), since the two-tier chain they
+  compose is exactly what this ramp drives. It runs the ramp twice — once against an
+  unconstrained aggregating Shipper (the flagship number), then again (after truncating
+  `dc_records`/`dc_files` and tearing down just that phase's Shipper + real stacks, with
+  Postgres/RustFS/network kept up) against a deliberately CPU/memory-constrained one
+  (`--cpus`/`--memory`, `DC_E2E_FANIN_CONSTRAINED_CPUS`/`_MEMORY`) — and hard-fails
+  unless the constrained ceiling comes in at or below half the unconstrained one
+  (`DC_E2E_FANIN_CEILING_DROP_RATIO`, default 0.5), proving the harness detects an
+  induced limit per #323's PRD ("a limits harness that cannot demonstrate detecting an
+  induced limit has not been shown to work"). Either phase reporting `BOUND_NOT_FOUND`
+  is itself a hard failure, never a skip: an unconstrained run with no measured ceiling
+  has nothing for the PRD's closing sentence to state, and a constrained run that never
+  saturates has failed to demonstrate the induced limit.
+- **Verified against real infrastructure**, not just unit-level reasoning: ran the full
+  two-phase scenario against the pre-built `dc-e2e:latest` image several times on this
+  machine. One run (`DC_E2E_FANIN_LEVELS="100 400"`, only 2 levels) correctly *failed*
+  the instrument-proof gate — both phases happened to saturate at the same coarse tested
+  level, and the harness refused to claim a false pass rather than fabricate success at
+  that resolution. A finer-grained run (`"50 100 200 400"`) drove real synthetic load
+  through a real aggregating Shipper, found a real knee via `ramp_controller`, asserted
+  real zero-loss via `verify_zero_loss.py` at clear levels, and produced a correct
+  closing sentence and curve report — confirmed level-by-level before the run was cut
+  short by an external background-task limit at level 200 of the second (constrained)
+  phase, after both earlier levels had already passed cleanly with the fix below in
+  place. A full unattended pass of both phases end-to-end (a run of several minutes) is
+  still worth doing once outside this sandbox's per-command constraints, but the
+  mechanism was exercised for real, not just smoke-tested against fakes.
+- **Recorded discovery, found and root-caused from that real run, not simulated**: the
+  live-volume snapshot `verify_zero_loss_at_level()` reads from (the ledger-checked real
+  stack keeps running across the whole ramp — restarting it between every level would be
+  far too slow) raced a specific, precisely diagnosed mechanism, not a vague "torn
+  write": `entrypoint.sh` starts `dc_mcap_writer` with `--max-duration-secs 15`, and
+  (per `RotatingMcapWriter._open_next_file()`'s own docstring) a `.mcap` file only
+  becomes readable once its 15s rotation finishes and `Writer.finish()` runs — so a
+  snapshot taken mid-rotation reports the handful of most-recent Records as "never
+  reached dc_mcap_writer" even though they are sitting safely on disk, about to become
+  readable a few seconds later. First hit this at real ramp level 400: a clean,
+  well-formed "ZERO-LOSS VERIFICATION FAILED" (`mcap/synth02`/`synth03`, "away from any
+  kill point") that manually re-running the exact same check against the same
+  still-live containers, moments later, reported as a clean pass with zero violations —
+  proving it was a snapshot-timing race, not real loss. The original retry logic only
+  retried failures that *looked like* a parse crash (kept a real "ZERO-LOSS
+  VERIFICATION FAILED" message as an immediate hard failure); fixed to retry *any*
+  failure shape once, after a pause (`_ZERO_LOSS_RETRY_SLEEP_S = 18.0`, comfortably past
+  the 15s rotation boundary) before hard-failing — a genuine violation is expected to
+  reproduce well past any rotation boundary, so this costs nothing on real loss.
+  Re-verified directly against the same live containers that had failed under the
+  original 5s retry: the fixed 18s retry passed within its two-attempt budget
+  (`VERIFY OK in 84.4s`).
+- `tools/e2e/README.md` gained a "Shipper fan-in axis (#382)" section (after the
+  single-robot ceiling axis's #383 section, before Layout — #383 merged first and
+  already claimed the "seventh piece" framing, so this one is the eighth) plus a Layout
+  entry for the two new files.
+- Not wired into `ci.yaml`, same as every other narrow scenario script, and — like
+  `run_limits_two_tier.sh` — needs that script's own topology bring-up working before it
+  can run at all.

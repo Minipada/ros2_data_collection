@@ -395,6 +395,63 @@ the test"), the real-I/O `PodmanRealStackHandle` itself and the shell script are
 exercised by actually running the scenario, not unit tests. Not wired into `ci.yaml`,
 same as the other scenario scripts above.
 
+## Shipper fan-in axis (#382)
+
+The eighth piece, and the epic's flagship axis: how many robots does one aggregating
+Shipper serve before it applies backpressure?
+
+```sh
+./tools/e2e/scripts/run_limits_shipper_fanin.sh
+```
+
+A sibling of `run_limits_two_tier.sh` — its own gates, not a mode bolted onto the
+zero-loss run — but it reuses that ticket's topology verbatim, since the two-tier chain
+it composes is exactly what this ramp drives: the same `params/e2e_limits_params.yaml`,
+`params/e2e_limits_forward_sink.toml`, and the same hard-coded container names those
+files address (`dc-e2e-limits-postgres`/`rustfs`/`agg`). `scripts/run_limits_shipper_fanin.py`
+is where the pieces actually meet: `ramp_controller.find_knee()` (#379) drives synthetic
+connection count upward via `load_driver.py` (#378) against the aggregating Shipper,
+`saturation_probe.evaluate()` (#377) judges each level from a short window of
+ack-latency/unacked-window-depth/disk-buffer-growth observations, and `curve_reporter`
+(#380) turns the result into a stable report plus the PRD's required closing sentence.
+None of the four are modified — this axis is exactly the "one axis costs one thin
+scenario" the epic's PRD called for.
+
+Zero loss is asserted by hooking straight into the ramp controller's own driver/probe
+seam: the `probe` handed to `find_knee()` first asks the saturation probe for a verdict,
+and only when a level's verdict stays clear does it also run `verify_zero_loss.py` — "the
+existing verifier," reused unmodified, same as `run_limits_two_tier.sh` — against a
+snapshot of the ledger-checked real stack's still-running output. A violation there is a
+hard failure of the whole ramp, immediately: a throughput figure obtained from a
+configuration that was dropping Records is never reported. Recorded discovery, verified
+against a real run: because the real stack keeps running (and its output files keep
+growing) across the whole ramp rather than being restarted between every level, the
+snapshot the verifier reads occasionally races that still-running container. One instance
+of that race has a precise, diagnosed cause — `entrypoint.sh` runs `dc_mcap_writer` with
+`--max-duration-secs 15`, and a `.mcap` file only becomes readable once its rotation
+finishes, so a snapshot taken mid-rotation can report the handful of most-recent Records
+as "never reached dc_mcap_writer" even though they are safely on disk. The check retries
+any failure shape once, after a pause comfortably longer than that 15s rotation window,
+before treating it as a hard failure like any other — never silently skipped, never given
+more than one extra chance.
+
+The scenario then proves the instrument itself, per the PRD's "a limits harness that
+cannot demonstrate detecting an induced limit has not been shown to work": having found
+the unconstrained ceiling, it truncates `dc_records`/`dc_files`, tears down that phase's
+aggregating Shipper and real stacks (Postgres/RustFS/the network stay up), and re-runs the
+identical ramp against a deliberately CPU/memory-constrained aggregating Shipper
+(`--cpus`/`--memory`, `DC_E2E_FANIN_CONSTRAINED_CPUS`/`_MEMORY`). The constrained run's
+ceiling must come in at or below half the unconstrained one
+(`DC_E2E_FANIN_CEILING_DROP_RATIO`, default `0.5`) — a hard gate, not informational.
+Either phase reporting `BOUND_NOT_FOUND` (never saturating within the tested levels) is
+itself a hard failure: an unconstrained run with no measured ceiling has nothing for the
+PRD's closing sentence to state, and a constrained run that never saturates has failed to
+demonstrate the induced limit, never fabricated as a pass either way.
+
+Not wired into `ci.yaml`, same as the other scenario scripts above — and, like
+`run_limits_two_tier.sh`'s own dependents, this axis needs that script's own topology
+bring-up already established working before it can run at all.
+
 ## Layout
 
 - `Containerfile` — builds the full DC workspace (every `dc_*` package, all C++ since
@@ -508,6 +565,10 @@ same as the other scenario scripts above.
   #323): the real-I/O `RealStackHandle`, the find_knee-result-to-`AxisRun` folding, and
   the one-real-stack podman topology, reusing `verify_zero_loss.py` unmodified after a
   post-ramp drain.
+- `scripts/run_limits_shipper_fanin.sh` / `scripts/run_limits_shipper_fanin.py` — the
+  Shipper fan-in axis (#382, part of #323) described above: ramping robot count against
+  #381's two-tier topology to the knee and proving the instrument itself against a
+  deliberately constrained aggregating Shipper.
 
 ## `.dockerignore`
 
