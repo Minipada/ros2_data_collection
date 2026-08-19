@@ -8412,3 +8412,77 @@ reading the code (the repo's established verification standard):
   Shipper fan-in axis's #382 section — the last of the three merged this way, so it
   gets the "ninth piece" framing, before Layout) plus Layout entries for the new files.
 - Not wired into `ci.yaml`, same as every other narrow scenario script.
+
+### #388 - Add the Mission Measurement: NavigateThroughPoses adapter
+
+- New `dc_measurements` plugin `mission_nav2_through_poses` (class
+  `MissionNav2ThroughPoses`), watching nav2's `NavigateThroughPoses` action and emitting
+  `mission_start`/`mission_end` Records in #387's Record schema, with
+  `mission_type: "navigate_through_poses"`. #387 itself is not implemented in this tree
+  (still open) — #388's own "Blocked by: None" explicitly says it only needs #387's
+  *documented* schema/pattern (written out in #387's issue body), not #387's code, so
+  this was implemented directly against that spec.
+- **Architecture decision, not pre-specified by either issue**: this Measurement is a
+  passive observer, not a second `rclcpp_action::Client` competing for the action
+  server's single active goal. nav2's `SimpleActionServer` (behind `bt_navigator`) only
+  ever runs one goal at a time; a DC plugin that sent its own competing
+  `NavigateThroughPoses` goal to track missions would preempt or fight whatever real
+  navigation stack component (BT navigator, fleet orchestrator) is actually driving the
+  robot. Instead it subscribes directly to the action's own `_action/status`
+  (`action_msgs/msg/GoalStatusArray`) and `_action/feedback` topics and calls its
+  `_action/get_result` service directly for whichever goal_id just reached a terminal
+  status — the same standard per-action topics/services every `rclcpp_action::Server`
+  exposes (verified against the real generated `Impl::GetResultService`/
+  `Impl::FeedbackMessage` codegen pattern), rather than `rclcpp_action::Client`'s
+  higher-level API, which has no supported way to attach to a goal it did not itself
+  send.
+- Verified the real nav2 message shapes against `ros-navigation/navigation2` on GitHub
+  (not from memory) before writing the field mapping: `NavigateThroughPoses.action`'s
+  Result carries `error_code`/`error_msg` (same error-code table as `NavigateToPose`,
+  offset by `+100`) plus `WaypointStatus[] waypoint_statuses`; `action_msgs/msg/
+  GoalStatusArray`'s array field is `status_list`, not `status` (an easy field-name trap
+  had this not been checked directly).
+- ROS-free core (`mission_nav2_through_poses_core.hpp`, header-only, following #360's
+  `StateTransitionDetector`/`BatteryCycleAccumulator` split precedent): tracks which
+  goal_ids are new (`observe()` → a `MissionStartFact` only the first time a goal_id is
+  seen — deliberately *not* built on `StateTransitionDetector<GoalPhase>`, since a
+  mission's start is the very first sample for a goal_id, not a transition away from
+  some prior baseline state the way `intervention`/`fault` have one); `end()` derives
+  `outcome` (`succeeded`/`failed`/`cancelled`/`aborted`) from the terminal phase and
+  `error_code`, matching #387's contract (`SUCCEEDED` + non-zero `error_code` →
+  `failed`, distinct from `ABORTED`). Bounded tracking (`kMaxTracked = 256`, prunes
+  oldest *finished* entries only) since goal UUIDs never repeat, unlike `fault`'s
+  diagnostic-name keys.
+- `waypoint_statuses` on `mission_end` is an aggregate `{total, completed, skipped,
+  failed}` count object, not the raw per-pose array — the acceptance criteria left this
+  choice to the implementer ("whichever is simpler to keep the Record reasonably
+  flat").
+- New JSON Schema `mission_nav2_through_poses.json` (mirrors #387's `battery.json`-style
+  `allOf`/`if`/`then` conditionals: `mission_end` requires `outcome`/`duration_sec`;
+  `outcome` in `[failed, aborted]` additionally requires `reason`/`error_code`).
+- Tests: `test_mission_nav2_through_poses_core.cpp` (ROS-free, no node, no action
+  server — mirrors `battery_cycle_accumulator_test.cpp`) plus
+  `test_measurement_mission_nav2_through_poses.cpp`, a `MeasurementServer` integration
+  test using a real `rclcpp_action::Server<NavigateThroughPoses>` fixture standing in
+  for nav2, driven by a real `rclcpp_action::Client` the *test* owns (since the
+  Measurement under test never sends a goal itself) — covers goal-accepted →
+  `mission_start`, succeeded/aborted/cancelled/failed-via-error-code outcomes,
+  recoveries-from-feedback, `waypoint_statuses` aggregation, schema validation on every
+  emitted Record, and sequence monotonicity across several missions.
+- Doc page `doc/src/dc/measurements/mission_nav2_through_poses.md`, registered in
+  `doc/src/SUMMARY.md` (after Memory, alphabetically among Measurements).
+- New `dc_measurements` deps: `action_msgs`, `nav2_msgs`, `rclcpp_action`,
+  `unique_identifier_msgs` (package.xml + CMakeLists.txt `dependencies`).
+- `git add -A && prek run --all-files --skip build-doc` passes clean (clang-format
+  reformatted the new files on the first pass, re-staged and re-ran clean).
+- **Not done / left for CI**: no `colcon`/ROS 2 toolchain available in this sandbox (no
+  `/opt/ros`, no `colcon` binary) — same constraint noted in #242/#243's entries above.
+  Every generated-message field name used (`GoalStatusArray.status_list`,
+  `GoalStatus.goal_info`/`.status`, `GoalInfo.goal_id`/`.stamp`, `UUID.uuid`,
+  `NavigateThroughPoses` Goal/Result/Feedback/`Impl::GetResultService`/
+  `Impl::FeedbackMessage`, `WaypointStatus.waypoint_status`/`PENDING`/`COMPLETED`/
+  `SKIPPED`/`FAILED`) was cross-checked against the real `.msg`/`.action` definitions
+  fetched from `ros-navigation/navigation2` and `ros2/rcl_interfaces`/
+  `ros2/unique_identifier_msgs` on GitHub rather than from memory, but a real `colcon
+  build`/`colcon test` of `dc_measurements` on Jazzy is still needed to close the loop
+  formally (CI once #249 lands, or a machine with `ament_cmake`/nav2 installed).
