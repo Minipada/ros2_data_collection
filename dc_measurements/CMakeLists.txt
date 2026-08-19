@@ -167,6 +167,9 @@ list(APPEND dc_measurement_plugin_libs dc_ip_camera_measurement)
 add_library(dc_map_measurement SHARED plugins/measurements/map.cpp)
 list(APPEND dc_measurement_plugin_libs dc_map_measurement)
 
+add_library(dc_mission_nav2_follow_waypoints_measurement SHARED plugins/measurements/mission_nav2_follow_waypoints.cpp)
+list(APPEND dc_measurement_plugin_libs dc_mission_nav2_follow_waypoints_measurement)
+
 add_library(dc_mission_nav2_through_poses_measurement SHARED plugins/measurements/mission_nav2_through_poses.cpp)
 list(APPEND dc_measurement_plugin_libs dc_mission_nav2_through_poses_measurement)
 
@@ -344,6 +347,7 @@ set(tests
   test_measurement_list_string_equal
   test_measurement_map
   test_measurement_memory
+  test_measurement_mission_nav2_follow_waypoints
   test_measurement_mission_nav2_through_poses
   test_measurement_moving
   test_measurement_network
@@ -361,6 +365,7 @@ set(tests
   test_measurement_tcp_health
   test_measurement_thermal
   test_measurement_uptime
+  mission_follow_waypoints_tracker_test
   test_mission_nav2_through_poses_core
 )
 

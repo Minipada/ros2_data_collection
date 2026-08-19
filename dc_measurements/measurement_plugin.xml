@@ -116,6 +116,14 @@ SPDX-License-Identifier: MPL-2.0
         </class>
     </library>
 
+    <library path="dc_mission_nav2_follow_waypoints_measurement">
+        <class name="dc_measurements/MissionNav2FollowWaypoints" type="dc_measurements::MissionNav2FollowWaypoints" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_mission_nav2_follow_waypoints
+            </description>
+        </class>
+    </library>
+
     <library path="dc_network_measurement">
         <class name="dc_measurements/Network" type="dc_measurements::Network" base_class_type="dc_core::Measurement">
             <description>
