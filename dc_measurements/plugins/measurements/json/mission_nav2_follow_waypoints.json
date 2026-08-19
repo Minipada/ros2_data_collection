@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MissionNav2FollowWaypoints",
+  "description":
+      "One nav2 FollowWaypoints goal's lifecycle, watched passively: a mission_start Record when it is accepted, a mission_end Record when it reaches a terminal state",
+  "properties": {
+    "event": {
+      "description": "What this Record is: a mission being accepted, or one reaching a terminal state",
+      "type": "string",
+      "enum": [
+        "mission_start",
+        "mission_end"
+      ]
+    },
+    "mission_id": {
+      "description": "The FollowWaypoints goal UUID, stringified",
+      "type": "string"
+    },
+    "mission_type": {
+      "description":
+          "Always 'follow_waypoints' for this adapter -- other Mission Measurement adapters set their own value",
+      "type": "string",
+      "const": "follow_waypoints"
+    },
+    "sequence": {
+      "description":
+          "Monotonically increasing transition number for this Measurement instance, so a dropped Record is detectable rather than silently corrupting a duration",
+      "type": "integer",
+      "minimum": 1
+    },
+    "outcome": {
+      "description":
+          "How the mission ended. 'failed' is a goal that reached GoalStatus SUCCEEDED but still carried a non-zero error_code (nav2's WaypointFollower can finish having missed a waypoint without the action itself aborting)",
+      "type": "string",
+      "enum": [
+        "succeeded",
+        "failed",
+        "cancelled",
+        "aborted"
+      ]
+    },
+    "reason": {
+      "description": "Human-readable failure reason, verbatim from FollowWaypoints::Result.error_msg",
+      "type": "string"
+    },
+    "error_code": {
+      "description": "nav2's own numeric FollowWaypoints::Result.error_code, carried through verbatim",
+      "type": "integer",
+      "minimum": 0
+    },
+    "duration_sec": {
+      "description": "How long the mission ran, from acceptance to its terminal state",
+      "type": "number",
+      "minimum": 0
+    },
+    "missed_waypoints": {
+      "description":
+          "One entry per waypoint FollowWaypoints::Result.missed_waypoints reports -- which specific stops were not completed and why",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "description": "Position of this waypoint in the goal's pose list",
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "completed",
+              "skipped",
+              "failed"
+            ]
+          },
+          "error_code": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "error_msg": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "status",
+          "error_code",
+          "error_msg"
+        ]
+      }
+    }
+  },
+  "required": [
+    "event",
+    "mission_id",
+    "mission_type",
+    "sequence"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "mission_end"
+          }
+        },
+        "required": [
+          "event"
+        ]
+      },
+      "then": {
+        "required": [
+          "outcome",
+          "duration_sec",
+          "missed_waypoints"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "failed",
+              "aborted"
+            ]
+          }
+        },
+        "required": [
+          "outcome"
+        ]
+      },
+      "then": {
+        "required": [
+          "reason",
+          "error_code"
+        ]
+      }
+    }
+  ],
+  "type": "object"
+}
