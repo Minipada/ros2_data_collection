@@ -192,6 +192,9 @@ list(APPEND dc_measurement_plugin_libs dc_manipulation_measurement)
 add_library(dc_map_measurement SHARED plugins/measurements/map.cpp)
 list(APPEND dc_measurement_plugin_libs dc_map_measurement)
 
+add_library(dc_mission_nav2_measurement SHARED plugins/measurements/mission_nav2.cpp)
+list(APPEND dc_measurement_plugin_libs dc_mission_nav2_measurement)
+
 add_library(dc_mission_nav2_follow_waypoints_measurement SHARED plugins/measurements/mission_nav2_follow_waypoints.cpp)
 list(APPEND dc_measurement_plugin_libs dc_mission_nav2_follow_waypoints_measurement)
 
@@ -382,6 +385,7 @@ set(tests
   test_measurement_manipulation
   test_measurement_map
   test_measurement_memory
+  test_measurement_mission_nav2
   test_measurement_mission_nav2_follow_waypoints
   test_measurement_mission_nav2_through_poses
   test_measurement_moving
@@ -403,6 +407,7 @@ set(tests
   test_measurement_thermal
   test_measurement_uptime
   mission_follow_waypoints_tracker_test
+  mission_nav2_tracker_test
   test_mission_nav2_through_poses_core
 )
 

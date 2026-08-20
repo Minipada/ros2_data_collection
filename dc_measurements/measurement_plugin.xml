@@ -120,6 +120,14 @@ SPDX-License-Identifier: MPL-2.0
         </class>
     </library>
 
+    <library path="dc_mission_nav2_measurement">
+        <class name="dc_measurements/MissionNav2" type="dc_measurements::MissionNav2" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_mission_nav2
+            </description>
+        </class>
+    </library>
+
     <library path="dc_mission_nav2_through_poses_measurement">
         <class name="dc_measurements/MissionNav2ThroughPoses" type="dc_measurements::MissionNav2ThroughPoses" base_class_type="dc_core::Measurement">
             <description>
