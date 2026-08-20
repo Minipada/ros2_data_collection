@@ -6,8 +6,6 @@
 #include <iomanip>
 #include <sstream>
 
-#include "nav2_msgs/msg/waypoint_status.hpp"
-
 namespace dc_measurements
 {
 
@@ -40,34 +38,6 @@ std::string outcomeName(MissionOutcome outcome)
     default:
       return "aborted";
   }
-}
-
-std::optional<WaypointStatusCounts> countWaypointStatuses(const std::vector<nav2_msgs::msg::WaypointStatus>& statuses)
-{
-  if (statuses.empty())
-  {
-    return std::nullopt;
-  }
-  WaypointStatusCounts counts;
-  counts.total = static_cast<std::uint32_t>(statuses.size());
-  for (const auto& status : statuses)
-  {
-    switch (status.waypoint_status)
-    {
-      case nav2_msgs::msg::WaypointStatus::COMPLETED:
-        ++counts.completed;
-        break;
-      case nav2_msgs::msg::WaypointStatus::SKIPPED:
-        ++counts.skipped;
-        break;
-      case nav2_msgs::msg::WaypointStatus::FAILED:
-        ++counts.failed;
-        break;
-      default:
-        break;
-    }
-  }
-  return counts;
 }
 
 }  // namespace
@@ -204,8 +174,7 @@ void MissionNav2ThroughPoses::handleResult(const std::string& goal_id_hex, GoalP
       recoveries = recoveries_it->second;
       last_recoveries_.erase(recoveries_it);
     }
-    fact = core_.end(goal_id_hex, phase, response->result.error_code, response->result.error_msg, recoveries,
-                     countWaypointStatuses(response->result.waypoint_statuses), at);
+    fact = core_.end(goal_id_hex, phase, response->result.error_code, response->result.error_msg, recoveries, at);
   }
 
   json data;
@@ -226,13 +195,6 @@ void MissionNav2ThroughPoses::handleResult(const std::string& goal_id_hex, GoalP
   if (fact.recoveries.has_value())
   {
     data["recoveries"] = *fact.recoveries;
-  }
-  if (fact.waypoint_statuses.has_value())
-  {
-    data["waypoint_statuses"] = { { "total", fact.waypoint_statuses->total },
-                                  { "completed", fact.waypoint_statuses->completed },
-                                  { "skipped", fact.waypoint_statuses->skipped },
-                                  { "failed", fact.waypoint_statuses->failed } };
   }
 
   const std::lock_guard<std::mutex> lock(mutex_);

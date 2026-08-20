@@ -16,7 +16,6 @@
 using dc_measurements::GoalPhase;
 using dc_measurements::MissionNav2ThroughPosesCore;
 using dc_measurements::MissionOutcome;
-using dc_measurements::WaypointStatusCounts;
 
 namespace
 {
@@ -74,7 +73,7 @@ TEST(MissionNav2ThroughPosesCore, SucceededWithNoErrorCodeIsOutcomeSucceeded)
 {
   MissionNav2ThroughPosesCore core;
   core.observe("goal-1", at(0));
-  const auto fact = core.end("goal-1", GoalPhase::Succeeded, 0, "", std::nullopt, std::nullopt, at(10));
+  const auto fact = core.end("goal-1", GoalPhase::Succeeded, 0, "", std::nullopt, at(10));
 
   EXPECT_EQ(fact.mission_id, "goal-1");
   EXPECT_EQ(fact.sequence, 2u);
@@ -88,8 +87,7 @@ TEST(MissionNav2ThroughPosesCore, SucceededWithNonZeroErrorCodeIsOutcomeFailed)
 {
   MissionNav2ThroughPosesCore core;
   core.observe("goal-1", at(0));
-  const auto fact =
-      core.end("goal-1", GoalPhase::Succeeded, 9100, "unknown failure", std::nullopt, std::nullopt, at(5));
+  const auto fact = core.end("goal-1", GoalPhase::Succeeded, 9100, "unknown failure", std::nullopt, at(5));
 
   EXPECT_EQ(fact.outcome, MissionOutcome::Failed);
   ASSERT_TRUE(fact.reason.has_value());
@@ -102,7 +100,7 @@ TEST(MissionNav2ThroughPosesCore, AbortedCarriesReasonAndErrorCode)
 {
   MissionNav2ThroughPosesCore core;
   core.observe("goal-1", at(0));
-  const auto fact = core.end("goal-1", GoalPhase::Aborted, 9102, "tf timeout", std::nullopt, std::nullopt, at(3));
+  const auto fact = core.end("goal-1", GoalPhase::Aborted, 9102, "tf timeout", std::nullopt, at(3));
 
   EXPECT_EQ(fact.outcome, MissionOutcome::Aborted);
   ASSERT_TRUE(fact.reason.has_value());
@@ -115,32 +113,22 @@ TEST(MissionNav2ThroughPosesCore, CanceledCarriesNoReasonOrErrorCode)
 {
   MissionNav2ThroughPosesCore core;
   core.observe("goal-1", at(0));
-  const auto fact = core.end("goal-1", GoalPhase::Canceled, 0, "", std::nullopt, std::nullopt, at(2));
+  const auto fact = core.end("goal-1", GoalPhase::Canceled, 0, "", std::nullopt, at(2));
 
   EXPECT_EQ(fact.outcome, MissionOutcome::Cancelled);
   EXPECT_FALSE(fact.reason.has_value());
   EXPECT_FALSE(fact.error_code.has_value());
 }
 
-TEST(MissionNav2ThroughPosesCore, RecoveriesAndWaypointStatusesAreCarriedThrough)
+TEST(MissionNav2ThroughPosesCore, RecoveriesAreCarriedThrough)
 {
   MissionNav2ThroughPosesCore core;
   core.observe("goal-1", at(0));
 
-  WaypointStatusCounts counts;
-  counts.total = 3;
-  counts.completed = 2;
-  counts.skipped = 0;
-  counts.failed = 1;
-
-  const auto fact = core.end("goal-1", GoalPhase::Succeeded, 0, "", 2, counts, at(1));
+  const auto fact = core.end("goal-1", GoalPhase::Succeeded, 0, "", 2, at(1));
 
   ASSERT_TRUE(fact.recoveries.has_value());
   EXPECT_EQ(*fact.recoveries, 2);
-  ASSERT_TRUE(fact.waypoint_statuses.has_value());
-  EXPECT_EQ(fact.waypoint_statuses->total, 3u);
-  EXPECT_EQ(fact.waypoint_statuses->completed, 2u);
-  EXPECT_EQ(fact.waypoint_statuses->failed, 1u);
 }
 
 TEST(MissionNav2ThroughPosesCore, OpenMissionIdsReportsOnlyUnfinishedMissions)
@@ -148,7 +136,7 @@ TEST(MissionNav2ThroughPosesCore, OpenMissionIdsReportsOnlyUnfinishedMissions)
   MissionNav2ThroughPosesCore core;
   core.observe("goal-1", at(0));
   core.observe("goal-2", at(1));
-  core.end("goal-1", GoalPhase::Succeeded, 0, "", std::nullopt, std::nullopt, at(2));
+  core.end("goal-1", GoalPhase::Succeeded, 0, "", std::nullopt, at(2));
 
   const auto open = core.openMissionIds();
   ASSERT_EQ(open.size(), 1u);
@@ -159,9 +147,9 @@ TEST(MissionNav2ThroughPosesCore, SequenceIsMonotonicAcrossStartsAndEndsOfSevera
 {
   MissionNav2ThroughPosesCore core;
   const auto start1 = core.observe("goal-1", at(0));
-  const auto end1 = core.end("goal-1", GoalPhase::Succeeded, 0, "", std::nullopt, std::nullopt, at(1));
+  const auto end1 = core.end("goal-1", GoalPhase::Succeeded, 0, "", std::nullopt, at(1));
   const auto start2 = core.observe("goal-2", at(2));
-  const auto end2 = core.end("goal-2", GoalPhase::Aborted, 9102, "tf timeout", std::nullopt, std::nullopt, at(3));
+  const auto end2 = core.end("goal-2", GoalPhase::Aborted, 9102, "tf timeout", std::nullopt, at(3));
 
   EXPECT_EQ(start1->sequence, 1u);
   EXPECT_EQ(end1.sequence, 2u);

@@ -43,14 +43,6 @@ struct MissionStartFact
   std::uint64_t sequence;
 };
 
-struct WaypointStatusCounts
-{
-  std::uint32_t total{ 0 };
-  std::uint32_t completed{ 0 };
-  std::uint32_t skipped{ 0 };
-  std::uint32_t failed{ 0 };
-};
-
 struct MissionEndFact
 {
   std::string mission_id;
@@ -60,7 +52,6 @@ struct MissionEndFact
   std::optional<std::string> reason;
   std::optional<std::uint16_t> error_code;
   std::optional<int> recoveries;
-  std::optional<WaypointStatusCounts> waypoint_statuses;
 };
 
 /**
@@ -122,14 +113,12 @@ public:
    * application-level failure nav2 reported without aborting the goal status itself.
    */
   MissionEndFact end(const std::string& goal_id, GoalPhase terminal_phase, std::uint16_t error_code,
-                     const std::string& error_msg, std::optional<int> recoveries,
-                     std::optional<WaypointStatusCounts> waypoint_statuses, TimePoint at)
+                     const std::string& error_msg, std::optional<int> recoveries, TimePoint at)
   {
     MissionEndFact fact;
     fact.mission_id = goal_id;
     fact.sequence = ++sequence_;
     fact.recoveries = recoveries;
-    fact.waypoint_statuses = waypoint_statuses;
 
     auto it = missions_.find(goal_id);
     const TimePoint started_at = (it != missions_.end()) ? it->second.started_at : at;
