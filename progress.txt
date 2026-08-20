@@ -8521,3 +8521,26 @@ reading the code (the repo's established verification standard):
   fix. Same caveat as before: no `colcon`/ROS 2 toolchain in this sandbox, so this was
   verified by re-reading the jazzy-branch definitions directly rather than by
   rebuilding — the next CI run is what actually closes the loop.
+
+### #388 follow-up 2 - Fix CI test failure (double EXECUTE transition in test fixture)
+
+- After the `waypoint_statuses` build fix above, the same CI run's `colcon test` still
+  failed — all 7 `dc_measurements_test_measurement_mission_nav2_through_poses` cases,
+  each in under 100ms (not a timeout). Real error, from the log: `C++ exception with
+  description "goal_handle attempted invalid transition from state EXECUTING with event
+  EXECUTE, at ./src/rcl_action/goal_handle.c:100" thrown in the test body`.
+- Root cause: a bug in the test's own fake action-server fixture, not the plugin under
+  test. The fixture's `handle_goal` callback returns `GoalResponse::ACCEPT_AND_EXECUTE`
+  — which, per `rclcpp_action::Server`'s own semantics, already drives the goal handle
+  straight from ACCEPTED to EXECUTING internally *before* invoking `handle_accepted`.
+  The fixture's `handleAccepted()` then called `goal_handle->execute()` again as a
+  defensive "make sure it's executing" step — a second EXECUTE event on an
+  already-EXECUTING goal handle, which `rcl_action`'s state machine treats as a hard
+  error, not a no-op.
+- Fix: removed the redundant `execute()` call from `handleAccepted()`, with a comment
+  explaining why it was wrong (not just deleting it silently) so a future edit doesn't
+  reintroduce it defensively. `succeed()`/`abort()`/cancel-then-`canceled()` are all
+  still valid from the state ACCEPT_AND_EXECUTE already put the goal in.
+- `git add -A && prek run --all-files --skip build-doc` passes clean. Same caveat as
+  the last two entries: no `colcon`/ROS 2 toolchain in this sandbox to actually run the
+  test locally — the next CI run is what confirms this.

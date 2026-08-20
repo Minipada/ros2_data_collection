@@ -103,14 +103,14 @@ protected:
 
   void handleAccepted(const std::shared_ptr<ServerGoalHandleT>& goal_handle)
   {
-    {
-      const std::lock_guard<std::mutex> lock(goal_mutex_);
-      active_goal_ = goal_handle;
-    }
-    // Standing in for a real action server that starts working immediately on acceptance -- moves
-    // the goal from ACCEPTED straight to EXECUTING so succeed()/abort() below are valid calls, and
-    // so a client-initiated cancel lands in CANCELING rather than being rejected outright.
-    goal_handle->execute();
+    const std::lock_guard<std::mutex> lock(goal_mutex_);
+    active_goal_ = goal_handle;
+    // No goal_handle->execute() here: returning ACCEPT_AND_EXECUTE from the goal-request callback
+    // already moves rcl_action's state machine straight from ACCEPTED to EXECUTING before this
+    // callback runs, so succeed()/abort() below are already valid calls, and a client-initiated
+    // cancel already lands in CANCELING rather than being rejected outright. Calling execute()
+    // again here is a second EXECUTE event on an already-EXECUTING goal handle -- rcl_action
+    // throws ("invalid transition from state EXECUTING with event EXECUTE") rather than no-op it.
   }
 
   void spinFor(std::chrono::milliseconds duration)
