@@ -34,7 +34,6 @@ public:
   {
     kSucceed,
     kAbort,
-    kCancel,
   };
 
   FakeMoveGroupServer(const rclcpp::Node::SharedPtr& node, const std::string& action_name)
@@ -82,9 +81,6 @@ public:
         break;
       case Terminal::kAbort:
         handle->abort(result);
-        break;
-      case Terminal::kCancel:
-        handle->canceled(result);
         break;
     }
   }
@@ -320,7 +316,12 @@ TEST_F(MeasurementManipulationTest, PreemptedGoalMapsToCancelledOutcome)
   waitForActionServer();
 
   sendGoalAndWaitForStart();
-  const auto end = completeGoalAndWaitForEnd(FakeMoveGroupServer::Terminal::kCancel, -7 /* PREEMPTED */, 0.0);
+  // Real MoveGroup reports a preempted goal as aborted with error_code PREEMPTED, not as
+  // canceled -- rcl_action's own goal-handle state machine only allows the CANCELED terminal
+  // state to be reached from CANCELING (i.e. after an actual accepted cancel request), never
+  // directly from EXECUTING. Manipulation's outcome mapping is driven by error_code alone (see
+  // Manipulation::onResult), so which terminal call produced it is deliberately irrelevant here.
+  const auto end = completeGoalAndWaitForEnd(FakeMoveGroupServer::Terminal::kAbort, -7 /* PREEMPTED */, 0.0);
 
   EXPECT_EQ(end["outcome"], "cancelled");
   EXPECT_EQ(end["error_code"].get<int>(), -7);
