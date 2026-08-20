@@ -4,9 +4,10 @@ DC collects Records; the numbers an operations team reports on are computed from
 Records in SQL, on the database, never on the robot. The window is a query parameter, so
 changing a KPI definition is re-applying one file — not redeploying a fleet.
 
-The set covers **availability and uptime**, **utilisation**, **intervention rate** and
-**MTBF/MTTR**. It lives in `tools/infrastructure/sql/kpi_views.sql` and reads the `dc`
-table the [PostgreSQL](./infrastructure_setup/postgresql.md) Destination writes into.
+The set covers **availability and uptime**, **utilisation**, **intervention rate**,
+**MTBF/MTTR** and **loop closure rate**. It lives in `tools/infrastructure/sql/kpi_views.sql`
+and reads the `dc` table the [PostgreSQL](./infrastructure_setup/postgresql.md) Destination
+writes into.
 
 ## What it defines
 
@@ -24,6 +25,9 @@ table the [PostgreSQL](./infrastructure_setup/postgresql.md) Destination writes 
 | `dc_kpi_fault_events`                                 | view     | One row per fault Record: `component`, `from_level`, `to_level`, `previous_duration`, `sequence`, `reason`, `open`                                     |
 | `dc_kpi_reliability(from, to [, failure_levels])`     | function | Per component: `failures`, `repairs`, `open_faults`, `operating_seconds`, `downtime_seconds`, `mtbf_seconds`, `mttr_seconds`                           |
 | `dc_kpi_faults_1h`                                    | view     | Failures, repairs and downtime in 1-hour buckets                                                                                                      |
+| `dc_kpi_loop_closure_events`                          | view     | One row per slam_toolbox_quality `loop_closure` Record ([#394])                                                                                        |
+| `dc_kpi_loop_closure_rate(from, to)`                  | function | Per robot: `loop_closures`, `window_seconds`, `per_hour`, `last_loop_closure`, `seconds_since_last`                                                     |
+| `dc_kpi_loop_closures_1h`                             | view     | Loop closures in 1-hour buckets                                                                                                                       |
 | `dc_kpi_max_gap()`                                    | function | The grace period every definition above shares (30 s)                                                                                                 |
 | `dc_kpi_min_speed()`                                  | function | The speed at or above which the robot counts as moving (0.05 m/s)                                                                                     |
 | `dc_kpi_failure_levels()`                             | function | The diagnostic levels that count as broken (`ERROR`, `STALE`)                                                                                         |
@@ -147,6 +151,30 @@ What it deliberately does not claim:
   after eight healthy hours reports eight hours of MTBF in a one-hour window; the window
   chooses which events count, not how long their intervals were.
 
+## Loop closure rate
+
+Reads the `slam_toolbox_quality` Measurement ([#394]). `slam_toolbox/LoopClosureEvent` carries
+nothing but its own occurrence, so the KPI value is entirely in Record timing:
+
+```text
+per_hour = loop_closures / (window_seconds / 3600)
+```
+
+alongside `seconds_since_last` — how long it's been since the most recent loop closure as of
+`window_end`, a localization-drift risk indicator distinct from the rate: a robot can have a
+healthy rate over a long window and still be mid-drift right now if its last correction was a
+while ago.
+
+What it deliberately does not claim:
+
+- **`seconds_since_last` looks past `window_start`.** Clipped to the window it would read a
+  robot with no loop closure yet in a short window as "just corrected" instead of "never
+  corrected" — the other rate functions clip strictly to the window, this one deliberately
+  doesn't, for this one column.
+- **A robot with no loop closure Record at all, ever, is absent from the result** — same as
+  every other rate function here: nothing distinguishes "never ran slam_toolbox" from "ran it
+  and never closed a loop" without a fleet registry.
+
 ## Mission success rate is not here yet
 
 The fourth starter metric — completed, failed, cancelled and aborted missions as a share of
@@ -174,6 +202,7 @@ them:
 | Utilisation         | `driving_type`, `speed`                                   |
 | Intervention rate   | `intervention` ([#362]), `driving_type`, `distance_traveled` |
 | MTBF / MTTR         | `fault` ([#365])                                          |
+| Loop closure rate   | `slam_toolbox_quality` ([#394])                            |
 
 `dc_demos/params/tb3_simulation_pgsql_minio.yaml` is a working example of everything that
 exists today. The `intervention` and `fault` Measurements do not, so their views return no
@@ -230,11 +259,13 @@ Then, on the reporting side:
   ```sql
   GRANT SELECT ON dc_kpi_uptime_samples, dc_kpi_availability_5m, dc_kpi_driving_samples,
                   dc_kpi_utilisation_5m, dc_kpi_intervention_events, dc_kpi_interventions_1h,
-                  dc_kpi_fault_events, dc_kpi_faults_1h TO grafana;
+                  dc_kpi_fault_events, dc_kpi_faults_1h, dc_kpi_loop_closure_events,
+                  dc_kpi_loop_closures_1h TO grafana;
   GRANT EXECUTE ON FUNCTION dc_kpi_availability(timestamptz, timestamptz, interval),
                             dc_kpi_utilisation(timestamptz, timestamptz, interval, double precision),
                             dc_kpi_intervention_rate(timestamptz, timestamptz, interval),
-                            dc_kpi_reliability(timestamptz, timestamptz, text[]) TO grafana;
+                            dc_kpi_reliability(timestamptz, timestamptz, text[]),
+                            dc_kpi_loop_closure_rate(timestamptz, timestamptz) TO grafana;
   ```
 
 - **Records stored elsewhere** — another schema, another table name — only affect the four
@@ -259,3 +290,4 @@ a dashboard later. Add a case for every definition you add.
 [#305]: https://github.com/Minipada/ros2_data_collection/issues/305
 [#362]: https://github.com/Minipada/ros2_data_collection/issues/362
 [#365]: https://github.com/Minipada/ros2_data_collection/issues/365
+[#394]: https://github.com/Minipada/ros2_data_collection/issues/394

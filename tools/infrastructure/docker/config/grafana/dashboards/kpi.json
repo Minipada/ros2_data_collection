@@ -1225,6 +1225,128 @@
       ],
       "title": "Faults per hour",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "dc_postgres"
+      },
+      "description":
+          "dc_kpi_loop_closures_1h — slam_toolbox_quality loop closures per hour (#394). Blank until the Measurement lands.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 60
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "dc_postgres"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql":
+              "SELECT bucket_start AS \"time\", robot_name AS metric, loop_closures FROM dc_kpi_loop_closures_1h WHERE $__timeFilter(bucket_start) ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Loop closures per hour",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "dc_postgres"
+      },
+      "description":
+          "dc_kpi_loop_closure_rate() — seconds since the last loop closure, a localization-drift risk indicator: a growing gap means the map has gone without a correction.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 60
+      },
+      "id": 18,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "limit": 10,
+          "values": true
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "dc_postgres"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT robot_name, seconds_since_last FROM dc_kpi_loop_closure_rate($__timeFrom(), $__timeTo())",
+          "refId": "A"
+        }
+      ],
+      "title": "Time since last loop closure",
+      "type": "stat"
     }
   ],
   "refresh": "30s",

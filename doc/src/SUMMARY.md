@@ -45,6 +45,7 @@
   - [Random](./dc/measurements/random.md)
   - [ROS2 control status](./dc/measurements/ros2_control_status.md)
   - [Serial interface](./dc/measurements/serial_interface.md)
+  - [slam_toolbox quality](./dc/measurements/slam_toolbox_quality.md)
   - [Speed](./dc/measurements/speed.md)
   - [Storage](./dc/measurements/storage.md)
   - [String stamped](./dc/measurements/string_stamped.md)

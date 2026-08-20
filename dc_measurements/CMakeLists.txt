@@ -234,6 +234,9 @@ list(APPEND dc_measurement_plugin_libs dc_ros2_control_status_measurement)
 add_library(dc_serial_interface_measurement SHARED plugins/measurements/serial_interface.cpp)
 list(APPEND dc_measurement_plugin_libs dc_serial_interface_measurement)
 
+add_library(dc_slam_toolbox_quality_measurement SHARED plugins/measurements/slam_toolbox_quality.cpp)
+list(APPEND dc_measurement_plugin_libs dc_slam_toolbox_quality_measurement)
+
 add_library(dc_speed_measurement SHARED plugins/measurements/speed.cpp)
 list(APPEND dc_measurement_plugin_libs dc_speed_measurement)
 
@@ -392,6 +395,7 @@ set(tests
   test_measurement_same_as_previous
   test_measurement_serial_interface
   test_measurement_shared_flush
+  test_measurement_slam_toolbox_quality
   test_measurement_speed
   test_measurement_storage
   test_measurement_string_match
