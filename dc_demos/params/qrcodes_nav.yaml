@@ -115,8 +115,8 @@ controller_server:
     #
     # Hence 0.1 rad, not the 0.2 this carried. Yaw is the expensive term because
     # it scales with the standoff, and a diff-drive robot turning on the spot
-    # settles well inside 0.1 rad -- measured at no cost in navigation time (see
-    # progress.txt); xy stays at 0.1 m, which costs nothing.
+    # settles well inside 0.1 rad -- measured at no cost in navigation time;
+    # xy stays at 0.1 m, which costs nothing.
     #
     # Worth knowing that this budget is not the whole error: the goal checker
     # compares AMCL's *estimate* of the pose against the goal, so localization

@@ -24,7 +24,6 @@ path = [
   "dc_simulation/maps/**",
   "dc_simulation/models/**",
   "dc_simulation/env-hooks/dc_simulation.dsv.in",
-  "progress.txt",
   ".codespell.txt",
   ".python-version",
 ]

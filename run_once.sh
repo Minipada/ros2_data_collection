@@ -86,7 +86,6 @@ fi
 
 REPO_ROOT="$(git -C "$(dirname "$(realpath "$0")")" rev-parse --show-toplevel)"
 BASE_REF="origin/jazzy"
-PROGRESS_FILE="progress.txt"
 
 AGENT_COLORS=(blue cyan fuchsia green indigo lime magenta orange pink purple rose teal violet yellow)
 
@@ -384,13 +383,11 @@ else
 	fi
 fi
 
-PROMPT="@${PROGRESS_FILE}
-1. Read GitHub issue #${ISSUE_NUMBER} and the progress file.
+PROMPT="1. Read GitHub issue #${ISSUE_NUMBER}.
 2. Implement issue #${ISSUE_NUMBER}.
 3. Commit your changes.
-4. Update ${PROGRESS_FILE} with what you did.
-5. Push the branch and open a PR.
-6. The PR description must include 'Closes #${ISSUE_NUMBER}'.
+4. Push the branch and open a PR.
+5. The PR description must include 'Closes #${ISSUE_NUMBER}'.
 ONLY DO ONE TASK AT A TIME."
 
 COLOR_INDEX=$(printf '%s' "$ISSUE_NUMBER" | cksum | awk '{print $1}')

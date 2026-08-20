@@ -130,7 +130,7 @@ those are dropped):
 
 Keep them short. A file header is one to three lines; a block comment is one or two.
 Say *why*, and only when the code can't. No history lessons, no restating the diff, no
-paragraphs of rationale — that belongs in `progress.txt`, an ADR, or the PR description.
+paragraphs of rationale — that belongs in an ADR or the PR description.
 Some older files (`ci.yaml`, `doc.yaml`, `tools/e2e/Containerfile`) have long headers
 from before this rule; don't copy them, and trim them when you touch them.
 
@@ -139,10 +139,8 @@ from before this rule; don't copy them, and trim them when you touch them.
 - Issues ready for autonomous agent work carry the `ready-for-agent` label.
 - An issue can declare dependencies with a `## Blocked by` section listing `#N` issue numbers;
   agents must not start an issue while any listed blocker is still open.
-- `progress.txt` at repo root is the running log of completed work — read it and the target
-  GitHub issue before implementing, update it with what you did, and commit it alongside the
-  code change (it's tracked in git, not gitignored — the log is part of the durable state a
-  fresh agent session reconstructs context from).
+- Read the target GitHub issue before implementing; git log/PR history is the record of
+  completed work — there is no separate progress log to maintain.
 - One task per run/session. Commit, push the branch, and open a PR whose description includes
   `Closes #N`.
 - `run_once.sh` automates all of the above: it picks the oldest eligible issue, does the work in

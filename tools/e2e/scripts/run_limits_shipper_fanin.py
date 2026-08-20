@@ -53,8 +53,8 @@ a vague "torn write": `entrypoint.sh` starts `dc_mcap_writer` with `--max-durati
 unfinished* file that `mcap_summary.py` cannot parse at all yet. A live snapshot taken
 mid-rotation therefore reports those Records as "never reached dc_mcap_writer" even
 though they are sitting safely on disk, about to become readable a few seconds later.
-Verified empirically against a real run (see #382's progress.txt entry): a level's check
-failed with a clean, well-formed "ZERO-LOSS VERIFICATION FAILED" (not a parse crash) that
+Verified empirically against a real run: a level's check failed with a clean,
+well-formed "ZERO-LOSS VERIFICATION FAILED" (not a parse crash) that
 the exact same check, re-run against the same still-live containers a bit later, no
 longer reproduced. So `verify_zero_loss_at_level()` retries *any* failure shape once,
 after a pause comfortably longer than that 15s rotation window

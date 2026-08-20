@@ -86,8 +86,8 @@ def build_bridge_and_mcap_actions(configured_params):
        run` spawns its target as a child of its own process and does not forward
        signals to it, so a `respawn`/shutdown-triggering `kill` on what `ros2 run`
        returns never reaches the actual writer (see `tools/e2e/scripts/entrypoint.sh`
-       and progress.txt's #210 follow-up entry for how this was found). `ExecuteProcess`
-       runs `python3 -m dc_mcap_writer.cli` directly instead.
+       for the same pattern). `ExecuteProcess` runs `python3 -m dc_mcap_writer.cli`
+       directly instead.
 
     When the block is absent or `enabled` is false or missing (every existing params
     file, unchanged), this returns exactly what the static `Node(...)` it replaces used
