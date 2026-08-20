@@ -11,6 +11,7 @@
 
 #include <atomic>
 #include <boost/asio/connect.hpp>
+#include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/post.hpp>
@@ -46,7 +47,7 @@ using tcp = asio::ip::tcp;
 class PushServer
 {
 public:
-  PushServer() : acceptor_(ioc_, tcp::endpoint(tcp::v4(), 0))
+  PushServer() : acceptor_(ioc_, tcp::endpoint(tcp::v4(), 0)), work_guard_(asio::make_work_guard(ioc_))
   {
     doAccept();
     thread_ = std::thread([this] { ioc_.run(); });
@@ -104,6 +105,7 @@ public:
         beast::error_code wec;
         current_ws_->next_layer().close(wec);
       }
+      work_guard_.reset();
       ioc_.stop();
     });
     if (thread_.joinable())
@@ -139,6 +141,13 @@ private:
 
   asio::io_context ioc_;
   tcp::acceptor acceptor_;
+  // Once a connection's handshake completes, this server issues no further async_accept and never
+  // reads from the connection (server-push-only, unlike EchoServer's always-outstanding
+  // async_read) -- with no pending async operation left, io_context::run() would otherwise return
+  // on its own the moment the handshake handler finishes, ending thread_ and leaving any later
+  // send() posted to a dead io_context to block forever. The work guard keeps run() alive
+  // regardless of pending operations until stop() releases it.
+  asio::executor_work_guard<asio::io_context::executor_type> work_guard_;
   std::thread thread_;
   std::atomic<bool> stopped_{ false };
   std::atomic<bool> connected_{ false };
