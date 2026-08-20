@@ -163,7 +163,7 @@ void MissionNav2FollowWaypoints::statusCb(const action_msgs::msg::GoalStatusArra
   const std::chrono::system_clock::time_point at{ std::chrono::nanoseconds(now.nanoseconds()) };
 
   const std::lock_guard<std::mutex> lock(mutex_);
-  for (const auto& entry : msg.status)
+  for (const auto& entry : msg.status_list)
   {
     const std::string goal_id = uuidToString(entry.goal_info.goal_id);
 
