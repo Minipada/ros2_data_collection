@@ -96,7 +96,8 @@ CREATE TABLE IF NOT EXISTS dc (
   active boolean,
   -- Fast DDS statistics (fastdds_stats.cpp, #392, fastdds_stats_pgsql_grafana demo). `event` is
   -- always "sample" for this Measurement -- listed for querying, unlike the Measurements above
-  -- that never populate it, none of which use this column.
+  -- that never populate it, none of which use this column. process_names (not `processes`,
+  -- which cpu.cpp above already owns for its total process count) is a jsonb array of names.
   event text,
   domain_id integer,
   participant_count integer,
@@ -110,7 +111,7 @@ CREATE TABLE IF NOT EXISTS dc (
   participants jsonb,
   hosts jsonb,
   users jsonb,
-  processes jsonb
+  process_names jsonb
 );
 
 -- File upload status + group-completion Records from dc_bridge's Uploader

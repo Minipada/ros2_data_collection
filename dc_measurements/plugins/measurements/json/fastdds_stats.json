@@ -90,7 +90,7 @@
         "type": "string"
       }
     },
-    "processes": {
+    "process_names": {
       "description": "Names of the processes running the participants discovered in the domain (physical-layer data)",
       "type": "array",
       "items": {

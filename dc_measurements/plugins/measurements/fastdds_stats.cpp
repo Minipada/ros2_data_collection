@@ -169,7 +169,10 @@ dc_interfaces::msg::StringStamped FastddsStats::collect()
 
   data["hosts"] = namesOf(EntityKind::HOST, monitor_id_);
   data["users"] = namesOf(EntityKind::USER, monitor_id_);
-  data["processes"] = namesOf(EntityKind::PROCESS, monitor_id_);
+  // Named process_names, not processes: cpu.cpp already owns a top-level "processes" column
+  // (its total process count) in the shared dc table, and Vector's postgres sink maps a
+  // Record's top-level JSON keys straight onto columns of the same name.
+  data["process_names"] = namesOf(EntityKind::PROCESS, monitor_id_);
 
   msg.data = data.dump(-1, ' ', true);
   return msg;
