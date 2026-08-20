@@ -5,8 +5,9 @@
 Localization quality from two of [slam_toolbox](https://github.com/SteveMacenski/slam_toolbox)'s
 native ROS 2 topics: `/pose` (`geometry_msgs/PoseWithCovarianceStamped`), polled on the same
 interval as every other Measurement, for a `sample` Record carrying the pose and its covariance;
-and `/slam_toolbox/loop_closure_event` (`slam_toolbox/LoopClosureEvent`) for a single-shot
-`loop_closure` Record per occurrence.
+and `/slam_toolbox/loop_closure_event` (`slam_toolbox/LoopClosureEvent` on slam_toolbox's
+development branch — see the note below on why this Measurement doesn't depend on that type
+directly) for a single-shot `loop_closure` Record per occurrence.
 
 `LoopClosureEvent` carries nothing but its own timestamp — slam_toolbox doesn't say which nodes
 closed the loop or by how much, only that one happened. The Record reflects that: `loop_closure`
@@ -33,12 +34,17 @@ next poll, one Record per poll, so it travels the same path as every other Recor
 incident buffering, Group) — the same convention [Battery](./battery.md)'s charging-session
 boundaries and [Intervention](./intervention.md)'s takeovers use.
 
-```admonish info title="slam_toolbox is a runtime dependency, not a build one this plugin adds weight to"
-`slam_toolbox/LoopClosureEvent` is defined inside the `slam_toolbox` package itself — it ships no
-separate, lighter `_msgs` package the way nav2 does. This Measurement only makes sense on a robot
-already running slam_toolbox for real SLAM, so depending on the real package (rather than working
-around it with a raw/generic subscription) is the plain choice: the dependency is already present
-wherever this Measurement is.
+```admonish info title="Why loop_closure_topic is subscribed generically"
+`slam_toolbox/LoopClosureEvent` is declared on slam_toolbox's `ros2` development branch but isn't
+part of any released binary yet — verified directly against the actual `ros-jazzy-slam-toolbox`
+package contents, which ship no `msg/` interface headers for it at all, only the `srv/` ones. A
+compile-time dependency on that message can't build against a real installation today, so this
+Measurement subscribes to `loop_closure_topic` with `create_generic_subscription` instead — the
+same runtime-discovery mechanism dc_bridge's raw mode uses. The content is never decoded (the
+Record only needs to know an occurrence happened, not what the message carried), and the topic's
+actual type is discovered from the ROS graph once slam_toolbox starts advertising it, so this
+Measurement keeps working whichever release adds the topic and whatever fields it ends up
+carrying — no dc_measurements rebuild required.
 ```
 
 ## Parameters
@@ -46,7 +52,7 @@ wherever this Measurement is.
 | Parameter               | Description                                                                 | Type | Default                              |
 | ------------------------ | ----------------------------------------------------------------------------- | ---- | --------------------------------------- |
 | **pose_topic**           | Topic (`geometry_msgs/PoseWithCovarianceStamped`) to read localization pose from | str  | "/pose" (Optional)                    |
-| **loop_closure_topic**   | Topic (`slam_toolbox/LoopClosureEvent`) slam_toolbox reports loop closures on | str  | "/slam_toolbox/loop_closure_event" (Optional) |
+| **loop_closure_topic**   | Topic slam_toolbox reports loop closures on, subscribed generically (type discovered at runtime) | str  | "/slam_toolbox/loop_closure_event" (Optional) |
 
 ## Schema
 

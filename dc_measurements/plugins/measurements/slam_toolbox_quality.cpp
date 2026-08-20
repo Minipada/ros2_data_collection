@@ -26,9 +26,56 @@ void SlamToolboxQuality::onConfigure()
 
   pose_subscription_ = node->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
       pose_topic_, rclcpp::SensorDataQoS(), std::bind(&SlamToolboxQuality::poseCb, this, std::placeholders::_1));
-  loop_closure_subscription_ = node->create_subscription<slam_toolbox::msg::LoopClosureEvent>(
-      loop_closure_topic_, rclcpp::SystemDefaultsQoS(),
-      std::bind(&SlamToolboxQuality::loopClosureCb, this, std::placeholders::_1));
+
+  // The loop-closure topic's type isn't known until slam_toolbox actually advertises it (it
+  // may not even be running yet), so the generic subscription can't be created up front the
+  // way the typed pose one is -- tryCreateLoopClosureSubscription() retries until it appears.
+  tryCreateLoopClosureSubscription();
+  if (!loop_closure_subscription_)
+  {
+    loop_closure_discovery_timer_ =
+        node->create_wall_timer(std::chrono::seconds(1), [this] { tryCreateLoopClosureSubscription(); });
+  }
+}
+
+void SlamToolboxQuality::tryCreateLoopClosureSubscription()
+{
+  auto node = getNode();
+  const auto topics = node->get_topic_names_and_types();
+  const auto topic_it = topics.find(loop_closure_topic_);
+  if (topic_it == topics.end() || topic_it->second.empty())
+  {
+    return;
+  }
+  if (topic_it->second.size() > 1)
+  {
+    // Genuinely ambiguous: one generic subscription carries exactly one type, and picking
+    // arbitrarily would silently drop whichever publisher's messages don't match.
+    RCLCPP_WARN_STREAM_THROTTLE(logger_, *node->get_clock(), 10000,
+                                "Measurement " << measurement_name_ << ": " << loop_closure_topic_ << " advertises "
+                                               << topic_it->second.size()
+                                               << " types; cannot pick one to subscribe with.");
+    return;
+  }
+
+  try
+  {
+    loop_closure_subscription_ =
+        node->create_generic_subscription(loop_closure_topic_, topic_it->second.front(), rclcpp::SystemDefaultsQoS(),
+                                          std::bind(&SlamToolboxQuality::loopClosureCb, this, std::placeholders::_1));
+  }
+  catch (const std::exception& e)
+  {
+    // Most likely the message package's type support isn't loadable on this machine.
+    // Logged once via throttle; the discovery timer will keep retrying regardless, since a
+    // transient cause (the package finishing an install) is exactly as plausible as a
+    // permanent one, and there's no cheap way to tell them apart from here.
+    RCLCPP_WARN_STREAM_THROTTLE(logger_, *node->get_clock(), 10000,
+                                "Measurement " << measurement_name_ << ": could not subscribe to "
+                                               << loop_closure_topic_ << ": " << e.what());
+    return;
+  }
+  loop_closure_discovery_timer_.reset();
 }
 
 void SlamToolboxQuality::setValidationSchema()
@@ -46,11 +93,12 @@ void SlamToolboxQuality::poseCb(const geometry_msgs::msg::PoseWithCovarianceStam
   has_pose_ = true;
 }
 
-void SlamToolboxQuality::loopClosureCb(const slam_toolbox::msg::LoopClosureEvent& msg)
+void SlamToolboxQuality::loopClosureCb(std::shared_ptr<const rclcpp::SerializedMessage> msg)
 {
-  // slam_toolbox/msg/LoopClosureEvent carries only its own stamp; the occurrence is the Record,
-  // so this Measurement's own clock -- not the message's stamp -- is what pairs it with the
-  // pose samples around it.
+  // A generic subscription only ever hands over the raw serialized bytes, undecoded; the
+  // occurrence is the Record regardless of what the message carries, so this Measurement's
+  // own clock -- not any stamp the message might have -- is what pairs it with the pose
+  // samples around it.
   (void)msg;
   const auto now = getNode()->get_clock()->now();
 

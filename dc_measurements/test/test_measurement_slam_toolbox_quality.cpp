@@ -16,7 +16,7 @@
 #include "dc_measurements/measurement_server.hpp"
 #include "dc_util/json_utils.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
-#include "slam_toolbox/msg/loop_closure_event.hpp"
+#include "std_msgs/msg/empty.hpp"
 
 class MeasurementSlamToolboxQualityTest : public ::testing::Test
 {
@@ -39,8 +39,11 @@ protected:
         std::bind(&MeasurementSlamToolboxQualityTest::dataCallback, this, std::placeholders::_1));
     pose_pub_ = ms_node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/test/pose",
                                                                                           rclcpp::SensorDataQoS());
-    loop_closure_pub_ = ms_node_->create_publisher<slam_toolbox::msg::LoopClosureEvent>("/test/loop_closure_event",
-                                                                                        rclcpp::SystemDefaultsQoS());
+    // Stands in for whatever slam_toolbox itself eventually publishes: the plugin subscribes
+    // generically and never decodes the message, so the type here doesn't have to match a
+    // real slam_toolbox one -- only its *arrival* is exercised.
+    loop_closure_pub_ =
+        ms_node_->create_publisher<std_msgs::msg::Empty>("/test/loop_closure_event", rclcpp::SystemDefaultsQoS());
   }
 
   void TearDown() override
@@ -124,9 +127,7 @@ protected:
   nlohmann::json publishLoopClosureAndWaitForRecord()
   {
     const size_t first_new = records_.size();
-    slam_toolbox::msg::LoopClosureEvent msg;
-    msg.stamp = ms_node_->get_clock()->now();
-    loop_closure_pub_->publish(msg);
+    loop_closure_pub_->publish(std_msgs::msg::Empty());
     for (int i = 0; i < 400; ++i)
     {
       rclcpp::spin_some(ms_node_->get_node_base_interface());
@@ -159,7 +160,7 @@ protected:
   std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
   rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub_;
-  rclcpp::Publisher<slam_toolbox::msg::LoopClosureEvent>::SharedPtr loop_closure_pub_;
+  rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr loop_closure_pub_;
   std::vector<nlohmann::json> records_;
 };
 

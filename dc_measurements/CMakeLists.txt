@@ -26,7 +26,6 @@ set(dependencies
   rclcpp_components
   rclcpp_lifecycle
   sensor_msgs
-  slam_toolbox
   std_msgs
   tf2
   tf2_geometry_msgs
