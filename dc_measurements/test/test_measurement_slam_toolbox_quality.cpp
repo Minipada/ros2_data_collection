@@ -212,8 +212,14 @@ TEST_F(MeasurementSlamToolboxQualityTest, EmitsASingleShotRecordPerLoopClosure)
   const auto record = publishLoopClosureAndWaitForRecord();
 
   EXPECT_EQ(record["event"], "loop_closure");
-  // The source topic carries only a timestamp -- nothing else belongs in the Record body.
-  EXPECT_EQ(record.size(), 1u);
+  // The source topic carries only a timestamp -- no localization data belongs in the Record
+  // body. (Every Record picks up a few enrichment keys -- flattened/nested and friends -- from
+  // the shared publish() pipeline regardless of Measurement, so this checks absence of the
+  // sample-specific fields rather than an exact key count.)
+  for (const auto& key : { "x", "y", "yaw", "covariance_x", "covariance_y", "covariance_yaw" })
+  {
+    EXPECT_FALSE(record.contains(key)) << key << " should be absent on a loop_closure Record";
+  }
   expectValidatesAgainstSchema(record);
 }
 
