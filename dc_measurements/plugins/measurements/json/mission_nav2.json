@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MissionNav2",
+  "description":
+      "One nav2 NavigateToPose goal's lifecycle, watched passively: a mission_start Record when it is accepted, a mission_end Record when it reaches a terminal state. The base Record contract every Mission Measurement nav2 adapter shares (NavigateThroughPoses, FollowWaypoints)",
+  "properties": {
+    "event": {
+      "description": "What this Record is: a mission being accepted, or one reaching a terminal state",
+      "type": "string",
+      "enum": [
+        "mission_start",
+        "mission_end"
+      ]
+    },
+    "mission_id": {
+      "description": "The NavigateToPose goal UUID, stringified",
+      "type": "string"
+    },
+    "mission_type": {
+      "description":
+          "Always 'navigate_to_pose' for this adapter -- other Mission Measurement adapters set their own value",
+      "type": "string",
+      "const": "navigate_to_pose"
+    },
+    "sequence": {
+      "description":
+          "Monotonically increasing transition number for this Measurement instance, so a dropped Record is detectable rather than silently corrupting a duration",
+      "type": "integer",
+      "minimum": 1
+    },
+    "outcome": {
+      "description":
+          "How the mission ended. 'failed' is a goal that reached GoalStatus SUCCEEDED but still carried a non-zero error_code, distinct from 'aborted' (the goal status itself)",
+      "type": "string",
+      "enum": [
+        "succeeded",
+        "failed",
+        "cancelled",
+        "aborted"
+      ]
+    },
+    "reason": {
+      "description": "Human-readable failure reason, verbatim from NavigateToPose::Result.error_msg",
+      "type": "string"
+    },
+    "error_code": {
+      "description": "nav2's own numeric NavigateToPose::Result.error_code, carried through verbatim",
+      "type": "integer",
+      "minimum": 0
+    },
+    "duration_sec": {
+      "description": "How long the mission ran, from acceptance to its terminal state",
+      "type": "number",
+      "minimum": 0
+    },
+    "recoveries": {
+      "description":
+          "NavigateToPose::Feedback.number_of_recoveries at mission completion, when feedback was seen before the terminal state",
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "event",
+    "mission_id",
+    "mission_type",
+    "sequence"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event": {
+            "const": "mission_end"
+          }
+        },
+        "required": [
+          "event"
+        ]
+      },
+      "then": {
+        "required": [
+          "outcome",
+          "duration_sec"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "failed",
+              "aborted"
+            ]
+          }
+        },
+        "required": [
+          "outcome"
+        ]
+      },
+      "then": {
+        "required": [
+          "reason",
+          "error_code"
+        ]
+      }
+    }
+  ],
+  "type": "object"
+}

@@ -38,6 +38,7 @@
   - [Memory](./dc/measurements/memory.md)
   - [Mission (nav2 FollowWaypoints)](./dc/measurements/mission_nav2_follow_waypoints.md)
   - [Mission Nav2 (NavigateThroughPoses)](./dc/measurements/mission_nav2_through_poses.md)
+  - [Mission Nav2 (NavigateToPose)](./dc/measurements/mission_nav2.md)
   - [Network](./dc/measurements/network.md)
   - [OS](./dc/measurements/os.md)
   - [Permissions](./dc/measurements/permissions.md)
