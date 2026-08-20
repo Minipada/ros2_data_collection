@@ -4,7 +4,8 @@
 
 The nav2 adapter of the Mission Measurement for nav2's `NavigateToPose` action -- a single-pose
 navigation goal, the base case the mission lifecycle contract (#305, recorded in
-[ADR-0010](../../adr/0010-mission-lifecycle-contract.md)) was agreed against. Emits a
+[ADR-0010](https://github.com/minipada/ros2_data_collection/tree/jazzy/docs/adr/0010-mission-lifecycle-contract.md))
+was agreed against. Emits a
 `mission_start` Record when a goal is accepted and a `mission_end` Record once it reaches a
 terminal state. `NavigateThroughPoses` and `FollowWaypoints` are its siblings (#388/#389): same
 Record schema, same `mission_id`/`sequence` conventions, each with its own `mission_type`.
