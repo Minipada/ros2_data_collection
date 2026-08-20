@@ -8667,3 +8667,28 @@ reading the code (the repo's established verification standard):
   (not from memory, and this time with the ref actually pinned) rather than by
   rebuilding -- the next CI run is what closes the loop, same as #388's own two
   follow-ups needed.
+
+### #389 follow-up 2 - Fix CI build failure (`GoalStatusArray` has no member `status`)
+
+- CI's real Jazzy build failed: `mission_nav2_follow_waypoints.cpp:166: error:
+  'const action_msgs::msg::GoalStatusArray' ... has no member named 'status'`, plus a
+  `-Werror=unused-function` on `uuidToString()` (a knock-on effect of the same error --
+  the compiler couldn't fully check the function body past the bad range-for expression,
+  so it never registered the call site inside that loop as a use).
+- Root cause: `action_msgs::msg::GoalStatusArray`'s array field is `status_list`, not
+  `status` -- exactly the "easy field-name trap" #388's own progress.txt entry above
+  already named as something it had specifically checked and avoided for its own
+  `GoalStatusArray` usage. This ticket's `statusCb()` used the wrong name anyway; the
+  `?ref=jazzy` re-verification the two follow-ups above did was for the nav2-specific
+  `FollowWaypoints`/`MissedWaypoint` shapes, not for this core, nav2-independent
+  `action_msgs` type, which was carried over from the original implementation without a
+  matching re-check.
+- Fix: one-line change, `msg.status` -> `msg.status_list` in
+  `MissionNav2FollowWaypoints::statusCb()`. Cross-checked against
+  `mission_nav2_through_poses.cpp`'s own (correct) `msg.status_list` usage for
+  consistency. No other file in this ticket's diff touches `GoalStatusArray` directly.
+- `git add -A && prek run --all-files --skip build-doc` passes clean. This one came from
+  a real CI build log (not a re-read of definitions), so unlike every prior entry in this
+  ticket, the specific line that failed is now confirmed compiling-clean against the
+  actual error message -- though a full `colcon build`/`colcon test` pass is still owed
+  to CI, since this sandbox still has no ROS 2 toolchain to run one.
