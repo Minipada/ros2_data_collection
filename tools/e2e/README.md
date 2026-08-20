@@ -514,6 +514,61 @@ expected file count. A violation raises immediately and aborts the whole ramp.
 
 Not wired into `ci.yaml`, same as every other narrow scenario above.
 
+## Drain-rate axis (#385)
+
+The tenth piece of #323's limits harness (developed in parallel with #382/#383/#384):
+"how long does a backlog take to clear once connectivity returns, as a function of load
+and outage length."
+
+```sh
+./tools/e2e/scripts/run_limits_drain_rate.sh
+```
+
+Brings up a standalone Shipper under test (a bare Vector instance on its own bridge
+network, `fluent` source + `aws_s3` sink with a disk buffer — same convention the
+two-tier composer's aggregating Shipper and the load-driver byte-compatibility test both
+use) plus RustFS as the Destination it can lose, then drives `scripts/drain_rate_axis.py`
+through an ascending ramp of outage lengths at a stated synthetic connection
+count/rate. For each outage length it induces the outage with the exact `podman stop` /
+wait / `podman start` recipe `run.sh` itself uses on its own Postgres/RustFS containers
+(#385's "existing incident/outage scenario scaffolding, reused unmodified" acceptance
+criterion), drives `load_driver.py` for the outage's duration, then polls the Shipper's
+buffer size until it clears or a wait bound expires and records that elapsed time as the
+drain time.
+
+Buffer size comes from Vector's own `internal_metrics` + `prometheus_exporter`
+(`vector_buffer_byte_size`), not a filesystem stat on the buffer directory — a discovery
+made empirically while building this: Vector's on-disk buffer format (a segment-based
+mmap log) does not shrink its `.dat` segment file as events are acked, so `du -sb` on the
+buffer directory stays pinned at its post-outage peak indefinitely, which would make
+every drain look like it never happened. The metrics gauge, by contrast, tracks the
+buffer's actual pending bytes and reaches ~0 once the backlog genuinely clears. Injecting
+a metrics source/sink into this standalone Vector config is not a DC code change — #323's
+PRD anticipates exactly this ("observability comes from configuration, not code
+changes").
+
+Every outage-phase observation window is run through `saturation_probe.evaluate()`
+(#377) with `outage_declared=True`, and the whole run hard-fails
+(`OutageMisreportedError`) if that window is ever reported saturated — a growing buffer
+during a declared outage must never be misreported, and this is the same module and the
+same disk-buffer signal #377 defines, not a bespoke check. The *recovery*-phase window
+reuses the identical signal with `outage_declared=False` to decide whether an outage
+length is the ramp's knee — the shortest outage length whose backlog failed to drain
+within the wait bound (never fabricated: a backlog that always drains within the tested
+range is reported as `BOUND_NOT_FOUND`, matching #379's own rule). Output feeds
+`curve_reporter.py` in the same stable `AxisRun`/`CurveReport` shape the other axes use;
+`AxisRun.points[].level` is the outage length in seconds (the same unit
+`tripped_level`/`highest_clear_level` come in) — the per-level *drain time* this axis
+exists to report has no field of its own in that shared shape, so it travels alongside
+the curve report as a companion JSON keyed by the same outage-length levels.
+`tools/e2e/test/test_drain_rate_axis.py` covers the pure parts (`evaluate_cycle`,
+`build_axis_run`, `find_drain_rate_curve`) with fake drivers and synthetic observation
+windows, no containers; the real podman/`load_driver.py` orchestration is exercised by
+running the scenario script itself, not unit-tested, matching the two-tier composer's own
+testing decision.
+
+Not wired into `ci.yaml`, same as the scenarios above.
+
 ## Layout
 
 - `Containerfile` — builds the full DC workspace (every `dc_*` package, all C++ since
@@ -640,6 +695,14 @@ Not wired into `ci.yaml`, same as every other narrow scenario above.
   #323) described above: calls `ramp_controller.find_knee()` unchanged, ramping N
   Bridge/Uploader containers against shared Postgres/RustFS and asserting
   delete-after-verify ordering plus Group completion correctness at every level.
+- `scripts/drain_rate_axis.py` / `scripts/run_limits_drain_rate.sh` — the drain-rate axis
+  (#385, part of #323) described above: an induced-outage-then-recovery ramp over outage
+  length at a fixed synthetic load, reusing run.sh's own outage-inducing recipe and
+  saturation_probe.py's outage-aware disk-buffer signal, reporting into
+  curve_reporter.py's stable shape. `evaluate_cycle()`/`build_axis_run()`/
+  `find_drain_rate_curve()` are pure and unit-tested with fakes
+  (`test_drain_rate_axis.py`); the podman/load_driver.py orchestration is exercised by
+  running the scenario script.
 
 ## `.dockerignore`
 
