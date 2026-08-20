@@ -244,7 +244,7 @@
           "format": "table",
           "rawQuery": true,
           "rawSql":
-              "SELECT to_timestamp(date / 1e9) AS \"time\", hosts, users, processes, participants FROM dc WHERE name = 'fastdds_stats' ORDER BY date DESC LIMIT 1",
+              "SELECT to_timestamp(date / 1e9) AS \"time\", hosts, users, process_names, participants FROM dc WHERE name = 'fastdds_stats' ORDER BY date DESC LIMIT 1",
           "refId": "A"
         }
       ],

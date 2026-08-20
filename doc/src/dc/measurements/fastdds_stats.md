@@ -37,8 +37,10 @@ Each sample reports:
 - RTPS packets sent and lost, summed across every participant (`rtps_packets_sent`,
   `rtps_packets_lost`)
 - Physical-layer data: each discovered participant's `name`/`guid`, and the names of the hosts,
-  OS users and processes running them (`hosts`, `users`, `processes`) — useful for spotting which
-  machine or process is actually behind a noisy participant on a multi-process robot
+  OS users and processes running them (`hosts`, `users`, `process_names` — not `processes`, which
+  the [CPU](./cpu.md) Measurement's total process count already owns in the shared `dc` table) —
+  useful for spotting which machine or process is actually behind a noisy participant on a
+  multi-process robot
 
 A field tied to a DataKind (latency, throughput, packet counts) is **absent**, not zero, when
 nothing reported data in the window — a domain with one lonely participant and no matched
@@ -89,7 +91,7 @@ plugin — and its test — are skipped from the build entirely.
     "participants": { "type": "array" },
     "hosts": { "type": "array", "items": { "type": "string" } },
     "users": { "type": "array", "items": { "type": "string" } },
-    "processes": { "type": "array", "items": { "type": "string" } }
+    "process_names": { "type": "array", "items": { "type": "string" } }
   },
   "required": ["event", "domain_id", "participant_count", "datawriter_count", "datareader_count"],
   "type": "object"
@@ -129,6 +131,6 @@ Example Record data:
   ],
   "hosts": ["robot-01"],
   "users": ["dc"],
-  "processes": ["measurement_server-12345"]
+  "process_names": ["measurement_server-12345"]
 }
 ```
