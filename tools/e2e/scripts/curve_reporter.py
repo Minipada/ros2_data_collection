@@ -231,6 +231,49 @@ def to_json(report: CurveReport) -> str:
     return json.dumps(dataclasses.asdict(report), indent=2, sort_keys=True)
 
 
+def _resource_sample_from_dict(d: dict | None) -> ResourceSample | None:
+    return None if d is None else ResourceSample(**d)
+
+
+def _binding_constraint_from_dict(d: dict) -> BindingConstraint:
+    return BindingConstraint(
+        resource=None if d["resource"] is None else ResourceKind(d["resource"]),
+        percent=d["percent"],
+        reason=d["reason"],
+    )
+
+
+def _level_result_from_dict(d: dict) -> LevelResult:
+    return LevelResult(
+        level=d["level"],
+        saturated=d["saturated"],
+        kind=PointKind(d["kind"]),
+        composition=RunComposition(**d["composition"]),
+        resources=_resource_sample_from_dict(d["resources"]),
+    )
+
+
+def axis_report_from_dict(d: dict) -> AxisReport:
+    """The inverse of `dataclasses.asdict()` for one axis, used to read back a
+    per-axis report a scenario script already wrote via `to_json()` — the shape #386's
+    one-command entry point combines across axes."""
+    return AxisReport(
+        axis=d["axis"],
+        unit=d["unit"],
+        outcome=RunOutcome(d["outcome"]),
+        highest_clear_level=d["highest_clear_level"],
+        tripped_level=d["tripped_level"],
+        binding_constraint=_binding_constraint_from_dict(d["binding_constraint"]),
+        points=tuple(_level_result_from_dict(p) for p in d["points"]),
+    )
+
+
+def from_json(text: str) -> CurveReport:
+    """The inverse of `to_json()`."""
+    data = json.loads(text)
+    return CurveReport(axes=tuple(axis_report_from_dict(a) for a in data["axes"]))
+
+
 def render_summary(report: CurveReport) -> str:
     """A human-readable summary naming, per axis, the outcome and the binding
     constraint at saturation, with every point labelled measured or extrapolated and
@@ -271,3 +314,60 @@ def render_summary(report: CurveReport) -> str:
         lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _point_at(axis: AxisReport, level: float) -> LevelResult:
+    for point in axis.points:
+        if point.level == level:
+            return point
+    raise ValueError(f"axis {axis.axis!r} has no point at level {level}")
+
+
+def closing_sentence(axis: AxisReport) -> str:
+    """#323's PRD's single defensible sentence, generalised across axes: 'sustains N
+    <unit> before applying backpressure, with its composition and measured/extrapolated
+    conditions stated' — never a fabricated ceiling. `run_limits_shipper_fanin.py`
+    carries its own bespoke wording for the PRD's literal flagship example; this is the
+    generic form #386's one-command entry point uses for every axis, built entirely from
+    the already-computed `AxisReport`, with no axis-specific knowledge."""
+    unit = axis.unit
+    if axis.outcome == RunOutcome.BOUND_NOT_FOUND:
+        highest = axis.highest_clear_level
+        if highest is None:
+            return (
+                f"{axis.axis}: bound not found — no level was tested without saturating, "
+                f"so no ceiling is reported (never fabricated)."
+            )
+        point = _point_at(axis, highest)
+        comp = point.composition
+        return (
+            f"{axis.axis} sustains at least {highest} {unit} ({comp.real_stacks} real + "
+            f"{comp.synthetic_senders} synthetic, {point.kind.value}) without applying "
+            f"backpressure — the ramp never saturated within the tested range, so no "
+            f"ceiling is reported beyond {highest} {unit} (bound not found; never "
+            f"fabricated)."
+        )
+
+    tripped = axis.tripped_level
+    assert tripped is not None  # KNEE_FOUND always carries a tripped_level
+    tripped_point = _point_at(axis, tripped)
+    extrapolated_note = (
+        "not extrapolated — the knee itself was measured, not projected"
+        if tripped_point.kind == PointKind.MEASURED
+        else "extrapolated beyond what was directly measured"
+    )
+    highest = axis.highest_clear_level
+    if highest is None:
+        return (
+            f"{axis.axis} saturated at the first level tested, {tripped} {unit} "
+            f"({tripped_point.composition.real_stacks} real + "
+            f"{tripped_point.composition.synthetic_senders} synthetic); no lower level "
+            f"was sustained ({extrapolated_note})."
+        )
+    sustain_point = _point_at(axis, highest)
+    comp = sustain_point.composition
+    return (
+        f"{axis.axis} sustains {highest} {unit} ({comp.real_stacks} real + "
+        f"{comp.synthetic_senders} synthetic, {sustain_point.kind.value}) before applying "
+        f"backpressure; saturation observed at {tripped} {unit} ({extrapolated_note})."
+    )

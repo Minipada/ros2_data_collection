@@ -569,6 +569,47 @@ testing decision.
 
 Not wired into `ci.yaml`, same as the scenarios above.
 
+## One-command capacity baseline (#386)
+
+The final piece of #323's epic: a single entry point that runs all four axes above and
+combines their reports into one artifact, so a contributor can check the effect of a
+change with one command instead of assembling four scenarios by hand, and a release can
+record a capacity baseline instead of repeating the previous release's claim.
+
+```sh
+./tools/e2e/scripts/run_limits_capacity_baseline.sh
+```
+
+Runs `run_limits_shipper_fanin.sh`, `run_limits_single_robot_ceiling.sh`,
+`run_limits_upload_concurrency.sh`, and `run_limits_drain_rate.sh` in sequence — each is
+its own full podman bring-up/teardown, and none of the four are meant to run
+concurrently, same as every other pair of sibling scenario scripts in this harness —
+then hands the four already-written `curve_reporter.py` report JSON files (only the
+Shipper fan-in axis's **unconstrained** phase; its constrained phase is that axis's own
+internal instrument proof, not a fifth axis here) to `scripts/limits_baseline.py`.
+`merge_reports()` combines them into one `CurveReport` sorted by axis name — the same
+stability guarantee `curve_reporter.build_report()` gives within one report, extended
+across reports, so the combined artifact is diffable between runs of an unchanged
+system exactly as each axis's own report already is. `render_baseline()` then renders
+`curve_reporter.render_summary()`'s per-axis detail followed by every axis's one-sentence
+capacity claim from the new `curve_reporter.closing_sentence()` — a generic form of
+`run_limits_shipper_fanin.py`'s own bespoke "single defensible sentence" (which keeps its
+particular wording, since it's the PRD's literal flagship example), built entirely from
+an already-computed `AxisReport` with no axis-specific knowledge, so every axis gets one
+without a fifth bespoke implementation. Both `merge_reports()` and `render_baseline()`
+are pure functions over already-written reports, unit-tested with synthetic data
+(`test_limits_baseline.py`), matching this epic's testing philosophy: this script and the
+four axis scripts it sequences are proven by running them, not by a unit test.
+
+Because `set -euo pipefail` combines with each axis script's own hard-failing gates, any
+axis failing aborts the whole baseline immediately — a combined artifact is only ever
+written from four axes that actually passed. Every env var an individual axis script
+accepts (`DC_E2E_FANIN_*`, `DC_E2E_CEILING_*`, `DC_E2E_UPLOAD_*`, `DC_E2E_DRAIN_*`,
+`DC_E2E_IMAGE`/`DC_WORKSPACE_IMAGE`, `DC_E2E_KEEP`) still applies unchanged, since this
+script does no parameter translation of its own.
+
+Not wired into `ci.yaml`, same as the scenarios above.
+
 ## Layout
 
 - `Containerfile` — builds the full DC workspace (every `dc_*` package, all C++ since
@@ -703,6 +744,13 @@ Not wired into `ci.yaml`, same as the scenarios above.
   `find_drain_rate_curve()` are pure and unit-tested with fakes
   (`test_drain_rate_axis.py`); the podman/load_driver.py orchestration is exercised by
   running the scenario script.
+- `scripts/limits_baseline.py` / `scripts/run_limits_capacity_baseline.sh` — the
+  one-command capacity baseline (#386, the final piece of #323's epic) described above:
+  sequences the four axis scripts, then combines their `curve_reporter.py` reports into
+  one stable artifact with every axis's closing sentence. `merge_reports()`/
+  `render_baseline()` are pure and unit-tested with synthetic reports
+  (`test_limits_baseline.py`); the four axes it sequences are each exercised by running
+  their own scenario script, not re-tested here.
 
 ## `.dockerignore`
 

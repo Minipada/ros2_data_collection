@@ -22,6 +22,8 @@ from curve_reporter import (
     RunComposition,
     RunOutcome,
     build_report,
+    closing_sentence,
+    from_json,
     render_summary,
     to_json,
 )
@@ -366,3 +368,99 @@ def test_report_covers_multiple_axes_each_with_its_own_binding_constraint():
     by_axis = {a.axis: a for a in report.axes}
     assert by_axis["shipper_fan_in"].binding_constraint.resource == ResourceKind.CPU
     assert by_axis["uploader_concurrency"].binding_constraint.resource == ResourceKind.DISK
+
+
+# --- Round-tripping through JSON (#386: reading a per-axis report back in) ---------
+
+
+def test_from_json_round_trips_to_json():
+    report = build_report([_cpu_bound_run(), _cpu_bound_run(axis="drain_rate")])
+
+    round_tripped = from_json(to_json(report))
+
+    assert round_tripped == report
+    assert to_json(round_tripped) == to_json(report)
+
+
+def test_from_json_round_trips_extrapolated_points_and_bound_not_found():
+    run = AxisRun(
+        axis="single_robot_ceiling",
+        unit="records_s",
+        outcome=RunOutcome.BOUND_NOT_FOUND,
+        highest_clear_level=500.0,
+        tripped_level=None,
+        points=[
+            _measured(500.0, False, cpu=30.0, mem=20.0, disk=10.0),
+            _extrapolated(900.0, False),
+        ],
+    )
+    report = build_report([run])
+
+    round_tripped = from_json(to_json(report))
+
+    assert round_tripped == report
+
+
+# --- #386's closing sentence: generic across axes, never fabricated ----------------
+
+
+def test_closing_sentence_states_composition_and_measured_for_knee_found():
+    sentence = closing_sentence(build_report([_cpu_bound_run()]).axes[0])
+
+    assert "shipper_fan_in sustains 140.0 robots" in sentence
+    assert "3 real + 137 synthetic" in sentence
+    assert "measured" in sentence
+    assert "saturation observed at 220.0 robots" in sentence
+    assert "not extrapolated" in sentence
+
+
+def test_closing_sentence_never_fabricates_a_ceiling_when_bound_not_found():
+    run = AxisRun(
+        axis="single_robot_ceiling",
+        unit="records_s",
+        outcome=RunOutcome.BOUND_NOT_FOUND,
+        highest_clear_level=500.0,
+        tripped_level=None,
+        points=[_measured(500.0, False, cpu=30.0, mem=20.0, disk=10.0)],
+    )
+
+    sentence = closing_sentence(build_report([run]).axes[0])
+
+    assert "at least 500.0 records_s" in sentence
+    assert "never saturated" in sentence
+    assert "bound not found; never fabricated" in sentence
+
+
+def test_closing_sentence_when_bound_not_found_and_no_level_was_ever_clear():
+    run = AxisRun(
+        axis="drain_rate",
+        unit="seconds",
+        outcome=RunOutcome.BOUND_NOT_FOUND,
+        highest_clear_level=None,
+        tripped_level=None,
+        points=[_measured(30.0, True, cpu=10.0, mem=10.0, disk=95.0)],
+    )
+
+    sentence = closing_sentence(build_report([run]).axes[0])
+
+    assert sentence.startswith("drain_rate: bound not found")
+    assert "never fabricated" in sentence
+
+
+def test_closing_sentence_labels_a_saturated_extrapolated_point_honestly():
+    run = AxisRun(
+        axis="shipper_fan_in",
+        unit="robots",
+        outcome=RunOutcome.KNEE_FOUND,
+        highest_clear_level=140.0,
+        tripped_level=500.0,
+        points=[
+            _measured(140.0, False, cpu=68.0, mem=44.0, disk=20.0),
+            _extrapolated(500.0, True),
+        ],
+    )
+
+    sentence = closing_sentence(build_report([run]).axes[0])
+
+    assert "extrapolated beyond what was directly measured" in sentence
+    assert "not extrapolated" not in sentence
