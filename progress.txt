@@ -9127,3 +9127,22 @@ the new tests, not that they were run and passed.
   generic and content is never inspected). Doc page's admonish block rewritten to match.
   Genuinely forward-compatible: whichever release slam_toolbox eventually ships this topic
   on, and whatever fields it carries, this Measurement picks it up without a rebuild.
+- **CI follow-up 2 (kpi-views failure, also caught landing the PR)**: `psycopg2.errors.
+  DuplicateColumn: column "event" specified more than once`. Cause: #392 (Fast DDS
+  statistics Measurement) landed on `jazzy` around the same time and *also* added its own
+  `event text,` column to the `dc` table in `tools/infrastructure/docker/config/postgresql/
+  init.sql` -- textually far enough from this ticket's own `event text,` addition that
+  `git rebase`'s line-based merge saw no conflict and silently kept both. Fixed by dropping
+  the duplicate declaration and pointing fastdds_stats' own comment at the column this
+  ticket (and battery.cpp) already declares, rather than redeclaring it. Verified for real
+  this time, not just via `prek`: ran `tools/infrastructure/scripts/test_kpi_views.sh`
+  locally against a throwaway Podman PostgreSQL -- the actual CI harness, available in this
+  sandbox even though `colcon`/ROS are not -- all 33 fixture tests (including the 4 new
+  loop-closure-rate cases) passed. Also swept every other file two-or-more concurrently
+  merged PRs touched for the same silent-duplicate risk (plugin registrations, CMake
+  dependency/test lists, package.xml depends, Grafana panel ids/titles, SQL view/function
+  names, SUMMARY.md doc entries) -- none found. Lesson for next time landing a PR into a
+  fast-moving base: a clean rebase only proves no *textual* conflict, not no *semantic* one
+  between concurrently-merged PRs that both touch a shared append-only file in different
+  places; worth an explicit duplicate-declaration sweep whenever a rebase pulls in another
+  PR that touched the same generated/shared file.

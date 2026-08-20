@@ -90,11 +90,11 @@ CREATE TABLE IF NOT EXISTS dc (
   sequence bigint,
   open boolean,
   -- slam_toolbox_quality.cpp's Records (#394): `event` tags which of the two Record shapes a
-  -- row is (shared with battery.cpp's own `event`, told apart by `name`), and
-  -- x/y/yaw/covariance_* carry the `sample` shape -- distinct columns from position.cpp's own
-  -- x/y/yaw (never enumerated above, see the note at the top of this file) only in the sense
-  -- that the postgres sink maps by column name regardless of `name`, so both are told apart by
-  -- `name = 'slam_toolbox_quality'` in the KPI views that read them.
+  -- row is -- a column battery.cpp and fastdds_stats.cpp also populate their own `event` into,
+  -- told apart by `name` -- and x/y/yaw/covariance_* carry the `sample` shape, distinct columns
+  -- from position.cpp's own x/y/yaw (never enumerated above, see the note at the top of this
+  -- file) only in the sense that the postgres sink maps by column name regardless of `name`, so
+  -- both are told apart by `name = 'slam_toolbox_quality'` in the KPI views that read them.
   event text,
   x double precision,
   y double precision,
@@ -107,11 +107,10 @@ CREATE TABLE IF NOT EXISTS dc (
   port integer,
   server_name text,
   active boolean,
-  -- Fast DDS statistics (fastdds_stats.cpp, #392, fastdds_stats_pgsql_grafana demo). `event` is
-  -- always "sample" for this Measurement -- listed for querying, unlike the Measurements above
-  -- that never populate it, none of which use this column. process_names (not `processes`,
-  -- which cpu.cpp above already owns for its total process count) is a jsonb array of names.
-  event text,
+  -- Fast DDS statistics (fastdds_stats.cpp, #392, fastdds_stats_pgsql_grafana demo). Reuses the
+  -- `event` column declared above (always "sample" for this Measurement -- listed for querying).
+  -- process_names (not `processes`, which cpu.cpp above already owns for its total process
+  -- count) is a jsonb array of names.
   domain_id integer,
   participant_count integer,
   datawriter_count integer,
