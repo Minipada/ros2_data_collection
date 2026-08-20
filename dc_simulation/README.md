@@ -151,8 +151,8 @@ world-file cleanup.
 **That gain does not show up once Nav2 and DC are both running.** With the full demo
 pipeline up and the robot merely parked at its spawn pose — no navigation, camera
 measurements still polling once a second — RTF sits at ~0.11 whether or not the props
-are merged: the same figure progress.txt records for "the pass with DC running" against
-#279's DC-off 0.198. Nav2's planners/costmaps and DC's per-frame ZXing decode (two
+are merged: the same figure recorded for "the pass with DC running" against #279's
+DC-off 0.198. Nav2's planners/costmaps and DC's per-frame ZXing decode (two
 1280x720 streams, every poll) are together the larger cost once they're both in the
 loop, and they swamp what the world-entity count buys on this box. See
 [#52](https://github.com/Minipada/ros2_data_collection/issues/52) for the full

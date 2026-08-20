@@ -49,7 +49,6 @@ on:
     paths-ignore:
       - doc/**
       - docs/**
-      - progress.txt
       - "**.md"
   push:
     branches:
@@ -57,7 +56,6 @@ on:
     paths-ignore:
       - doc/**
       - docs/**
-      - progress.txt
       - "**.md"
 
 concurrency:
