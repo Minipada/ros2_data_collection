@@ -417,3 +417,16 @@ TEST_F(MeasurementMissionOpenRmfTest, TerminalWithoutPriorActiveProducesNoRecord
 
   EXPECT_TRUE(records_.empty());
 }
+
+int main(int argc, char** argv)
+{
+  ::testing::InitGoogleTest(&argc, argv);
+
+  rclcpp::init(argc, argv);
+
+  bool all_successful = RUN_ALL_TESTS();
+
+  rclcpp::shutdown();
+
+  return all_successful;
+}
