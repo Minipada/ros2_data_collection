@@ -18,7 +18,6 @@
 #include "dc_measurements/measurement_server.hpp"
 #include "dc_util/json_utils.hpp"
 #include "nav2_msgs/action/navigate_through_poses.hpp"
-#include "nav2_msgs/msg/waypoint_status.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 
 namespace
@@ -179,20 +178,17 @@ protected:
     waitForActiveGoal()->publish_feedback(feedback);
   }
 
-  static ActionT::Result::SharedPtr makeResult(uint16_t error_code, const std::string& error_msg,
-                                               std::vector<nav2_msgs::msg::WaypointStatus> waypoint_statuses = {})
+  static ActionT::Result::SharedPtr makeResult(uint16_t error_code, const std::string& error_msg)
   {
     auto result = std::make_shared<ActionT::Result>();
     result->error_code = error_code;
     result->error_msg = error_msg;
-    result->waypoint_statuses = std::move(waypoint_statuses);
     return result;
   }
 
-  void succeedActiveGoal(uint16_t error_code = 0, const std::string& error_msg = "",
-                         std::vector<nav2_msgs::msg::WaypointStatus> waypoint_statuses = {})
+  void succeedActiveGoal(uint16_t error_code = 0, const std::string& error_msg = "")
   {
-    waitForActiveGoal()->succeed(makeResult(error_code, error_msg, std::move(waypoint_statuses)));
+    waitForActiveGoal()->succeed(makeResult(error_code, error_msg));
   }
 
   void abortActiveGoal(uint16_t error_code, const std::string& error_msg)
@@ -361,28 +357,6 @@ TEST_F(MeasurementMissionNav2ThroughPosesTest, RecoveriesFromFeedbackAreCarriedO
   const auto end = waitForRecord(isEvent("mission_end"));
   ASSERT_TRUE(end.contains("recoveries"));
   EXPECT_EQ(end["recoveries"], 3);
-}
-
-TEST_F(MeasurementMissionNav2ThroughPosesTest, WaypointStatusesAreAggregatedOntoMissionEnd)
-{
-  declareCommonParameters();
-  startLifecycleNode();
-
-  sendGoal();
-  waitForRecord(isEvent("mission_start"));
-
-  std::vector<nav2_msgs::msg::WaypointStatus> waypoints(3);
-  waypoints[0].waypoint_status = nav2_msgs::msg::WaypointStatus::COMPLETED;
-  waypoints[1].waypoint_status = nav2_msgs::msg::WaypointStatus::COMPLETED;
-  waypoints[2].waypoint_status = nav2_msgs::msg::WaypointStatus::FAILED;
-  succeedActiveGoal(0, "", waypoints);
-
-  const auto end = waitForRecord(isEvent("mission_end"));
-  ASSERT_TRUE(end.contains("waypoint_statuses"));
-  EXPECT_EQ(end["waypoint_statuses"]["total"], 3);
-  EXPECT_EQ(end["waypoint_statuses"]["completed"], 2);
-  EXPECT_EQ(end["waypoint_statuses"]["failed"], 1);
-  expectValidatesAgainstSchema(end);
 }
 
 TEST_F(MeasurementMissionNav2ThroughPosesTest, SequenceIsMonotonicAcrossSeveralMissions)

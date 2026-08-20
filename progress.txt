@@ -8486,3 +8486,38 @@ reading the code (the repo's established verification standard):
   `ros2/unique_identifier_msgs` on GitHub rather than from memory, but a real `colcon
   build`/`colcon test` of `dc_measurements` on Jazzy is still needed to close the loop
   formally (CI once #249 lands, or a machine with `ament_cmake`/nav2 installed).
+
+### #388 follow-up - Fix CI build failure (`nav2_msgs/msg/waypoint_status.hpp` missing)
+
+- CI's real Jazzy build (`dc_measurements` `colcon build` in the `build-workspace` job)
+  failed: `fatal error: nav2_msgs/msg/waypoint_status.hpp: No such file or directory`.
+  Root cause: the `.action`/`.msg` field verification for #388 above was done by
+  fetching `ros-navigation/navigation2` **without pinning a ref**, which resolves to
+  the repo's default branch (`main`, tracking rolling/current dev) — not the `jazzy`
+  branch CI's rosdep-installed `nav2_msgs` actually ships. Re-fetched
+  `nav2_msgs/action/NavigateThroughPoses.action` and `nav2_msgs/msg` directly with
+  `?ref=jazzy` this time: on `jazzy`, `NavigateThroughPoses::Result` carries only
+  `error_code`/`error_msg` (same shape as `NavigateToPose::Result`) — no
+  `waypoint_statuses` field, and no `WaypointStatus.msg` exists in the package at all
+  yet (`nav2_msgs/msg/` on `jazzy` has no such file; it appears to be an addition to a
+  later/rolling nav2 not yet on the branch this repo builds against). Also confirmed
+  `action_msgs`/`unique_identifier_msgs` (core ROS interfaces, not nav2-versioned) were
+  unaffected — their `jazzy`-branch field names match what was already used
+  (`status_list`, `goal_info`, `goal_id`, `uuid`).
+- Fix: removed `waypoint_statuses` entirely rather than working around it — the
+  acceptance criteria's "final waypoint_statuses... represented on mission_end" item is
+  not satisfiable against the nav2 this repo actually targets, not a bug to patch
+  around. Removed `WaypointStatusCounts`/the `waypoint_statuses` parameter from
+  `MissionNav2ThroughPosesCore::end()`, the `#include "nav2_msgs/msg/waypoint_status.hpp"`
+  and its aggregation helper from the plugin, the `waypoint_statuses` property from the
+  JSON schema, the corresponding test coverage in both test files, and rewrote the
+  affected doc section to state plainly why the field isn't there and what would need
+  to change upstream for it to come back.
+- `mission_id`/`mission_type`/`sequence`/`outcome`/`reason`/`error_code`/
+  `duration_sec`/`recoveries` are all unaffected — those come from
+  `NavigateThroughPoses::Result.error_code`/`.error_msg` and `::Feedback
+  .number_of_recoveries`, all present on both branches.
+- `git add -A && prek run --all-files --skip build-doc` passes clean again after the
+  fix. Same caveat as before: no `colcon`/ROS 2 toolchain in this sandbox, so this was
+  verified by re-reading the jazzy-branch definitions directly rather than by
+  rebuilding — the next CI run is what actually closes the loop.

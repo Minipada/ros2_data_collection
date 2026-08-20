@@ -30,10 +30,20 @@ Two Records per mission:
 application-level failure nav2 reported without aborting the goal status itself.
 
 `recoveries` (from `NavigateThroughPoses::Feedback.number_of_recoveries`, when feedback was seen
-before completion) and `waypoint_statuses` (an aggregate `{total, completed, skipped, failed}`
-count of `NavigateThroughPoses::Result.waypoint_statuses` -- which poses in the job succeeded
-versus were skipped or failed -- kept as counts rather than the raw per-pose array to keep the
-Record flat) are both carried on the end Record when available.
+before completion) is carried on the end Record when available.
+
+**No per-waypoint outcome is reported.** The acceptance criteria this Measurement was built
+against ask for the final `waypoint_statuses` (which poses in the job succeeded versus failed) to
+be represented on `mission_end`, following an upstream nav2 `NavigateThroughPoses.action` result
+field of that name. That field does not exist on the nav2 release this repository actually
+builds against (`nav2_msgs` on the `jazzy` branch of `ros-navigation/navigation2` -- verified
+directly, not assumed): its `NavigateThroughPoses::Result` carries only `error_code`/`error_msg`,
+the same shape as `NavigateToPose::Result`. It was present in an earlier implementation of this
+plugin (written against the upstream default branch without checking the pinned distro branch
+first) and removed once CI's real Jazzy build caught the mismatch (`fatal error:
+nav2_msgs/msg/waypoint_status.hpp: No such file or directory`). Adding it back is a follow-up for
+whenever nav2 backports per-waypoint result reporting to a distro this repository targets, not
+something this Measurement can honestly do today.
 
 A mission still running when collection stops simply never gets a matching `mission_end` Record:
 nothing downstream can average an interval that was never closed as a zero, because there is no
@@ -63,16 +73,7 @@ denominator.
     "reason": { "type": "string" },
     "error_code": { "type": "integer", "minimum": 0 },
     "duration_sec": { "type": "number", "minimum": 0 },
-    "recoveries": { "type": "integer", "minimum": 0 },
-    "waypoint_statuses": {
-      "type": "object",
-      "properties": {
-        "total": { "type": "integer", "minimum": 0 },
-        "completed": { "type": "integer", "minimum": 0 },
-        "skipped": { "type": "integer", "minimum": 0 },
-        "failed": { "type": "integer", "minimum": 0 }
-      }
-    }
+    "recoveries": { "type": "integer", "minimum": 0 }
   },
   "required": ["event", "mission_id", "sequence"],
   "type": "object"
@@ -101,7 +102,7 @@ Example Record data, start:
 }
 ```
 
-and end (succeeded, two of three waypoints completed):
+and end (succeeded):
 
 ```json
 {
@@ -111,8 +112,7 @@ and end (succeeded, two of three waypoints completed):
   "sequence": 8,
   "outcome": "succeeded",
   "duration_sec": 96.4,
-  "recoveries": 1,
-  "waypoint_statuses": { "total": 3, "completed": 2, "skipped": 0, "failed": 1 }
+  "recoveries": 1
 }
 ```
 

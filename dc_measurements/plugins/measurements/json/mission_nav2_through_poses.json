@@ -55,35 +55,6 @@
       "description": "NavigateThroughPoses::Feedback.number_of_recoveries at mission completion, when feedback was seen",
       "type": "integer",
       "minimum": 0
-    },
-    "waypoint_statuses": {
-      "description":
-          "Aggregate counts of NavigateThroughPoses::Result.waypoint_statuses -- which poses in the job succeeded, were skipped, or failed -- kept as counts rather than the raw per-pose array to keep the Record flat",
-      "type": "object",
-      "properties": {
-        "total": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "completed": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "skipped": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "failed": {
-          "type": "integer",
-          "minimum": 0
-        }
-      },
-      "required": [
-        "total",
-        "completed",
-        "skipped",
-        "failed"
-      ]
     }
   },
   "required": [
