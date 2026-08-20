@@ -42,6 +42,11 @@ endforeach()
 find_package(PkgConfig REQUIRED)
 pkg_search_module(UUID REQUIRED uuid)
 
+# dc_common::WebSocketJsonClient (#390, used by the mission_open_rmf plugin, #391) needs
+# std::thread -- linked explicitly rather than assuming a transitive dependency already pulls in
+# pthread, same reasoning as dc_common's own websocket_json_client_test.
+find_package(Threads REQUIRED)
+
 # ZXing-C++ (#123): only the camera plugin's barcode/QR detection needs it, and it
 # exports a plain CMake config (ZXing::ZXing), not an ament package, so it's kept out of
 # the shared `dependencies` list/foreach below and linked directly to dc_camera_measurement.
@@ -201,6 +206,9 @@ list(APPEND dc_measurement_plugin_libs dc_mission_nav2_follow_waypoints_measurem
 add_library(dc_mission_nav2_through_poses_measurement SHARED plugins/measurements/mission_nav2_through_poses.cpp)
 list(APPEND dc_measurement_plugin_libs dc_mission_nav2_through_poses_measurement)
 
+add_library(dc_mission_open_rmf_measurement SHARED plugins/measurements/mission_open_rmf.cpp)
+list(APPEND dc_measurement_plugin_libs dc_mission_open_rmf_measurement)
+
 add_library(dc_memory_measurement SHARED
   plugins/measurements/memory.cpp
   plugins/measurements/system/linux_parser.cpp
@@ -282,6 +290,9 @@ target_link_libraries(dc_ip_camera_measurement ${AVFORMAT_LIBRARIES} ${AVUTIL_LI
 if(fastdds_statistics_backend_FOUND)
   target_link_libraries(dc_fastdds_stats_measurement fastdds_statistics_backend)
 endif()
+# dc_common::WebSocketJsonClient (#390) uses std::thread; linked explicitly rather than relying on
+# it coming in transitively, same reasoning as dc_common's own websocket_json_client_test.
+target_link_libraries(dc_mission_open_rmf_measurement Threads::Threads)
 foreach(condition_plugin ${dc_condition_plugin_libs})
   ament_target_dependencies(${condition_plugin} ${dependencies})
   target_compile_definitions(${condition_plugin} PRIVATE BT_PLUGIN_EXPORT)
@@ -388,6 +399,7 @@ set(tests
   test_measurement_mission_nav2
   test_measurement_mission_nav2_follow_waypoints
   test_measurement_mission_nav2_through_poses
+  test_measurement_mission_open_rmf
   test_measurement_moving
   test_measurement_network
   test_measurement_os
@@ -409,6 +421,7 @@ set(tests
   mission_follow_waypoints_tracker_test
   mission_nav2_tracker_test
   test_mission_nav2_through_poses_core
+  test_mission_open_rmf_core
 )
 
 # The plugin lib doesn't exist without the library, and this test would only ever report a
@@ -440,6 +453,9 @@ if(BUILD_TESTING)
   # the reader transitively or not at all.
   target_link_libraries(${PROJECT_NAME}_test_code_pose ZXing::ZXing)
   target_link_libraries(${PROJECT_NAME}_test_barcode_rotation ZXing::ZXing)
+  # test_measurement_mission_open_rmf's fixture is its own small websocket server (Boost.Beast),
+  # standing in for #391's real websocket_url endpoint; needs std::thread like the plugin itself.
+  target_link_libraries(${PROJECT_NAME}_test_measurement_mission_open_rmf Threads::Threads)
 endif()
 
 ament_export_include_directories(include)
