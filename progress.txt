@@ -8630,3 +8630,40 @@ reading the code (the repo's established verification standard):
   documented, stable ROS 2 action-protocol behavior and cross-checked against this
   repo's one existing `rclcpp_action` usage (`dc_lifecycle_manager`), but a real build is
   needed to close the loop.
+
+### #389 follow-up - Fix `nav2_msgs/msg/waypoint_status.hpp` missing (rebase-time discovery)
+
+- While rebasing #389 onto `jazzy` after #388 landed, found #388's own two follow-up
+  entries above: it hit the exact same mistake this ticket's initial implementation had
+  just made -- fetching `ros-navigation/navigation2` **without pinning a ref** resolves
+  to `main` (rolling/current dev), not the `jazzy` branch this repo's rosdep actually
+  installs. #389's original entry above explicitly (if unknowingly) documents having
+  fetched `FollowWaypoints.action`/`WaypointStatus.msg` from `main`. Re-fetched both with
+  `?ref=jazzy` before finishing the rebase, rather than pushing a branch already known to
+  hit the same CI build failure #388 did.
+- On `jazzy`, `FollowWaypoints::Result.missed_waypoints` is `MissedWaypoint[]`, not
+  `WaypointStatus[]` -- a different message entirely (`nav2_msgs/msg/WaypointStatus.msg`
+  doesn't exist on `jazzy` at all, confirmed 404). `MissedWaypoint` carries only `index`,
+  the waypoint's goal pose, and `error_code` -- no per-waypoint status enum
+  (pending/completed/skipped/failed) and no per-waypoint `error_msg` the way the `main`
+  branch's `WaypointStatus` has. Also, `jazzy`'s error-code table for this action is only
+  `NONE=0`/`UNKNOWN=600`/`TASK_EXECUTOR_FAILED=601` -- `NO_VALID_WAYPOINTS=602` and
+  `STOP_ON_MISSED_WAYPOINT=603`, both used in the original implementation and its tests,
+  don't exist on `jazzy` either.
+- Fix: `WaypointOutcome` (`mission_follow_waypoints_tracker.hpp`) dropped its `status`/
+  `error_msg` fields, keeping only `index`/`error_code`; the plugin's
+  `#include "nav2_msgs/msg/waypoint_status.hpp"` became
+  `"nav2_msgs/msg/missed_waypoint.hpp"` and the now-unused `waypointStatusName()` helper
+  was removed; the JSON schema's `missed_waypoints` item shape dropped `status`/
+  `error_msg`, keeping `index`/`error_code` as the only required fields; both test files
+  and the doc page's schema/examples were updated to match, using the real
+  `FollowWaypoints::Result::TASK_EXECUTOR_FAILED`/`::UNKNOWN` constants instead of the
+  602/603 values that don't exist on this repo's target nav2. `mission_id`/
+  `mission_type`/`sequence`/`outcome`/`reason`/`error_code`/`duration_sec` -- all sourced
+  from fields `jazzy`'s `FollowWaypoints.action` genuinely has -- are unaffected.
+- `git add -A && prek run --all-files --skip build-doc` passes clean after the fix.
+  Same caveat as the original entry: no `colcon`/ROS 2 toolchain in this sandbox, so this
+  was verified by re-reading the `jazzy`-branch `.action`/`.msg` definitions directly
+  (not from memory, and this time with the ref actually pinned) rather than by
+  rebuilding -- the next CI run is what closes the loop, same as #388's own two
+  follow-ups needed.

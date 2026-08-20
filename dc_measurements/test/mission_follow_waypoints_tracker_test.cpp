@@ -81,18 +81,18 @@ TEST(MissionFollowWaypointsTracker, SucceededStatusWithNonZeroErrorCodeIsReporte
   MissionFollowWaypointsTracker tracker(at(0));
   tracker.startMission("goal-1", at(5));
 
-  std::vector<WaypointOutcome> missed{ { 3, "skipped", 603, "waypoint skipped" } };
+  std::vector<WaypointOutcome> missed{ { 3, 601 } };  // 601 = TASK_EXECUTOR_FAILED on Jazzy
   const auto end =
-      tracker.endMission("goal-1", MissionTerminalStatus::Succeeded, 603, "stopped on missed waypoint", missed, at(20));
+      tracker.endMission("goal-1", MissionTerminalStatus::Succeeded, 601, "task executor failed", missed, at(20));
   ASSERT_TRUE(end.has_value());
   EXPECT_EQ(end->outcome, MissionOutcome::Failed);
   ASSERT_TRUE(end->reason.has_value());
-  EXPECT_EQ(*end->reason, "stopped on missed waypoint");
+  EXPECT_EQ(*end->reason, "task executor failed");
   ASSERT_TRUE(end->error_code.has_value());
-  EXPECT_EQ(*end->error_code, 603u);
+  EXPECT_EQ(*end->error_code, 601u);
   ASSERT_EQ(end->missed_waypoints.size(), 1u);
   EXPECT_EQ(end->missed_waypoints[0].index, 3u);
-  EXPECT_EQ(end->missed_waypoints[0].status, "skipped");
+  EXPECT_EQ(end->missed_waypoints[0].error_code, 601u);
 }
 
 TEST(MissionFollowWaypointsTracker, CanceledStatusIsReportedAsCancelled)

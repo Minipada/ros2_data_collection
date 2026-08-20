@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include "nav2_msgs/msg/waypoint_status.hpp"
+#include "nav2_msgs/msg/missed_waypoint.hpp"
 
 namespace dc_measurements
 {
@@ -29,23 +29,6 @@ std::string uuidToString(const unique_identifier_msgs::msg::UUID& uuid)
     }
   }
   return oss.str();
-}
-
-std::string waypointStatusName(uint8_t status)
-{
-  switch (status)
-  {
-    case nav2_msgs::msg::WaypointStatus::PENDING:
-      return "pending";
-    case nav2_msgs::msg::WaypointStatus::COMPLETED:
-      return "completed";
-    case nav2_msgs::msg::WaypointStatus::SKIPPED:
-      return "skipped";
-    case nav2_msgs::msg::WaypointStatus::FAILED:
-      return "failed";
-    default:
-      return "unknown";
-  }
 }
 
 std::string outcomeName(MissionOutcome outcome)
@@ -155,10 +138,7 @@ json MissionNav2FollowWaypoints::missionEndJson(const MissionEndFact& fact)
   json missed = json::array();
   for (const auto& waypoint : fact.missed_waypoints)
   {
-    missed.push_back({ { "index", waypoint.index },
-                       { "status", waypoint.status },
-                       { "error_code", waypoint.error_code },
-                       { "error_msg", waypoint.error_msg } });
+    missed.push_back({ { "index", waypoint.index }, { "error_code", waypoint.error_code } });
   }
   data["missed_waypoints"] = missed;
   return data;
@@ -256,8 +236,7 @@ void MissionNav2FollowWaypoints::handleResultResponse(const std::string& goal_id
   missed.reserve(response->result.missed_waypoints.size());
   for (const auto& waypoint : response->result.missed_waypoints)
   {
-    missed.push_back({ waypoint.waypoint_index, waypointStatusName(waypoint.waypoint_status), waypoint.error_code,
-                       waypoint.error_msg });
+    missed.push_back({ waypoint.index, waypoint.error_code });
   }
 
   const std::chrono::system_clock::time_point at{ std::chrono::nanoseconds(terminal_at.nanoseconds()) };

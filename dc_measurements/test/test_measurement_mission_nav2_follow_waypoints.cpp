@@ -17,7 +17,7 @@
 #include "dc_measurements/measurement_server.hpp"
 #include "dc_util/json_utils.hpp"
 #include "nav2_msgs/action/follow_waypoints.hpp"
-#include "nav2_msgs/msg/waypoint_status.hpp"
+#include "nav2_msgs/msg/missed_waypoint.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 
 using FollowWaypoints = nav2_msgs::action::FollowWaypoints;
@@ -248,23 +248,21 @@ TEST_F(MeasurementMissionNav2FollowWaypointsTest, SucceededStatusWithNonZeroErro
   waitForRecord(isEvent("mission_start"));
 
   auto result = std::make_shared<FollowWaypoints::Result>();
-  result->error_code = 603;  // STOP_ON_MISSED_WAYPOINT
-  result->error_msg = "stopped on missed waypoint";
-  nav2_msgs::msg::WaypointStatus missed;
-  missed.waypoint_index = 2;
-  missed.waypoint_status = nav2_msgs::msg::WaypointStatus::SKIPPED;
-  missed.error_code = 603;
-  missed.error_msg = "skipped";
+  result->error_code = FollowWaypoints::Result::TASK_EXECUTOR_FAILED;
+  result->error_msg = "task executor failed";
+  nav2_msgs::msg::MissedWaypoint missed;
+  missed.index = 2;
+  missed.error_code = FollowWaypoints::Result::TASK_EXECUTOR_FAILED;
   result->missed_waypoints.push_back(missed);
   goal_handle_->succeed(result);
 
   const auto end = waitForRecord(isEvent("mission_end"));
   EXPECT_EQ(end["outcome"], "failed");
-  EXPECT_EQ(end["reason"], "stopped on missed waypoint");
-  EXPECT_EQ(end["error_code"].get<int>(), 603);
+  EXPECT_EQ(end["reason"], "task executor failed");
+  EXPECT_EQ(end["error_code"].get<int>(), FollowWaypoints::Result::TASK_EXECUTOR_FAILED);
   ASSERT_EQ(end["missed_waypoints"].size(), 1u);
   EXPECT_EQ(end["missed_waypoints"][0]["index"].get<int>(), 2);
-  EXPECT_EQ(end["missed_waypoints"][0]["status"], "skipped");
+  EXPECT_EQ(end["missed_waypoints"][0]["error_code"].get<int>(), FollowWaypoints::Result::TASK_EXECUTOR_FAILED);
   expectValidatesAgainstSchema(end);
 }
 
@@ -293,14 +291,14 @@ TEST_F(MeasurementMissionNav2FollowWaypointsTest, AbortedGoalCarriesReasonAndErr
   waitForRecord(isEvent("mission_start"));
 
   auto result = std::make_shared<FollowWaypoints::Result>();
-  result->error_code = 601;  // TASK_EXECUTOR_FAILED
-  result->error_msg = "task executor failed";
+  result->error_code = FollowWaypoints::Result::UNKNOWN;
+  result->error_msg = "unknown failure";
   goal_handle_->abort(result);
 
   const auto end = waitForRecord(isEvent("mission_end"));
   EXPECT_EQ(end["outcome"], "aborted");
-  EXPECT_EQ(end["reason"], "task executor failed");
-  EXPECT_EQ(end["error_code"].get<int>(), 601);
+  EXPECT_EQ(end["reason"], "unknown failure");
+  EXPECT_EQ(end["error_code"].get<int>(), FollowWaypoints::Result::UNKNOWN);
   expectValidatesAgainstSchema(end);
 }
 

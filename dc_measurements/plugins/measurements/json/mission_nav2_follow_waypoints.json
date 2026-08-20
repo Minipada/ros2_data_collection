@@ -55,7 +55,7 @@
     },
     "missed_waypoints": {
       "description":
-          "One entry per waypoint FollowWaypoints::Result.missed_waypoints reports -- which specific stops were not completed and why",
+          "One entry per waypoint FollowWaypoints::Result.missed_waypoints reports -- which specific stops were not completed, and nav2's per-waypoint error code for each",
       "type": "array",
       "items": {
         "type": "object",
@@ -65,28 +65,15 @@
             "type": "integer",
             "minimum": 0
           },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "completed",
-              "skipped",
-              "failed"
-            ]
-          },
           "error_code": {
+            "description": "nav2's MissedWaypoint.error_code for this waypoint",
             "type": "integer",
             "minimum": 0
-          },
-          "error_msg": {
-            "type": "string"
           }
         },
         "required": [
           "index",
-          "status",
-          "error_code",
-          "error_msg"
+          "error_code"
         ]
       }
     }

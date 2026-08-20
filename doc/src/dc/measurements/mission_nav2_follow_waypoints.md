@@ -61,11 +61,9 @@ commander via a documented escape hatch (#305's territory), not from this adapte
         "type": "object",
         "properties": {
           "index": { "type": "integer", "minimum": 0 },
-          "status": { "type": "string", "enum": ["pending", "completed", "skipped", "failed"] },
-          "error_code": { "type": "integer", "minimum": 0 },
-          "error_msg": { "type": "string" }
+          "error_code": { "type": "integer", "minimum": 0 }
         },
-        "required": ["index", "status", "error_code", "error_msg"]
+        "required": ["index", "error_code"]
       }
     }
   },
@@ -125,11 +123,13 @@ and end, failed on a missed waypoint:
   "mission_type": "follow_waypoints",
   "sequence": 8,
   "outcome": "failed",
-  "reason": "stopped on missed waypoint",
-  "error_code": 603,
+  "reason": "task executor failed",
+  "error_code": 601,
   "duration_sec": 92.6,
   "missed_waypoints": [
-    { "index": 2, "status": "skipped", "error_code": 603, "error_msg": "stopped on missed waypoint" }
+    { "index": 2, "error_code": 601 }
   ]
 }
 ```
+
+`error_code` is `FollowWaypoints::Result.error_code` verbatim -- on the Jazzy `nav2_msgs` this repo targets, its only non-zero values are `UNKNOWN` (600) and `TASK_EXECUTOR_FAILED` (601); `missed_waypoints[].error_code` is nav2's `MissedWaypoint.error_code` for that one waypoint, from the same table. `MissedWaypoint` on Jazzy carries only `index`, the waypoint's goal pose (not part of this schema) and `error_code` -- no per-waypoint status enum or free-text reason the way a newer/rolling nav2 has; `reason`/`error_msg` above are always the mission-level `FollowWaypoints::Result.error_msg`, not anything per-waypoint.
