@@ -6,16 +6,16 @@
 
 #include <array>
 #include <cstdint>
-#include <deque>
 #include <map>
 #include <mutex>
 #include <optional>
 #include <string>
-#include <utility>
 
 #include "action_msgs/msg/goal_status_array.hpp"
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_measurements/mission_record_json.hpp"
+#include "dc_measurements/pending_record_queue.hpp"
 #include "dc_measurements/plugins/measurements/mission_nav2_through_poses_core.hpp"
 #include "dc_util/node_utils.hpp"
 #include "nav2_msgs/action/navigate_through_poses.hpp"
@@ -76,7 +76,7 @@ private:
   std::map<std::string, int> last_recoveries_;
   // Records wait here for a poll to carry them out, one per poll, so they travel the same publish
   // path (Conditions, buffering, Group) as every other Record.
-  std::deque<std::pair<json, rclcpp::Time>> pending_records_;
+  PendingRecordQueue pending_records_;
 
 protected:
   void onConfigure() override;

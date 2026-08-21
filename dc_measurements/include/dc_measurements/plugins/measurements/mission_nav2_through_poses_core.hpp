@@ -6,11 +6,12 @@
 
 #include <chrono>
 #include <cstdint>
-#include <deque>
-#include <map>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "dc_measurements/mission_outcome.hpp"
+#include "dc_measurements/mission_registry.hpp"
 
 namespace dc_measurements
 {
@@ -27,20 +28,6 @@ enum class GoalPhase : std::uint8_t
   Succeeded = 4,
   Canceled = 5,
   Aborted = 6,
-};
-
-enum class MissionOutcome
-{
-  Succeeded,
-  Failed,
-  Cancelled,
-  Aborted,
-};
-
-struct MissionStartFact
-{
-  std::string mission_id;
-  std::uint64_t sequence;
 };
 
 struct MissionEndFact
@@ -66,6 +53,10 @@ struct MissionEndFact
  * a goal_id, not a transition away from some prior baseline -- there is no natural idle state a
  * goal_id holds before it exists -- so this is a small bespoke tracker rather than a
  * StateTransitionDetector<GoalPhase> instantiation.
+ *
+ * The bounded id -> state bookkeeping (oldest-finished-first eviction, the sequence counter) is
+ * PrunedMissionMap, shared with MissionOpenRmfCore -- the two cores differ only in what a tracked
+ * mission's Active payload holds and how a terminal outcome is derived, which stays here.
  */
 class MissionNav2ThroughPosesCore
 {
@@ -79,14 +70,12 @@ public:
    */
   std::optional<MissionStartFact> observe(const std::string& goal_id, TimePoint at)
   {
-    if (missions_.find(goal_id) != missions_.end())
+    if (registry_.find(goal_id) != nullptr)
     {
       return std::nullopt;
     }
-    missions_.emplace(goal_id, Active{ at, false, false });
-    order_.push_back(goal_id);
-    prune();
-    return MissionStartFact{ goal_id, ++sequence_ };
+    registry_.insert(goal_id, Active{ at, false, false });
+    return MissionStartFact{ goal_id, registry_.nextSequence() };
   }
 
   /**
@@ -96,12 +85,12 @@ public:
    */
   bool shouldRequestResult(const std::string& goal_id)
   {
-    auto it = missions_.find(goal_id);
-    if (it == missions_.end() || it->second.finished || it->second.result_requested)
+    auto* active = registry_.find(goal_id);
+    if (active == nullptr || active->finished || active->result_requested)
     {
       return false;
     }
-    it->second.result_requested = true;
+    active->result_requested = true;
     return true;
   }
 
@@ -117,11 +106,11 @@ public:
   {
     MissionEndFact fact;
     fact.mission_id = goal_id;
-    fact.sequence = ++sequence_;
+    fact.sequence = registry_.nextSequence();
     fact.recoveries = recoveries;
 
-    auto it = missions_.find(goal_id);
-    const TimePoint started_at = (it != missions_.end()) ? it->second.started_at : at;
+    auto* active = registry_.find(goal_id);
+    const TimePoint started_at = (active != nullptr) ? active->started_at : at;
     fact.duration_sec =
         std::chrono::duration<double>(at > started_at ? at - started_at : TimePoint::duration::zero()).count();
 
@@ -150,9 +139,9 @@ public:
         break;
     }
 
-    if (it != missions_.end())
+    if (active != nullptr)
     {
-      it->second.finished = true;
+      active->finished = true;
     }
     return fact;
   }
@@ -161,22 +150,10 @@ public:
   /// warning, mirroring Fault's fault_started_at_ map.
   std::vector<std::string> openMissionIds() const
   {
-    std::vector<std::string> open;
-    for (const auto& [id, active] : missions_)
-    {
-      if (!active.finished)
-      {
-        open.push_back(id);
-      }
-    }
-    return open;
+    return registry_.openIds();
   }
 
 private:
-  // goal_ids never repeat in practice (they're UUIDs), so a long-running instance's map would
-  // otherwise grow without bound; only ever prunes finished missions, oldest first.
-  static constexpr std::size_t kMaxTracked = 256;
-
   struct Active
   {
     TimePoint started_at;
@@ -184,29 +161,7 @@ private:
     bool result_requested{ false };
   };
 
-  void prune()
-  {
-    while (order_.size() > kMaxTracked)
-    {
-      const auto& oldest = order_.front();
-      auto it = missions_.find(oldest);
-      if (it != missions_.end() && it->second.finished)
-      {
-        missions_.erase(it);
-        order_.pop_front();
-      }
-      else
-      {
-        // The oldest tracked goal_id is still open (a very long-running mission) -- leave it
-        // rather than dropping an active mission's tracking state.
-        break;
-      }
-    }
-  }
-
-  std::map<std::string, Active> missions_;
-  std::deque<std::string> order_;
-  std::uint64_t sequence_{ 0 };
+  PrunedMissionMap<Active> registry_;
 };
 
 }  // namespace dc_measurements

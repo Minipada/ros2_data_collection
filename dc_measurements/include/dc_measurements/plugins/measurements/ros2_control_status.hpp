@@ -5,17 +5,17 @@
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__ROS2_CONTROL_STATUS_HPP_
 
 #include <cstdint>
-#include <deque>
 #include <map>
 #include <mutex>
 #include <string>
-#include <utility>
+#include <vector>
 
 #include "controller_manager_msgs/msg/controller_manager_activity.hpp"
 #include "controller_manager_msgs/msg/named_lifecycle_state.hpp"
 #include "dc_common/state_transition_detector.hpp"
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_measurements/pending_record_queue.hpp"
 #include "dc_util/node_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
 
@@ -55,7 +55,7 @@ private:
   std::map<std::string, dc_common::StateTransitionDetector<uint8_t>> hardware_component_detectors_;
   // Records wait here for a poll to carry them out, one per poll, so they travel the same publish
   // path (Conditions, buffering, Group) as every other Record.
-  std::deque<std::pair<json, rclcpp::Time>> pending_records_;
+  PendingRecordQueue pending_records_;
 
   // Per-Record, not per-component: a global counter across every controller and hardware
   // component, so a consumer can tell a dropped Record apart from one that never changed.

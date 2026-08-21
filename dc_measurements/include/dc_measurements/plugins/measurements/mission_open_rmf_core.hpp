@@ -6,11 +6,13 @@
 
 #include <chrono>
 #include <cstdint>
-#include <deque>
 #include <map>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include "dc_measurements/mission_outcome.hpp"
+#include "dc_measurements/mission_registry.hpp"
 
 namespace dc_measurements
 {
@@ -58,20 +60,6 @@ inline RmfTaskStatus parseRmfTaskStatus(const std::string& status)
   const auto it = kByName.find(status);
   return it == kByName.end() ? RmfTaskStatus::UnknownStatus : it->second;
 }
-
-enum class MissionOutcome
-{
-  Succeeded,
-  Failed,
-  Cancelled,
-  Aborted,
-};
-
-struct MissionStartFact
-{
-  std::string mission_id;
-  std::uint64_t sequence;
-};
 
 struct MissionEndFact
 {
@@ -132,6 +120,10 @@ struct TaskStateSample
  *   settles on as the end of the task's life; they are absent from `task_state.json`'s modeled
  *   terminal set (`failed`/`canceled`/`killed`/`completed`/`skipped`). A task observed as
  *   `blocked`/`error` stays open here; only a later terminal status closes it.
+ *
+ * The bounded id -> state bookkeeping (oldest-finished-first eviction, the sequence counter) is
+ * PrunedMissionMap, shared with MissionNav2ThroughPosesCore -- the two cores differ only in what a
+ * tracked mission's Active payload holds and how a terminal outcome is derived, which stays here.
  */
 class MissionOpenRmfCore
 {
@@ -159,22 +151,19 @@ public:
   ObserveResult observe(const TaskStateSample& sample, TimePoint at)
   {
     ObserveResult result;
-    auto it = missions_.find(sample.mission_id);
+    auto* active = registry_.find(sample.mission_id);
 
-    if (it == missions_.end())
+    if (active == nullptr)
     {
       if (!isActive(sample.status))
       {
         return result;
       }
-      missions_.emplace(sample.mission_id, Active{ at, false });
-      order_.push_back(sample.mission_id);
-      prune();
-      result.start = MissionStartFact{ sample.mission_id, ++sequence_ };
-      it = missions_.find(sample.mission_id);
+      active = &registry_.insert(sample.mission_id, Active{ at, false });
+      result.start = MissionStartFact{ sample.mission_id, registry_.nextSequence() };
     }
 
-    if (it->second.finished)
+    if (active->finished)
     {
       return result;
     }
@@ -183,7 +172,7 @@ public:
     {
       MissionEndFact fact;
       fact.mission_id = sample.mission_id;
-      fact.sequence = ++sequence_;
+      fact.sequence = registry_.nextSequence();
       fact.outcome = outcomeFor(sample.status);
       fact.reason = sample.reason;
       fact.error_code = sample.error_code;
@@ -195,12 +184,12 @@ public:
       }
       else
       {
-        const TimePoint started_at = it->second.started_at;
+        const TimePoint started_at = active->started_at;
         fact.duration_sec =
             std::chrono::duration<double>(at > started_at ? at - started_at : TimePoint::duration::zero()).count();
       }
 
-      it->second.finished = true;
+      active->finished = true;
       result.end = fact;
     }
 
@@ -211,23 +200,10 @@ public:
   /// shutdown warning, mirroring MissionNav2ThroughPosesCore::openMissionIds().
   std::vector<std::string> openMissionIds() const
   {
-    std::vector<std::string> open;
-    for (const auto& [id, active] : missions_)
-    {
-      if (!active.finished)
-      {
-        open.push_back(id);
-      }
-    }
-    return open;
+    return registry_.openIds();
   }
 
 private:
-  // mission_ids never repeat in practice (Open-RMF booking IDs are monotonically issued), so a
-  // long-running instance's map would otherwise grow without bound; only ever prunes finished
-  // missions, oldest first -- same policy as MissionNav2ThroughPosesCore.
-  static constexpr std::size_t kMaxTracked = 256;
-
   struct Active
   {
     TimePoint started_at;
@@ -280,29 +256,7 @@ private:
     }
   }
 
-  void prune()
-  {
-    while (order_.size() > kMaxTracked)
-    {
-      const auto& oldest = order_.front();
-      auto it = missions_.find(oldest);
-      if (it != missions_.end() && it->second.finished)
-      {
-        missions_.erase(it);
-        order_.pop_front();
-      }
-      else
-      {
-        // The oldest tracked mission_id is still open (a very long-running task); leave it rather
-        // than dropping an active mission's tracking state.
-        break;
-      }
-    }
-  }
-
-  std::map<std::string, Active> missions_;
-  std::deque<std::string> order_;
-  std::uint64_t sequence_{ 0 };
+  PrunedMissionMap<Active> registry_;
 };
 
 }  // namespace dc_measurements

@@ -10,7 +10,6 @@ namespace dc_measurements
 
 namespace
 {
-constexpr size_t kMaxPendingRecords = 64;
 constexpr const char* kControllerType = "controller";
 constexpr const char* kHardwareComponentType = "hardware_component";
 
@@ -136,7 +135,17 @@ void Ros2ControlStatus::processEntries(const std::vector<controller_manager_msgs
     data["previous_state_duration_s"] = secondsOf(transition->dwell);
     data["open"] = starts;
 
-    pending_records_.emplace_back(std::move(data), stamp);
+    // One Record leaves per poll, so a controller manager flapping far faster than the polling
+    // interval would otherwise queue without bound. The oldest goes first: the recent transitions
+    // are the ones still worth reporting.
+    if (pending_records_.push(std::move(data), stamp))
+    {
+      RCLCPP_WARN_STREAM_THROTTLE(
+          logger_, *getNode()->get_clock(), 10000,
+          "Measurement " << measurement_name_
+                         << ": ros2_control_status Records are arriving faster than the polling interval "
+                            "can report them; dropping the oldest.");
+    }
   }
 }
 
@@ -147,19 +156,6 @@ void Ros2ControlStatus::activityCb(const controller_manager_msgs::msg::Controlle
   const std::lock_guard<std::mutex> lock(mutex_);
   processEntries(msg.controllers, kControllerType, stamp, controller_detectors_);
   processEntries(msg.hardware_components, kHardwareComponentType, stamp, hardware_component_detectors_);
-
-  // One Record leaves per poll, so a controller manager flapping far faster than the polling
-  // interval would otherwise queue without bound. The oldest goes first: the recent transitions
-  // are the ones still worth reporting.
-  while (pending_records_.size() > kMaxPendingRecords)
-  {
-    pending_records_.pop_front();
-    RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
-                                "Measurement "
-                                    << measurement_name_
-                                    << ": ros2_control_status Records are arriving faster than the polling interval "
-                                       "can report them; dropping the oldest.");
-  }
 }
 
 dc_interfaces::msg::StringStamped Ros2ControlStatus::collect()
@@ -173,8 +169,7 @@ dc_interfaces::msg::StringStamped Ros2ControlStatus::collect()
     return msg;
   }
 
-  auto record = std::move(pending_records_.front());
-  pending_records_.pop_front();
+  auto record = pending_records_.pop();
   msg.header.stamp = record.second;
   msg.data = record.first.dump(-1, ' ', true);
   return msg;

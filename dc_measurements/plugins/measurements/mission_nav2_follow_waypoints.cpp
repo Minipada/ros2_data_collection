@@ -3,9 +3,7 @@
 
 #include "dc_measurements/plugins/measurements/mission_nav2_follow_waypoints.hpp"
 
-#include <iomanip>
-#include <sstream>
-
+#include "dc_measurements/mission_uuid.hpp"
 #include "nav2_msgs/msg/missed_waypoint.hpp"
 
 namespace dc_measurements
@@ -13,39 +11,6 @@ namespace dc_measurements
 
 namespace
 {
-
-constexpr size_t kMaxPendingRecords = 64;
-
-std::string uuidToString(const unique_identifier_msgs::msg::UUID& uuid)
-{
-  std::ostringstream oss;
-  oss << std::hex << std::setfill('0');
-  for (size_t i = 0; i < uuid.uuid.size(); ++i)
-  {
-    oss << std::setw(2) << static_cast<int>(uuid.uuid[i]);
-    if (i == 3 || i == 5 || i == 7 || i == 9)
-    {
-      oss << '-';
-    }
-  }
-  return oss.str();
-}
-
-std::string outcomeName(MissionOutcome outcome)
-{
-  switch (outcome)
-  {
-    case MissionOutcome::Succeeded:
-      return "succeeded";
-    case MissionOutcome::Failed:
-      return "failed";
-    case MissionOutcome::Cancelled:
-      return "cancelled";
-    case MissionOutcome::Aborted:
-      return "aborted";
-  }
-  return "unknown";
-}
 
 MissionTerminalStatus terminalStatusOf(int8_t action_status)
 {
@@ -108,48 +73,10 @@ void MissionNav2FollowWaypoints::setValidationSchema()
   }
 }
 
-json MissionNav2FollowWaypoints::missionStartJson(const MissionStartFact& fact)
-{
-  json data;
-  data["event"] = "mission_start";
-  data["mission_id"] = fact.mission_id;
-  data["mission_type"] = "follow_waypoints";
-  data["sequence"] = fact.sequence;
-  return data;
-}
-
-json MissionNav2FollowWaypoints::missionEndJson(const MissionEndFact& fact)
-{
-  json data;
-  data["event"] = "mission_end";
-  data["mission_id"] = fact.mission_id;
-  data["mission_type"] = "follow_waypoints";
-  data["sequence"] = fact.sequence;
-  data["outcome"] = outcomeName(fact.outcome);
-  data["duration_sec"] = fact.duration_sec;
-  if (fact.reason.has_value())
-  {
-    data["reason"] = *fact.reason;
-  }
-  if (fact.error_code.has_value())
-  {
-    data["error_code"] = *fact.error_code;
-  }
-  json missed = json::array();
-  for (const auto& waypoint : fact.missed_waypoints)
-  {
-    missed.push_back({ { "index", waypoint.index }, { "error_code", waypoint.error_code } });
-  }
-  data["missed_waypoints"] = missed;
-  return data;
-}
-
 void MissionNav2FollowWaypoints::enqueue(json data, const rclcpp::Time& stamp)
 {
-  pending_records_.emplace_back(std::move(data), stamp);
-  while (pending_records_.size() > kMaxPendingRecords)
+  if (pending_records_.push(std::move(data), stamp))
   {
-    pending_records_.pop_front();
     RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
                                 "Measurement " << measurement_name_
                                                << ": mission Records are arriving faster than the polling interval "
@@ -165,7 +92,7 @@ void MissionNav2FollowWaypoints::statusCb(const action_msgs::msg::GoalStatusArra
   const std::lock_guard<std::mutex> lock(mutex_);
   for (const auto& entry : msg.status_list)
   {
-    const std::string goal_id = uuidToString(entry.goal_info.goal_id);
+    const std::string goal_id = missionGoalIdDashed(entry.goal_info.goal_id);
 
     if (entry.status == action_msgs::msg::GoalStatus::STATUS_ACCEPTED ||
         entry.status == action_msgs::msg::GoalStatus::STATUS_EXECUTING ||
@@ -174,7 +101,7 @@ void MissionNav2FollowWaypoints::statusCb(const action_msgs::msg::GoalStatusArra
       const auto start = tracker_->startMission(goal_id, at);
       if (start.has_value())
       {
-        enqueue(missionStartJson(*start), now);
+        enqueue(missionStartJson(start->mission_id, "follow_waypoints", start->sequence), now);
       }
       else if (!tracker_->activeMissionId().has_value() || *tracker_->activeMissionId() != goal_id)
       {
@@ -247,7 +174,15 @@ void MissionNav2FollowWaypoints::handleResultResponse(const std::string& goal_id
                                         response->result.error_msg, std::move(missed), at);
   if (end.has_value())
   {
-    enqueue(missionEndJson(*end), terminal_at);
+    json data = missionEndJsonBase(end->mission_id, "follow_waypoints", end->sequence, end->outcome,
+                                   end->duration_sec, end->reason, end->error_code);
+    json missed_json = json::array();
+    for (const auto& waypoint : end->missed_waypoints)
+    {
+      missed_json.push_back({ { "index", waypoint.index }, { "error_code", waypoint.error_code } });
+    }
+    data["missed_waypoints"] = missed_json;
+    enqueue(std::move(data), terminal_at);
   }
 }
 
@@ -261,8 +196,7 @@ dc_interfaces::msg::StringStamped MissionNav2FollowWaypoints::collect()
   {
     return msg;
   }
-  auto record = std::move(pending_records_.front());
-  pending_records_.pop_front();
+  auto record = pending_records_.pop();
   msg.header.stamp = record.second;
   msg.data = record.first.dump(-1, ' ', true);
   return msg;

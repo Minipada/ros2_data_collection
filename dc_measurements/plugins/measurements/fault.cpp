@@ -13,8 +13,6 @@ namespace dc_measurements
 
 namespace
 {
-constexpr size_t kMaxPendingRecords = 64;
-
 double secondsOf(const std::chrono::system_clock::duration& d)
 {
   return std::chrono::duration<double>(d).count();
@@ -141,19 +139,16 @@ void Fault::diagnosticsCb(const diagnostic_msgs::msg::DiagnosticArray& msg)
       fault_started_at_.erase(status.name);
     }
 
-    pending_records_.emplace_back(std::move(data), stamp);
-  }
-
-  // One Record leaves per poll, so a component (or set of components) flapping far faster than
-  // the polling interval would otherwise queue without bound. The oldest goes first: the recent
-  // transitions are the ones still worth reporting.
-  while (pending_records_.size() > kMaxPendingRecords)
-  {
-    pending_records_.pop_front();
-    RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
-                                "Measurement " << measurement_name_
-                                               << ": fault Records are arriving faster than the polling interval "
-                                                  "can report them; dropping the oldest.");
+    // One Record leaves per poll, so a component (or set of components) flapping far faster than
+    // the polling interval would otherwise queue without bound. The oldest goes first: the recent
+    // transitions are the ones still worth reporting.
+    if (pending_records_.push(std::move(data), stamp))
+    {
+      RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
+                                  "Measurement " << measurement_name_
+                                                 << ": fault Records are arriving faster than the polling interval "
+                                                    "can report them; dropping the oldest.");
+    }
   }
 }
 
@@ -168,8 +163,7 @@ dc_interfaces::msg::StringStamped Fault::collect()
     return msg;
   }
 
-  auto record = std::move(pending_records_.front());
-  pending_records_.pop_front();
+  auto record = pending_records_.pop();
   msg.header.stamp = record.second;
   msg.data = record.first.dump(-1, ' ', true);
   return msg;

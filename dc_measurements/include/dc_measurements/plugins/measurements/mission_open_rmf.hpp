@@ -4,15 +4,15 @@
 #ifndef DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__MISSION_OPEN_RMF_HPP_
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__MISSION_OPEN_RMF_HPP_
 
-#include <deque>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <utility>
 
 #include "dc_common/websocket_json_client.hpp"
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_measurements/mission_record_json.hpp"
+#include "dc_measurements/pending_record_queue.hpp"
 #include "dc_measurements/plugins/measurements/mission_open_rmf_core.hpp"
 #include "dc_util/node_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -63,7 +63,7 @@ private:
   // Records wait here for a poll to carry them out, one per poll, so they travel the same publish
   // path (Conditions, buffering, Group) as every other Record -- same shape as
   // MissionNav2ThroughPoses::pending_records_.
-  std::deque<std::pair<json, rclcpp::Time>> pending_records_;
+  PendingRecordQueue pending_records_;
 
 protected:
   void onConfigure() override;

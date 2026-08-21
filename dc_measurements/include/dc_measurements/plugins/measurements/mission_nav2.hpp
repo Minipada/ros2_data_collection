@@ -4,17 +4,17 @@
 #ifndef DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__MISSION_NAV2_HPP_
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__MISSION_NAV2_HPP_
 
-#include <deque>
 #include <mutex>
 #include <optional>
 #include <set>
 #include <string>
-#include <utility>
 
 #include "action_msgs/msg/goal_status.hpp"
 #include "action_msgs/msg/goal_status_array.hpp"
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_measurements/mission_record_json.hpp"
+#include "dc_measurements/pending_record_queue.hpp"
 #include "dc_measurements/plugins/measurements/mission_nav2_tracker.hpp"
 #include "dc_util/node_utils.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
@@ -58,8 +58,6 @@ private:
                             const GetResultService::Response::SharedPtr& response);
   // Caller holds mutex_.
   void enqueue(json data, const rclcpp::Time& stamp);
-  static json missionStartJson(const MissionStartFact& fact);
-  static json missionEndJson(const MissionEndFact& fact);
 
   std::string action_name_;
   rclcpp::Subscription<action_msgs::msg::GoalStatusArray>::SharedPtr status_sub_;
@@ -79,7 +77,7 @@ private:
   std::optional<int> last_recoveries_;
   // Records wait here for a poll to carry them out, one per poll, so they travel the same publish
   // path (Conditions, buffering, Group) as every other Record.
-  std::deque<std::pair<json, rclcpp::Time>> pending_records_;
+  PendingRecordQueue pending_records_;
 
 protected:
   void onConfigure() override;
