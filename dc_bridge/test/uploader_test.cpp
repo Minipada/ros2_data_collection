@@ -258,6 +258,107 @@ TEST(Uploader, MetadataRecordHasHumbleShape)
   EXPECT_EQ(marker["files"][0]["local_path"], local);
 }
 
+// The payloads below carry what measurement.hpp's addCustomKeys() writes for
+// `custom_key_str_list: [site, fleet]`: the values inline, plus a `custom_keys`
+// declaration naming which of the Record's keys are labelling rather than data.
+TEST(Uploader, CustomKeysReachEveryFileMetadataRow)
+{
+  Fixture fx({ "minio" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  auto payload = camera_payload(local, { "minio" });
+  payload["site"] = "warehouse-3";
+  payload["fleet"] = "eu-west";
+  payload["custom_keys"] = json::array({ "site", "fleet" });
+
+  auto up = fx.uploader(true);  // delete_when_sent, so the deleted rows are emitted too
+  auto rows = std::make_shared<std::vector<json>>();
+  auto summary = up.process_record(payload, "dc.measurement.camera", collect_rows(rows));
+
+  EXPECT_TRUE(summary.dropped_custom_keys.empty());
+  auto file_rows = rows_of_kind(*rows, "file_status");
+  EXPECT_EQ(file_rows.size(), 2u);  // uploaded + deleted
+  for (const auto& row : file_rows)
+  {
+    EXPECT_EQ(row["site"], "warehouse-3");
+    EXPECT_EQ(row["fleet"], "eu-west");
+  }
+  auto marker = rows_of_kind(*rows, "group_complete")[0];
+  EXPECT_EQ(marker["site"], "warehouse-3");
+  EXPECT_EQ(marker["fleet"], "eu-west");
+}
+
+// `custom_key_str_list: ["robot_name", "id"]` is what every demo configures, and the rows
+// have carried both since Humble — as `robot_name` and `robot_id`. Re-emitting the Record's
+// own `id` alongside would put a robot identifier in whatever an `id` column happens to be.
+TEST(Uploader, CustomKeysAlreadyCarriedUnderTheirOwnColumnAreNotRepeated)
+{
+  Fixture fx({ "minio" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  auto payload = camera_payload(local, { "minio" });
+  payload["custom_keys"] = json::array({ "robot_name", "id" });
+
+  auto up = fx.uploader(false);
+  auto rows = std::make_shared<std::vector<json>>();
+  auto summary = up.process_record(payload, "dc.measurement.camera", collect_rows(rows));
+
+  auto row = rows_of_kind(*rows, "file_status")[0];
+  EXPECT_EQ(row["robot_id"], "r1");
+  EXPECT_EQ(row["robot_name"], "robot1");
+  EXPECT_FALSE(row.contains("id"));
+  EXPECT_FALSE(rows_of_kind(*rows, "group_complete")[0].contains("id"));
+  // Both values are in the row already, so neither is a collision to report.
+  EXPECT_TRUE(summary.dropped_custom_keys.empty());
+}
+
+TEST(Uploader, CustomKeyNamingAnUploaderFieldNeverOverwritesIt)
+{
+  Fixture fx({ "minio" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  auto payload = camera_payload(local, { "minio" });
+  payload["storage_type"] = "not-minio";
+  payload["site"] = "warehouse-3";
+  payload["custom_keys"] = json::array({ "storage_type", "site" });
+
+  auto up = fx.uploader(false);
+  auto rows = std::make_shared<std::vector<json>>();
+  auto summary = up.process_record(payload, "dc.measurement.camera", collect_rows(rows));
+
+  auto row = rows_of_kind(*rows, "file_status")[0];
+  EXPECT_EQ(row["storage_type"], "minio");  // the Uploader's own value, not the custom one
+  EXPECT_EQ(row["site"], "warehouse-3");
+  // Dropped from every row kind, including the ones that don't carry the field themselves,
+  // so a File and its group marker can't end up disagreeing about what `storage_type` means.
+  auto marker = rows_of_kind(*rows, "group_complete")[0];
+  EXPECT_FALSE(marker.contains("storage_type"));
+  EXPECT_EQ(marker["site"], "warehouse-3");
+  EXPECT_EQ(summary.dropped_custom_keys, (std::vector<std::string>{ "storage_type" }));
+}
+
+TEST(Uploader, NoCustomKeysKeepsTheRowsUnchanged)
+{
+  Fixture fx({ "minio" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  auto up = fx.uploader(false);
+  auto rows = std::make_shared<std::vector<json>>();
+  up.process_record(camera_payload(local, { "minio" }), "dc.measurement.camera", collect_rows(rows));
+
+  auto key_set = [](const json& row) {
+    std::set<std::string> keys;
+    for (auto it = row.begin(); it != row.end(); ++it)
+    {
+      keys.insert(it.key());
+    }
+    return keys;
+  };
+  EXPECT_EQ(key_set(rows_of_kind(*rows, "file_status")[0]),
+            (std::set<std::string>{ "kind", "group_name", "robot_name", "robot_id", "local_path", "remote_path",
+                                    "storage_type", "updated_at", "uploaded", "on_filesystem", "deleted",
+                                    "content_type", "size" }));
+  EXPECT_EQ(key_set(rows_of_kind(*rows, "group_complete")[0]),
+            (std::set<std::string>{ "kind", "group_name", "robot_name", "robot_id", "complete", "file_count", "files",
+                                    "updated_at" }));
+}
+
 TEST(Uploader, VerifyFailureRetriedWithoutSecondUpload)
 {
   Fixture fx({ "minio" });

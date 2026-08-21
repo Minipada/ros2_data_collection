@@ -682,6 +682,20 @@ void BridgeNode::run_uploader_worker(std::string forward_host, std::uint16_t for
                     item->tag.c_str(), summary.files, summary.verified, summary.missing, summary.deleted,
                     static_cast<int>(summary.group_complete));
       }
+      // A custom key naming a field the Uploader emits itself keeps the Uploader's value
+      // (#419); saying so here is the difference between a defined rule and a silent drop.
+      if (!summary.dropped_custom_keys.empty())
+      {
+        std::string joined;
+        for (const auto& key : summary.dropped_custom_keys)
+        {
+          joined += (joined.empty() ? "" : ", ") + key;
+        }
+        RCLCPP_WARN(this->get_logger(),
+                    "uploader: group '%s': custom key(s) %s name fields the File metadata Records already carry — "
+                    "the Uploader's own values are kept and the custom values are not written",
+                    item->tag.c_str(), joined.c_str());
+      }
       // Previews are best-effort and never fail an upload (#256), so a File the operator
       // asked to have one and didn't get is only visible here. Warn rather than info:
       // silently shipping galleries with no previews is the failure mode worth surfacing.

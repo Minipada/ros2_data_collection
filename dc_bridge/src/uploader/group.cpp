@@ -120,6 +120,26 @@ FileGroup parse_file_group(const nlohmann::json& payload, const std::string& fal
     {
       group.robot_id = *id_it;
     }
+    // Top level only: a Group-merged Record namespaces its members' fields under their
+    // `group_key`, so those keys are no longer the Measurement's own labelling.
+    auto declared_it = payload.find("custom_keys");
+    if (declared_it != payload.end() && declared_it->is_array())
+    {
+      for (const auto& name : *declared_it)
+      {
+        if (!name.is_string())
+        {
+          continue;
+        }
+        const std::string key = name.get<std::string>();
+        auto value_it = payload.find(key);
+        if (key.empty() || value_it == payload.end())
+        {
+          continue;
+        }
+        group.custom_keys.emplace(key, *value_it);
+      }
+    }
   }
   for (auto& [local_path, file] : files)
   {

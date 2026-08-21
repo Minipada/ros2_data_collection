@@ -63,6 +63,10 @@ struct ProcessSummary
   /// log line rather than by diffing the object store.
   std::size_t thumbnails = 0;
   std::size_t thumbnails_failed = 0;
+  /// Custom keys (#419) the rows could not carry because they name a field the Uploader
+  /// emits itself. Reported so the collision is visible in the Bridge's log instead of
+  /// being the silent drop this whole feature exists to remove.
+  std::vector<std::string> dropped_custom_keys;
 };
 
 /// Thrown by process_record when a Record couldn't be fully processed. `Incomplete` is

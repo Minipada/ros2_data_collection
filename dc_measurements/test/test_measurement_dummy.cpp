@@ -46,6 +46,7 @@ protected:
     boost::replace_all(data_str, "'", "\"");
     nlohmann::json data_json = nlohmann::json::parse(data_str);
     RCLCPP_INFO_STREAM(ms_node_->get_logger(), "Value: " << data_str);
+    dummy_record_ = data_json;
     dummy_message_ = data_json["message"].get<nlohmann::json::string_t>();
     dummy_callback_ = true;
   }
@@ -53,6 +54,7 @@ protected:
   std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
   rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   std::string dummy_message_;
+  nlohmann::json dummy_record_;
 
 public:
   bool dummy_callback_{ false };
@@ -74,6 +76,44 @@ TEST_F(MeasurementDummyTest, DummyDataCorrect)
   }
 
   EXPECT_EQ(dummy_message_, message);
+}
+
+// A Record with custom keys names them, so the Bridge's Uploader can carry the same
+// labelling onto the Measurement's File metadata Records (#419).
+TEST_F(MeasurementDummyTest, CustomKeysAreDeclaredInTheRecord)
+{
+  ms_node_->declare_parameter("dummy.plugin", std::string("dc_measurements/Dummy"));
+  ms_node_->declare_parameter("dummy.topic_output", std::string("/dc/measurement/dummy"));
+  ms_node_->declare_parameter("dummy.record", std::string("{\"message\": \"My message\"}"));
+  ms_node_->declare_parameter("custom_key_str_list", std::vector<std::string>{ "site" });
+  ms_node_->declare_parameter("custom_keys_str.site.name", std::string("site"));
+  ms_node_->declare_parameter("custom_keys_str.site.value", std::string("warehouse-3"));
+
+  startLifecycleNode();
+
+  while (!dummy_callback_)
+  {
+    rclcpp::spin_some(ms_node_->get_node_base_interface());
+  }
+
+  EXPECT_EQ(dummy_record_["site"], "warehouse-3");
+  EXPECT_EQ(dummy_record_["custom_keys"], nlohmann::json::array({ "site" }));
+}
+
+TEST_F(MeasurementDummyTest, NoCustomKeysLeavesTheRecordUntouched)
+{
+  ms_node_->declare_parameter("dummy.plugin", std::string("dc_measurements/Dummy"));
+  ms_node_->declare_parameter("dummy.topic_output", std::string("/dc/measurement/dummy"));
+  ms_node_->declare_parameter("dummy.record", std::string("{\"message\": \"My message\"}"));
+
+  startLifecycleNode();
+
+  while (!dummy_callback_)
+  {
+    rclcpp::spin_some(ms_node_->get_node_base_interface());
+  }
+
+  EXPECT_FALSE(dummy_record_.contains("custom_keys"));
 }
 
 TEST_F(MeasurementDummyTest, DummyDataIncorrect)

@@ -449,6 +449,13 @@ ProcessSummary Uploader::process_record(const nlohmann::json& payload, const std
   {
     return summary;
   }
+  for (const auto& [key, value] : group.custom_keys)
+  {
+    if (status::is_reserved_field(key))
+    {
+      summary.dropped_custom_keys.push_back(key);
+    }
+  }
 
   std::vector<std::string> failures;
   std::vector<const FileRef*> verified_files;

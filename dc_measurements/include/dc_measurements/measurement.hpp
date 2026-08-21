@@ -511,6 +511,7 @@ public:
       {
         RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding custom keys: " << data.dump());
       }
+      json declared = json::array();
       for (auto& param : custom_keys_)
       {
         auto key = param["key"].get<std::string>();
@@ -521,7 +522,12 @@ public:
           json data_custom = { { key, value } };
           data.update(data_custom);
         }
+        declared.push_back(key);
       }
+      // Names the keys that are this Measurement's labelling rather than its data, so the
+      // Bridge's Uploader can carry them onto the File metadata Records too (#419) — it
+      // has no other way to tell `site` from a measured field.
+      data["custom_keys"] = std::move(declared);
       msg.data = data.dump(-1, ' ', true);
     }
   }
