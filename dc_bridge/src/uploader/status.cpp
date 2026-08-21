@@ -4,12 +4,47 @@
 #include "dc_bridge/uploader/status.hpp"
 
 #include <chrono>
+#include <set>
 
 namespace dc_bridge::uploader::status
 {
 
 namespace
 {
+
+// Fields the rows compute themselves. A custom key naming one of these means the
+// Measurement and the Uploader disagree about what the name stands for.
+const std::set<std::string>& computed_fields()
+{
+  static const std::set<std::string> fields{
+    "kind",       "group_name", "robot_id", "local_path",    "remote_path",    "storage_type",
+    "updated_at", "uploaded",   "deleted",  "on_filesystem", "duration",       "content_type",
+    "size",       "complete",   "files",    "file_count",    "thumbnail_path",
+  };
+  return fields;
+}
+
+// Record keys the rows already carry, verbatim or under a Humble-era name of their own
+// (`name` → group_name, `id` → robot_id). Also dropped, but not a collision: the value is
+// in the row already, so re-emitting it would only put it in a second column.
+const std::set<std::string>& payload_derived_fields()
+{
+  static const std::set<std::string> keys{ "name", "id", "robot_name" };
+  return keys;
+}
+
+// Appends the emitting Measurement's custom keys (#419). Called last, so a key that names
+// a field the row already carries is dropped instead of overwriting it.
+void apply_custom_keys(nlohmann::json& row, const FileGroup& group)
+{
+  for (const auto& [key, value] : group.custom_keys)
+  {
+    if (!computed_fields().count(key) && !payload_derived_fields().count(key))
+    {
+      row[key] = value;
+    }
+  }
+}
 
 double unix_now()
 {
@@ -61,6 +96,7 @@ nlohmann::json uploaded_row(const FileGroup& group, const FileRef& file, const S
     // same way by a consumer.
     row["thumbnail_path"] = storage.url_prefix + storage.object_key(*thumbnail_path);
   }
+  apply_custom_keys(row, group);
   return row;
 }
 
@@ -71,6 +107,7 @@ nlohmann::json missing_row(const FileGroup& group, const FileRef& file, const St
   row["uploaded"] = false;
   row["on_filesystem"] = false;
   row["deleted"] = false;
+  apply_custom_keys(row, group);
   return row;
 }
 
@@ -81,6 +118,7 @@ nlohmann::json deleted_row(const FileGroup& group, const FileRef& file, const St
   row["uploaded"] = true;
   row["on_filesystem"] = false;
   row["deleted"] = true;
+  apply_custom_keys(row, group);
   return row;
 }
 
@@ -91,6 +129,7 @@ nlohmann::json shed_row(const FileGroup& group, const FileRef& file, const Stora
   row["uploaded"] = false;
   row["on_filesystem"] = false;
   row["deleted"] = true;
+  apply_custom_keys(row, group);
   return row;
 }
 
@@ -116,7 +155,13 @@ nlohmann::json group_complete_row(const FileGroup& group)
   }
   row["files"] = std::move(files);
   row["updated_at"] = unix_now();
+  apply_custom_keys(row, group);
   return row;
+}
+
+bool is_reserved_field(const std::string& name)
+{
+  return computed_fields().count(name) > 0;
 }
 
 }  // namespace dc_bridge::uploader::status

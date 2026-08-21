@@ -40,7 +40,7 @@ the Record as a `tags` field, but it has no routing effect — remove it. See th
 | condition_plugins                            | Name of the condition plugins to load                                                                                                                     | list\[str\] | N/A (mandatory)               |
 | save_local_base_path                         | Path where files will be saved locally (e.g camera images). Expands $X to environment variables and =Y to custom string parameters                        | str         | "$HOME/ros2/data/%Y/%M/%D/%H" |
 | all_base_path                                | Path where files will be saved at their destination (S3, RustFS...). Expands $X to environment variables and =Y to custom string parameters               | str         | ""                            |
-| custom_key_str_list                          | Custom strings to use in other parameters. They are also appended in the json sent to the destination                                                     | list\[str\] | N/A                           |
+| custom_key_str_list                          | Custom strings to use in other parameters. They are also appended in the json sent to the destination, and to the File metadata Records of the same Measurement | list\[str\] | N/A                           |
 | custom_keys_str.force_override               | Override values if the keys are already present in the measurement. Applies to all and can be overridden by `custom_keys_str.<param_name>.force_override` | bool        | false                         |
 |                                              |                                                                                                                                                           |             |                               |
 | custom_keys_str.<param_name>.name            | Key to add in the serialized data                                                                                                                         | str         | N/A (optional)                |
@@ -51,6 +51,21 @@ the Record as a `tags` field, but it has no routing effect — remove it. See th
 | run_id.counter                               | Enable counter for the run_id                                                                                                                             | str         | true                          |
 | run_id.counter_path                          | Path to store the last run. It is expanded with environment variables id                                                                                  | str         | "$HOME/run_id"                |
 | run_id.uuid                                  | Generate a new run ID by using a random UUID                                                                                                              | str         | false                         |
+
+### Custom keys on Files
+
+The keys listed in `custom_key_str_list` label a Measurement's **Files** as well as its
+Records: the Bridge's Uploader writes them into the `file_status` and `group_complete`
+Records it emits for that Measurement's Files, so both sides of a Destination carry the
+same labelling. A Record names its custom keys in a `custom_keys` field for that purpose.
+
+Two limits are worth knowing. A custom key whose name is one the Uploader computes itself
+(`group_name`, `local_path`, `remote_path`, `storage_type`, `uploaded`, `size`, …) is not
+written — the Uploader's own value is kept and the Bridge logs the collision. The keys the
+rows already carry, `robot_name` and `id` (as `robot_id`), are likewise not repeated, and
+are not reported: those values are in the row either way. And the column still has to exist
+in the Destination: the PostgreSQL sink maps JSON keys onto existing columns 1:1, so a new
+custom key needs an `ALTER TABLE` on `dc_files` the same way it needs one on `dc_records`.
 
 ## Plugin parameters
 

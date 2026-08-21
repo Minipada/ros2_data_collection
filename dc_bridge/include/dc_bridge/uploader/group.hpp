@@ -36,6 +36,10 @@ struct FileGroup
   std::string group_name;
   std::optional<std::string> robot_name;
   std::optional<nlohmann::json> robot_id;
+  /// The emitting Measurement's `custom_key_str_list` keys and their values, read from the
+  /// Record's `custom_keys` declaration (#419). The Uploader carries them onto its File
+  /// metadata Records so a Measurement's Files and its Records are labelled the same way.
+  std::map<std::string, nlohmann::json> custom_keys;
   std::vector<FileRef> files;  ///< deterministic (local-path-sorted) order.
 };
 

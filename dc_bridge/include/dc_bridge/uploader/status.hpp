@@ -52,6 +52,15 @@ nlohmann::json shed_row(const FileGroup& group, const FileRef& file, const Stora
 /// ADR-0005's group completion marker.
 nlohmann::json group_complete_row(const FileGroup& group);
 
+/// True for a field name the rows above compute themselves. A Measurement custom key
+/// (#419) with such a name is dropped rather than overwriting the Uploader's own value —
+/// and dropped from every row kind, not just the ones that happen to carry that field, so
+/// a File and the group marker covering it never disagree about what a key means.
+/// The Record's own `name`, `id` and `robot_name` are dropped too but are not reserved:
+/// the rows already carry those values (as `group_name`, `robot_id`, `robot_name`), so
+/// there is no disagreement to report.
+bool is_reserved_field(const std::string& name);
+
 }  // namespace status
 }  // namespace dc_bridge::uploader
 
