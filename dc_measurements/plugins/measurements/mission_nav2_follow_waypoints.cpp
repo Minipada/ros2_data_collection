@@ -174,8 +174,8 @@ void MissionNav2FollowWaypoints::handleResultResponse(const std::string& goal_id
                                         response->result.error_msg, std::move(missed), at);
   if (end.has_value())
   {
-    json data = missionEndJsonBase(end->mission_id, "follow_waypoints", end->sequence, end->outcome,
-                                   end->duration_sec, end->reason, end->error_code);
+    json data = missionEndJsonBase(end->mission_id, "follow_waypoints", end->sequence, end->outcome, end->duration_sec,
+                                   end->reason, end->error_code);
     json missed_json = json::array();
     for (const auto& waypoint : end->missed_waypoints)
     {
