@@ -50,6 +50,30 @@ enum class Status : int8_t
   RUNNING = 3,
 };
 
+// A json_validator schema_loader resolving a "$ref" naming a sibling file (e.g.
+// "mission_base.json") against `schema_dir` -- the directory the root schema itself was loaded
+// from. Every schema in this codebase but the Mission Measurement family keeps to same-file
+// "#/$defs/..." refs, which nlohmann_json_schema_validator resolves on its own; this loader is
+// only ever invoked for a schema that references another file, letting a family of adapters
+// (#305/ADR-0010's shared mission_start/mission_end contract) share one base schema instead of
+// duplicating its properties per adapter.
+inline nlohmann::json_schema::schema_loader makeSchemaFileLoader(const std::string& schema_dir)
+{
+  return [schema_dir](const nlohmann::json_uri& id, json& value) {
+    std::string filename = id.path();
+    if (!filename.empty() && filename.front() == '/')
+    {
+      filename.erase(0, 1);
+    }
+    std::ifstream f(schema_dir + "/" + filename);
+    if (!f)
+    {
+      throw std::runtime_error{ "could not load schema '" + filename + "' referenced from " + schema_dir };
+    }
+    value = json::parse(f);
+  };
+}
+
 /**
  * @class nav2_behaviors::Behavior
  * @brief An action server Behavior base class implementing the action server and basic factory.
@@ -144,7 +168,8 @@ public:
   void validateSchema(const std::string& package_name, const std::string& json_filename)
   {
     std::string package_share_directory = ament_index_cpp::get_package_share_directory(package_name);
-    std::string path = package_share_directory + "/plugins/measurements/json/" + json_filename;
+    std::string schema_dir = package_share_directory + "/plugins/measurements/json";
+    std::string path = schema_dir + "/" + json_filename;
     std::ifstream f(path.c_str());
     try
     {
@@ -155,6 +180,7 @@ public:
       RCLCPP_INFO_STREAM(logger_, "schema: " << schema_);
       try
       {
+        validator_ = json_validator(makeSchemaFileLoader(schema_dir));
         validator_.set_root_schema(schema_);
       }
       catch (const std::exception& e)
@@ -180,6 +206,8 @@ public:
       RCLCPP_INFO_STREAM(logger_, "schema: " << schema_);
       try
       {
+        const std::string schema_dir = std::filesystem::path(json_schema_path).parent_path().string();
+        validator_ = json_validator(makeSchemaFileLoader(schema_dir));
         validator_.set_root_schema(schema_);
       }
       catch (const std::exception& e)

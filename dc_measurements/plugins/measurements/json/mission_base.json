@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MissionLifecycleBase",
+  "description":
+      "Property definitions shared by every Mission Measurement adapter's Record (#305, recorded in ADR-0010): nav2's NavigateToPose/NavigateThroughPoses/FollowWaypoints adapters and Open-RMF. Not a validatable schema on its own -- referenced via allOf/$ref by each adapter's own schema, which adds its own mission_type/required/conditional rules on top.",
+  "properties": {
+    "event": {
+      "description": "Which boundary of the mission this Record reports",
+      "type": "string",
+      "enum": [
+        "mission_start",
+        "mission_end"
+      ]
+    },
+    "mission_id": {
+      "description": "This adapter's identifier for the mission -- an action goal UUID for the nav2 adapters, Open-RMF's booking.id for its adapter",
+      "type": "string"
+    },
+    "sequence": {
+      "description":
+          "Monotonically increasing number of this Record, across every mission this Measurement instance has seen (not per mission_id), so a dropped Record is detectable",
+      "type": "integer",
+      "minimum": 1
+    },
+    "outcome": {
+      "description": "How the mission ended -- see the adapter's own schema for what maps to which value",
+      "type": "string",
+      "enum": [
+        "succeeded",
+        "failed",
+        "cancelled",
+        "aborted"
+      ]
+    },
+    "reason": {
+      "description": "Human-readable detail on why the mission ended the way it did, when the source provided one",
+      "type": "string"
+    },
+    "error_code": {
+      "description": "The source's own numeric error code, carried through verbatim, when it provided one",
+      "type": "integer",
+      "minimum": 0
+    },
+    "duration_sec": {
+      "description": "How long the mission ran, from its mission_start boundary to its mission_end boundary",
+      "type": "number",
+      "minimum": 0
+    }
+  }
+}

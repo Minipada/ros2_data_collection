@@ -3,64 +3,23 @@
   "title": "MissionOpenRmf",
   "description":
       "One Open-RMF task's lifecycle: a mission_start Record when its status first leaves queued/standby into an active state, a mission_end Record once it reaches a terminal status. Shares #387's mission_start/mission_end Record contract; mission_type carries Open-RMF's own task category",
-  "properties": {
-    "event": {
-      "description": "Which boundary of the mission this Record reports",
-      "type": "string",
-      "enum": [
-        "mission_start",
-        "mission_end"
-      ]
-    },
-    "mission_id": {
-      "description": "Open-RMF's booking.id for the task",
-      "type": "string"
-    },
-    "mission_type": {
-      "description": "Open-RMF's task category (e.g. 'delivery', 'patrol'), verbatim",
-      "type": "string"
-    },
-    "sequence": {
-      "description":
-          "Monotonically increasing number of this Record, across every mission this Measurement instance has seen (not per mission_id), so a dropped Record is detectable",
-      "type": "integer",
-      "minimum": 1
-    },
-    "outcome": {
-      "description":
-          "How the mission ended. 'completed'->succeeded, 'failed'->failed, 'canceled'->cancelled, 'killed'->aborted. Open-RMF's 'skipped' status also maps to 'cancelled': DC's outcome contract (#305/#387) has four values, not five, and 'cancelled' -- closed without completing the work, not an error -- is the closer fit than 'succeeded' or a failure outcome",
-      "type": "string",
-      "enum": [
-        "succeeded",
-        "failed",
-        "cancelled",
-        "aborted"
-      ]
-    },
-    "reason": {
-      "description":
-          "Best-effort detail carried verbatim from whichever field Open-RMF actually populated for this outcome: dispatch.errors (or the top-level detail) for 'failed', cancellation.labels for 'cancelled', killed.labels for 'aborted'. Not guaranteed present for every outcome -- unlike nav2's always-populated error_msg, Open-RMF does not always supply one",
-      "type": "string"
-    },
-    "error_code": {
-      "description":
-          "Open-RMF's own dispatch error code, carried through verbatim when a 'failed' outcome's dispatch.errors supplied one",
-      "type": "integer",
-      "minimum": 0
-    },
-    "duration_sec": {
-      "description":
-          "How long the mission ran. Uses Open-RMF's own unix_millis_start_time/unix_millis_finish_time when the source provided both; falls back to this Measurement's own locally observed start/end timestamps otherwise",
-      "type": "number",
-      "minimum": 0
-    }
-  },
-  "required": [
-    "event",
-    "mission_id",
-    "sequence"
-  ],
   "allOf": [
+    {
+      "$ref": "mission_base.json"
+    },
+    {
+      "properties": {
+        "mission_type": {
+          "description": "Open-RMF's task category (e.g. 'delivery', 'patrol'), verbatim",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event",
+        "mission_id",
+        "sequence"
+      ]
+    },
     {
       "if": {
         "properties": {
