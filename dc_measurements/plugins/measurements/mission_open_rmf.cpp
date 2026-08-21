@@ -209,9 +209,9 @@ void MissionOpenRmf::handleMessage(const nlohmann::json& message)
 
   if (observed.end.has_value())
   {
-    json data = missionEndJsonBase(observed.end->mission_id, sample.mission_type, observed.end->sequence,
-                                   observed.end->outcome, observed.end->duration_sec, observed.end->reason,
-                                   observed.end->error_code);
+    json data =
+        missionEndJsonBase(observed.end->mission_id, sample.mission_type, observed.end->sequence, observed.end->outcome,
+                           observed.end->duration_sec, observed.end->reason, observed.end->error_code);
     const std::lock_guard<std::mutex> lock(mutex_);
     emit(std::move(data), stamp);
   }

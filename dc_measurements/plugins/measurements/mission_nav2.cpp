@@ -184,8 +184,8 @@ void MissionNav2::handleResultResponse(const std::string& goal_id, const rclcpp:
                                         response->result.error_msg, recoveries, at);
   if (end.has_value())
   {
-    json data = missionEndJsonBase(end->mission_id, "navigate_to_pose", end->sequence, end->outcome,
-                                   end->duration_sec, end->reason, end->error_code);
+    json data = missionEndJsonBase(end->mission_id, "navigate_to_pose", end->sequence, end->outcome, end->duration_sec,
+                                   end->reason, end->error_code);
     if (end->recoveries.has_value())
     {
       data["recoveries"] = *end->recoveries;

@@ -13,7 +13,8 @@
       ]
     },
     "mission_id": {
-      "description": "This adapter's identifier for the mission -- an action goal UUID for the nav2 adapters, Open-RMF's booking.id for its adapter",
+      "description":
+          "This adapter's identifier for the mission -- an action goal UUID for the nav2 adapters, Open-RMF's booking.id for its adapter",
       "type": "string"
     },
     "sequence": {

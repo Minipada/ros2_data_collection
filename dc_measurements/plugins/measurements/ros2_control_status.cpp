@@ -140,11 +140,11 @@ void Ros2ControlStatus::processEntries(const std::vector<controller_manager_msgs
     // are the ones still worth reporting.
     if (pending_records_.push(std::move(data), stamp))
     {
-      RCLCPP_WARN_STREAM_THROTTLE(
-          logger_, *getNode()->get_clock(), 10000,
-          "Measurement " << measurement_name_
-                         << ": ros2_control_status Records are arriving faster than the polling interval "
-                            "can report them; dropping the oldest.");
+      RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
+                                  "Measurement "
+                                      << measurement_name_
+                                      << ": ros2_control_status Records are arriving faster than the polling interval "
+                                         "can report them; dropping the oldest.");
     }
   }
 }

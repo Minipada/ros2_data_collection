@@ -14,7 +14,8 @@
           "type": "string"
         },
         "recoveries": {
-          "description": "NavigateThroughPoses::Feedback.number_of_recoveries at mission completion, when feedback was seen",
+          "description":
+              "NavigateThroughPoses::Feedback.number_of_recoveries at mission completion, when feedback was seen",
           "type": "integer",
           "minimum": 0
         }
