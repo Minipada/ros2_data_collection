@@ -3,44 +3,10 @@
 
 #include "dc_measurements/plugins/measurements/mission_nav2_through_poses.hpp"
 
-#include <iomanip>
-#include <sstream>
+#include "dc_measurements/mission_uuid.hpp"
 
 namespace dc_measurements
 {
-
-namespace
-{
-
-constexpr size_t kMaxPendingRecords = 64;
-
-std::string uuidToHex(const std::array<uint8_t, 16>& uuid)
-{
-  std::ostringstream oss;
-  for (auto byte : uuid)
-  {
-    oss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(byte);
-  }
-  return oss.str();
-}
-
-std::string outcomeName(MissionOutcome outcome)
-{
-  switch (outcome)
-  {
-    case MissionOutcome::Succeeded:
-      return "succeeded";
-    case MissionOutcome::Failed:
-      return "failed";
-    case MissionOutcome::Cancelled:
-      return "cancelled";
-    case MissionOutcome::Aborted:
-    default:
-      return "aborted";
-  }
-}
-
-}  // namespace
 
 MissionNav2ThroughPoses::MissionNav2ThroughPoses() : dc_measurements::Measurement()
 {
@@ -53,8 +19,11 @@ void MissionNav2ThroughPoses::onConfigure()
   auto node = getNode();
   action_name_ = dc_util::get_str_type_param(node, measurement_name_, "action_name", "navigate_through_poses");
 
+  // Matches the QoS an action server publishes its status topic with (reliable, transient_local):
+  // a late-joining watcher still gets the current goal's last-known status rather than waiting for
+  // the next change -- same reasoning as MissionNav2/MissionNav2FollowWaypoints.
   status_sub_ = node->create_subscription<action_msgs::msg::GoalStatusArray>(
-      action_name_ + "/_action/status", rclcpp::QoS(10),
+      action_name_ + "/_action/status", rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local(),
       std::bind(&MissionNav2ThroughPoses::statusCb, this, std::placeholders::_1));
   feedback_sub_ = node->create_subscription<FeedbackMsg>(action_name_ + "/_action/feedback", rclcpp::QoS(10),
                                                          std::bind(&MissionNav2ThroughPoses::feedbackCb, this,
@@ -83,13 +52,11 @@ void MissionNav2ThroughPoses::setValidationSchema()
 
 void MissionNav2ThroughPoses::emit(json data, const rclcpp::Time& stamp)
 {
-  pending_records_.emplace_back(std::move(data), stamp);
   // One Record leaves per poll, so missions starting/ending far faster than the polling interval
   // would otherwise queue without bound. The oldest goes first: the recent boundaries are the ones
   // still worth reporting.
-  while (pending_records_.size() > kMaxPendingRecords)
+  if (pending_records_.push(std::move(data), stamp))
   {
-    pending_records_.pop_front();
     RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
                                 "Measurement " << measurement_name_
                                                << ": mission Records are arriving faster than the polling interval "
@@ -104,7 +71,7 @@ void MissionNav2ThroughPoses::statusCb(const action_msgs::msg::GoalStatusArray& 
 
   for (const auto& status : msg.status_list)
   {
-    const std::string goal_id_hex = uuidToHex(status.goal_info.goal_id.uuid);
+    const std::string goal_id_hex = missionGoalIdHex(status.goal_info.goal_id.uuid);
 
     std::optional<MissionStartFact> start;
     {
@@ -113,11 +80,7 @@ void MissionNav2ThroughPoses::statusCb(const action_msgs::msg::GoalStatusArray& 
     }
     if (start.has_value())
     {
-      json data;
-      data["event"] = "mission_start";
-      data["mission_id"] = start->mission_id;
-      data["mission_type"] = "navigate_through_poses";
-      data["sequence"] = start->sequence;
+      json data = missionStartJson(start->mission_id, "navigate_through_poses", start->sequence);
       const std::lock_guard<std::mutex> lock(mutex_);
       emit(std::move(data), stamp);
     }
@@ -132,7 +95,7 @@ void MissionNav2ThroughPoses::statusCb(const action_msgs::msg::GoalStatusArray& 
 
 void MissionNav2ThroughPoses::feedbackCb(const FeedbackMsg& msg)
 {
-  const std::string goal_id_hex = uuidToHex(msg.goal_id.uuid);
+  const std::string goal_id_hex = missionGoalIdHex(msg.goal_id.uuid);
   const std::lock_guard<std::mutex> lock(mutex_);
   last_recoveries_[goal_id_hex] = msg.feedback.number_of_recoveries;
 }
@@ -177,21 +140,8 @@ void MissionNav2ThroughPoses::handleResult(const std::string& goal_id_hex, GoalP
     fact = core_.end(goal_id_hex, phase, response->result.error_code, response->result.error_msg, recoveries, at);
   }
 
-  json data;
-  data["event"] = "mission_end";
-  data["mission_id"] = fact.mission_id;
-  data["mission_type"] = "navigate_through_poses";
-  data["sequence"] = fact.sequence;
-  data["outcome"] = outcomeName(fact.outcome);
-  data["duration_sec"] = fact.duration_sec;
-  if (fact.reason.has_value())
-  {
-    data["reason"] = *fact.reason;
-  }
-  if (fact.error_code.has_value())
-  {
-    data["error_code"] = *fact.error_code;
-  }
+  json data = missionEndJsonBase(fact.mission_id, "navigate_through_poses", fact.sequence, fact.outcome,
+                                 fact.duration_sec, fact.reason, fact.error_code);
   if (fact.recoveries.has_value())
   {
     data["recoveries"] = *fact.recoveries;
@@ -212,8 +162,7 @@ dc_interfaces::msg::StringStamped MissionNav2ThroughPoses::collect()
     return msg;
   }
 
-  auto record = std::move(pending_records_.front());
-  pending_records_.pop_front();
+  auto record = pending_records_.pop();
   msg.header.stamp = record.second;
   msg.data = record.first.dump(-1, ' ', true);
   return msg;

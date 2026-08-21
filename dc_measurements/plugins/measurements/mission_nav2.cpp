@@ -3,47 +3,13 @@
 
 #include "dc_measurements/plugins/measurements/mission_nav2.hpp"
 
-#include <iomanip>
-#include <sstream>
+#include "dc_measurements/mission_uuid.hpp"
 
 namespace dc_measurements
 {
 
 namespace
 {
-
-constexpr size_t kMaxPendingRecords = 64;
-
-std::string uuidToString(const unique_identifier_msgs::msg::UUID& uuid)
-{
-  std::ostringstream oss;
-  oss << std::hex << std::setfill('0');
-  for (size_t i = 0; i < uuid.uuid.size(); ++i)
-  {
-    oss << std::setw(2) << static_cast<int>(uuid.uuid[i]);
-    if (i == 3 || i == 5 || i == 7 || i == 9)
-    {
-      oss << '-';
-    }
-  }
-  return oss.str();
-}
-
-std::string outcomeName(MissionOutcome outcome)
-{
-  switch (outcome)
-  {
-    case MissionOutcome::Succeeded:
-      return "succeeded";
-    case MissionOutcome::Failed:
-      return "failed";
-    case MissionOutcome::Cancelled:
-      return "cancelled";
-    case MissionOutcome::Aborted:
-      return "aborted";
-  }
-  return "unknown";
-}
 
 MissionTerminalStatus terminalStatusOf(int8_t action_status)
 {
@@ -110,49 +76,13 @@ void MissionNav2::setValidationSchema()
   }
 }
 
-json MissionNav2::missionStartJson(const MissionStartFact& fact)
-{
-  json data;
-  data["event"] = "mission_start";
-  data["mission_id"] = fact.mission_id;
-  data["mission_type"] = "navigate_to_pose";
-  data["sequence"] = fact.sequence;
-  return data;
-}
-
-json MissionNav2::missionEndJson(const MissionEndFact& fact)
-{
-  json data;
-  data["event"] = "mission_end";
-  data["mission_id"] = fact.mission_id;
-  data["mission_type"] = "navigate_to_pose";
-  data["sequence"] = fact.sequence;
-  data["outcome"] = outcomeName(fact.outcome);
-  data["duration_sec"] = fact.duration_sec;
-  if (fact.reason.has_value())
-  {
-    data["reason"] = *fact.reason;
-  }
-  if (fact.error_code.has_value())
-  {
-    data["error_code"] = *fact.error_code;
-  }
-  if (fact.recoveries.has_value())
-  {
-    data["recoveries"] = *fact.recoveries;
-  }
-  return data;
-}
-
 void MissionNav2::enqueue(json data, const rclcpp::Time& stamp)
 {
-  pending_records_.emplace_back(std::move(data), stamp);
   // One Record leaves per poll, so missions starting/ending far faster than the polling interval
   // would otherwise queue without bound. The oldest goes first: the recent boundaries are the ones
   // still worth reporting.
-  while (pending_records_.size() > kMaxPendingRecords)
+  if (pending_records_.push(std::move(data), stamp))
   {
-    pending_records_.pop_front();
     RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
                                 "Measurement " << measurement_name_
                                                << ": mission Records are arriving faster than the polling interval "
@@ -168,7 +98,7 @@ void MissionNav2::statusCb(const action_msgs::msg::GoalStatusArray& msg)
   const std::lock_guard<std::mutex> lock(mutex_);
   for (const auto& entry : msg.status_list)
   {
-    const std::string goal_id = uuidToString(entry.goal_info.goal_id);
+    const std::string goal_id = missionGoalIdDashed(entry.goal_info.goal_id);
 
     if (entry.status == action_msgs::msg::GoalStatus::STATUS_ACCEPTED ||
         entry.status == action_msgs::msg::GoalStatus::STATUS_EXECUTING ||
@@ -177,7 +107,7 @@ void MissionNav2::statusCb(const action_msgs::msg::GoalStatusArray& msg)
       const auto start = tracker_->startMission(goal_id, at);
       if (start.has_value())
       {
-        enqueue(missionStartJson(*start), now);
+        enqueue(missionStartJson(start->mission_id, "navigate_to_pose", start->sequence), now);
       }
       else if (!tracker_->activeMissionId().has_value() || *tracker_->activeMissionId() != goal_id)
       {
@@ -254,7 +184,13 @@ void MissionNav2::handleResultResponse(const std::string& goal_id, const rclcpp:
                                         response->result.error_msg, recoveries, at);
   if (end.has_value())
   {
-    enqueue(missionEndJson(*end), terminal_at);
+    json data = missionEndJsonBase(end->mission_id, "navigate_to_pose", end->sequence, end->outcome,
+                                   end->duration_sec, end->reason, end->error_code);
+    if (end->recoveries.has_value())
+    {
+      data["recoveries"] = *end->recoveries;
+    }
+    enqueue(std::move(data), terminal_at);
   }
 }
 
@@ -268,8 +204,7 @@ dc_interfaces::msg::StringStamped MissionNav2::collect()
   {
     return msg;
   }
-  auto record = std::move(pending_records_.front());
-  pending_records_.pop_front();
+  auto record = pending_records_.pop();
   msg.header.stamp = record.second;
   msg.data = record.first.dump(-1, ' ', true);
   return msg;

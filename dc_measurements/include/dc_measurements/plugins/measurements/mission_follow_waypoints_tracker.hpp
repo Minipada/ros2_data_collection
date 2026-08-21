@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "dc_common/state_transition_detector.hpp"
+#include "dc_measurements/mission_outcome.hpp"
 
 namespace dc_measurements
 {
@@ -25,18 +26,6 @@ enum class MissionTerminalStatus
   Aborted,
 };
 
-/// The outcome a Record actually reports, per #387's schema. Distinct from MissionTerminalStatus:
-/// a goal that reaches Succeeded with a non-zero error_code is reported as Failed rather than
-/// Succeeded (nav2's WaypointFollower can finish its action goal successfully while still having
-/// missed one or more waypoints).
-enum class MissionOutcome
-{
-  Succeeded,
-  Failed,
-  Cancelled,
-  Aborted,
-};
-
 /// One entry of FollowWaypoints::Result.missed_waypoints (nav2_msgs/msg/MissedWaypoint on Jazzy),
 /// stripped of the goal pose -- not part of #389's schema. Jazzy's MissedWaypoint is just
 /// index/goal/error_code -- no per-waypoint status enum or error_msg the way an older/rolling nav2
@@ -46,12 +35,6 @@ struct WaypointOutcome
 {
   std::uint32_t index{ 0 };
   std::uint16_t error_code{ 0 };
-};
-
-struct MissionStartFact
-{
-  std::string mission_id;
-  std::uint64_t sequence{ 0 };
 };
 
 struct MissionEndFact

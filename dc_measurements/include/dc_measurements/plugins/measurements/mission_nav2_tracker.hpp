@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "dc_common/state_transition_detector.hpp"
+#include "dc_measurements/mission_outcome.hpp"
 
 namespace dc_measurements
 {
@@ -22,24 +23,6 @@ enum class MissionTerminalStatus
   Succeeded,
   Canceled,
   Aborted,
-};
-
-/// The outcome a Record actually reports, per the mission lifecycle contract (#305, recorded in
-/// ADR-0010). Distinct from MissionTerminalStatus: a goal that reaches Succeeded with a non-zero
-/// error_code is reported as Failed rather than Succeeded -- an application-level failure nav2
-/// reported without aborting the goal status itself.
-enum class MissionOutcome
-{
-  Succeeded,
-  Failed,
-  Cancelled,
-  Aborted,
-};
-
-struct MissionStartFact
-{
-  std::string mission_id;
-  std::uint64_t sequence{ 0 };
 };
 
 struct MissionEndFact

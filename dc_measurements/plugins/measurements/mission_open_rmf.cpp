@@ -11,24 +11,6 @@ namespace dc_measurements
 namespace
 {
 
-constexpr size_t kMaxPendingRecords = 64;
-
-std::string outcomeName(MissionOutcome outcome)
-{
-  switch (outcome)
-  {
-    case MissionOutcome::Succeeded:
-      return "succeeded";
-    case MissionOutcome::Failed:
-      return "failed";
-    case MissionOutcome::Cancelled:
-      return "cancelled";
-    case MissionOutcome::Aborted:
-    default:
-      return "aborted";
-  }
-}
-
 // `cancellation.labels`/`killed.labels` are string arrays ("a single value like `dashboard`, or a
 // key-value pair like `app=dashboard`" per rmf_api_msgs' own schema) -- joined verbatim rather
 // than picking just the first, so none of the source's own detail is silently dropped.
@@ -167,11 +149,9 @@ void MissionOpenRmf::setValidationSchema()
 
 void MissionOpenRmf::emit(json data, const rclcpp::Time& stamp)
 {
-  pending_records_.emplace_back(std::move(data), stamp);
   // One Record leaves per poll, same overflow policy as MissionNav2ThroughPoses::emit().
-  while (pending_records_.size() > kMaxPendingRecords)
+  if (pending_records_.push(std::move(data), stamp))
   {
-    pending_records_.pop_front();
     RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
                                 "Measurement " << measurement_name_
                                                << ": mission Records are arriving faster than the polling interval "
@@ -222,32 +202,16 @@ void MissionOpenRmf::handleMessage(const nlohmann::json& message)
 
   if (observed.start.has_value())
   {
-    json data;
-    data["event"] = "mission_start";
-    data["mission_id"] = observed.start->mission_id;
-    data["mission_type"] = sample.mission_type;
-    data["sequence"] = observed.start->sequence;
+    json data = missionStartJson(observed.start->mission_id, sample.mission_type, observed.start->sequence);
     const std::lock_guard<std::mutex> lock(mutex_);
     emit(std::move(data), stamp);
   }
 
   if (observed.end.has_value())
   {
-    json data;
-    data["event"] = "mission_end";
-    data["mission_id"] = observed.end->mission_id;
-    data["mission_type"] = sample.mission_type;
-    data["sequence"] = observed.end->sequence;
-    data["outcome"] = outcomeName(observed.end->outcome);
-    data["duration_sec"] = observed.end->duration_sec;
-    if (observed.end->reason.has_value())
-    {
-      data["reason"] = *observed.end->reason;
-    }
-    if (observed.end->error_code.has_value())
-    {
-      data["error_code"] = *observed.end->error_code;
-    }
+    json data = missionEndJsonBase(observed.end->mission_id, sample.mission_type, observed.end->sequence,
+                                   observed.end->outcome, observed.end->duration_sec, observed.end->reason,
+                                   observed.end->error_code);
     const std::lock_guard<std::mutex> lock(mutex_);
     emit(std::move(data), stamp);
   }
@@ -264,8 +228,7 @@ dc_interfaces::msg::StringStamped MissionOpenRmf::collect()
     return msg;
   }
 
-  auto record = std::move(pending_records_.front());
-  pending_records_.pop_front();
+  auto record = pending_records_.pop();
   msg.header.stamp = record.second;
   msg.data = record.first.dump(-1, ' ', true);
   return msg;
