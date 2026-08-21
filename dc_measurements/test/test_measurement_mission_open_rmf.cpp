@@ -29,6 +29,7 @@
 
 #include "ament_index_cpp/get_package_share_directory.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
+#include "dc_measurements/measurement.hpp"
 #include "dc_measurements/measurement_server.hpp"
 #include "dc_util/json_utils.hpp"
 
@@ -261,11 +262,15 @@ protected:
 
   static void expectValidatesAgainstSchema(const nlohmann::json& record)
   {
-    const std::string path = ament_index_cpp::get_package_share_directory("dc_measurements") +
-                             "/plugins/measurements/json/mission_open_rmf.json";
+    const std::string schema_dir =
+        ament_index_cpp::get_package_share_directory("dc_measurements") + "/plugins/measurements/json";
+    const std::string path = schema_dir + "/mission_open_rmf.json";
     std::ifstream schema_file(path);
     ASSERT_TRUE(schema_file.good()) << "Schema not installed at " << path;
-    nlohmann::json_schema::json_validator validator;
+    // mission_open_rmf.json's allOf $refs mission_base.json (#305/ADR-0010's shared property
+    // definitions), so this independent re-validation needs the same loader
+    // dc_measurements::Measurement::validateSchema() uses in production.
+    nlohmann::json_schema::json_validator validator(dc_measurements::makeSchemaFileLoader(schema_dir));
     validator.set_root_schema(nlohmann::json::parse(schema_file));
     EXPECT_NO_THROW(validator.validate(record)) << record.dump();
   }
