@@ -4,13 +4,11 @@
   <img height="300" src="./doc/src/images/dc.png" />
 </p>
 
-**Documentation**: [https://minipada.github.io/ros2_data_collection](https://minipada.github.io/ros2_data_collection)
-
 **Source code**: [https://github.com/minipada/ros2_data_collection](https://github.com/minipada/ros2_data_collection)
 
 [![ROS 2](https://img.shields.io/badge/ROS%202-jazzy-informational?style=for-the-badge)](https://docs.ros.org/en/jazzy/index.html) ![python](https://img.shields.io/badge/python-3.12-informational?style=for-the-badge) ![C++](https://img.shields.io/badge/C++-17-informational?style=for-the-badge)
 
-[![codecov](https://codecov.io/gh/Minipada/ros2_data_collection/branch/humble/graph/badge.svg?token=Y2UA5OE0KR)](https://codecov.io/gh/Minipada/ros2_data_collection) [![tests](https://minipada.testspace.com/spaces/219054/badge?token=8214fc76eff8c09b47136742d644d2a1ac0e38e3)](https://minipada.testspace.com/spaces/219054?utm_campaign=badge&utm_medium=referral&utm_source=test)
+[![codecov](https://codecov.io/gh/Minipada/ros2_data_collection/branch/jazzy/graph/badge.svg?token=Y2UA5OE0KR)](https://codecov.io/gh/Minipada/ros2_data_collection) [![tests](https://minipada.testspace.com/spaces/219054/badge?token=8214fc76eff8c09b47136742d644d2a1ac0e38e3)](https://minipada.testspace.com/spaces/219054?utm_campaign=badge&utm_medium=referral&utm_source=test)
 
 | Jazzy                                                                                                                                                                                                                        |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -20,27 +18,9 @@
 | [![CI](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml/badge.svg)](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml)                                                     |
 
 
-For detailed instructions:
-
-- [Setup](https://minipada.github.io/ros2_data_collection/dc/setup.html)
-- [Migrating from DC 1.x to DC 2.0](https://minipada.github.io/ros2_data_collection/dc/migration.html)
-- [Demos](https://minipada.github.io/ros2_data_collection/dc/demos.html)
-- [Concepts](https://minipada.github.io/ros2_data_collection/dc/concepts.html)
-- [Data Pipeline](https://minipada.github.io/ros2_data_collection/dc/data_pipeline.html)
-- [Measurements](https://minipada.github.io/ros2_data_collection/dc/measurements.html)
-- [Conditions](https://minipada.github.io/ros2_data_collection/dc/conditions.html)
-- [Data validation](https://minipada.github.io/ros2_data_collection/dc/data_validation.html)
-- [Groups](https://minipada.github.io/ros2_data_collection/dc/groups.html)
-- [Destinations](https://minipada.github.io/ros2_data_collection/dc/destinations.html)
-- [Configuration examples](https://minipada.github.io/ros2_data_collection/dc/configuration_examples.html)
-- [Infrastructure setup](https://minipada.github.io/ros2_data_collection/dc/infrastructure_setup.html)
-- [CLI tools](https://minipada.github.io/ros2_data_collection/dc/cli.html)
-- [Requirements](https://minipada.github.io/ros2_data_collection/dc/requirements.html)
-- [Future work and Roadmap](https://minipada.github.io/ros2_data_collection/dc/future_work.html)
-- [Contributing](https://minipada.github.io/ros2_data_collection/dc/contributing.html)
-- [Security policy](https://github.com/Minipada/ros2_data_collection/blob/jazzy/SECURITY.md)
-- [FAQ](https://minipada.github.io/ros2_data_collection/dc/faq.html)
-- [About and contact](https://minipada.github.io/ros2_data_collection/dc/about_contact.html)
+For detailed instructions, see the navigation sidebar, or browse
+[doc/src/dc](https://github.com/Minipada/ros2_data_collection/tree/jazzy/doc/src/dc) on
+GitHub. [Security policy](https://github.com/Minipada/ros2_data_collection/blob/jazzy/SECURITY.md).
 
 ## Introduction
 
