@@ -1,12 +1,23 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-# Full DC workspace (every dc_* package, all C++) — three stages:
+# Full DC workspace (every dc_* package, all C++) — four stages:
 # - `cacher`: extracts just the package manifests (package.xml) from the full source
 #   tree, so `toolchain`'s COPY --from below keys its own cache on dependency lists
 #   alone, not on every source edit — without having to hardcode one COPY per package.
-# - `toolchain`: ROS 2 + system packages + pre-built aws-sdk-cpp + full-workspace
-#   rosdep install. Stays a cache hit across ordinary source changes.
+# - `toolchain-base`: ROS 2 + the OS packages every later stage needs (git, ccache,
+#   pip tools), before anything vendor-specific is copied in. Exists solely as a shared
+#   branch point for `toolchain` and `vendor-network-check` below (#423) — without it,
+#   `vendor-network-check` would have to either repeat this layer's RUN verbatim (two
+#   copies to keep in sync) or `FROM toolchain`, which already has aws_sdk_vendor built
+#   and would make the isolation check a no-op cache hit instead of a real rebuild.
+# - `toolchain`: `toolchain-base` + pre-built aws-sdk-cpp + full-workspace rosdep
+#   install. Stays a cache hit across ordinary source changes.
+# - `vendor-network-check`: `toolchain-base` + a from-scratch, network-isolated build of
+#   just `aws_sdk_vendor` and `vector_vendor` (#423) — see the stage's own comment
+#   below. Not part of the production image graph; nothing downstream depends on it.
+#   Built via tools/e2e/scripts/verify_network_isolation.sh, wired into CI as its own
+#   (non-blocking, until #424/#425 land) job.
 # - `workspace`: inherits toolchain, COPYs the full source, then one `colcon build` +
 #   `colcon test`. The compiler's object-file cache (ccache) comes from a
 #   `RUN --mount=type=cache` mount, which persists across builds independently of the
@@ -46,7 +57,7 @@ COPY . src/ros2_data_collection
 RUN mkdir -p /tmp/manifests && \
     find src/ros2_data_collection -name package.xml -exec cp --parents -t /tmp/manifests {} +
 
-FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS toolchain
+FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS toolchain-base
 
 ARG APT_CACHEBUST=unknown
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -69,6 +80,8 @@ RUN echo "apt cache bust: ${APT_CACHEBUST}" && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /root/ws
+
+FROM toolchain-base AS toolchain
 
 # aws_sdk_vendor built in its own layer, isolated from the rest of the toolchain stage
 # (#271): `COPY <path>` keys Podman's layer cache on that path's own content, so
@@ -108,6 +121,49 @@ RUN apt-get -q update && \
     DEBIAN_FRONTEND=noninteractive \
     rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
     rm -rf /var/lib/apt/lists/*
+
+# --- vendor-network-check: proves the aws_sdk_vendor / vector_vendor build-time network
+# fetches (ExternalProject_Add's GIT_REPOSITORY, file(DOWNLOAD ...)) are isolated to the
+# actual `colcon build` step, not smeared together with rosdep/apt's own (allowed)
+# network use for installing system packages (#423). Branches from `toolchain-base` —
+# *before* the `toolchain` stage above already built aws_sdk_vendor — so this is a real,
+# from-scratch build attempt each time, not a cache hit against work the `toolchain`
+# stage already did.
+#
+# `RUN --network=none` is a per-instruction Buildah/Podman flag (independent of, and
+# verified to take precedence over, build.sh's own top-level `--network host`): only the
+# colcon build below loses network access, while the rosdep install right above it keeps
+# the same network access every other stage's rosdep install gets. Today (before #424 /
+# #425 replace the git clone and the binary download with vendored/prebuilt sources)
+# that colcon build is expected to fail here — that's the point: this stage exists to
+# prove the isolation seam itself works, with a clear, attributable network error, before
+# it's ever asked to pass. Not part of the production image graph — nothing downstream
+# depends on it. Built via tools/e2e/scripts/verify_network_isolation.sh.
+FROM toolchain-base AS vendor-network-check
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+COPY rosdep src/ros2_data_collection/rosdep
+COPY aws_sdk_vendor src/ros2_data_collection/aws_sdk_vendor
+COPY vector_vendor src/ros2_data_collection/vector_vendor
+RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
+      > /etc/ros/rosdep/sources.list.d/10-dc.list && \
+    apt-get -q update && \
+    rosdep update --include-eol-distros && \
+    DEBIAN_FRONTEND=noninteractive \
+    rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
+    rm -rf /var/lib/apt/lists/*
+#
+# --executor sequential --continue-on-error: aws_sdk_vendor and vector_vendor have no
+# dependency on each other, so colcon's default parallel executor cancels whichever one
+# is still starting up (its own network error not yet surfaced) the moment the other's
+# failure comes in, and its default stop-on-first-error skips whichever package sorts
+# second — either way only one package's actual error would make it into the build log.
+# Sequential + continue-on-error means both packages run to their own conclusion and
+# both network errors are attributable.
+RUN --network=none \
+    # shellcheck disable=SC1091
+    . /opt/ros/jazzy/setup.sh && \
+    colcon build --executor sequential --continue-on-error --packages-select aws_sdk_vendor vector_vendor --event-handlers desktop_notification- status-
 
 # --- workspace: full source + colcon build + colcon test, in one image both CI and
 # local dev build the same way (./tools/e2e/scripts/build.sh) ---
