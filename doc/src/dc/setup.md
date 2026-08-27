@@ -35,12 +35,12 @@ source /opt/ros/jazzy/setup.bash
 colcon build
 ```
 
-That is the whole install. `colcon build` also runs `vector_vendor`, which downloads a
-pinned, checksummed [Vector](https://vector.dev/) binary — the external **Shipper** the
-Bridge supervises at runtime (ADR-0002).
+That is the whole install. `colcon build` also runs `vector_vendor`, which installs a
+pinned, checksummed [Vector](https://vector.dev/) binary checked into the package — the
+external **Shipper** the Bridge supervises at runtime (ADR-0002).
 
 ```admonish tip title="Air-gapped or distro-packaged Vector"
-Point the build at a Vector binary you already have instead of downloading one:
+Point the build at a Vector binary you already have instead of the checked-in one:
 
     colcon build --cmake-args -Dvector_path=/usr/bin/vector
 

@@ -18,9 +18,9 @@
 #   kpi-views (standalone: SQL + a throwaway Postgres, no workspace image needed)
 #   raw-volume (standalone: stdlib Python fixtures over the shared volume accounting)
 #   network-isolation-check (standalone: builds tools/e2e/Containerfile's
-#     vendor-network-check stage — #423. Disabled (if: false) until #424/#425 replace
-#     aws_sdk_vendor's/vector_vendor's build-time network fetches with vendored/prebuilt
-#     sources — until then this job's build is *expected* to fail.)
+#     vendor-network-check stage — #423. vector_vendor's build-time fetch is already
+#     replaced with a checked-in binary (#424); disabled (if: false) until #425 does
+#     the same for aws_sdk_vendor's — until then this job's build is *expected* to fail.)
 #
 # e2e calls the same tools/e2e/scripts/run.sh a developer runs locally, driving the
 # harness with plain podman (no compose) so nothing extra is installed on the runner;
@@ -339,11 +339,10 @@ jobs:
   # continue-on-error: true — the job's own check-run conclusion reports "failure"
   # regardless of continue-on-error (only the *workflow's* aggregate conclusion and
   # `needs:`-blocking are affected by it), so every PR still showed a red ❌ for a
-  # failure that's expected today, not actionable. aws_sdk_vendor still git-clones
-  # aws-sdk-cpp and vector_vendor still downloads a prebuilt binary, both at
-  # colcon-build time, until #424/#425 replace those fetches with vendored/prebuilt
-  # sources — flip `if: false` to `if: true` (and drop this comment) once they land
-  # and this build can actually pass.
+  # failure that's expected today, not actionable. vector_vendor now installs a
+  # checked-in binary (#424), but aws_sdk_vendor still git-clones aws-sdk-cpp at
+  # colcon-build time — flip `if: false` to `if: true` (and drop this comment) once
+  # #425 replaces that fetch too and this build can actually pass.
   network-isolation-check:
     runs-on: ubuntu-latest
     if: false
@@ -353,7 +352,7 @@ jobs:
       - name: Verify podman
         run: podman --version
 
-      - name: Attempt the network-isolated vendor package build (expected to fail until #424/#425 land)
+      - name: Attempt the network-isolated vendor package build (expected to fail until #425 lands)
         run: ./tools/e2e/scripts/verify_network_isolation.sh
 
   # The KPI definitions are SQL, not workspace code: this needs a database and nothing else.

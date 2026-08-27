@@ -23,6 +23,9 @@ repos:
       - id: check-added-large-files
         name: Detect if giant files are added
         args: ["--maxkb=2000"]
+        # vector_vendor's checked-in Vector release tarballs (#424) replace a
+        # build-time network download with a committed binary by design.
+        exclude: "^vector_vendor/prebuilt/.*\\.tar\\.gz$"
       - id: check-docstring-first
         name: Checks for a common error of placing code before the docstring
       - id: check-executables-have-shebangs

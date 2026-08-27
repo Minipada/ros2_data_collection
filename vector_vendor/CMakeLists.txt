@@ -6,8 +6,9 @@ project(vector_vendor)
 
 find_package(ament_cmake REQUIRED)
 
-# Bumping Vector is a single-line change: update the version and the checksum
-# for every supported architecture below (see ADR-0002).
+# Bumping Vector: download the new version's release tarball for every architecture
+# below, drop it into prebuilt/ (replacing the old one), and update the version and
+# checksum here to match (see ADR-0002).
 set(VECTOR_VERSION "0.57.0")
 set(VECTOR_SHA256_x86_64 "b04fafcffcbeb3d43cbba587583dbe3338b24dd34256b3967fb15d137aff75f2")
 set(VECTOR_SHA256_aarch64 "81cec5343e49985351e13f76ae3d550d7b0f0ac64fd4d88c07e3873bdfdf100a")
@@ -44,36 +45,22 @@ else()
     message(FATAL_ERROR "vector_vendor: no pinned checksum for architecture '${_vector_arch}'")
   endif()
 
+  # The official release tarball (same bytes `file(DOWNLOAD ...)` used to fetch, same
+  # pinned checksum below) is checked directly into this package's git history instead
+  # of fetched over the network at build time (#424) — no network access required.
   set(_vector_tarball_name "vector-${VECTOR_VERSION}-${_vector_arch}-unknown-linux-musl.tar.gz")
-  set(_vector_url "https://github.com/vectordotdev/vector/releases/download/v${VECTOR_VERSION}/${_vector_tarball_name}")
-  set(_vector_download_dir "${CMAKE_CURRENT_BINARY_DIR}/download")
-  set(_vector_tarball "${_vector_download_dir}/${_vector_tarball_name}")
-
-  file(MAKE_DIRECTORY "${_vector_download_dir}")
-
-  set(_need_download TRUE)
-  if(EXISTS "${_vector_tarball}")
-    file(SHA256 "${_vector_tarball}" _cached_sha256)
-    if(_cached_sha256 STREQUAL _vector_sha256)
-      set(_need_download FALSE)
-    endif()
+  set(_vector_tarball "${CMAKE_CURRENT_SOURCE_DIR}/prebuilt/${_vector_tarball_name}")
+  if(NOT EXISTS "${_vector_tarball}")
+    message(FATAL_ERROR
+      "vector_vendor: no checked-in tarball for architecture '${_vector_arch}' at "
+      "${_vector_tarball}")
   endif()
 
-  if(_need_download)
-    message(STATUS "vector_vendor: downloading ${_vector_url}")
-    file(DOWNLOAD "${_vector_url}" "${_vector_tarball}"
-      EXPECTED_HASH SHA256=${_vector_sha256}
-      TLS_VERIFY ON
-      STATUS _download_status
-    )
-    list(GET _download_status 0 _download_code)
-    if(NOT _download_code EQUAL 0)
-      list(GET _download_status 1 _download_message)
-      file(REMOVE "${_vector_tarball}")
-      message(FATAL_ERROR
-        "vector_vendor: failed to download Vector ${VECTOR_VERSION} for "
-        "${_vector_arch}: ${_download_message}")
-    endif()
+  file(SHA256 "${_vector_tarball}" _actual_sha256)
+  if(NOT _actual_sha256 STREQUAL _vector_sha256)
+    message(FATAL_ERROR
+      "vector_vendor: checked-in tarball '${_vector_tarball}' has SHA256 "
+      "${_actual_sha256}, expected ${_vector_sha256}")
   endif()
 
   set(_vector_extract_dir "${CMAKE_CURRENT_BINARY_DIR}/extract")
@@ -100,8 +87,8 @@ else()
   endif()
   if(NOT _vector_version_output MATCHES "vector ${VECTOR_VERSION} ")
     message(FATAL_ERROR
-      "vector_vendor: downloaded Vector reports version '${_vector_version_output}', "
-      "expected ${VECTOR_VERSION}")
+      "vector_vendor: checked-in Vector binary reports version "
+      "'${_vector_version_output}', expected ${VECTOR_VERSION}")
   endif()
 endif()
 

@@ -9,7 +9,7 @@ SPDX-License-Identifier: MPL-2.0
 <package format="3">
     <name>vector_vendor</name>
     <version>0.1.0</version>
-    <description>Vendor package that downloads a checksum-pinned prebuilt Vector binary at build time (ADR-0002), or vendors a system-installed Vector via the vector_path override.</description>
+    <description>Vendor package that installs a checksum-pinned prebuilt Vector binary checked into this package's git history (ADR-0002), or vendors a system-installed Vector via the vector_path override.</description>
     <maintainer email="d.bensoussan@proton.me">David Bensoussan</maintainer>
     <license>MPL-2.0</license>
 
