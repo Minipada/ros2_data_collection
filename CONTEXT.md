@@ -8,15 +8,6 @@ DC collects operational data from robots — system, robot-state, and inspection
 A source of sampled data (CPU, position, camera inspection…) that emits Records.
 _Avoid_: metric, sensor log, sample
 
-**Pro Package**:
-An `asaph_*` plugin implementing one of this repo's pluginlib interfaces (Measurement,
-Condition, or Trigger), shipped and loaded from the closed-source `asaph_pro` repository
-instead of this one. Core discovers Pro Packages at runtime through pluginlib and
-configuration; no `dc_*` package ever declares a dependency on one — an open-core boundary
-that holds before and after Asaph's stealth period ends.
-_Avoid_: plugin (too generic — every Measurement/Condition/Trigger is a plugin; Pro Package
-names specifically the ones that live outside this repo)
-
 **Condition**:
 A boolean predicate on robot state that gates whether a Measurement's Records are collected.
 A Condition is a *level*: it holds for as long as the predicate is true, and gates collection
