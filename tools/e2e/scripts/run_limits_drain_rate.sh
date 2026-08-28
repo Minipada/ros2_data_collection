@@ -123,9 +123,9 @@ cleanup() {
 trap cleanup EXIT
 
 # The exact Vector version dc_bridge is built and tested against, same as
-# run_limits_two_tier.sh / run_load_driver_shipper_test.sh -- read out of the file that
-# pins it, not duplicated as a second source of truth.
-VECTOR_VERSION="$(grep -oP 'set\(VECTOR_VERSION "\K[^"]+' "$REPO_ROOT/vector_vendor/CMakeLists.txt")"
+# run_limits_two_tier.sh / run_load_driver_shipper_test.sh -- read out of the .repos pin
+# that fetches vector_vendor, not duplicated as a second source of truth.
+VECTOR_VERSION="$(grep -oP 'version: v\K[0-9.]+' "$REPO_ROOT/ros2_data_collection.repos")"
 VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
 
 remove_stack

@@ -75,11 +75,25 @@ RUN echo "apt cache bust: ${APT_CACHEBUST}" && \
     apt-get -q update && \
     apt-get -q -y dist-upgrade && \
     apt-get -q install --no-install-recommends -y \
-    git python3-pip ccache lcov && \
+    git python3-pip python3-vcstool ccache lcov && \
     pip install --break-system-packages --no-cache-dir fastcov mcap && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /root/ws
+
+# vector_vendor lives in its own repo (docs/adr/0002-vector-as-default-shipper.md's
+# amendment), so it has to be fetched into the workspace source tree the same way a
+# developer's own `vcs import` would, before anything downstream can `colcon build` it.
+# A separate COPY (not folded into the apt RUN above) keys this layer's own cache on
+# ros2_data_collection.repos's content: it re-fetches when that file changes (a version
+# bump) or when APT_CACHEBUST invalidates the layer above (daily) — not on an ordinary
+# source edit elsewhere in the repo. `vcs import` needs network; every later `colcon
+# build`/`colcon test` in downstream stages runs against the already-materialized
+# result, so #423's network-isolated check (which branches from this same stage) still
+# isolates only the actual build step, not this fetch.
+COPY ros2_data_collection.repos .
+RUN mkdir -p src/ros2_data_collection && \
+    vcs import --shallow src/ros2_data_collection < ros2_data_collection.repos
 
 FROM toolchain-base AS toolchain
 
@@ -122,29 +136,30 @@ RUN apt-get -q update && \
     rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
     rm -rf /var/lib/apt/lists/*
 
-# --- vendor-network-check: proves the aws_sdk_vendor / vector_vendor build-time network
-# fetches (ExternalProject_Add's GIT_REPOSITORY, file(DOWNLOAD ...)) are isolated to the
-# actual `colcon build` step, not smeared together with rosdep/apt's own (allowed)
-# network use for installing system packages (#423). Branches from `toolchain-base` —
-# *before* the `toolchain` stage above already built aws_sdk_vendor — so this is a real,
-# from-scratch build attempt each time, not a cache hit against work the `toolchain`
-# stage already did.
+# --- vendor-network-check: proves aws_sdk_vendor's build-time network fetch
+# (ExternalProject_Add's GIT_REPOSITORY) is isolated to the actual `colcon build` step,
+# not smeared together with rosdep/apt's own (allowed) network use for installing
+# system packages (#423). Branches from `toolchain-base` — *before* the `toolchain`
+# stage above already built aws_sdk_vendor — so this is a real, from-scratch build
+# attempt each time, not a cache hit against work the `toolchain` stage already did.
+# vector_vendor no longer needs checking here: it's fetched (with network) by
+# `toolchain-base`'s own `vcs import` step above, and its build has been network-free
+# since #424 — this stage now exists purely for aws_sdk_vendor, until #425 lands.
 #
 # `RUN --network=none` is a per-instruction Buildah/Podman flag (independent of, and
 # verified to take precedence over, build.sh's own top-level `--network host`): only the
 # colcon build below loses network access, while the rosdep install right above it keeps
-# the same network access every other stage's rosdep install gets. Today (before #424 /
-# #425 replace the git clone and the binary download with vendored/prebuilt sources)
-# that colcon build is expected to fail here — that's the point: this stage exists to
-# prove the isolation seam itself works, with a clear, attributable network error, before
-# it's ever asked to pass. Not part of the production image graph — nothing downstream
-# depends on it. Built via tools/e2e/scripts/verify_network_isolation.sh.
+# the same network access every other stage's rosdep install gets. Today (before #425
+# replaces the git clone with a vendored source) that colcon build is expected to fail
+# here — that's the point: this stage exists to prove the isolation seam itself works,
+# with a clear, attributable network error, before it's ever asked to pass. Not part of
+# the production image graph — nothing downstream depends on it. Built via
+# tools/e2e/scripts/verify_network_isolation.sh.
 FROM toolchain-base AS vendor-network-check
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY rosdep src/ros2_data_collection/rosdep
 COPY aws_sdk_vendor src/ros2_data_collection/aws_sdk_vendor
-COPY vector_vendor src/ros2_data_collection/vector_vendor
 RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
       > /etc/ros/rosdep/sources.list.d/10-dc.list && \
     apt-get -q update && \

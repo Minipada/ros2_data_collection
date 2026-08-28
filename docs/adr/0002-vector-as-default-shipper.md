@@ -4,8 +4,79 @@ Both upstream Fluent Bit and Vector can sit behind the Bridge's Forward-protocol
 
 ## Consequences
 
-- CI publishes a "vector-slim" prebuilt binary (feature-flagged build, ~30–40MB) for constrained deployments; users never compile Vector themselves.
-- A `vector_vendor` ament package downloads the official static binary at build time, pinned to an exact version by checksum (arch-detected); a `vector_path` parameter allows using a system-installed Vector instead. Apt-repo install and Docker remain documented alternatives.
+- A `vector_vendor` ament package vendors the official static binary, pinned to an exact version by checksum (arch-detected); a `vector_path` parameter allows using a system-installed Vector instead. Apt-repo install and Docker remain documented alternatives.
+
+## Amendment: checked-in binary instead of a build-time download (#424)
+
+`vector_vendor` originally fetched its pinned binary over the network at build time via
+`file(DOWNLOAD ...)`, which violates the ROS buildfarm's no-network-access policy for
+binarydeb jobs and defeats #423's network-isolated build check. The "vector-slim"
+feature-flagged build this ADR originally proposed CI would publish was never actually
+built — no such CI job exists in this repo — so it is not available to vendor either.
+
+Fixed by checking the official `vectordotdev/vector` release tarballs (x86_64 and
+aarch64, same bytes `file(DOWNLOAD ...)` used to fetch, same pinned SHA256 checksums)
+directly into `vector_vendor/prebuilt/`; `CMakeLists.txt` now extracts and installs from
+the local file, performing no network I/O. The *tarball*, not the extracted binary, is
+what's committed: the extracted `vector` binary is 120–142MB (stripped/unstripped)
+depending on target, over GitHub's 100MB hard per-file limit, while the release
+tarball's upstream gzip compression brings each architecture's file to ~50-54MB — under
+the limit.
+
+**Not tracked via Git LFS**, per #421's original implementation decision ("no
+release-time injection step, no `git-lfs`: committed like any other tracked file").
+LFS was evaluated and briefly adopted mid-review: the specific concern that motivated
+#421's original call — that LFS content wouldn't survive `bloom`'s release-tarball
+export step — turned out to be unfounded. `bloom`'s `export_upstream` delegates to
+`vcstools.GitClient.checkout()` (a plain `git clone` + `git checkout <tag>`, which does
+run LFS's smudge filter), and the export machinery itself
+(`vcstools.git_archive_all.GitArchiver`) reads files off the working-tree filesystem
+rather than through `git archive`'s blob-store plumbing (the actual, narrower reason
+plain `git archive` breaks LFS) — confirmed empirically against a throwaway LFS repo and
+the real `vcstools`/`bloom` code, not just read.
+
+LFS was reverted anyway for a more basic reason: GitHub's free LFS tier is 1GB storage
+and 1GB bandwidth per month, and every future Vector version bump adds both tarballs
+(~106MB) as new, non-deduplicated LFS objects — roughly 9 version bumps before storage
+alone exhausts the free tier, independent of and sooner than the plain-blob approach's
+own cost (git history growing by the same ~106MB per bump, but against no comparable
+quota). A plain committed blob has no such ceiling; the tradeoff is that every future
+Vector bump grows this repo's ordinary git history by ~106MB, permanently, since git
+does not deduplicate binary blobs across versions. Revisit if/when that accumulation
+becomes the more pressing cost — the LFS path is proven to work, should it be needed.
+
+## Amendment: split into its own repo, pulled in via `.repos`
+
+The ~106MB-per-bump cost the previous amendment accepted as `vector_vendor`'s tradeoff
+doesn't have to be `ros2_data_collection`'s cost to carry — nothing about the rest of
+this repo's history needs to grow every time Vector ships a release. `vector_vendor`
+now lives at [github.com/Minipada/vector_vendor](https://github.com/Minipada/vector_vendor)
+(default branch `jazzy`, matching this repo's own active line), containing exactly what
+used to sit at `ros2_data_collection/vector_vendor/`: the same `CMakeLists.txt`
+(checked-in tarball, checksum-pinned, no network at build time — the previous
+amendment's decision is unchanged, just relocated) and the same two prebuilt tarballs.
+`package.xml`'s `<version>` there tracks the vendored Vector version directly (`0.57.0`
+at the time of the split), not an independent counter.
+
+Pulled into this workspace via `ros2_data_collection.repos` (vcstool) rather than a
+`COPY`/git submodule: `vcs import` pins to a **tag** (`v<VECTOR_VERSION>`), not a
+branch, so a given `ros2_data_collection` commit always resolves the same
+`vector_vendor` content — a floating branch would make the build's vector_vendor
+content silently drift out from under an unrelated `ros2_data_collection` change.
+`tools/e2e/Containerfile`'s `toolchain-base` stage runs the import (network required,
+same as its rosdep install right below it); every downstream stage's actual `colcon
+build` — including #423's `--network=none` check — builds against the already-fetched
+result, unaffected by where the source physically came from. Bumping Vector now touches
+two repos: land the new binaries + tag in `vector_vendor`, then bump the pinned
+`version:` in `ros2_data_collection.repos` to match.
+
+This is a development-workspace convenience only (`vcs import`/`colcon build` from
+source); it does not by itself make `vector_vendor` installable via `apt` — that
+requires its own independent `bloom-release` into `rosdistro`, not yet done, at which
+point `ros2_data_collection` packages that need it would instead declare a normal
+`<depend>vector_vendor</depend>` and let rosdep resolve the released `.deb`, same as any
+other ROS package dependency. Until then, `.repos` is how CI and local dev get a
+buildable workspace.
 
 ## Why the forward protocol is the Bridge→Shipper wire format
 

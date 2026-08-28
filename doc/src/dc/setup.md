@@ -12,7 +12,7 @@ and has a considerably longer setup; if you are coming from it, read the
 ## Requirements
 
 - ROS 2 Jazzy (`ros-jazzy-ros-base` or larger), on Ubuntu 24.04 or a Debian equivalent
-- `colcon`, `rosdep`, `git`, a C++17 compiler
+- `colcon`, `rosdep`, `git`, `vcstool` (`python3-vcstool`), a C++17 compiler
 - x86-64 or aarch64 — the architectures `vector_vendor` has a pinned Vector binary for
 
 ## Build
@@ -22,9 +22,11 @@ and has a considerably longer setup; if you are coming from it, read the
 mkdir -p ~/ws/src && cd ~/ws/src
 git clone https://github.com/minipada/ros2_data_collection.git
 
-# 2. Register DC's local rosdep rules (two header-only C++ libraries upstream
-#    rosdistro has no key for), then resolve dependencies
+# 2. Pull in vector_vendor (its own repo — see ADR-0002's amendment), register DC's
+#    local rosdep rules (two header-only C++ libraries upstream rosdistro has no key
+#    for), then resolve dependencies
 cd ~/ws
+vcs import src < src/ros2_data_collection/ros2_data_collection.repos
 echo "yaml file://$PWD/src/ros2_data_collection/rosdep/dc.yaml" \
   | sudo tee /etc/ros/rosdep/sources.list.d/10-dc.list
 rosdep update
@@ -35,12 +37,12 @@ source /opt/ros/jazzy/setup.bash
 colcon build
 ```
 
-That is the whole install. `colcon build` also runs `vector_vendor`, which downloads a
-pinned, checksummed [Vector](https://vector.dev/) binary — the external **Shipper** the
-Bridge supervises at runtime (ADR-0002).
+That is the whole install. `colcon build` also runs `vector_vendor`, which installs a
+pinned, checksummed [Vector](https://vector.dev/) binary checked into the package — the
+external **Shipper** the Bridge supervises at runtime (ADR-0002).
 
 ```admonish tip title="Air-gapped or distro-packaged Vector"
-Point the build at a Vector binary you already have instead of downloading one:
+Point the build at a Vector binary you already have instead of the checked-in one:
 
     colcon build --cmake-args -Dvector_path=/usr/bin/vector
 
