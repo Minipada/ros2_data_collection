@@ -11,8 +11,8 @@
 # listener, standalone — but "the Shipper's ingest listener cannot distinguish it from a
 # real Bridge at the socket" (#378's own framing) is a claim only a real Shipper build
 # can settle, never a mock. This script is that check: it runs the pinned Vector version
-# `vector_vendor/CMakeLists.txt` builds dc_bridge against (as a container — the public
-# `timberio/vector` image, not a repo-built artifact, since vector_vendor only vendors a
+# `ros2_data_collection.repos` pins vector_vendor to and dc_bridge is built against (as a
+# container — the public `timberio/vector` image, not a repo-built artifact, since vector_vendor only vendors a
 # bare binary at colcon build time, not a runnable container image) with a bare `fluent`
 # source (global acknowledgements enabled, exactly as dc_bridge/src/render.cpp turns it
 # on for the real Bridge) plus a `file` sink recording every Record it actually decoded,
@@ -48,9 +48,11 @@ KEEP="${DC_E2E_KEEP:-false}"
 
 VECTOR_C=dc_e2e_ldtest_vector
 
-# The exact version dc_bridge is built and tested against -- read out of the CMake file
-# that pins it, not duplicated here as a second source of truth that could drift from it.
-VECTOR_VERSION="$(grep -oP 'set\(VECTOR_VERSION "\K[^"]+' "$REPO_ROOT/vector_vendor/CMakeLists.txt")"
+# The exact version dc_bridge is built and tested against -- read out of the .repos pin
+# that fetches vector_vendor (its own repo as of #424's follow-up split; see
+# docs/adr/0002-vector-as-default-shipper.md), not duplicated here as a second source of
+# truth that could drift from it.
+VECTOR_VERSION="$(grep -oP 'version: v\K[0-9.]+' "$REPO_ROOT/ros2_data_collection.repos")"
 VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
 
 log() { echo "[load-driver-shipper-test $(date -u +%H:%M:%S)] $*"; }

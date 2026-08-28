@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# External source repos this workspace needs alongside ros2_data_collection itself,
+# for `vcs import` (see doc/src/dc/setup.md). vector_vendor was split out of this repo
+# (see docs/adr/0002-vector-as-default-shipper.md's amendment) so its binary content's
+# growth doesn't land in ros2_data_collection's own git history. Pinned to a tag, not a
+# branch, so a workspace built from a given ros2_data_collection commit is reproducible.
+repositories:
+  vector_vendor:
+    type: git
+    url: https://github.com/Minipada/vector_vendor.git
+    version: v0.57.0

@@ -245,7 +245,7 @@ can't establish:
 ./tools/e2e/scripts/run_load_driver_shipper_test.sh
 ```
 
-Pulls the exact Vector version `vector_vendor/CMakeLists.txt` pins, runs it as a bare
+Pulls the exact Vector version `ros2_data_collection.repos` pins vector_vendor to, runs it as a bare
 `fluent` source (global acknowledgements on, exactly as `render.cpp` configures it for
 the real Bridge) plus a `file` sink, points the driver at it, and asserts every frame was
 accepted and acknowledged and that the driver's ledger names the exact same records

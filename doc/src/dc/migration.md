@@ -583,9 +583,10 @@ dc_bridge:
   root to run it). `fluent_bit_plugins` and `dc_destinations` no longer exist.
 - **No Go toolchain.** The `out_minio.so` / `out_files_metrics.so` Go plugins are gone
   along with `plugin_path`.
-- **Vector is vendored.** `vector_vendor` downloads a pinned, checksummed Vector binary
-  at build time. Point `-Dvector_path=/usr/bin/vector` (or `VECTOR_PATH`) at a
-  system-installed binary for air-gapped builds.
+- **Vector is vendored.** `vector_vendor` installs a pinned, checksummed Vector binary
+  checked directly into the package — no network access at build time. Point
+  `-Dvector_path=/usr/bin/vector` (or `VECTOR_PATH`) at a system-installed binary
+  instead if preferred.
 - **Startup is ordered.** The Bridge starts before the collection nodes and a readiness
   gate blocks activation until the Shipper is accepting connections, so no Record is
   produced before the pipeline can accept it. See
