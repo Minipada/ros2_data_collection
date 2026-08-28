@@ -45,6 +45,39 @@ Vector bump grows this repo's ordinary git history by ~106MB, permanently, since
 does not deduplicate binary blobs across versions. Revisit if/when that accumulation
 becomes the more pressing cost — the LFS path is proven to work, should it be needed.
 
+## Amendment: split into its own repo, pulled in via `.repos`
+
+The ~106MB-per-bump cost the previous amendment accepted as `vector_vendor`'s tradeoff
+doesn't have to be `ros2_data_collection`'s cost to carry — nothing about the rest of
+this repo's history needs to grow every time Vector ships a release. `vector_vendor`
+now lives at [github.com/Minipada/vector_vendor](https://github.com/Minipada/vector_vendor)
+(default branch `jazzy`, matching this repo's own active line), containing exactly what
+used to sit at `ros2_data_collection/vector_vendor/`: the same `CMakeLists.txt`
+(checked-in tarball, checksum-pinned, no network at build time — the previous
+amendment's decision is unchanged, just relocated) and the same two prebuilt tarballs.
+`package.xml`'s `<version>` there tracks the vendored Vector version directly (`0.57.0`
+at the time of the split), not an independent counter.
+
+Pulled into this workspace via `ros2_data_collection.repos` (vcstool) rather than a
+`COPY`/git submodule: `vcs import` pins to a **tag** (`v<VECTOR_VERSION>`), not a
+branch, so a given `ros2_data_collection` commit always resolves the same
+`vector_vendor` content — a floating branch would make the build's vector_vendor
+content silently drift out from under an unrelated `ros2_data_collection` change.
+`tools/e2e/Containerfile`'s `toolchain-base` stage runs the import (network required,
+same as its rosdep install right below it); every downstream stage's actual `colcon
+build` — including #423's `--network=none` check — builds against the already-fetched
+result, unaffected by where the source physically came from. Bumping Vector now touches
+two repos: land the new binaries + tag in `vector_vendor`, then bump the pinned
+`version:` in `ros2_data_collection.repos` to match.
+
+This is a development-workspace convenience only (`vcs import`/`colcon build` from
+source); it does not by itself make `vector_vendor` installable via `apt` — that
+requires its own independent `bloom-release` into `rosdistro`, not yet done, at which
+point `ros2_data_collection` packages that need it would instead declare a normal
+`<depend>vector_vendor</depend>` and let rosdep resolve the released `.deb`, same as any
+other ROS package dependency. Until then, `.repos` is how CI and local dev get a
+buildable workspace.
+
 ## Why the forward protocol is the Bridge→Shipper wire format
 
 The Bridge must hand Records to the Shipper across a process boundary such that **the

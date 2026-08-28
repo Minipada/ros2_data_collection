@@ -119,12 +119,3 @@ path = [
 ]
 SPDX-FileCopyrightText = "2012 Nathan Koenig"
 SPDX-License-Identifier = "CC-BY-3.0"
-
-# --- Vendored third-party binaries ---------------------------------------------------
-
-# Official vectordotdev/vector release tarballs, checked in verbatim (#424) so
-# vector_vendor's build needs no network access; see vector_vendor/CMakeLists.txt.
-[[annotations]]
-path = "vector_vendor/prebuilt/*.tar.gz"
-SPDX-FileCopyrightText = "2020 Vector Authors <vector@datadoghq.com>"
-SPDX-License-Identifier = "MPL-2.0"

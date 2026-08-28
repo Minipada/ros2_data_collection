@@ -162,7 +162,9 @@ else
   DC_IMAGE="dc-e2e:latest"
 fi
 
-VECTOR_VERSION="$(grep -oP 'set\(VECTOR_VERSION "\K[^"]+' "$REPO_ROOT/vector_vendor/CMakeLists.txt")"
+# Read out of the .repos pin that fetches vector_vendor (its own repo as of #424's
+# follow-up split), not duplicated here as a second source of truth.
+VECTOR_VERSION="$(grep -oP 'version: v\K[0-9.]+' "$REPO_ROOT/ros2_data_collection.repos")"
 VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
 
 remove_all
