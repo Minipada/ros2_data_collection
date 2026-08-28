@@ -1,1 +1,0 @@
-dir_traversal_test->root_child.txt

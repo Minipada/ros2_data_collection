@@ -1,3 +1,0 @@
-[foo]
-name = value; Adjacent semicolons
-name2 = value# Adjacent pound signs

@@ -1,9 +1,0 @@
-{
-    "name": "aws-c-compression",
-    "upstream": [
-        { "name": "aws-c-common" }
-    ],
-    "downstream": [
-        { "name": "aws-c-http" }
-    ]
-}

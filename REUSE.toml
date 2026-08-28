@@ -95,19 +95,6 @@ path = "dc_simulation/rviz/qrcodes.rviz"
 SPDX-FileCopyrightText = ["The Nav2 Project Contributors", "2022-2026 David Bensoussan"]
 SPDX-License-Identifier = "Apache-2.0"
 
-# --- Vendored third-party source (aws_sdk_vendor) -----------------------------------
-
-# Flattened, plain-committed source (no .git) for aws-sdk-cpp (core + s3) and its
-# aws-crt-cpp / aws-c-* / aws-checksums / s2n dependency chain (ADR-0012). Most files
-# already carry an embedded "SPDX-License-Identifier: Apache-2.0" or the equivalent
-# full Apache-2.0 header (s2n's own convention); this blanket annotation covers the
-# rest (build metadata, generated model JSON, etc.) uniformly rather than auditing
-# tens of thousands of upstream files individually.
-[[annotations]]
-path = "aws_sdk_vendor/vendor/**"
-SPDX-FileCopyrightText = "Amazon.com, Inc. or its affiliates"
-SPDX-License-Identifier = "Apache-2.0"
-
 # --- Simulation models --------------------------------------------------------------
 
 [[annotations]]

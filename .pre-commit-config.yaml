@@ -3,9 +3,8 @@
 
 # Run by prek (https://prek.j178.dev): `prek install` for the git hook,
 # `prek run --all-files` for everything.
-# LICENSES/ and aws_sdk_vendor/vendor/ hold verbatim upstream text/source — including
-# upstream typos and formatting. No hook edits them.
-exclude: "doc/js/.*$|doc/theme/.*|doc/src/fonts/.*|doc/css/lineicon.css|^LICENSES/.*|^aws_sdk_vendor/vendor/.*"
+# LICENSES/ holds verbatim licence texts — including their upstream typos. No hook edits them.
+exclude: "doc/js/.*$|doc/theme/.*|doc/src/fonts/.*|doc/css/lineicon.css|^LICENSES/.*"
 repos:
   - repo: local
     hooks:
