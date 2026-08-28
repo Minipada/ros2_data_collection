@@ -1,0 +1,30 @@
+diff --git a/tls/s2n_record_read_cbc.c b/tls/s2n_record_read_cbc.c
+index 346e6571..0f2527e9 100644
+--- a/tls/s2n_record_read_cbc.c
++++ b/tls/s2n_record_read_cbc.c
+@@ -26,6 +26,8 @@
+ #include "utils/s2n_blob.h"
+ #include "utils/s2n_safety.h"
+ 
++extern int g_padding_length;
++
+ int s2n_record_parse_cbc(
+         const struct s2n_cipher_suite *cipher_suite,
+         struct s2n_connection *conn,
+@@ -82,6 +84,8 @@ int s2n_record_parse_cbc(
+ 
+     /* Subtract the padding length */
+     POSIX_ENSURE_GT(en.size, 0);
++    //After hmac verification padding_length is declassified
++    en.data[en.size - 1] = g_padding_length;
+     uint32_t out = 0;
+     POSIX_GUARD(s2n_sub_overflow(payload_length, en.data[en.size - 1] + 1, &out));
+     payload_length = out;
+@@ -103,6 +107,7 @@ int s2n_record_parse_cbc(
+ 
+     /* Padding. This finalizes the provided HMAC. */
+     if (s2n_verify_cbc(conn, mac, &en) < 0) {
++        __VERIFIER_assume(0);
+         POSIX_BAIL(S2N_ERR_BAD_MESSAGE);
+     }
+ 

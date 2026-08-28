@@ -1,0 +1,22 @@
+diff --git a/tls/s2n_record_read_composite.c b/tls/s2n_record_read_composite.c
+index b57207a0..5109c47f 100644
+--- a/tls/s2n_record_read_composite.c
++++ b/tls/s2n_record_read_composite.c
+@@ -29,6 +29,8 @@
+ #include "utils/s2n_safety.h"
+ #include "utils/s2n_blob.h"
+ 
++extern int g_padding_length;
++
+ int s2n_record_parse_composite(
+     const struct s2n_cipher_suite *cipher_suite,
+     struct s2n_connection *conn,
+@@ -88,6 +90,8 @@ int s2n_record_parse_composite(
+ 
+     /* Subtract the padding length */
+     POSIX_ENSURE_GT(en.size, 0);
++    //After hmac verification padding_length is declassified
++    en.data[en.size - 1] = g_padding_length;
+     uint32_t out = 0;
+     POSIX_GUARD(s2n_sub_overflow(payload_length, en.data[en.size - 1] + 1, &out));
+     payload_length = out;

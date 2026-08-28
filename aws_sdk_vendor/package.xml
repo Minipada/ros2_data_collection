@@ -10,18 +10,18 @@ SPDX-License-Identifier: MPL-2.0
   <name>aws_sdk_vendor</name>
   <version>0.1.0</version>
   <description>
-    Vendor package for the AWS SDK for C++ (core + s3 only), built from a pinned source
-    tag at colcon-build time — the object-storage client the Bridge's Uploader uses
-    (ADR-0005, ADR-0007). Only `s3` is built (`-DBUILD_ONLY=s3`); zlib request
-    compression is disabled (optional per the SDK), keeping the build minimal. Verified
-    working against RustFS (PutObject + multipart) before adoption.
+    Vendor package for the AWS SDK for C++ (core + s3 only), built at colcon-build time
+    from a flattened, plain-committed source tree pinned to a fixed version (ADR-0012)
+    — the object-storage client the Bridge's Uploader uses (ADR-0005, ADR-0007). Only
+    `s3` is built (`-DBUILD_ONLY=s3`); zlib request compression is disabled (optional
+    per the SDK), keeping the build minimal. Verified working against RustFS (PutObject
+    + multipart) before adoption.
   </description>
   <maintainer email="d.bensoussan@proton.me">David Bensoussan</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <build_depend>git</build_depend>
   <build_depend>libssl-dev</build_depend>
   <build_depend>zlib</build_depend>
   <build_depend>libcurl-dev</build_depend>

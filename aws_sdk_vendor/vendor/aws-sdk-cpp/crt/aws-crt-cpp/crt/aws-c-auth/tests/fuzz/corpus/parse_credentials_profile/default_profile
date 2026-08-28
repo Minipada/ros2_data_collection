@@ -1,0 +1,5 @@
+[default]
+name2 = value2
+
+[profile default]
+name = value

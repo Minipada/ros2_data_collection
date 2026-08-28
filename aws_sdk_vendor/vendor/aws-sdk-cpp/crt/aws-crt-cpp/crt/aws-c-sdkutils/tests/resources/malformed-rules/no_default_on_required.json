@@ -1,0 +1,26 @@
+{
+  "parameters": {
+    "param1": {
+      "type": "string",
+      "default": "",
+      "required": true
+    },
+    "boolParam": {
+      "type": "boolean",
+      "required": true
+    }
+  },
+  "rules": [
+    {
+      "conditions": [
+        {
+          "fn": "booleanEquals",
+          "argv": []
+        }
+      ],
+      "endpoint": {},
+      "type": "endpoint"
+    }
+  ],
+  "version": "1.0"
+}

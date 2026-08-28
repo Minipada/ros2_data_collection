@@ -17,7 +17,7 @@
 #   just `aws_sdk_vendor` and `vector_vendor` (#423) — see the stage's own comment
 #   below. Not part of the production image graph; nothing downstream depends on it.
 #   Built via tools/e2e/scripts/verify_network_isolation.sh, wired into CI as its own
-#   (non-blocking, until #424/#425 land) job.
+#   blocking job.
 # - `workspace`: inherits toolchain, COPYs the full source, then one `colcon build` +
 #   `colcon test`. The compiler's object-file cache (ccache) comes from a
 #   `RUN --mount=type=cache` mount, which persists across builds independently of the
@@ -37,7 +37,9 @@
 # `--packages-skip aws_sdk_vendor` on the workspace stage's build/test: its build/ and
 # install/ trees are already part of the toolchain stage this stage is FROM (built
 # once, in its own layer — see below), so skipping it here avoids re-running its
-# ~20-minute ExternalProject source build on every image, not just every source change.
+# multi-minute ExternalProject source build (#425, ADR-0012: ~4.5 minutes from the
+# vendored source tree, down from the ~20-minute network+build baseline this comment
+# used to cite) on every image, not just every source change.
 #
 # Plain ROS 2 + C++: no separate language toolchain, no source-built message repos.
 # dc_bridge builds with rosdep + colcon like every other dc_* package.
@@ -144,15 +146,17 @@ RUN apt-get -q update && \
 # attempt each time, not a cache hit against work the `toolchain` stage already did.
 # vector_vendor no longer needs checking here: it's fetched (with network) by
 # `toolchain-base`'s own `vcs import` step above, and its build has been network-free
-# since #424 — this stage now exists purely for aws_sdk_vendor, until #425 lands.
+# since #424 — aws_sdk_vendor's build-time source is likewise network-free since #425
+# (ADR-0012's flattened, plain-committed vendor tree), so both packages in the
+# `colcon build` below are expected to succeed.
 #
 # `RUN --network=none` is a per-instruction Buildah/Podman flag (independent of, and
 # verified to take precedence over, build.sh's own top-level `--network host`): only the
 # colcon build below loses network access, while the rosdep install right above it keeps
-# the same network access every other stage's rosdep install gets. Today (before #425
-# replaces the git clone with a vendored source) that colcon build is expected to fail
-# here — that's the point: this stage exists to prove the isolation seam itself works,
-# with a clear, attributable network error, before it's ever asked to pass. Not part of
+# the same network access every other stage's rosdep install gets. This stage exists to
+# prove the isolation seam itself works — a regression that reintroduces a build-time
+# fetch surfaces here as a clear, attributable network error instead of a buildfarm
+# failure discovered later. Not part of
 # the production image graph — nothing downstream depends on it. Built via
 # tools/e2e/scripts/verify_network_isolation.sh.
 FROM toolchain-base AS vendor-network-check

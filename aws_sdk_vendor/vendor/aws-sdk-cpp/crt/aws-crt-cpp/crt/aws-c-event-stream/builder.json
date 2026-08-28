@@ -1,0 +1,8 @@
+{
+    "name": "aws-c-event-stream",
+    "upstream": [
+        { "name": "aws-c-common" },
+        { "name": "aws-c-io" },
+        { "name": "aws-checksums" }
+    ]
+}

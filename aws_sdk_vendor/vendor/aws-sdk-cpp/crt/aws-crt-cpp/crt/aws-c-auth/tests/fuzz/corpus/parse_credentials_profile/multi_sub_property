@@ -1,0 +1,5 @@
+[profile default]
+s3 =
+   name = value
+    
+ name2 = value2

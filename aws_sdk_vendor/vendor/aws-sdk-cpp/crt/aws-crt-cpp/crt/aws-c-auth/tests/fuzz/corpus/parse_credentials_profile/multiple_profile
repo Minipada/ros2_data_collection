@@ -1,0 +1,4 @@
+[profile foo]
+name = value
+[profile bar]
+name2 = value2

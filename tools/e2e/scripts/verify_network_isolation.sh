@@ -12,10 +12,8 @@
 # its own repo, fetched via `vcs import` before this same stage's isolated build step —
 # see docs/adr/0002-vector-as-default-shipper.md).
 #
-# Today, before #425 (aws_sdk_vendor flattened source) replaces its git-clone with a
-# vendored source, this build is EXPECTED TO FAIL with a network-access error — that
-# failure is the proof the isolation seam works, not a bug in this script. Once #425
-# lands, this same command should start succeeding.
+# aws_sdk_vendor builds from a flattened, plain-committed source tree (ADR-0012,
+# #425) — no network I/O — so this build is expected to succeed.
 #
 # Env vars (all optional, forwarded to build.sh):
 #   IMAGE_TAG      image tag to build (default dc-vendor-network-check:latest)

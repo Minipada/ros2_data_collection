@@ -1,0 +1,15 @@
+{
+    "version": "1.0",
+    "testCases": [
+      {
+        "documentation": "Condition object mem usage",
+        "params": {
+          "Arn": "arn:aws:s3::123456789012:accesspoint:mfzwi23gnjvgw.mrap"
+        },
+        "expect": {
+            "error": "Invalid arn use"
+        }
+      }
+    ]
+  }
+  

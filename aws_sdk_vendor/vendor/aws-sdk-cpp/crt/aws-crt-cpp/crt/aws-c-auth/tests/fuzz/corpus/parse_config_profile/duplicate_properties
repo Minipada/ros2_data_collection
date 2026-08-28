@@ -1,0 +1,7 @@
+[foo]
+name = value
+name2 = value2
+name = value2
+
+[foo]
+name2 = value

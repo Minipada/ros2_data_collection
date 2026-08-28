@@ -1,0 +1,53 @@
+{
+    "version": "1.0",
+    "testCases": [
+      {
+        "documentation": "aws-iso-e region",
+        "params": {
+          "Region": "eu-isoe-west-1"
+        },
+        "expect": {
+          "endpoint": {
+            "url": "https://aws-iso-e.eu-isoe-west-1.cloud.adc-e.uk",
+            "properties": {
+              "authSchemes": [
+                {
+                  "name": "sigv4",
+                  "signingName": "serviceName",
+                  "signingRegion": "eu-isoe-west-1"
+                }
+              ],
+              "meta": {
+                "baseSuffix": "cloud.adc-e.uk",
+                "dualStackSuffix": "cloud.adc-e.uk"
+              }
+            }
+          }
+        }
+      },
+      {
+        "documentation": "aws-iso-f region",
+        "params": {
+          "Region": "us-isof-south-1"
+        },
+        "expect": {
+          "endpoint": {
+            "url": "https://aws-iso-f.us-isof-south-1.csp.hci.ic.gov",
+            "properties": {
+              "authSchemes": [
+                {
+                  "name": "sigv4",
+                  "signingName": "serviceName",
+                  "signingRegion": "us-isof-south-1"
+                }
+              ],
+              "meta": {
+                "baseSuffix": "csp.hci.ic.gov",
+                "dualStackSuffix": "csp.hci.ic.gov"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }

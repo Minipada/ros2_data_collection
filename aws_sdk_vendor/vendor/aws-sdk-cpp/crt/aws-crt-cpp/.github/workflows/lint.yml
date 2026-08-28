@@ -1,0 +1,20 @@
+name: Lint
+
+on:
+  push:
+    branches-ignore:
+      - 'main'
+      - 'docs'
+
+jobs:
+  clang-format:
+
+    runs-on: ubuntu-24.04 # latest
+
+    steps:
+    - name: Checkout Sources
+      uses: actions/checkout@v4
+
+    - name: clang-format lint
+      run: |
+        ./format-check.py

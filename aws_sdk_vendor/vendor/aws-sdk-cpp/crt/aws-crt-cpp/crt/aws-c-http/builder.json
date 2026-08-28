@@ -1,0 +1,23 @@
+{
+    "name": "aws-c-http",
+    "targets": {
+        "android": {
+            "enabled": false,
+            "_comment": "disabled until we need to support it. LibCrypto needs to be configured on build machine."
+        }
+    },
+    "upstream": [
+        { "name": "aws-c-io" },
+        { "name": "aws-c-compression" }
+    ],
+    "downstream": [
+        { "name": "aws-c-auth" },
+        { "name": "aws-c-mqtt" },
+        { "name": "aws-c-s3" }
+    ],
+    "pre_build_steps": ["local-server-setup"],
+    "test_steps": [
+        "aws-c-http-test",
+        ["python3", "{source_dir}/integration-testing/http_client_test.py", "{install_dir}/bin/elasticurl{exe}"]
+    ]
+}

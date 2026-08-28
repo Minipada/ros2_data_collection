@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "serviceId": "example",
+  "parameters": {
+    "Arn": {
+      "type": "string",
+      "documentation": "Arn"
+    }
+  },
+  "rules": [
+    {
+      "conditions": [
+        {
+          "fn": "aws.parseArn",
+          "argv": [
+            {
+              "ref": "Arn"
+            }
+          ]
+        }
+      ],
+      "error": "Invalid arn use",
+      "type": "error"
+    },
+    {
+      "type": "endpoint",
+      "documentation": "the single service global endpoint",
+      "conditions": [],
+      "endpoint": {"url": "https://example.amazonaws.com"}
+    }
+  ]
+}

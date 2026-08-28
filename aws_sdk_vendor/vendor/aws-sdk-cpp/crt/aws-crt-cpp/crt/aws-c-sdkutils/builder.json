@@ -1,0 +1,12 @@
+{
+    "name": "aws-c-sdkutils",
+    "upstream": [
+        { "name": "aws-c-common" }
+    ],
+    "downstream": [
+        { "name": "aws-c-auth" }
+    ],
+    "test_steps": [
+        "test"
+    ]
+}

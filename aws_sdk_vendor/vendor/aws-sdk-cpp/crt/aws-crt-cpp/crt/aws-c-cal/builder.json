@@ -1,0 +1,158 @@
+{
+    "name": "aws-c-cal",
+    "upstream": [
+        { "name": "aws-c-common" }
+    ],
+    "downstream": [
+        {
+            "name": "aws-c-io"
+        },
+        {
+            "name": "aws-c-auth"
+        }
+    ],
+    "targets": {
+        "linux": {
+            "upstream": [
+                {
+                    "name": "aws-lc"
+                }
+            ]
+        },
+        "android": {
+            "upstream": [
+                {
+                    "name": "aws-lc"
+                }
+            ]
+        },
+        "freebsd": {
+            "upstream": [
+                {
+                    "name": "aws-lc"
+                }
+            ]
+        },
+        "openbsd": {
+            "upstream": [
+                {
+                    "name": "aws-lc"
+                }
+            ]
+        },
+        "windows": {
+            "!test_steps": [
+                "test",
+                "{build_dir}/aws-c-cal/bin/sha256_profile/RelWithDebInfo/sha256_profile.exe",
+                "{build_dir}/aws-c-cal/bin/run_x_platform_fuzz_corpus/RelWithDebInfo/run_x_platform_fuzz_corpus.exe --corpus-path {source_dir}/ecdsa-fuzz-corpus"
+            ]
+        }
+    },
+    "variants": {
+        "openssl": {
+            "hosts": {
+                "ubuntu": {
+                    "packages": [
+                        "libssl-dev"
+                    ]
+                }
+            },
+            "targets": {
+                "linux": {
+                    "!upstream": [
+                        { "name": "aws-c-common" }
+                    ]
+                }
+            }
+        },
+        "ancient-openssl": {
+            "hosts": {
+                "ubuntu": {
+                    "packages": [
+                        "libssl1.0-dev",
+                        "libssl1.0.0"
+                    ]
+                }
+            },
+            "targets": {
+                "linux": {
+                    "!upstream": [
+                        { "name": "aws-c-common" }
+                    ]
+                }
+            }
+        },
+        "boringssl": {
+            "hosts": {
+                "ubuntu": {
+                    "packages": [
+                        "golang-go"
+                    ]
+                }
+            },
+            "targets": {
+                "linux": {
+                    "!upstream": [
+                        {
+                            "name": "aws-c-common"
+                        },
+                        {
+                            "name": "boringssl",
+                            "revision": "9939e14"
+                        }
+                    ]
+                }
+            }
+        },
+        "aws-lc-fips": {
+            "targets": {
+                "linux": {
+                    "!upstream": [
+                        {
+                            "name": "aws-c-common"
+                        },
+                        {
+                            "name": "aws-lc",
+                            "_comment": "FIPS releases are currently cut from this branch",
+                            "revision": "fips-2022-11-02"
+                        }
+                    ]
+                }
+            }
+        },
+        "aws-lc-ed25519": {
+            "targets": {
+                "windows": {
+                    "+upstream": [
+                        {
+                            "name": "aws-lc"
+                        }
+                    ]
+                },
+                "macos": {
+                    "+upstream": [
+                        {
+                            "name": "aws-lc"
+                        }
+                    ]
+                }
+            }
+        },
+        "no-tests": {
+            "!test_steps": []
+        },
+        "just-tests": {
+            "!test_steps": [
+                "test"
+            ]
+        }
+    },
+    "test_steps": [
+        "test",
+        [
+            "{build_dir}/aws-c-cal/bin/sha256_profile/sha256_profile"
+        ],
+        "{build_dir}/aws-c-cal/bin/run_x_platform_fuzz_corpus/run_x_platform_fuzz_corpus --corpus-path {source_dir}/ecdsa-fuzz-corpus"
+
+    ]
+}

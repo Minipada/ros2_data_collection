@@ -1,0 +1,7 @@
+[foo]
+name = value
+  -continued # Comment
+
+[bar]
+name2 = value2
+  -continued ; Comment
