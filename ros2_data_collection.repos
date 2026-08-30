@@ -4,10 +4,17 @@
 # External source repos this workspace needs alongside ros2_data_collection itself,
 # for `vcs import` (see doc/src/dc/setup.md). vector_vendor was split out of this repo
 # (see docs/adr/0002-vector-as-default-shipper.md's amendment) so its binary content's
-# growth doesn't land in ros2_data_collection's own git history. Pinned to a tag, not a
-# branch, so a workspace built from a given ros2_data_collection commit is reproducible.
+# growth doesn't land in ros2_data_collection's own git history; aws_sdk_vendor lives
+# here too for layout consistency across vendor packages, even though its own content
+# (a thin ament_vendor() recipe with no vendored source) carries no such bloat — see
+# docs/adr/0012-aws-sdk-vendor-flattened-source.md. Pinned to a tag, not a branch, so a
+# workspace built from a given ros2_data_collection commit is reproducible.
 repositories:
   vector_vendor:
     type: git
     url: https://github.com/Minipada/vector_vendor.git
     version: v0.57.0
+  aws_sdk_vendor:
+    type: git
+    url: https://github.com/Minipada/aws_sdk_vendor.git
+    version: v1.11.600

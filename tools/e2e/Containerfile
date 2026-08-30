@@ -6,11 +6,13 @@
 #   tree, so `toolchain`'s COPY --from below keys its own cache on dependency lists
 #   alone, not on every source edit — without having to hardcode one COPY per package.
 # - `toolchain-base`: ROS 2 + the OS packages every later stage needs (git, ccache,
-#   pip tools), before anything vendor-specific is copied in. Exists solely as a shared
-#   branch point for `toolchain` and `vendor-network-check` below (#423) — without it,
-#   `vendor-network-check` would have to either repeat this layer's RUN verbatim (two
-#   copies to keep in sync) or `FROM toolchain`, which already has aws_sdk_vendor built
-#   and would make the isolation check a no-op cache hit instead of a real rebuild.
+#   pip tools), then `vcs import`s vector_vendor and aws_sdk_vendor — both live in
+#   their own repos (docs/adr/0002, docs/adr/0012) — before anything else is copied
+#   in. Exists solely as a shared branch point for `toolchain` and
+#   `vendor-network-check` below (#423) — without it, `vendor-network-check` would
+#   have to either repeat this layer's RUN verbatim (two copies to keep in sync) or
+#   `FROM toolchain`, which already has aws_sdk_vendor built and would make the
+#   isolation check a no-op cache hit instead of a real rebuild.
 # - `toolchain`: `toolchain-base` + pre-built aws-sdk-cpp + full-workspace rosdep
 #   install. Stays a cache hit across ordinary source changes.
 # - `vendor-network-check`: `toolchain-base` + a from-scratch, network-isolated build of
@@ -37,8 +39,8 @@
 #
 # `--packages-skip aws_sdk_vendor` on the workspace stage's build/test: its build/ and
 # install/ trees are already part of the toolchain stage this stage is FROM (built
-# once, in its own layer — see below), so skipping it here avoids re-running its
-# ~20-minute ExternalProject source build on every image, not just every source change.
+# once — see below), so skipping it here avoids re-running its ~15-minute
+# aws-sdk-cpp source build on every image, not just every source change.
 #
 # Plain ROS 2 + C++: no separate language toolchain, no source-built message repos.
 # dc_bridge builds with rosdep + colcon like every other dc_* package.
@@ -82,38 +84,36 @@ RUN echo "apt cache bust: ${APT_CACHEBUST}" && \
 
 WORKDIR /root/ws
 
-# vector_vendor lives in its own repo (docs/adr/0002-vector-as-default-shipper.md's
-# amendment), so it has to be fetched into the workspace source tree the same way a
-# developer's own `vcs import` would, before anything downstream can `colcon build` it.
-# A separate COPY (not folded into the apt RUN above) keys this layer's own cache on
-# ros2_data_collection.repos's content: it re-fetches when that file changes (a version
-# bump) or when APT_CACHEBUST invalidates the layer above (daily) — not on an ordinary
-# source edit elsewhere in the repo. `vcs import` needs network; every later `colcon
-# build`/`colcon test` in downstream stages runs against the already-materialized
-# result, so #423's network-isolated check (which branches from this same stage) still
-# isolates only the actual build step, not this fetch.
+# vector_vendor and aws_sdk_vendor both live in their own repos (docs/adr/0002's
+# amendment, docs/adr/0012), so they have to be fetched into the workspace source tree
+# the same way a developer's own `vcs import` would, before anything downstream can
+# `colcon build` them. A separate COPY (not folded into the apt RUN above) keys this
+# layer's own cache on ros2_data_collection.repos's content: it re-fetches when that
+# file changes (either package's version bump) or when APT_CACHEBUST invalidates the
+# layer above (daily) — not on an ordinary source edit elsewhere in the repo. `vcs
+# import` needs network; every later `colcon build`/`colcon test` in downstream stages
+# runs against the already-materialized result, so #423's network-isolated check
+# (which branches from this same stage) still isolates only the actual build step, not
+# this fetch. Keying the fetch on ros2_data_collection.repos rather than the full
+# source tree is also what keeps aws_sdk_vendor's ~15-minute aws-sdk-cpp source build
+# (#271, in the `toolchain` stage below) a cache hit across ordinary source edits
+# elsewhere in ros2_data_collection.
 COPY ros2_data_collection.repos .
 RUN mkdir -p src/ros2_data_collection && \
     vcs import --shallow src/ros2_data_collection < ros2_data_collection.repos
 
 FROM toolchain-base AS toolchain
 
-# aws_sdk_vendor built in its own layer, isolated from the rest of the toolchain stage
-# (#271): `COPY <path>` keys Podman's layer cache on that path's own content, so
-# copying only `aws_sdk_vendor/` (plus the rosdep source it needs registered) here
-# means this layer — and its ~20-minute aws-sdk-cpp ExternalProject source build —
-# stays a cache hit for a source change anywhere *else* in the repo, instead of
-# invalidating on every commit like a single `COPY . ` + one `RUN` layer would.
-# The full-workspace build later reuses this layer's already-built install/ via
-# `colcon build --packages-skip aws_sdk_vendor`.
-#
+# aws_sdk_vendor's source already arrived via toolchain-base's `vcs import` above, so
+# building it here only needs the local rosdep source it depends on registering.
 # rosdep/dc.yaml is registered as a local rosdep source so `rosdep install` resolves
 # tomlplusplus / msgpack-cxx (header-only C++ libs dc_bridge uses that upstream
 # rosdistro has no key for — see dc_bridge/package.xml). It's registered here, in the
 # `toolchain` stage, rather than beside the full-workspace rosdep install below, so
-# `rosdep update`'s index fetch only happens once.
+# `rosdep update`'s index fetch only happens once. The full-workspace build later
+# reuses this layer's already-built install/ via `colcon build --packages-skip
+# aws_sdk_vendor`.
 COPY rosdep src/ros2_data_collection/rosdep
-COPY aws_sdk_vendor src/ros2_data_collection/aws_sdk_vendor
 RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
       > /etc/ros/rosdep/sources.list.d/10-dc.list && \
     apt-get -q update && \
@@ -160,7 +160,6 @@ FROM toolchain-base AS vendor-network-check
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 COPY rosdep src/ros2_data_collection/rosdep
-COPY aws_sdk_vendor src/ros2_data_collection/aws_sdk_vendor
 RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
       > /etc/ros/rosdep/sources.list.d/10-dc.list && \
     apt-get -q update && \

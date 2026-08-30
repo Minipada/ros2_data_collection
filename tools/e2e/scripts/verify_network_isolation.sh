@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MPL-2.0
 
 # Builds tools/e2e/Containerfile's `vendor-network-check` stage (#423) — a harness
-# proving aws_sdk_vendor's build-time network fetch (ExternalProject_Add's
-# GIT_REPOSITORY) is isolated to its own `colcon build` step via that stage's
+# proving aws_sdk_vendor's build-time network fetch (ament_vendor()'s `vcs import` of
+# aws-sdk-cpp) is isolated to its own `colcon build` step via that stage's
 # `RUN --network=none` (a per-instruction Buildah/Podman flag independent of this
 # script's own build.sh's top-level `--network host`), not smeared together with
 # rosdep/apt's own allowed network use. vector_vendor's own build-time fetch was the
