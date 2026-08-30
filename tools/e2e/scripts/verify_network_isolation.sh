@@ -12,10 +12,10 @@
 # its own repo, fetched via `vcs import` before this same stage's isolated build step —
 # see docs/adr/0002-vector-as-default-shipper.md).
 #
-# Today, before #425 (aws_sdk_vendor flattened source) replaces its git-clone with a
-# vendored source, this build is EXPECTED TO FAIL with a network-access error — that
-# failure is the proof the isolation seam works, not a bug in this script. Once #425
-# lands, this same command should start succeeding.
+# This build is EXPECTED TO FAIL with a network-access error, permanently — aws_sdk_vendor
+# fetches aws-sdk-cpp live via ament_vendor() by design (docs/adr/0012), matching what
+# the real ROS buildfarm's binarydeb jobs actually allow (docker run --net=host). The
+# failure here is the proof the isolation seam works, not a bug in this script.
 #
 # Env vars (all optional, forwarded to build.sh):
 #   IMAGE_TAG      image tag to build (default dc-vendor-network-check:latest)

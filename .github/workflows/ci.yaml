@@ -19,8 +19,9 @@
 #   raw-volume (standalone: stdlib Python fixtures over the shared volume accounting)
 #   network-isolation-check (standalone: builds tools/e2e/Containerfile's
 #     vendor-network-check stage — #423. vector_vendor's build-time fetch is already
-#     replaced with a checked-in binary (#424); disabled (if: false) until #425 does
-#     the same for aws_sdk_vendor's — until then this job's build is *expected* to fail.)
+#     replaced with a checked-in binary (#424); aws_sdk_vendor fetches aws-sdk-cpp live
+#     by design (docs/adr/0012), so this job's build is *expected* to fail, permanently
+#     — disabled (if: false) since it can never turn green.)
 #
 # e2e calls the same tools/e2e/scripts/run.sh a developer runs locally, driving the
 # harness with plain podman (no compose) so nothing extra is installed on the runner;
@@ -339,10 +340,11 @@ jobs:
   # continue-on-error: true — the job's own check-run conclusion reports "failure"
   # regardless of continue-on-error (only the *workflow's* aggregate conclusion and
   # `needs:`-blocking are affected by it), so every PR still showed a red ❌ for a
-  # failure that's expected today, not actionable. vector_vendor now installs a
-  # checked-in binary (#424), but aws_sdk_vendor still git-clones aws-sdk-cpp at
-  # colcon-build time — flip `if: false` to `if: true` (and drop this comment) once
-  # #425 replaces that fetch too and this build can actually pass.
+  # failure that's expected, not actionable. vector_vendor installs a checked-in
+  # binary (#424); aws_sdk_vendor deliberately keeps git-cloning aws-sdk-cpp at
+  # colcon-build time, permanently, matching what the real ROS buildfarm's binarydeb
+  # jobs actually allow (docs/adr/0012) — this job can never turn green and stays
+  # disabled for that reason, not as a TODO.
   network-isolation-check:
     runs-on: ubuntu-latest
     if: false
@@ -352,7 +354,7 @@ jobs:
       - name: Verify podman
         run: podman --version
 
-      - name: Attempt the network-isolated vendor package build (expected to fail until #425 lands)
+      - name: Attempt the network-isolated vendor package build (expected to always fail, by design — docs/adr/0012)
         run: ./tools/e2e/scripts/verify_network_isolation.sh
 
   # The KPI definitions are SQL, not workspace code: this needs a database and nothing else.
