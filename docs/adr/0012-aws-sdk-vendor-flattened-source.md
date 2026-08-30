@@ -62,10 +62,13 @@ the same layout and the same bump/release workflow.
   thin `ament_vendor()` recipe. `ros2_data_collection.repos` gains an `aws_sdk_vendor`
   entry (pinned to a tag, alongside `vector_vendor`'s), the same `vcs import` path
   `vector_vendor` already uses.
-- `tools/e2e/Containerfile`'s `vendor-network-check` stage keeps proving the *lack* of
-  network isolation is expected for `aws_sdk_vendor`: under `--network=none` its `colcon
-  build` is supposed to fail, same as it always has, since nothing about this decision
-  changes what the buildfarm actually does for this package.
+- `tools/e2e/Containerfile`'s `vendor-network-check` stage kept proving the *lack* of
+  network isolation is expected for `aws_sdk_vendor` for a while after this decision —
+  under `--network=none` its `colcon build` was supposed to fail, same as it always has,
+  since nothing about this decision changes what the buildfarm actually does for this
+  package. The stage (and the CI job wired to it) was later deleted, see docs/adr/0013:
+  a check that fails by design, permanently, for both vendor packages it covers stopped
+  being distinguishable from no check at all.
 
 ## Consequences
 
@@ -74,9 +77,7 @@ the same layout and the same bump/release workflow.
   AWS SDK version bump (just move `AWS_SDK_VERSION`).
 - `aws_sdk_vendor`'s `colcon build` step needs network, same as it always has since
   ADR-0007; `toolchain-base`'s `vcs import` (which fetches both `vector_vendor` and
-  `aws_sdk_vendor`) stays isolated from `tools/e2e/Containerfile`'s own build steps, and
-  the network-isolated check (#423) keeps demonstrating — rather than trying to
-  eliminate — that isolation boundary.
+  `aws_sdk_vendor`) stays isolated from `tools/e2e/Containerfile`'s own build steps.
 - Bumping the AWS SDK version now touches two repos, same as bumping Vector already
   does: land the new `AWS_SDK_VERSION`/`<version>`/tag in `Minipada/aws_sdk_vendor`,
   then bump the pinned `version:` in `ros2_data_collection.repos`.

@@ -65,8 +65,8 @@ branch, so a given `ros2_data_collection` commit always resolves the same
 content silently drift out from under an unrelated `ros2_data_collection` change.
 `tools/e2e/Containerfile`'s `toolchain-base` stage runs the import (network required,
 same as its rosdep install right below it); every downstream stage's actual `colcon
-build` — including #423's `--network=none` check — builds against the already-fetched
-result, unaffected by where the source physically came from. Bumping Vector now touches
+build` builds against the already-fetched result, unaffected by where the source
+physically came from. Bumping Vector now touches
 two repos: land the new binaries + tag in `vector_vendor`, then bump the pinned
 `version:` in `ros2_data_collection.repos` to match.
 
@@ -114,9 +114,12 @@ exactly, and there is no independent counter to bump for a fetch-mechanism-only 
 `tools/e2e/Containerfile`'s `vendor-network-check` stage (#423) already built
 `vector_vendor` alongside `aws_sdk_vendor` under `--network=none` before this amendment
 — it was a no-op inclusion back then, since the checked-in binary's `colcon build`
-needed no network and so never failed. It is no longer a no-op: `vector_vendor`'s build
-now fails under `--network=none` for the same reason `aws_sdk_vendor`'s always has,
-which is the change this amendment's own end-to-end verification confirmed.
+needed no network and so never failed. It stopped being a no-op here: `vector_vendor`'s
+build started failing under `--network=none` for the same reason `aws_sdk_vendor`'s
+always has, which is the change this amendment's own end-to-end verification confirmed.
+The stage itself (and the CI job wired to it) was later deleted — see docs/adr/0013 —
+once a permanently-failing check on both packages stopped being distinguishable from no
+check at all.
 
 If a future ROS buildfarm policy change *does* restrict binarydeb network access (the
 false premise here becoming true later), this decision reverses again to the
