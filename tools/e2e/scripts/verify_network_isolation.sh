@@ -4,18 +4,18 @@
 
 # Builds tools/e2e/Containerfile's `vendor-network-check` stage (#423) — a harness
 # proving aws_sdk_vendor's build-time network fetch (ament_vendor()'s `vcs import` of
-# aws-sdk-cpp) is isolated to its own `colcon build` step via that stage's
-# `RUN --network=none` (a per-instruction Buildah/Podman flag independent of this
-# script's own build.sh's top-level `--network host`), not smeared together with
-# rosdep/apt's own allowed network use. vector_vendor's own build-time fetch was the
-# same kind of check until #424 replaced it with a checked-in binary (since split into
-# its own repo, fetched via `vcs import` before this same stage's isolated build step —
-# see docs/adr/0002-vector-as-default-shipper.md).
+# aws-sdk-cpp) and vector_vendor's build-time network fetch (checksum-pinned
+# `file(DOWNLOAD ...)` of the Vector release tarball) are each isolated to their own
+# `colcon build` step via that stage's `RUN --network=none` (a per-instruction
+# Buildah/Podman flag independent of this script's own build.sh's top-level
+# `--network host`), not smeared together with rosdep/apt's own allowed network use.
 #
-# This build is EXPECTED TO FAIL with a network-access error, permanently — aws_sdk_vendor
-# fetches aws-sdk-cpp live via ament_vendor() by design (docs/adr/0012), matching what
-# the real ROS buildfarm's binarydeb jobs actually allow (docker run --net=host). The
-# failure here is the proof the isolation seam works, not a bug in this script.
+# This build is EXPECTED TO FAIL with a network-access error, permanently, for both
+# packages — aws_sdk_vendor fetches aws-sdk-cpp live via ament_vendor() by design
+# (docs/adr/0012), and vector_vendor fetches its release tarball live by design
+# (docs/adr/0002-vector-as-default-shipper.md's reversal, #435), matching what the real
+# ROS buildfarm's binarydeb jobs actually allow (docker run --net=host). The failure
+# here is the proof the isolation seam works, not a bug in this script.
 #
 # Env vars (all optional, forwarded to build.sh):
 #   IMAGE_TAG      image tag to build (default dc-vendor-network-check:latest)

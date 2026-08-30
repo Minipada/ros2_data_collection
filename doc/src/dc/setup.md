@@ -37,15 +37,16 @@ source /opt/ros/jazzy/setup.bash
 colcon build
 ```
 
-That is the whole install. `colcon build` also runs `vector_vendor`, which installs a
-pinned, checksummed [Vector](https://vector.dev/) binary checked into the package — the
-external **Shipper** the Bridge supervises at runtime (ADR-0002) — and `aws_sdk_vendor`,
-which fetches and builds the AWS SDK for C++ (`core` + `s3`) the Bridge's Uploader uses
-(ADR-0007) live from `github.com/aws/aws-sdk-cpp` at a pinned tag; unlike `vector_vendor`,
-this step needs network access (ADR-0012) and takes several minutes the first time.
+That is the whole install. `colcon build` also runs `vector_vendor`, which fetches a
+pinned, checksummed [Vector](https://vector.dev/) release tarball live — the external
+**Shipper** the Bridge supervises at runtime (ADR-0002) — and `aws_sdk_vendor`, which
+fetches and builds the AWS SDK for C++ (`core` + `s3`) the Bridge's Uploader uses
+(ADR-0007) live from `github.com/aws/aws-sdk-cpp` at a pinned tag; both steps need
+network access (ADR-0002, ADR-0012), and `aws_sdk_vendor`'s takes several minutes the
+first time.
 
 ```admonish tip title="Air-gapped or distro-packaged Vector"
-Point the build at a Vector binary you already have instead of the checked-in one:
+Point the build at a Vector binary you already have instead of downloading one:
 
     colcon build --cmake-args -Dvector_path=/usr/bin/vector
 
