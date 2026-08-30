@@ -78,6 +78,51 @@ point `ros2_data_collection` packages that need it would instead declare a norma
 other ROS package dependency. Until then, `.repos` is how CI and local dev get a
 buildable workspace.
 
+## Amendment: back to a live, checksum-pinned download (#435)
+
+The no-network-access assumption the first amendment (#424) rested on — that ROS
+buildfarm binarydeb jobs can't reach the network — is false. `ros_buildfarm`'s own
+job-generation source (`ros_buildfarm/templates/release/deb/binarypkg_job.xml.em`, the
+"Run Dockerfile - build binarydeb" section) invokes `docker run --net=host` for the
+container that runs the actual build step, and this isn't theoretical: `zmqpp_vendor` —
+which fetches its own dependency live at `colcon build` time via
+`ament_cmake_vendor_package`'s `ament_vendor()` — has a real, currently succeeding
+Jenkins job on build.ros2.org (`Jbin_uN64__zmqpp_vendor__ubuntu_noble_amd64__binary`,
+build #12, `SUCCESS`). `aws_sdk_vendor` reached the identical conclusion independently
+for its own build (docs/adr/0012) after resting on the same false premise.
+
+With real network available at build time, the live-download design this repo used
+before #424 is simply simpler than the checked-in-tarball design that replaced it, and
+it sidesteps the checked-in design's actual cost entirely: nothing binary is committed
+anywhere, so there is nothing for git to fail to deduplicate as Vector ships new
+versions. `vector_vendor/CMakeLists.txt` reverts to `file(DOWNLOAD ...)`, fetching the
+official per-architecture release tarball at build time and verifying it against the
+same pinned SHA256 checksums the checked-in design used — the `vector_path` override for
+air-gapped/distro-packaged builds is unchanged. The checked-in `prebuilt/*.tar.gz`
+tarballs are removed from `Minipada/vector_vendor`.
+
+This does not reopen the "own repo" amendment above: `vector_vendor` stays split out,
+independent of whether its own content is large enough to justify the split on git-bloat
+grounds by itself — see docs/adr/0012's identical reasoning for `aws_sdk_vendor`, a
+thin recipe with no bloat of its own that stays split anyway so every vendor package
+this workspace pulls in via `.repos` follows the same layout and bump/release workflow.
+Vector's vendored version is unchanged by this amendment (still 0.57.0), so
+`Minipada/vector_vendor`'s existing `v0.57.0` tag was moved onto the new commit rather
+than minted fresh — `package.xml`'s `<version>` continues to track `VECTOR_VERSION`
+exactly, and there is no independent counter to bump for a fetch-mechanism-only change.
+
+`tools/e2e/Containerfile`'s `vendor-network-check` stage (#423) already built
+`vector_vendor` alongside `aws_sdk_vendor` under `--network=none` before this amendment
+— it was a no-op inclusion back then, since the checked-in binary's `colcon build`
+needed no network and so never failed. It is no longer a no-op: `vector_vendor`'s build
+now fails under `--network=none` for the same reason `aws_sdk_vendor`'s always has,
+which is the change this amendment's own end-to-end verification confirmed.
+
+If a future ROS buildfarm policy change *does* restrict binarydeb network access (the
+false premise here becoming true later), this decision reverses again to the
+checked-in-tarball design; nothing about that design is lost — it is documented in the
+amendment above and in `Minipada/vector_vendor`'s own git history, not deleted.
+
 ## Why the forward protocol is the Bridge→Shipper wire format
 
 The Bridge must hand Records to the Shipper across a process boundary such that **the
