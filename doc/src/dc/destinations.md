@@ -5,9 +5,10 @@ architecture (ADR-0003,
 [`docs/adr/`](https://github.com/minipada/ros2_data_collection/tree/jazzy/docs/adr)), the
 pluginlib destination-plugin layer is retired. The Bridge (`dc_bridge`) renders the
 external Vector **Shipper's** configuration from plain ROS parameters for a **blessed
-set** of Destination types — `postgres`, `s3`, `file`, `console` — and every other
-destination in Vector's sink catalog is available through the **passthrough**: raw Vector
-config snippets listed in the `custom_config_files` parameter, merged natively by Vector.
+set** of Destination types — `postgres`, `s3`, `file`, `console`, `vector` — and every
+other destination in Vector's sink catalog is available through the **passthrough**: raw
+Vector config snippets listed in the `custom_config_files` parameter, merged natively by
+Vector.
 
 Coming from DC 1.x and its `flb_*` destination plugins? See the
 [migration guide](./migration.md).
@@ -82,6 +83,21 @@ upstream in 2026 and no longer receives maintenance — but existing MinIO or Ce
 deployments work identically: set `endpoint`, explicit credentials, and (typically)
 `force_path_style: true`.
 
+The `vector` type forwards to another Shipper over Vector's own native inter-instance
+protocol (`type = "vector"` sink → `type = "vector"` source) — the standard way to chain
+a robot's local Shipper to an edge aggregator's Shipper in a fleet deployment. `host` and
+`port` name the downstream Shipper; unlike `postgres`, there is no default for either,
+since there's no sensible address to assume for another Shipper.
+
+```yaml
+    to_aggregator:
+      type: vector
+      receives: records
+      inputs: ["/dc/measurement/uptime"]
+      host: "edge-aggregator.local"
+      port: 6000
+```
+
 Common parameters for every blessed type: `type`, `receives` (`records` | `files`, see
 the File uploads section below), `inputs` (ROS topic names), `time_key` (default
 `date`) and `time_format` (default `epoch_nanos`) controlling the normalized timestamp
@@ -140,6 +156,7 @@ Type-specific parameters:
 | `s3`       | `bucket`                                    | `region`, `endpoint`, `key_prefix`, `access_key_id` + `secret_access_key` (together), `force_path_style`, `batch_timeout_secs` |
 | `file`     | `path` (Vector template syntax allowed)     |                                                                                                                    |
 | `console`  |                                             |                                                                                                                    |
+| `vector`   | `host`, `port`                              |                                                                                                                    |
 
 Invalid parameters (unknown `type`, missing required field, half a credential pair, an
 out-of-range port…) are rejected with a clear error at Bridge startup — before Vector

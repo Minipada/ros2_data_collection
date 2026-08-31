@@ -1,7 +1,7 @@
 # Turtlebot3 AWS Warehouse InfluxDB
 
-`dc_bridge` blesses exactly four Destination types — `postgres`, `s3`, `file`, `console`
-(see [Destinations](../destinations.md)) — and InfluxDB is not one of them. This demo is
+`dc_bridge` blesses exactly five Destination types — `postgres`, `s3`, `file`, `console`,
+`vector` (see [Destinations](../destinations.md)) — and InfluxDB is not one of them. This demo is
 not a peer of the [PostgreSQL/RustFS demos](./tb3_aws_minio_pgsql.md): it exists to show
 how to reach a destination `dc_bridge` doesn't bless directly, via the ADR-0003
 **passthrough** escape hatch — a raw [Vector](https://vector.dev) sink config loaded

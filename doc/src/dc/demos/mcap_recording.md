@@ -1,7 +1,7 @@
 # MCAP recording (passthrough)
 
-`dc_bridge` blesses exactly four Destination types — `postgres`, `s3`, `file`, `console`
-(see [Destinations](../destinations.md)) — and MCAP is not one of them; Vector, the
+`dc_bridge` blesses exactly five Destination types — `postgres`, `s3`, `file`, `console`,
+`vector` (see [Destinations](../destinations.md)) — and MCAP is not one of them; Vector, the
 Shipper, has no MCAP sink at all. This tutorial is the worked example for #210: the
 ADR-0003 **passthrough** plus a small standalone process, `dc_mcap_writer`
 (ADR-0009, [`docs/adr/`](https://github.com/minipada/ros2_data_collection/tree/jazzy/docs/adr)),
@@ -115,9 +115,9 @@ what's specific to how MCAP recording is wired up.
 
 `dc_demos/params/mcap_recording.yaml`'s `dc_mcap_writer:` block is **not** nested
 inside `dc_bridge`'s `destinations` list, and can't be made to look exactly like
-`postgres`/`s3`/`file`/`console` there: `destinations` is parsed and validated by
+`postgres`/`s3`/`file`/`console`/`vector` there: `destinations` is parsed and validated by
 `dc_bridge` itself, in C++, and an unrecognized `type` is a hard startup error by
-design (see [Destinations](../destinations.md)) — teaching it a fifth type would mean
+design (see [Destinations](../destinations.md)) — teaching it a sixth type would mean
 changing `dc_bridge`, which ADR-0009 explicitly decided against (Vector's own
 at-least-once/disk-buffered guarantees already cover what would have justified that).
 So it's a sibling top-level block instead, structurally shaped like a Destination

@@ -16,7 +16,7 @@ DC has a small, fixed vocabulary. Using it precisely makes the rest of the docum
 | **Group**                 | A merge of Records from several Measurements into one Record, based on time proximity.                        |
 | **File**                  | A binary artifact produced by a Measurement (image, video, map), uploaded to object storage as-is; only its metadata travels as a Record. |
 | **Destination**           | An external system that receives Records or Files (PostgreSQL, S3-compatible storage, console…).              |
-| **Blessed Destination**   | A Destination DC configures natively from ROS parameters: `postgres`, `s3`, `file`, `console`.                |
+| **Blessed Destination**   | A Destination DC configures natively from ROS parameters: `postgres`, `s3`, `file`, `console`, `vector`.       |
 | **Passthrough Destination** | A Destination configured by handing raw Shipper configuration through DC, unlocking the Shipper's full catalog without DC code. |
 | **Bridge**                | The DC component (`dc_bridge`) that receives Records from ROS topics and hands them to the Shipper.           |
 | **Shipper**               | The external process (Vector by default) that buffers, transforms, and reliably delivers Records to Destinations. |

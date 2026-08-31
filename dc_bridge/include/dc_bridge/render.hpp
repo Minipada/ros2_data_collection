@@ -10,7 +10,7 @@
 // than an opaque payload key), one `route` transform exposing the public per-Tag
 // `dc.<tag>` routes (the
 // passthrough contract — see route_output_for_tag), disk-buffer settings, and the
-// blessed sinks (postgres, s3, file, console).
+// blessed sinks (postgres, s3, file, console, vector).
 //
 // Two layers, both pure: destination_from_raw (+ the per-type from_raw builders) turns
 // the flat, stringly-typed values ROS parameters give into validated typed config (this
@@ -109,7 +109,17 @@ struct ConsoleParams
 {
 };
 
-using DestinationKind = std::variant<PostgresParams, S3Params, FileParams, ConsoleParams>;
+/// Forwards to another Shipper (typically an edge aggregator) over Vector's own native
+/// inter-instance protocol — the `vector` sink/source pair. `host`/`port` name that
+/// Shipper's `vector` source; there is no sensible default for either, unlike postgres's
+/// dev-friendly `127.0.0.1`/`5432` (#443).
+struct VectorParams
+{
+  std::string host;
+  std::uint16_t port;
+};
+
+using DestinationKind = std::variant<PostgresParams, S3Params, FileParams, ConsoleParams, VectorParams>;
 
 struct Destination
 {
@@ -210,7 +220,7 @@ struct RawDestinationParams
 {
   std::optional<std::string> time_key;
   std::optional<std::string> time_format;
-  // postgres
+  // postgres, vector
   std::optional<std::string> host;
   std::optional<std::int64_t> port;
   std::optional<std::string> user;
@@ -233,6 +243,7 @@ struct RawDestinationParams
 PostgresParams postgres_from_raw(const std::string& name, const RawDestinationParams& raw);
 S3Params s3_from_raw(const std::string& name, const RawDestinationParams& raw);
 FileParams file_from_raw(const std::string& name, const RawDestinationParams& raw);
+VectorParams vector_from_raw(const std::string& name, const RawDestinationParams& raw);
 
 /// Validates and builds one Destination from the flat parameters ROS declares for it.
 Destination destination_from_raw(const std::string& name, const std::string& type_str, const std::string& receives_str,

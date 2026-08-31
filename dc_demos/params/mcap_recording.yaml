@@ -26,7 +26,7 @@ dc_bridge:
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224
 
-# MCAP is not a blessed Destination type (only postgres, s3, file and console are —
+# MCAP is not a blessed Destination type (only postgres, s3, file, console and vector are —
 # see doc/src/dc/destinations.md) and Vector has no MCAP sink at all, so recording goes
 # through the ADR-0003/ADR-0009 passthrough — but configured here like any other
 # Destination: dc_bringup.launch.py reads this block, starts the standalone

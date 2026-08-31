@@ -49,6 +49,11 @@ PostgresParams postgres_kind()
   return PostgresParams{ "127.0.0.1", 5432, "dc", "hunter2", "dc", "dc" };
 }
 
+VectorParams vector_kind()
+{
+  return VectorParams{ "dc-e2e-limits-agg", 6000 };
+}
+
 RenderConfig config_with(std::vector<Destination> dests)
 {
   RenderConfig c;
@@ -127,6 +132,16 @@ TEST(Render, FileAndConsoleDestinations)
       make_destination("debug_console", { "/dc/group/robot" }, TimeFormat::Double, ConsoleParams{}),
   });
   assert_matches_fixture(render(config), "file_and_console.toml");
+}
+
+// #443: `vector` forwards to another Shipper (typically an edge aggregator) over
+// Vector's own native inter-instance protocol — `address` is `host:port`, and it gets
+// the same disk buffer as every other blessed sink.
+TEST(Render, VectorDestinationForwardsToAggregator)
+{
+  auto config =
+      config_with({ make_destination("to_aggregator", { "/dc/group/robot" }, TimeFormat::Double, vector_kind()) });
+  assert_matches_fixture(render(config), "vector_destination.toml");
 }
 
 // #291: `incident_id` is a first-class column, not a key buried in the payload. Vector's
@@ -371,6 +386,12 @@ TEST(Render, DestinationFromRawBuildsS3FileConsole)
 
   auto console = destination_from_raw("debug_console", "console", "records", { "/dc/group/robot" }, {});
   EXPECT_TRUE(std::holds_alternative<ConsoleParams>(console.kind));
+
+  RawDestinationParams vecraw;
+  vecraw.host = "dc-e2e-limits-agg";
+  vecraw.port = 6000;
+  auto vec = destination_from_raw("to_aggregator", "vector", "records", { "/dc/group/robot" }, vecraw);
+  EXPECT_TRUE(std::holds_alternative<VectorParams>(vec.kind));
 }
 
 TEST(Render, DestinationFromRawRejectsFilesOnNonObjectStorage)
@@ -612,6 +633,65 @@ TEST(Render, PostgresFromRawAppliesDefaults)
   auto pg = postgres_from_raw("pgsql", raw);
   EXPECT_EQ(pg.host, "127.0.0.1");
   EXPECT_EQ(pg.port, 5432);
+}
+
+TEST(Render, VectorFromRawRejectsMissingHost)
+{
+  RawDestinationParams raw;
+  raw.port = 6000;
+  try
+  {
+    vector_from_raw("to_aggregator", raw);
+    FAIL();
+  }
+  catch (const RenderError& e)
+  {
+    EXPECT_EQ(e.kind(), RenderErrorKind::MissingField);
+    EXPECT_EQ(e.arg1(), "host");
+  }
+}
+
+TEST(Render, VectorFromRawRejectsMissingPort)
+{
+  RawDestinationParams raw;
+  raw.host = "dc-e2e-limits-agg";
+  try
+  {
+    vector_from_raw("to_aggregator", raw);
+    FAIL();
+  }
+  catch (const RenderError& e)
+  {
+    EXPECT_EQ(e.kind(), RenderErrorKind::MissingField);
+    EXPECT_EQ(e.arg1(), "port");
+  }
+}
+
+TEST(Render, VectorFromRawRejectsOutOfRangePort)
+{
+  RawDestinationParams raw;
+  raw.host = "dc-e2e-limits-agg";
+  raw.port = 70000;
+  try
+  {
+    vector_from_raw("to_aggregator", raw);
+    FAIL();
+  }
+  catch (const RenderError& e)
+  {
+    EXPECT_EQ(e.kind(), RenderErrorKind::InvalidPort);
+    EXPECT_EQ(e.number(), 70000);
+  }
+}
+
+TEST(Render, VectorFromRawBuildsAddress)
+{
+  RawDestinationParams raw;
+  raw.host = "dc-e2e-limits-agg";
+  raw.port = 6000;
+  auto vec = vector_from_raw("to_aggregator", raw);
+  EXPECT_EQ(vec.host, "dc-e2e-limits-agg");
+  EXPECT_EQ(vec.port, 6000);
 }
 
 // #308: the default is the exact integer format, not the lossy float one. A Destination
