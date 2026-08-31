@@ -41,6 +41,57 @@ exact TOML layout, Vector's own defaults) may change.
 | `vector_forward_port`       | Port the Shipper's ingest socket listens on                                        | int         | `24224`              |
 | `files.*`                   | Uploader settings; see [File uploads](#file-uploads-receives-files-the-uploader-adr-0005) | —     | —                    |
 
+## Deployment modes: `shipper.managed`
+
+`shipper.managed` picks who owns the Shipper's process lifecycle. The Bridge renders the
+same config and connects over the shipper ingest protocol the same way in both modes —
+only whether it also locates, spawns and supervises the Vector binary changes.
+
+| | `shipper.managed: true` (default) | `shipper.managed: false` |
+| --- | --- | --- |
+| Shipper supervised by | the Bridge (`fork`/`exec` + `PR_SET_PDEATHSIG`) | an external orchestrator (container runtime, Kubernetes, systemd, …) |
+| Vector binary | the vendored one, located on `AMENT_PREFIX_PATH` | not located at all — the orchestrator runs its own (e.g. the upstream Vector image) |
+| `vector validate` at startup | yes, against the merged config | no — nothing to validate against without a binary |
+| `shipper.config_path` | usually left at its temp-file default | set to a path on a volume shared with the Shipper container/pod |
+| `~/ready` semantics | ready once the supervised Shipper accepts connections | identical: a TCP probe against `vector_forward_host:vector_forward_port`, independent of who spawned it |
+
+**Use `shipper.managed: true` (the default) for:**
+
+- **Single-robot / simulation / demos** — one process tree on one machine, `apt install`
+  or a workspace build, nothing else to run or orchestrate. This is what every demo under
+  [Demos](./demos.md) and the `dc_simulation` warehouse simulation use.
+- **Local development and testing** — fewer moving parts: no container runtime, no
+  volumes to wire up, `ros2 launch dc_bringup dc_bringup.launch.py` is the whole story.
+
+Nothing about this mode changes with `shipper.managed` added — it is, and remains, the
+default, and an existing deployment that never sets the parameter is unaffected.
+
+**Use `shipper.managed: false` for:**
+
+- **Multi-container / orchestrator-managed deployments** — Vector runs as its own
+  container (the upstream image, not the vendored binary) under Compose, Podman Quadlet
+  or Kubernetes, alongside the ROS/Bridge container on the same host. Set
+  `shipper.config_path` to a path on a volume both containers mount, so the Bridge writes
+  the config where the Shipper container reads it; the atomic write (below) is what makes
+  that handoff safe even while the Shipper is already watching the file.
+- **Per-component operations** — separate logs (no ROS/Vector log interleaving),
+  independent restarts, and orchestrator-native resource limits/credentials for the
+  Shipper, without changing anything about how the Bridge renders or validates its
+  config.
+
+This parameter is the Bridge-side building block for the larger split-deployment and
+fleet topologies tracked in #440 (a separate `dc-uploader` entrypoint, a blessed `vector`
+Destination type for robot→edge forwarding, etc.); those remain future work, not shipped
+by `shipper.managed` alone.
+
+### Atomic config write
+
+The rendered config is always written atomically — a full write to
+`<shipper.config_path>.tmp`, then `rename()` over the real path — in both modes. A reader
+polling the path (an unmanaged Shipper container watching a shared volume; `vector
+validate` in managed mode) can therefore never observe a partial write, regardless of how
+large the config is or how the two containers' write/read timing lines up.
+
 ## Configuration contract
 
 Every Destination is declared in the `destinations` list of the `dc_bridge` node's
