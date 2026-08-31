@@ -349,6 +349,12 @@ toml::table render_sink(const RenderConfig& config, const Destination& dest)
     sink.insert("encoding", json_encoding());
     sink.insert("buffer", disk_buffer(config));
   }
+  else if (const auto* vec = std::get_if<VectorParams>(&dest.kind))
+  {
+    sink.insert("type", "vector");
+    sink.insert("address", vec->host + ":" + std::to_string(vec->port));
+    sink.insert("buffer", disk_buffer(config));
+  }
   else
   {  // Console
     sink.insert("type", "console");
@@ -531,6 +537,28 @@ FileParams file_from_raw(const std::string& name, const RawDestinationParams& ra
   return FileParams{ required_field(name, raw.path, "path") };
 }
 
+VectorParams vector_from_raw(const std::string& name, const RawDestinationParams& raw)
+{
+  VectorParams vec;
+  vec.host = required_field(name, raw.host, "host");
+
+  if (!raw.port)
+  {
+    throw RenderError(RenderErrorKind::MissingField, "destination '" + name + "': missing required field `port`", name,
+                      "port");
+  }
+  std::int64_t port_raw = *raw.port;
+  if (port_raw <= 0 || port_raw > 65535)
+  {
+    throw RenderError(RenderErrorKind::InvalidPort,
+                      "destination '" + name + "': port " + std::to_string(port_raw) +
+                          " is out of range (expected 1-65535)",
+                      name, "", port_raw);
+  }
+  vec.port = static_cast<std::uint16_t>(port_raw);
+  return vec;
+}
+
 Destination destination_from_raw(const std::string& name, const std::string& type_str, const std::string& receives_str,
                                  std::vector<std::string> inputs, const RawDestinationParams& raw)
 {
@@ -599,11 +627,15 @@ Destination destination_from_raw(const std::string& name, const std::string& typ
   {
     kind = ConsoleParams{};
   }
+  else if (type_str == "vector")
+  {
+    kind = vector_from_raw(name, raw);
+  }
   else
   {
     throw RenderError(RenderErrorKind::UnsupportedType,
                       "destination '" + name + "': type '" + type_str +
-                          "' is not a blessed destination type (supported: postgres, s3, file, console)",
+                          "' is not a blessed destination type (supported: postgres, s3, file, console, vector)",
                       name, type_str);
   }
 

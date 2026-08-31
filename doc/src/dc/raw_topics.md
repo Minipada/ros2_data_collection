@@ -16,7 +16,7 @@ dc_bridge:
       data_dir: "$HOME/.dc/buffer"
     destinations: ["raw_console"]
     raw_console:
-      type: console          # any blessed type works: postgres | s3 | file | console
+      type: console          # any blessed type works: postgres | s3 | file | console | vector
       receives: records
       time_key: "date"
     raw:

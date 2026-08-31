@@ -118,7 +118,7 @@ Let's analyze piece by piece. `dc_bridge` is the single C++ node that owns every
 
 **destinations (Mandatory)**: List all the Destinations to enable. Each name must have a matching section at the same level.
 
-**console.type (Mandatory)**: One of the four blessed Destination types (`postgres`, `s3`, `file`, `console`). `console` prints JSON to `dc_bridge`'s own stdout — handy for demos and debugging.
+**console.type (Mandatory)**: One of the blessed Destination types (`postgres`, `s3`, `file`, `console`, `vector`). `console` prints JSON to `dc_bridge`'s own stdout — handy for demos and debugging.
 
 **console.receives (Optional)**: `records` (default) or `files`.
 

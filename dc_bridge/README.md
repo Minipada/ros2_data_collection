@@ -76,7 +76,7 @@ dc_bridge:
       data_dir: "$HOME/.dc/buffer"
     destinations: ["pgsql"]
     pgsql:
-      type: postgres            # blessed types: postgres | s3 | file | console
+      type: postgres            # blessed types: postgres | s3 | file | console | vector
       receives: records          # records (default) | files
       inputs: ["/dc/group/robot"]
       host: "127.0.0.1"

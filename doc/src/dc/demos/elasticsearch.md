@@ -1,7 +1,7 @@
 # Elasticsearch (passthrough)
 
-`dc_bridge` blesses exactly four Destination types — `postgres`, `s3`, `file`, `console`
-(see [Destinations](../destinations.md)) — and Elasticsearch is not one of them. This
+`dc_bridge` blesses exactly five Destination types — `postgres`, `s3`, `file`, `console`,
+`vector` (see [Destinations](../destinations.md)) — and Elasticsearch is not one of them. This
 tutorial is the worked example for reaching everything else: the ADR-0003 **passthrough**,
 a raw [Vector](https://vector.dev) config snippet loaded through `custom_config_files`
 that consumes the same public `dc.<tag>` routes a blessed Destination consumes. Nothing in

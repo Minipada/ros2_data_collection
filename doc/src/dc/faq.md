@@ -9,7 +9,7 @@ Create a feature request in [Github Discussions](https://github.com/Minipada/ros
 
 ## I can't find the Destination I need
 
-You do not need one to exist. The four **blessed** Destination types are the ones DC
+You do not need one to exist. The **blessed** Destination types are the ones DC
 configures natively from ROS parameters; everything else in Vector's catalog works today
 through the [passthrough](./destinations.md#passthrough-custom_config_files) — see the
 question below.
@@ -23,7 +23,8 @@ DC 1.x Destination to its DC 2.0 equivalent with before/after configuration.
 
 The Bridge (`dc_bridge`) renders its Shipper's (Vector) config from plain ROS
 parameters for a **blessed set** of Destination types only (PostgreSQL,
-S3-compatible storage, file, console — see [Destinations](./destinations.md)). Every
+S3-compatible storage, file, console, another Vector Shipper — see
+[Destinations](./destinations.md)). Every
 other sink in [Vector's catalog](https://vector.dev/docs/reference/configuration/sinks/)
 (Kafka, Kinesis, InfluxDB, webhooks, …) is reachable through the **passthrough**: list a
 raw Vector config snippet (TOML) in the `custom_config_files` parameter, and consume the

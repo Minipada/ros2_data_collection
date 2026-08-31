@@ -25,7 +25,7 @@ same. Everything below is about the **delivery** half.
 | `destination_server` node                             | `dc_bridge` node                                                               |
 | `destination_plugins: [...]`                          | `destinations: [...]`                                                          |
 | `plugin: "dc_destinations/FlbPgSQL"`                  | `type: postgres`                                                               |
-| 13 pluginlib destination plugins                      | 4 **blessed** types (`postgres`, `s3`, `file`, `console`) + **passthrough**    |
+| 13 pluginlib destination plugins                      | 5 **blessed** types (`postgres`, `s3`, `file`, `console`, `vector`) + **passthrough** |
 | Embedded Fluent Bit (forked, built from source)       | External Vector binary, vendored by `vector_vendor`, supervised by the Bridge  |
 | `flb.*` service parameters                            | `shipper.data_dir` / `shipper.buffer_max_bytes` (Vector's own defaults for the rest) |
 | `tags: [...]` on Measurements/Groups selects outputs  | A Destination's `inputs: [...]` topic list selects what it receives            |

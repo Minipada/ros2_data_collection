@@ -1,0 +1,35 @@
+data_dir = "/home/dc/.dc/buffer"
+
+[acknowledgements]
+enabled = true
+
+[sinks.to_aggregator]
+address = "dc-e2e-limits-agg:6000"
+inputs = ["dc.dc.group.robot"]
+type = "vector"
+
+[sinks.to_aggregator.buffer]
+max_size = 268435488
+type = "disk"
+
+[sources.dc_bridge_in]
+address = "127.0.0.1:24224"
+type = "fluent"
+
+[transforms.dc]
+inputs = ["dc_bridge_normalize"]
+reroute_unmatched = false
+type = "route"
+
+[transforms.dc.route."dc.group.robot"]
+source = '.tag == "dc.group.robot"'
+type = "vrl"
+
+[transforms.dc_bridge_normalize]
+inputs = ["dc_bridge_in"]
+source = """
+if includes(["dc.group.robot"], .tag) {
+  .date = to_float(to_unix_timestamp!(.timestamp, unit: "nanoseconds")) / 1000000000.0
+}
+"""
+type = "remap"

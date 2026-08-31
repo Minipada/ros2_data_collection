@@ -23,6 +23,6 @@ ros2 run dc_cli list_plugins --help
 
 ```admonish info
 There is no `destinations` command. Destinations are not pluginlib plugins in DC 2.0
-(ADR-0003): the four blessed types are listed in [Destinations](./destinations.md), and
+(ADR-0003): the blessed types are listed in [Destinations](./destinations.md), and
 everything else is reached through the passthrough.
 ```

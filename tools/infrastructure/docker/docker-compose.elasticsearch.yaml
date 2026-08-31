@@ -3,7 +3,7 @@
 
 # Elasticsearch + Kibana, the store behind the passthrough Destination tutorial
 # (doc/src/dc/demos/elasticsearch.md). Elasticsearch is NOT a blessed Destination type —
-# dc_bridge blesses postgres/s3/file/console only (ADR-0003) — so nothing in dc_bridge
+# dc_bridge blesses postgres/s3/file/console/vector only (ADR-0003) — so nothing in dc_bridge
 # talks to this stack directly; a raw Vector `elasticsearch` sink loaded through
 # `custom_config_files` consumes the public `dc.<tag>` routes instead.
 #
