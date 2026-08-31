@@ -10,6 +10,7 @@
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement_server.hpp"
 #include "dc_util/json_utils.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
 
 class MeasurementDummyTest : public ::testing::Test
 {
@@ -170,6 +171,13 @@ TEST_F(MeasurementDummyTest, RobotNameResolvesFromFile)
   std::filesystem::remove(robot_name_file);
 }
 
+// rclcpp_lifecycle wraps every transition callback (on_configure here) in its own catch,
+// converting an uncaught exception into a CallbackReturn::ERROR rather than letting it
+// propagate to the caller of configure() (same behavior documented in
+// test_measurement_bool_equal.cpp's MeasurementServerConfigureFailsToReachInactiveState).
+// So the observable, end-to-end consequence of an unreadable value_from_file is that the
+// whole MeasurementServer fails to reach the "inactive" state, with the resolveRobotName()
+// error logged as the ERROR/FATAL "Original error" during the transition.
 TEST_F(MeasurementDummyTest, RobotNameMissingFileFailsConfigureClearly)
 {
   ms_node_->declare_parameter("dummy.plugin", std::string("dc_measurements/Dummy"));
@@ -180,7 +188,9 @@ TEST_F(MeasurementDummyTest, RobotNameMissingFileFailsConfigureClearly)
   ms_node_->declare_parameter("custom_keys_str.robot_name.value_from_file",
                               std::string("/nonexistent/dc_robot_name_that_does_not_exist"));
 
-  EXPECT_THROW(ms_node_->configure(), std::runtime_error);
+  auto result_state = ms_node_->configure();
+
+  EXPECT_NE(result_state.id(), lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE);
 }
 
 TEST_F(MeasurementDummyTest, NoCustomKeysLeavesTheRecordUntouched)
