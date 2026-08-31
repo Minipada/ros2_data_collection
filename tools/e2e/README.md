@@ -611,6 +611,80 @@ script does no parameter translation of its own.
 
 Not wired into `ci.yaml`, same as the scenarios above.
 
+## Two-container split topology (#445)
+
+Proves #440's split-deployment epic's scenario 2 — the Bridge (`dc-ros`) and the Shipper
+(`vector`) running as separate containers instead of one process tree — holds the same
+zero-loss guarantee `run.sh` already proves for the all-in-one mode:
+
+```sh
+./tools/e2e/scripts/run_split.sh
+```
+
+Unlike every scenario above, this one is driven through an actual Compose file
+(`compose.split.yaml`), not plain `podman run` — #445's own first acceptance criterion is
+that *a Compose deployment* runs the split topology, so the artifact under test has to be
+one. `compose.split.yaml` is self-contained (`podman compose -f tools/e2e/compose.split.yaml
+up` brings up the whole scenario standalone); `run_split.sh` brings its services up
+individually rather than all at once — starting `dc-ros` well before `vector` and inducing
+a Postgres/RustFS outage mid-run — so it can fold the scenario into the same style of
+lifecycle-driven proof the other scenarios use, then falls back to plain `podman
+stop`/`start`/`restart` on the compose-created (but fixed-`container_name`) containers for
+that lifecycle control, the same way every sibling script above drives its own containers.
+
+Four things this scenario exists to prove, straight from #445's acceptance criteria:
+
+1. **The Shipper runs from the unmodified upstream Vector image** — `docker.io/timberio/
+   vector:0.57.0-debian`, pinned to the same version `ros2_data_collection.repos` pins
+   `vector_vendor` to, so the container and native/apt install paths run identical Shipper
+   builds. No ROS workspace in it: `compose.split.yaml`'s `vector` service is nothing but
+   that image plus an `entrypoint`/`command` override.
+2. **Config handover across the volume boundary.** `dc-ros` renders the Shipper's config
+   exactly as it does in the all-in-one mode (`shipper.managed: false`, #444's unmanaged
+   mode, `shipper.config_path` pointed at the shared `dc_e2e_split_config` volume instead of
+   the managed-mode temp file) — one renderer, one source of truth, in both modes. Vector's
+   entrypoint override waits for that file to exist (a `sh -c` loop; the upstream image
+   ships nothing purpose-built for this) before running with Vector's own `--watch-config`,
+   so a later re-render reloads without a container restart.
+3. **No orchestrator-level ordering.** `compose.split.yaml` has no `depends_on` anywhere
+   between `dc-ros` and `vector`. `run_split.sh` starts `dc-ros` alone, waits
+   `DC_E2E_SPLIT_VECTOR_DELAY_SECONDS` (default 20s — comfortably inside
+   `bridge_ready_gate.py`'s existing 120s deadline), *then* starts `vector`, and asserts the
+   first Record lands in Postgres within `DC_E2E_SPLIT_RECOVERY_TIMEOUT_SECONDS` of that —
+   with no container restart in between. Recovery is entirely the existing readiness gate's
+   own poll loop (ADR-0006); nothing new was added to make this work.
+4. **Zero loss across an induced outage**, same standard as `run.sh`: steady state, stop
+   Postgres+RustFS, restart `dc-ros` while they're still down, restore them, drain, then
+   `scripts/verify_zero_loss.py` against the published ledger — reused for its Postgres/
+   ledger/upload-intent-queue checks unchanged. Its `--passthrough-file`/
+   `--mcap-summary-file`/`--raw-file` flags became optional (previously `required=True`) to
+   support this scenario: `params/e2e_split_params.yaml` carries no passthrough/MCAP/raw
+   configuration at all (see that file's own header for why — wiring those static,
+   pre-#445 sinks across the new container boundary would add plumbing with no bearing on
+   any of #445's acceptance criteria), so there is nothing for those three checks to verify
+   here. Every other scenario above keeps passing all three unchanged.
+
+One discovery came out of implementing this, recorded rather than worked around:
+**`vector_forward_host` has to be a literal IP, not the `vector` service's DNS name.**
+`dc_bridge`'s own Forwarder and readiness prober (`forwarder.cpp`/`readiness.cpp`) parse
+that value with `inet_pton()` — a literal IPv4 parse, not a resolver call — so a hostname
+there fails startup immediately ("invalid host address"), found by actually bringing the
+containers up rather than by reading the code. `compose.split.yaml` works around it at the
+deployment level, with no `dc_bridge` change: a fixed subnet plus a static
+`ipv4_address` on the `vector` service, and `params/e2e_split_params.yaml` points
+`vector_forward_host` (and, for consistency, `tcp_health.host`) at that literal address.
+Postgres and RustFS are unaffected — their hosts are read by Vector's own sinks and by
+the Uploader's aws-sdk-cpp HTTP client, both of which do resolve hostnames; the
+`inet_pton()`-only path is specific to the shipper ingest protocol's raw socket code.
+
+The Shipper's buffer (`dc_e2e_split_buffer`, mounted into `vector` only) and the Bridge's
+upload state (`dc_e2e_split_uploader`, mounted into `dc-ros` only) are separate volumes,
+same split #441 already proved for the all-in-one mode. The Uploader itself stays inside
+the Bridge process for this scenario — extracting it into its own container is #446, a
+sibling issue under the same epic, not part of #445.
+
+Not wired into `ci.yaml`, same as every scenario above.
+
 ## Layout
 
 - `Containerfile` — builds the full DC workspace (every `dc_*` package, all C++ since
@@ -752,6 +826,11 @@ Not wired into `ci.yaml`, same as the scenarios above.
   `render_baseline()` are pure and unit-tested with synthetic reports
   (`test_limits_baseline.py`); the four axes it sequences are each exercised by running
   their own scenario script, not re-tested here.
+- `compose.split.yaml` / `params/e2e_split_params.yaml` / `scripts/run_split.sh` — the
+  two-container split topology (#445, part of #440) described above: `dc-ros` and `vector`
+  as separate Compose-managed containers, proving unmanaged-shipper mode (#444), the config
+  handover across a shared volume, no orchestrator-level startup ordering, and zero loss
+  across an induced outage.
 
 ## `.dockerignore`
 
