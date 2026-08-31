@@ -74,8 +74,9 @@ not just a local tool.
    published with the store down, the Bridge process restarted, the store then
    restored) — the camera Measurement's File goes through exactly that path every run.
 5. **Durable upload intent queue check** (#265): asserts the on-disk intent queue
-   (`dc_bridge`'s `<shipper.data_dir>/queue/upload/`, on the `dc_e2e_buffer` named
-   volume) is empty once the run stops — proof the queue actually drained rather than
+   (`dc_bridge`'s `<uploader.data_dir>/queue/upload/`, on its own `dc_e2e_uploader` named
+   volume — deliberately separate from the Shipper's `dc_e2e_buffer` volume, #441) is
+   empty once the run stops — proof the queue actually drained rather than
    silently orphaning a pending upload across the restart above (the pre-#265 in-memory
    queue would have forgotten it).
 6. **Passthrough coverage** (ADR-0003, `params/e2e_passthrough_sink.toml`): a raw Vector
