@@ -196,8 +196,14 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
   const auto forward_port = static_cast<std::uint16_t>(vector_port);
 
   // --- shipper + destinations parameters (ADR-0003 config contract) ---
-  const std::string data_dir =
+  const std::string shipper_data_dir =
       expand_with_env(this->declare_parameter<std::string>("shipper.data_dir", "$HOME/.dc/buffer"));
+  // The Uploader's own directory (#441): the durable upload intent queue and multipart-resume
+  // state don't need to share a directory with the Shipper's disk buffer — only pulling from
+  // one parameter made them. Defaults to shipper.data_dir so a deployment that only ever set
+  // that keeps working unchanged; the two may still point at the same directory.
+  const std::string uploader_data_dir =
+      expand_with_env(this->declare_parameter<std::string>("uploader.data_dir", shipper_data_dir));
   const std::int64_t buffer_max_bytes = this->declare_parameter<std::int64_t>(
       "shipper.buffer_max_bytes", static_cast<std::int64_t>(MIN_DISK_BUFFER_BYTES));
   const std::vector<std::string> destination_names =
@@ -319,7 +325,7 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
     // worker thread's periodic sweep. Cheap: Storage is name/prefix strings plus a
     // shared_ptr<ObjectStore>.
     files_storages_ = storages;
-    uploader::UploaderConfig ucfg(data_dir + "/uploader", files_delete_when_sent);
+    uploader::UploaderConfig ucfg(uploader_data_dir + "/uploader", files_delete_when_sent);
     if (files_multipart_threshold)
     {
       ucfg.multipart_threshold_bytes =
@@ -339,15 +345,15 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
                                                      uploader::ffprobe_duration_prober(files_ffprobe),
                                                      uploader::ffmpeg_thumbnail_generator(thumbnail_binary_));
     // The durable intent queue (#265): sibling to the Uploader's own
-    // <data_dir>/uploader multipart-resume state, replayed on every startup so a Bridge
-    // restart never forgets a pending upload.
-    intent_queue_ = std::make_unique<uploader::IntentQueue>(data_dir + "/queue/upload");
+    // <uploader.data_dir>/uploader multipart-resume state, replayed on every startup so a
+    // Bridge restart never forgets a pending upload.
+    intent_queue_ = std::make_unique<uploader::IntentQueue>(uploader_data_dir + "/queue/upload");
   }
 
   RenderConfig render_config;
   render_config.forward_host = vector_host;
   render_config.forward_port = forward_port;
-  render_config.data_dir = data_dir;
+  render_config.data_dir = shipper_data_dir;
   render_config.buffer_max_bytes = static_cast<std::uint64_t>(std::max<std::int64_t>(0, buffer_max_bytes));
   render_config.destinations = records_destinations;
 

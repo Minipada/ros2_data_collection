@@ -239,13 +239,18 @@ columns; it does not create tables or columns. Create the table before starting 
 
 Files (images, maps, videos) never travel through the Shipper. A `receives: files`
 Destination is served by the Bridge's Uploader, and the per-File status Records it
-produces go to whichever Destination `files.metadata_destination` names.
+produces go to whichever Destination `files.metadata_destination` names. The Uploader's
+durable upload intent queue and multipart-resume state live under `uploader.data_dir`,
+which defaults to `shipper.data_dir` — set it separately if the Shipper's buffer and the
+Uploader's state should be mounted as different volumes.
 
 ```yaml
 dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"
+    uploader:
+      data_dir: "$HOME/.dc/buffer"            # optional; defaults to shipper.data_dir
     destinations: ["pgsql", "rustfs"]
     pgsql:                                    # the Records, and the File status log
       type: postgres

@@ -16,7 +16,10 @@ Records referencing Files get their Files uploaded to S3-compatible object stora
 (multipart + resumable), verified, and reported as status/metadata Records under the
 `dc.files` Tag. Pending uploads are durable (#265): each is written to a disk-backed
 intent queue before being handed to the Uploader, so a Bridge restart replays whatever
-never got acked instead of forgetting it.
+never got acked instead of forgetting it. That queue and the Uploader's multipart-resume
+state live under `uploader.data_dir` (#441), a directory separate from the Shipper's own
+`shipper.data_dir` buffer — they default to the same path, so a deployment that only ever
+set `shipper.data_dir` keeps working unchanged, but each can be mounted as its own volume.
 
 `dc_bridge` is an ordinary `ament_cmake` C++ package. It builds with the same `rosdep
 install` + `colcon build` as every other `dc_*` package. See
@@ -57,7 +60,7 @@ install` + `colcon build` as every other `dc_*` package. See
   `ObjectStore` (the only Uploader piece that links the SDK, via `aws_sdk_vendor`).
   Verified against RustFS (PutObject + multipart) before adoption.
 - **`src/bridge_node.cpp` / `src/main.cpp`** — the `rclcpp` node: declares the
-  `shipper`/`destinations`/`files` parameters (ADR-0003 config contract + ADR-0005),
+  `shipper`/`uploader`/`destinations`/`files` parameters (ADR-0003 config contract + ADR-0005),
   renders and `vector validate`s the config, spawns/supervises Vector, subscribes to
   every Destination's `inputs` topics, forwards Records, runs the Uploader worker thread,
   and exposes a `~/ready` (`std_srvs/Trigger`) service. `rclcpp` handles SIGINT/SIGTERM
