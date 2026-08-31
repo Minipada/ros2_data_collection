@@ -1,15 +1,19 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-// Ports of the inline readiness / config (TopicConfig) / vector_binary tests.
+// Ports of the inline readiness / config (TopicConfig) / vector_binary tests, plus
+// atomic_write (#444).
 #include <gtest/gtest.h>
 
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 
+#include "dc_bridge/atomic_write.hpp"
 #include "dc_bridge/readiness.hpp"
 #include "dc_bridge/topic_config.hpp"
 #include "dc_bridge/vector_binary.hpp"
@@ -76,4 +80,49 @@ TEST(VectorBinary, FindsBinaryInFirstPrefixThatHasIt)
 TEST(VectorBinary, ReturnsNoneWhenNoPrefixHasBinary)
 {
   EXPECT_FALSE(find_vector_binary("/nonexistent/prefix").has_value());
+}
+
+namespace
+{
+std::string read_file(const std::filesystem::path& path)
+{
+  std::ifstream in(path);
+  std::stringstream ss;
+  ss << in.rdbuf();
+  return ss.str();
+}
+}  // namespace
+
+TEST(AtomicWrite, WritesContentAndLeavesNoTmpFileBehind)
+{
+  auto path =
+      std::filesystem::temp_directory_path() / ("dc_bridge_atomic_write_test_" + std::to_string(::getpid()) + ".toml");
+  std::filesystem::remove(path);
+
+  write_file_atomically(path.string(), "hello world");
+
+  EXPECT_EQ(read_file(path), "hello world");
+  EXPECT_FALSE(std::filesystem::exists(path.string() + ".tmp"));
+
+  std::filesystem::remove(path);
+}
+
+TEST(AtomicWrite, OverwritesAnExistingFileCompletely)
+{
+  auto path = std::filesystem::temp_directory_path() /
+              ("dc_bridge_atomic_write_test_" + std::to_string(::getpid()) + "_overwrite.toml");
+  std::ofstream(path) << "a much longer previous config that should not leave any trailing bytes behind";
+
+  write_file_atomically(path.string(), "short");
+
+  EXPECT_EQ(read_file(path), "short");
+
+  std::filesystem::remove(path);
+}
+
+TEST(AtomicWrite, ThrowsWhenTheDirectoryDoesNotExist)
+{
+  auto path = std::filesystem::temp_directory_path() / ("dc_bridge_atomic_write_test_" + std::to_string(::getpid())) /
+              "nonexistent" / "config.toml";
+  EXPECT_THROW(write_file_atomically(path.string(), "content"), std::runtime_error);
 }

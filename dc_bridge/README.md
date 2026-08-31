@@ -43,6 +43,9 @@ install` + `colcon build` as every other `dc_*` package. See
   - `render` — the ADR-0003 config renderer: ROS parameters → a complete Vector TOML
     config (toml++). Pure, gold-file tested.
   - `vector_binary` — locates the vendored Vector binary on `AMENT_PREFIX_PATH`.
+  - `atomic_write` — writes a file crash/partial-write-safe (write to `<path>.tmp`, then
+    `rename()`, #444), used for the rendered Shipper config so a reader polling the path
+    never observes a partial write.
   - `uploader/` — the Uploader (ADR-0005): `group` (parses the Files a Record
     references), `content_type` (magic-byte sniffing), `status` (the Humble-compatible
     status-row shapes), `multipart` (resumable multipart with a per-part JSON checkpoint
@@ -61,10 +64,19 @@ install` + `colcon build` as every other `dc_*` package. See
   Verified against RustFS (PutObject + multipart) before adoption.
 - **`src/bridge_node.cpp` / `src/main.cpp`** — the `rclcpp` node: declares the
   `shipper`/`uploader`/`destinations`/`files` parameters (ADR-0003 config contract + ADR-0005),
-  renders and `vector validate`s the config, spawns/supervises Vector, subscribes to
-  every Destination's `inputs` topics, forwards Records, runs the Uploader worker thread,
-  and exposes a `~/ready` (`std_srvs/Trigger`) service. `rclcpp` handles SIGINT/SIGTERM
-  and `on_shutdown` stops Vector, so it's never orphaned.
+  renders and atomically writes the config (write then rename, #444), subscribes to every
+  Destination's `inputs` topics, forwards Records, runs the Uploader worker thread, and
+  exposes a `~/ready` (`std_srvs/Trigger`) service. In the default **managed** mode
+  (`shipper.managed: true`) it also locates the vendored Vector binary, `vector
+  validate`s the merged config, and spawns/supervises Vector. In **unmanaged** mode
+  (`shipper.managed: false`, #440/#444 — the split-deployment topology) it locates no
+  binary, spawns no child, and installs no parent-death signal: an orchestrator owns the
+  Shipper container/pod instead, and the Bridge only renders the config (to
+  `shipper.config_path`, configurable so it can land on a volume shared with that
+  container) and connects. `~/ready` reports ready the same way in both modes — a TCP
+  probe against the Shipper's ingest port, independent of who spawned it. `rclcpp` handles
+  SIGINT/SIGTERM and `on_shutdown` stops Vector in managed mode (a no-op in unmanaged
+  mode, nothing to stop), so it's never orphaned.
 - **`test/`** — gtest suites (`forwarder`, `supervisor`, `render`, `misc`, `uploader`,
   `intent_queue`), all linking only the aws-free core.
 

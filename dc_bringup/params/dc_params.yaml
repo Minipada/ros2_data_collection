@@ -16,6 +16,15 @@ dc_bridge:
     # tools/infrastructure/docker/docker-compose.postgresql.yaml's credentials.
     shipper:
       data_dir: "$HOME/.dc/buffer"
+      # managed: true               # default — the Bridge spawns/supervises the Shipper.
+      #                              # false = unmanaged mode (#444): an orchestrator owns
+      #                              # the Shipper's lifecycle; the Bridge only renders the
+      #                              # config below and connects.
+      # config_path: "/shared/vector.toml"  # optional; defaults to a temp-file path.
+      #                              # Written atomically (write then rename) so a Shipper
+      #                              # watching it (unmanaged mode) never reads a partial
+      #                              # write. Set this to a path on a volume shared with
+      #                              # the Shipper container/pod in unmanaged mode.
     destinations: ["pgsql"]
     pgsql:
       type: postgres

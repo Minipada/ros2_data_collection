@@ -34,6 +34,8 @@ exact TOML layout, Vector's own defaults) may change.
 | `destinations`              | Names of the Destinations to enable                                                | list\[str\] | N/A (mandatory)      |
 | `shipper.data_dir`          | Directory for the Shipper's persistent disk buffer                                 | str         | `"$HOME/.dc/buffer"` |
 | `shipper.buffer_max_bytes`  | Disk-buffer size; Vector rejects anything below ~256 MiB                           | int         | Vector's minimum     |
+| `shipper.managed`           | `true`: the Bridge locates, spawns and supervises the Shipper. `false` (unmanaged, #444): the Bridge only renders the config and connects — an orchestrator owns the Shipper's lifecycle | bool | `true` |
+| `shipper.config_path`       | Where the rendered Shipper config is written (atomically: write then rename); shared with the Shipper container/pod in unmanaged mode | str | a temp-file path |
 | `custom_config_files`       | Raw Vector config snippets (TOML) to merge — the passthrough                       | list\[str\] | `[]`                 |
 | `vector_forward_host`       | Host the Shipper's ingest socket listens on                                        | str         | `"127.0.0.1"`        |
 | `vector_forward_port`       | Port the Shipper's ingest socket listens on                                        | int         | `24224`              |

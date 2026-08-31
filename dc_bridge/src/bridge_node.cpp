@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "dc_bridge/atomic_write.hpp"
 #include "dc_bridge/topic_config.hpp"
 #include "dc_bridge/vector_binary.hpp"
 
@@ -206,6 +207,15 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
       expand_with_env(this->declare_parameter<std::string>("uploader.data_dir", shipper_data_dir));
   const std::int64_t buffer_max_bytes = this->declare_parameter<std::int64_t>(
       "shipper.buffer_max_bytes", static_cast<std::int64_t>(MIN_DISK_BUFFER_BYTES));
+  // Managed (default, ADR-0001/0006/0007): the Bridge locates the vendored Vector
+  // binary, spawns it, and supervises it. Unmanaged (#440/#444, the split-deployment
+  // topology): an orchestrator owns the Shipper's lifecycle — the Bridge only renders
+  // the config and connects, exactly as in managed mode.
+  const bool shipper_managed = this->declare_parameter<bool>("shipper.managed", true);
+  // Empty (default) keeps the historic temp-file path so managed-mode behaviour is
+  // unchanged. Configurable so unmanaged mode can place the file on a volume shared with
+  // the Shipper container/pod rather than a path private to the Bridge's own filesystem.
+  const std::string shipper_config_path_param = this->declare_parameter<std::string>("shipper.config_path", "");
   const std::vector<std::string> destination_names =
       this->declare_parameter<std::vector<std::string>>("destinations", std::vector<std::string>{});
 
@@ -377,26 +387,13 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
   }
   validate_custom_config_files(render_config, custom_files);
 
-  // --- locate the vendored Vector binary ---
-  std::string vector_binary;
-  if (!vector_binary_override.empty())
-  {
-    vector_binary = vector_binary_override;
-  }
-  else
-  {
-    const std::string amentp = env_lookup("AMENT_PREFIX_PATH").value_or("");
-    auto found = find_vector_binary(amentp);
-    if (!found)
-    {
-      throw std::runtime_error("could not locate vendored Vector binary; set the vector_binary parameter");
-    }
-    vector_binary = *found;
-  }
-
-  // --- write the rendered config, build the --config set ---
-  const std::string config_path = (std::filesystem::temp_directory_path() / "dc_bridge_vector.toml").string();
-  std::ofstream(config_path) << rendered;
+  // --- write the rendered config atomically (write then rename, #444), build the
+  // --config set --- so a Shipper reading the file (its own process in managed mode, an
+  // orchestrator-supervised one in unmanaged mode) can never observe a partial write.
+  const std::string config_path = shipper_config_path_param.empty() ?
+                                      (std::filesystem::temp_directory_path() / "dc_bridge_vector.toml").string() :
+                                      expand_with_env(shipper_config_path_param);
+  write_file_atomically(config_path, rendered);
 
   std::vector<std::string> config_paths{ config_path };
   for (const auto& f : custom_files)
@@ -404,24 +401,47 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
     config_paths.push_back(f.path);
   }
 
-  supervisor_ = std::make_shared<Supervisor>(SupervisorConfig::vector(vector_binary, config_paths));
-
-  // Backstop for anything the pure checks can't see (dangling dc.<tag> inputs, sink
-  // options Vector itself rejects): run Vector's own validator before starting, so an
-  // invalid config is a loud startup failure, not a supervised-Vector crash loop.
+  // --- locate, validate and supervise the vendored Vector binary — managed mode only
+  // (#444). In unmanaged mode the Shipper's lifecycle belongs to an orchestrator: the
+  // Bridge locates no binary, runs no validator against it, spawns no child, and installs
+  // no parent-death signal — it only rendered the config above and connects below.
+  std::string vector_binary;
+  if (shipper_managed)
   {
-    std::vector<std::string> validate_args{ "validate", "--no-environment" };
-    validate_args.insert(validate_args.end(), config_paths.begin(), config_paths.end());
-    auto [code, output] = run_capture(vector_binary, validate_args);
-    if (code != 0)
+    if (!vector_binary_override.empty())
     {
-      throw std::runtime_error("vector rejected the merged configuration:\n" + output);
+      vector_binary = vector_binary_override;
     }
-  }
+    else
+    {
+      const std::string amentp = env_lookup("AMENT_PREFIX_PATH").value_or("");
+      auto found = find_vector_binary(amentp);
+      if (!found)
+      {
+        throw std::runtime_error("could not locate vendored Vector binary; set the vector_binary parameter");
+      }
+      vector_binary = *found;
+    }
 
-  {
-    std::lock_guard<std::mutex> lock(supervisor_mutex_);
-    supervisor_->start();
+    supervisor_ = std::make_shared<Supervisor>(SupervisorConfig::vector(vector_binary, config_paths));
+
+    // Backstop for anything the pure checks can't see (dangling dc.<tag> inputs, sink
+    // options Vector itself rejects): run Vector's own validator before starting, so an
+    // invalid config is a loud startup failure, not a supervised-Vector crash loop.
+    {
+      std::vector<std::string> validate_args{ "validate", "--no-environment" };
+      validate_args.insert(validate_args.end(), config_paths.begin(), config_paths.end());
+      auto [code, output] = run_capture(vector_binary, validate_args);
+      if (code != 0)
+      {
+        throw std::runtime_error("vector rejected the merged configuration:\n" + output);
+      }
+    }
+
+    {
+      std::lock_guard<std::mutex> lock(supervisor_mutex_);
+      supervisor_->start();
+    }
   }
 
   ForwarderConfig fcfg;
@@ -564,8 +584,17 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
         }
       });
 
-  RCLCPP_INFO(this->get_logger(), "dc_bridge up: %zu subscribed topic(s), supervising %s", subscriptions_.size(),
-              vector_binary.c_str());
+  if (shipper_managed)
+  {
+    RCLCPP_INFO(this->get_logger(), "dc_bridge up: %zu subscribed topic(s), supervising %s", subscriptions_.size(),
+                vector_binary.c_str());
+  }
+  else
+  {
+    RCLCPP_INFO(this->get_logger(),
+                "dc_bridge up: %zu subscribed topic(s), unmanaged shipper mode (config written to %s)",
+                subscriptions_.size(), config_path.c_str());
+  }
   if (raw_manager_)
   {
     RCLCPP_INFO(this->get_logger(),
@@ -728,8 +757,13 @@ void BridgeNode::run_prober(std::string forward_host, std::uint16_t forward_port
   while (!prober_stop_.load())
   {
     {
+      // supervisor_ is null in unmanaged mode (#444) — nothing to restart, the readiness
+      // probe below is what tracks the Shipper either way.
       std::lock_guard<std::mutex> lock(supervisor_mutex_);
-      supervisor_->poll_restart();
+      if (supervisor_)
+      {
+        supervisor_->poll_restart();
+      }
     }
     const bool ready = probe(forward_host, forward_port, std::chrono::milliseconds(200));
     readiness_.set_ready(ready);

@@ -9,8 +9,11 @@ Polls the Bridge's readiness service (``std_srvs/Trigger``, default
 ``dc_bringup.launch.py`` starts the lifecycle manager — and therefore the
 activation of the collection nodes — only on this process's successful
 exit, so no Record can be emitted before the Bridge and the Vector
-shipper it supervises are able to accept it. Exits 1 if the deadline
-passes first, which the launch file turns into a full shutdown.
+Shipper are able to accept it — whether the Bridge supervises that
+Shipper itself (the default) or it's unmanaged (``shipper.managed:
+false``, #444) and owned by an orchestrator instead; the readiness
+check is a TCP probe either way. Exits 1 if the deadline passes first,
+which the launch file turns into a full shutdown.
 """
 
 import sys
