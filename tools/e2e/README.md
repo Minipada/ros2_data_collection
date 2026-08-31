@@ -664,18 +664,19 @@ Four things this scenario exists to prove, straight from #445's acceptance crite
    any of #445's acceptance criteria), so there is nothing for those three checks to verify
    here. Every other scenario above keeps passing all three unchanged.
 
-One discovery came out of implementing this, recorded rather than worked around:
-**`vector_forward_host` has to be a literal IP, not the `vector` service's DNS name.**
-`dc_bridge`'s own Forwarder and readiness prober (`forwarder.cpp`/`readiness.cpp`) parse
-that value with `inet_pton()` — a literal IPv4 parse, not a resolver call — so a hostname
-there fails startup immediately ("invalid host address"), found by actually bringing the
-containers up rather than by reading the code. `compose.split.yaml` works around it at the
-deployment level, with no `dc_bridge` change: a fixed subnet plus a static
-`ipv4_address` on the `vector` service, and `params/e2e_split_params.yaml` points
-`vector_forward_host` (and, for consistency, `tcp_health.host`) at that literal address.
-Postgres and RustFS are unaffected — their hosts are read by Vector's own sinks and by
-the Uploader's aws-sdk-cpp HTTP client, both of which do resolve hostnames; the
-`inet_pton()`-only path is specific to the shipper ingest protocol's raw socket code.
+One discovery came out of implementing this, fixed rather than worked around:
+**`vector_forward_host` needs real DNS resolution, not just a literal-IP parse.**
+`dc_bridge`'s own Forwarder and readiness prober (`forwarder.cpp`/`readiness.cpp`) used to
+parse that value with `inet_pton()` — a literal IPv4 parse, not a resolver call — so a
+hostname there failed startup immediately ("invalid host address"), found by actually
+bringing the containers up rather than by reading the code. `dc_bridge/src/
+net_resolve.cpp` (`resolve_ipv4()`, shared by both files) now resolves through
+`getaddrinfo()` instead, so `vector_forward_host` (and `pgsql_records`/`pgsql_files`/
+`rustfs`'s own hosts, and every existing IP-literal deployment) work the same as before —
+`getaddrinfo()` returns a literal address as-is with no network round trip. Postgres and
+RustFS were never affected by the old bug: their hosts are read by Vector's own sinks and
+by the Uploader's aws-sdk-cpp HTTP client, both of which already resolved hostnames; the
+`inet_pton()`-only path was specific to the shipper ingest protocol's raw socket code.
 
 The Shipper's buffer (`dc_e2e_split_buffer`, mounted into `vector` only) and the Bridge's
 upload state (`dc_e2e_split_uploader`, mounted into `dc-ros` only) are separate volumes,

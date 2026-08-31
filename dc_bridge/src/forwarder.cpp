@@ -3,7 +3,6 @@
 
 #include "dc_bridge/forwarder.hpp"
 
-#include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -19,6 +18,8 @@
 #include <fstream>
 #include <msgpack.hpp>
 #include <random>
+
+#include "dc_bridge/net_resolve.hpp"
 
 namespace dc_bridge
 {
@@ -205,13 +206,11 @@ void Forwarder::ensure_connected()
   }
 
   sockaddr_in sa{};
-  sa.sin_family = AF_INET;
-  sa.sin_port = htons(config_.port);
-  if (::inet_pton(AF_INET, config_.host.c_str(), &sa.sin_addr) != 1)
+  if (!resolve_ipv4(config_.host, config_.port, sa))
   {
     ::close(fd);
-    throw ForwarderError(ForwarderErrorKind::Connect,
-                         "failed to connect to the shipper ingest peer at " + addr_str + ": invalid host address");
+    throw ForwarderError(ForwarderErrorKind::Connect, "failed to connect to the shipper ingest peer at " + addr_str +
+                                                          ": host does not resolve to an IPv4 address");
   }
 
   // Non-blocking connect + poll for connect_timeout, so a black-holed peer doesn't

@@ -15,10 +15,11 @@
 #
 # What this proves, matching #445's acceptance criteria one-for-one:
 #   - dc-ros and vector actually come up as two Compose-managed containers on one shared
-#     network (compose.split.yaml has no `network_mode: host` anywhere). Postgres/RustFS
-#     are reached by their compose service-name DNS alias; vector is reached by a fixed
-#     IP compose.split.yaml assigns it — see that file's header for why dc_bridge's own
-#     socket code (not Vector's own sinks, which do resolve DNS fine) needs the latter.
+#     network (compose.split.yaml has no `network_mode: host` anywhere) — every peer,
+#     vector included, is reached by its plain compose service-name DNS alias. That
+#     requires dc_bridge/src/net_resolve.cpp (#445) to resolve `vector_forward_host` with
+#     `getaddrinfo()`; the previous literal-IPv4-only `inet_pton()` parse would have
+#     rejected a hostname there outright.
 #   - vector runs from the unmodified upstream image, no ROS workspace in it.
 #   - vector's own entrypoint override waits for the Bridge-rendered config to exist, then
 #     runs with `--watch-config` so a later render reloads without a container restart.

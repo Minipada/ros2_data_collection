@@ -23,20 +23,18 @@
 #     embeds it into the rendered Vector config; see render.cpp), only Vector does, and in
 #     unmanaged mode that's a different container's filesystem entirely.
 #   - Every host that used to be 127.0.0.1 because everything ran in one container/network
-#     namespace is now the peer's compose network address: pgsql_records/pgsql_files and
-#     rustfs use the peer's compose *service name* (postgres/rustfs) — DNS resolution on the
-#     compose-managed network is what "a shared network" (#445's first acceptance criterion)
-#     buys over the all-in-one mode's implicit localhost. vector_forward_host is the
-#     exception: it's the *literal* fixed IP compose.split.yaml assigns the vector service
-#     (10.89.76.10), not the "vector" DNS name, because dc_bridge's Forwarder and readiness
-#     prober (forwarder.cpp/readiness.cpp) parse this value with `inet_pton()` — a literal
-#     IPv4 parse, not a resolver call — so a hostname there fails startup outright ("invalid
-#     host address"). tcp_health.host is set the same way for consistency, though that
-#     Measurement never actually dials it (TCPHealth.getPortHealth() checks whether *this*
-#     process can bind the port locally, not whether the named host is reachable — so its
-#     `active` field is not a meaningful Shipper-reachability signal in *any* topology; kept
-#     here only because e2e_params.yaml already exercises the Measurement's own Record
-#     cadence, which verify_zero_loss.py's REAL_TAGS check still expects).
+#     namespace is now the peer's compose *service name* (postgres/rustfs/vector) — DNS
+#     resolution on the compose-managed network is what "a shared network" (#445's first
+#     acceptance criterion) buys over the all-in-one mode's implicit localhost.
+#     vector_forward_host resolving as a hostname at all depends on dc_bridge/src/
+#     net_resolve.cpp using `getaddrinfo()` rather than a literal-IPv4-only `inet_pton()`
+#     parse (#445) — without that fix this value would have to be a literal IP instead.
+#     tcp_health.host is set the same way for consistency, though that Measurement never
+#     actually dials it (TCPHealth.getPortHealth() checks whether *this* process can bind
+#     the port locally, not whether the named host is reachable — so its `active` field is
+#     not a meaningful Shipper-reachability signal in *any* topology; kept here only
+#     because e2e_params.yaml already exercises the Measurement's own Record cadence,
+#     which verify_zero_loss.py's REAL_TAGS check still expects).
 measurement_server:
   ros__parameters:
     save_local_base_path: "$HOME/.dc/e2e/data/%Y/%M/%D/%H"
@@ -68,7 +66,7 @@ measurement_server:
       plugin: "dc_measurements/TCPHealth"
       polling_interval: 1000
       name: "vector_forward"
-      host: "10.89.76.10"
+      host: "vector"
       port: 24224
       group_key: "tcp_health"
 
@@ -241,7 +239,7 @@ dc_bridge:
       delete_when_sent: false
       metadata_destination: "pgsql_files"
 
-    vector_forward_host: "10.89.76.10"
+    vector_forward_host: "vector"
     vector_forward_port: 24224
 
 lifecycle_manager_dc:

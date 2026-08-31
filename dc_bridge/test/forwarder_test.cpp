@@ -481,6 +481,33 @@ TEST(Forwarder, AckedRecordLeavesTheUnackedWindow)
   srv.join();
 }
 
+// #445: vector_forward_host names a container-network peer (e.g. a Compose service) in
+// the split-deployment topology, not only ever a literal IP — resolve_ipv4() must resolve
+// a hostname, not just parse a dotted-decimal address.
+TEST(Forwarder, ConnectsUsingAHostnameNotOnlyALiteralIp)
+{
+  MockServer server;
+  std::thread srv([&]() {
+    int c = ::accept(server.listen_fd, nullptr, nullptr);
+    if (c < 0)
+    {
+      return;
+    }
+    read_frame_and_ack(c);
+    ::close(c);
+  });
+
+  ForwarderConfig cfg;
+  cfg.host = "localhost";
+  cfg.port = server.port;
+  Forwarder forwarder(cfg);
+
+  forwarder.send(make_record("dc.test", R"({"n": 1})"));
+  EXPECT_EQ(forwarder.unacked_count(), 1u);
+
+  srv.join();
+}
+
 TEST(Forwarder, UnackedRecordResendsAfterReconnect)
 {
   MockServer server;

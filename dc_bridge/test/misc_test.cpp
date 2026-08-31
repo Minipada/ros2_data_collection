@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
 // Ports of the inline readiness / config (TopicConfig) / vector_binary tests, plus
-// atomic_write (#444).
+// atomic_write (#444) and net_resolve (#445).
+#include <arpa/inet.h>
 #include <gtest/gtest.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include <chrono>
 #include <cstdio>
@@ -14,6 +18,7 @@
 #include <string>
 
 #include "dc_bridge/atomic_write.hpp"
+#include "dc_bridge/net_resolve.hpp"
 #include "dc_bridge/readiness.hpp"
 #include "dc_bridge/topic_config.hpp"
 #include "dc_bridge/vector_binary.hpp"
@@ -42,6 +47,48 @@ TEST(Readiness, ProbeFailsOnAClosedPort)
 {
   // Nothing listening on this port → not ready.
   EXPECT_FALSE(probe("127.0.0.1", 1, std::chrono::milliseconds(100)));
+}
+
+TEST(Readiness, ProbeAcceptsAHostnameNotOnlyALiteralIp)
+{
+  // #445: a container-network peer's readiness (e.g. a Compose service) is checked by
+  // name, not only ever by a literal IP — this must resolve, not fail at parse time.
+  int listen_fd = ::socket(AF_INET, SOCK_STREAM, 0);
+  sockaddr_in sa{};
+  sa.sin_family = AF_INET;
+  sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  sa.sin_port = 0;
+  ::bind(listen_fd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
+  ::listen(listen_fd, 1);
+  socklen_t len = sizeof(sa);
+  ::getsockname(listen_fd, reinterpret_cast<sockaddr*>(&sa), &len);
+  const std::uint16_t port = ntohs(sa.sin_port);
+
+  EXPECT_TRUE(probe("localhost", port, std::chrono::milliseconds(500)));
+
+  ::close(listen_fd);
+}
+
+TEST(NetResolve, ResolvesALiteralIPv4Address)
+{
+  sockaddr_in sa{};
+  ASSERT_TRUE(resolve_ipv4("127.0.0.1", 4242, sa));
+  EXPECT_EQ(sa.sin_addr.s_addr, htonl(INADDR_LOOPBACK));
+  EXPECT_EQ(sa.sin_port, htons(4242));
+}
+
+TEST(NetResolve, ResolvesAHostname)
+{
+  sockaddr_in sa{};
+  ASSERT_TRUE(resolve_ipv4("localhost", 4242, sa));
+  EXPECT_EQ(sa.sin_addr.s_addr, htonl(INADDR_LOOPBACK));
+  EXPECT_EQ(sa.sin_port, htons(4242));
+}
+
+TEST(NetResolve, FailsOnAHostnameThatDoesNotResolve)
+{
+  sockaddr_in sa{};
+  EXPECT_FALSE(resolve_ipv4("this-host-does-not-exist.invalid", 4242, sa));
 }
 
 TEST(TopicConfig, DerivesDottedTagFromTopicName)
