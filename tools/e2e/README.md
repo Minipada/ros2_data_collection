@@ -611,11 +611,12 @@ script does no parameter translation of its own.
 
 Not wired into `ci.yaml`, same as the scenarios above.
 
-## Two-container split topology (#445)
+## Three-container split topology (#445/#447)
 
-Proves #440's split-deployment epic's scenario 2 — the Bridge (`dc-ros`) and the Shipper
-(`vector`) running as separate containers instead of one process tree — holds the same
-zero-loss guarantee `run.sh` already proves for the all-in-one mode:
+Proves #440's split-deployment epic's scenario 2 — the Bridge (`dc-ros`), the Shipper
+(`vector`) and the Uploader (`dc-uploader`) running as separate containers instead of one
+process tree — holds the same zero-loss guarantee `run.sh` already proves for the
+all-in-one mode:
 
 ```sh
 ./tools/e2e/scripts/run_split.sh
@@ -626,13 +627,15 @@ Unlike every scenario above, this one is driven through an actual Compose file
 that *a Compose deployment* runs the split topology, so the artifact under test has to be
 one. `compose.split.yaml` is self-contained (`podman compose -f tools/e2e/compose.split.yaml
 up` brings up the whole scenario standalone); `run_split.sh` brings its services up
-individually rather than all at once — starting `dc-ros` well before `vector` and inducing
-a Postgres/RustFS outage mid-run — so it can fold the scenario into the same style of
+individually rather than all at once — starting `dc-ros`+`dc-uploader` well before `vector`
+and inducing a Postgres/RustFS outage mid-run, restarting `dc-ros` and `dc-uploader`
+independently of each other during it — so it can fold the scenario into the same style of
 lifecycle-driven proof the other scenarios use, then falls back to plain `podman
 stop`/`start`/`restart` on the compose-created (but fixed-`container_name`) containers for
 that lifecycle control, the same way every sibling script above drives its own containers.
 
-Four things this scenario exists to prove, straight from #445's acceptance criteria:
+Five things this scenario exists to prove, straight from #445's and #447's acceptance
+criteria:
 
 1. **The Shipper runs from the unmodified upstream Vector image** — `docker.io/timberio/
    vector:0.57.0-debian`, pinned to the same version `ros2_data_collection.repos` pins
@@ -647,22 +650,41 @@ Four things this scenario exists to prove, straight from #445's acceptance crite
    ships nothing purpose-built for this) before running with Vector's own `--watch-config`,
    so a later re-render reloads without a container restart.
 3. **No orchestrator-level ordering.** `compose.split.yaml` has no `depends_on` anywhere
-   between `dc-ros` and `vector`. `run_split.sh` starts `dc-ros` alone, waits
-   `DC_E2E_SPLIT_VECTOR_DELAY_SECONDS` (default 20s — comfortably inside
+   between any of the three containers. `run_split.sh` starts `dc-ros` and `dc-uploader`
+   together, waits `DC_E2E_SPLIT_VECTOR_DELAY_SECONDS` (default 20s — comfortably inside
    `bridge_ready_gate.py`'s existing 120s deadline), *then* starts `vector`, and asserts the
    first Record lands in Postgres within `DC_E2E_SPLIT_RECOVERY_TIMEOUT_SECONDS` of that —
    with no container restart in between. Recovery is entirely the existing readiness gate's
    own poll loop (ADR-0006); nothing new was added to make this work.
-4. **Zero loss across an induced outage**, same standard as `run.sh`: steady state, stop
-   Postgres+RustFS, restart `dc-ros` while they're still down, restore them, drain, then
-   `scripts/verify_zero_loss.py` against the published ledger — reused for its Postgres/
-   ledger/upload-intent-queue checks unchanged. Its `--passthrough-file`/
-   `--mcap-summary-file`/`--raw-file` flags became optional (previously `required=True`) to
-   support this scenario: `params/e2e_split_params.yaml` carries no passthrough/MCAP/raw
-   configuration at all (see that file's own header for why — wiring those static,
-   pre-#445 sinks across the new container boundary would add plumbing with no bearing on
-   any of #445's acceptance criteria), so there is nothing for those three checks to verify
-   here. Every other scenario above keeps passing all three unchanged.
+4. **The Uploader runs in its own container** (#447, building on #446's extraction of
+   `dc_uploader` into its own process). `compose.split.yaml`'s `dc-uploader` service runs
+   the same image as `dc-ros` — `dc_uploader` is one of its installed binaries — under a
+   different entrypoint (`entrypoint_uploader.sh`, which execs the binary directly, no
+   `ros2 launch`) and its own `DC_UPLOADER_*` environment, no ROS params at all. `dc-ros`
+   launches with `run_uploader:=false` so `dc_bringup.launch.py` never also spawns one
+   in-process. Object-storage credentials (`rustfs`'s `access_key_id`/`secret_access_key`)
+   live only in `dc-uploader`'s environment; `params/e2e_split_params.yaml`'s `rustfs`
+   destination carries no credentials at all, so they never reach `dc-ros` (#447's
+   per-container credential-scoping acceptance criterion) — the Bridge only needs the
+   bucket name to write upload intents, never the keys to act on them. Volumes stay scoped
+   to their owner: the intent queue and the Files directory are shared between `dc-ros`
+   (writer) and `dc-uploader` (reader); the Shipper's config and buffer volumes are not
+   mounted into `dc-uploader` at all, and vice versa. `run_split.sh` restarts `dc-ros` and
+   `dc-uploader` independently of each other mid-outage to exercise #447's
+   restart-independence requirement directly, not just structurally.
+5. **Zero loss across an induced outage**, same standard as `run.sh`: steady state, stop
+   Postgres+RustFS, restart `dc-ros` and `dc-uploader` (independently) while they're still
+   down, restore them, drain, then `scripts/verify_zero_loss.py` against the published
+   ledger — reused for its Postgres/ledger/upload-intent-queue checks unchanged, now
+   verifying File metadata Records `dc-uploader` emits over its own shipper-protocol
+   connection to `vector` land alongside Measurement Records the same way. Its
+   `--passthrough-file`/`--mcap-summary-file`/`--raw-file` flags became optional
+   (previously `required=True`) to support this scenario: `params/e2e_split_params.yaml`
+   carries no passthrough/MCAP/raw configuration at all (see that file's own header for
+   why — wiring those static, pre-#445 sinks across the new container boundary would add
+   plumbing with no bearing on any of #445's or #447's acceptance criteria), so there is
+   nothing for those three checks to verify here. Every other scenario above keeps passing
+   all three unchanged.
 
 One discovery came out of implementing this, fixed rather than worked around:
 **`vector_forward_host` needs real DNS resolution, not just a literal-IP parse.**
@@ -678,11 +700,9 @@ RustFS were never affected by the old bug: their hosts are read by Vector's own 
 by the Uploader's aws-sdk-cpp HTTP client, both of which already resolved hostnames; the
 `inet_pton()`-only path was specific to the shipper ingest protocol's raw socket code.
 
-The Shipper's buffer (`dc_e2e_split_buffer`, mounted into `vector` only) and the Bridge's
-upload state (`dc_e2e_split_uploader`, mounted into `dc-ros` only) are separate volumes,
-same split #441 already proved for the all-in-one mode. The Uploader itself stays inside
-the Bridge process for this scenario — extracting it into its own container is #446, a
-sibling issue under the same epic, not part of #445.
+The Shipper's buffer (`dc_e2e_split_buffer`, mounted into `vector` only) and the upload
+state (`dc_e2e_split_uploader`, mounted into `dc-ros` and `dc-uploader`) are separate
+volumes, same split #441 already proved for the all-in-one mode.
 
 Not wired into `ci.yaml`, same as every scenario above.
 
@@ -828,10 +848,11 @@ Not wired into `ci.yaml`, same as every scenario above.
   (`test_limits_baseline.py`); the four axes it sequences are each exercised by running
   their own scenario script, not re-tested here.
 - `compose.split.yaml` / `params/e2e_split_params.yaml` / `scripts/run_split.sh` — the
-  two-container split topology (#445, part of #440) described above: `dc-ros` and `vector`
-  as separate Compose-managed containers, proving unmanaged-shipper mode (#444), the config
-  handover across a shared volume, no orchestrator-level startup ordering, and zero loss
-  across an induced outage.
+  three-container split topology (#445/#447, part of #440) described above: `dc-ros`,
+  `vector` and `dc-uploader` as separate Compose-managed containers, proving
+  unmanaged-shipper mode (#444), the config handover across a shared volume, no
+  orchestrator-level startup ordering, per-container credential scoping, independent
+  restarts, and zero loss across an induced outage.
 
 ## `.dockerignore`
 

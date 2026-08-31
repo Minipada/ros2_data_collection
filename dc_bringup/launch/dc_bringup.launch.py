@@ -215,6 +215,11 @@ def build_bridge_and_mcap_actions(configured_params):
        for the same pattern). `ExecuteProcess` runs `python3 -m dc_mcap_writer.cli`
        directly instead.
 
+    Also starts `dc_uploader` (build_uploader_action) unless the `run_uploader` launch
+    argument is False — the three-container split (#447) runs it as its own container
+    instead, configured the same way (`DC_UPLOADER_*` env vars) but by that container's
+    compose service rather than by this launch file.
+
     When the block is absent or `enabled` is false or missing (every existing params
     file, unchanged), this returns exactly what the static `Node(...)` it replaces used
     to: `dc_bridge` alone, with `configured_params` as its only parameters entry.
@@ -322,7 +327,9 @@ def build_bridge_and_mcap_actions(configured_params):
             respawn_delay=2.0,
             parameters=bridge_parameters,
         )
-        extra_actions.extend(build_uploader_action(raw_params))
+        run_uploader = LaunchConfiguration("run_uploader").perform(context).lower() == "true"
+        if run_uploader:
+            extra_actions.extend(build_uploader_action(raw_params))
         return [dc_bridge_node, *extra_actions]
 
     return OpaqueFunction(function=_build)
@@ -408,6 +415,12 @@ def generate_launch_description():
     )
     declare_group_node = DeclareLaunchArgument(
         "group_node", default_value="False", description="Start group_node"
+    )
+    declare_run_uploader_cmd = DeclareLaunchArgument(
+        "run_uploader",
+        default_value="True",
+        description="Launch dc_uploader (#446) from this process. Set False when it runs "
+        "in its own container (#447 three-container split).",
     )
 
     # ADR-0006 deterministic startup: the Bridge (which spawns and supervises
@@ -629,6 +642,7 @@ def generate_launch_description():
     ld.add_action(declare_draw_img_service)
     ld.add_action(declare_save_img_service)
     ld.add_action(declare_group_node)
+    ld.add_action(declare_run_uploader_cmd)
     # Add the actions to launch all of the navigation nodes
     ld.add_action(load_nodes)
     ld.add_action(load_composable_nodes)

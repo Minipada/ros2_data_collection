@@ -90,6 +90,16 @@ install` + `colcon build` as every other `dc_*` package. See
   probe against the Shipper's ingest port, independent of who spawned it. `rclcpp` handles
   SIGINT/SIGTERM and `on_shutdown` stops Vector in managed mode (a no-op in unmanaged
   mode, nothing to stop), so it's never orphaned.
+
+  `shipper.bind_host` (#447) is the address embedded in the rendered config's fluent
+  source — what the Shipper itself binds to — separate from `vector_forward_host`,
+  which is only where *this* process connects. They default to the same value
+  (unchanged for every deployment that doesn't set `shipper.bind_host`), which is
+  correct when both processes share localhost. Split mode, where the Shipper runs in
+  its own container, needs them to diverge: the container binds `"0.0.0.0"` while the
+  Bridge connects to it by DNS name. Vector's fluent source only accepts a literal
+  address to bind — a hostname fails config validation — so `vector_forward_host` must
+  never reach that field verbatim once it names a DNS name rather than an IP.
 - **`src/uploader_main.cpp`** — `dc_uploader`'s entry point (#446, no `rclcpp`): loads
   `DC_UPLOADER_*` configuration, builds the S3 `ObjectStore`, and runs the same
   upload/retention poll loop the Bridge's worker thread used to run, now against its own

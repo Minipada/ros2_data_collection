@@ -1,17 +1,30 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-# Two-container split deployment (#445, scenario 2 of #440): dc-ros (ROS + the Bridge,
-# unmanaged-shipper mode, #444) and vector (the unmodified upstream image) as separate
+# Three-container split deployment (#447, scenario 2 of #440, extending #445+#446):
+# dc-ros (ROS + the Bridge, unmanaged-shipper mode, #444), vector (the unmodified
+# upstream image) and dc-uploader (#446, its own container as of #447) as separate
 # containers on one shared network, instead of one process tree. Postgres/RustFS stand in
 # for real Destinations, still reached directly.
 #
 # `podman compose -f compose.split.yaml up` runs this standalone; run_split.sh drives the
 # same file service-by-service to fold it into the zero-loss E2E harness.
 #
-# No `depends_on` between dc-ros and vector — that's the point (#445: no
-# orchestrator-level ordering). dc_bringup's readiness gate plus `restart: unless-stopped`
-# is what lets dc-ros recover if vector starts late.
+# No `depends_on` between any of dc-ros, vector and dc-uploader — that's the point (#445:
+# no orchestrator-level ordering). dc_bringup's readiness gate plus `restart:
+# unless-stopped` is what lets dc-ros recover if vector starts late; dc_uploader's own
+# IntentQueue::rescan() polling (#446) is what lets it recover if it starts before or
+# after dc-ros has written any intents.
+#
+# Volumes are scoped to their owner (#447's acceptance criteria): the Shipper's buffer to
+# vector alone; the rendered config to dc-ros (writer) and vector (reader); the upload
+# intent queue and the Files themselves to dc-ros (writer) and dc-uploader (reader) —
+# vector never sees either. Credentials are scoped the same way: rustfs's
+# access_key_id/secret_access_key live only in dc-uploader's environment below, not in
+# dc-ros's params file (see e2e_split_params.yaml's header) — object-storage credentials
+# never reach the ROS container. dc-ros also runs with `run_uploader:=false` so it never
+# spawns its own dc_uploader subprocess (dc_bringup.launch.py's build_uploader_action,
+# the two-container shape #446 left in place inside dc-ros).
 services:
   postgres:
     image: docker.io/library/postgres:13
@@ -46,6 +59,40 @@ services:
       - dc_e2e_split_data:/root/.dc/e2e/data
       - dc_e2e_split_config:/etc/dc/shipper
       - ./params/e2e_split_params.yaml:/opt/e2e/e2e_params.yaml:ro
+    # dc_uploader runs in its own container below (#447) — don't also spawn it here.
+    command: ["run_uploader:=false"]
+    restart: unless-stopped
+
+  # The Uploader as its own container (#446 extracted the process; #447 containerizes
+  # it). Same image as dc-ros — dc_uploader is an installed binary in it — but its own
+  # entrypoint that runs that binary directly instead of ros2 launch, and its own
+  # environment: no ROS params, configured entirely by DC_UPLOADER_* (docs/adr/0014).
+  # These values mirror what dc_bringup.launch.py's build_uploader_action computes from
+  # e2e_split_params.yaml's uploader.data_dir/rustfs/files blocks when it runs dc_uploader
+  # in-process (the two-container shape) — kept in sync by hand since this scenario's
+  # dc-ros deliberately no longer holds the rustfs credentials to compute them from.
+  dc-uploader:
+    image: ${DC_E2E_IMAGE:-dc-e2e:latest}
+    container_name: dc_e2e_split_dc_uploader
+    entrypoint: ["/opt/e2e/entrypoint_uploader.sh"]
+    environment:
+      DC_UPLOADER_STORAGE_NAME: "rustfs"
+      DC_UPLOADER_QUEUE_DIR: "/root/.dc/e2e/uploader/queue/upload"
+      DC_UPLOADER_STATE_DIR: "/root/.dc/e2e/uploader/uploader"
+      DC_UPLOADER_SHIPPER_HOST: "vector"
+      DC_UPLOADER_SHIPPER_PORT: "24224"
+      DC_UPLOADER_S3_BUCKET: "dc-e2e"
+      DC_UPLOADER_S3_REGION: "us-east-1"
+      DC_UPLOADER_S3_ENDPOINT: "http://rustfs:9000"
+      DC_UPLOADER_S3_ACCESS_KEY_ID: "rustfsadmin"
+      DC_UPLOADER_S3_SECRET_ACCESS_KEY: "rustfsadmin"
+      DC_UPLOADER_S3_FORCE_PATH_STYLE: "true"
+      DC_UPLOADER_DELETE_WHEN_SENT: "false"
+    volumes:
+      # Intent queue + Files: shared with dc-ros, which writes both. No config/buffer
+      # volume — those belong to dc-ros/vector only (see this file's header).
+      - dc_e2e_split_uploader:/root/.dc/e2e/uploader
+      - dc_e2e_split_data:/root/.dc/e2e/data
     restart: unless-stopped
 
   vector:

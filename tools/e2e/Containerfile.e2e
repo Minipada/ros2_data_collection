@@ -23,6 +23,9 @@ COPY scripts/mcap_summary.py /opt/e2e/mcap_summary.py
 # network for readiness polling and the shaping pre-check (see measure_rtt.py's header).
 COPY scripts/measure_rtt.py /opt/e2e/measure_rtt.py
 COPY scripts/entrypoint.sh /opt/e2e/entrypoint.sh
-RUN chmod +x /opt/e2e/entrypoint.sh
+# dc-uploader container's entrypoint for the three-container split (#447) — same image,
+# different entrypoint, selected by compose.split.yaml's dc-uploader service.
+COPY scripts/entrypoint_uploader.sh /opt/e2e/entrypoint_uploader.sh
+RUN chmod +x /opt/e2e/entrypoint.sh /opt/e2e/entrypoint_uploader.sh
 
 ENTRYPOINT ["/opt/e2e/entrypoint.sh"]
