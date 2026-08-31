@@ -1,30 +1,58 @@
+# This is the Vector config `dc_bridge` generates for a single `type: vector` Destination
+# named `to_aggregator` with `host: "dc-e2e-limits-agg"`, `port: 6000` and
+# `inputs: ["/dc/group/robot"]`. It's the gold file VectorDestinationForwardsToAggregator
+# in render_test.cpp compares against — kept commented as a worked example of what one
+# blessed Destination expands into; every DC-rendered config also has this same source,
+# transforms.dc and transforms.dc_bridge_normalize shape, whatever sinks are configured.
+
+# The Shipper's disk-buffer directory (`shipper.data_dir`), shared by every sink below.
 data_dir = "/home/dc/.dc/buffer"
 
+# Global delivery acknowledgements, always on: the Bridge's Forwarder expects every frame
+# it sends to be acked, so Records aren't dropped between the Bridge and this Shipper.
 [acknowledgements]
 enabled = true
 
+# The sink for the `to_aggregator` Destination. `type = "vector"` is Vector's own
+# inter-instance protocol — this Shipper connects OUT to another Shipper (the edge
+# aggregator) rather than to a database or object store directly.
 [sinks.to_aggregator]
+# host:port of the downstream Shipper's own `vector`-type *source*, from the
+# Destination's `host`/`port` parameters. Unlike `postgres`, there's no default here.
 address = "dc-e2e-limits-agg:6000"
+# The internal `dc.<tag>` routes this sink consumes — one per Tag in the Destination's
+# `inputs`, produced by the `transforms.dc` route below.
 inputs = ["dc.dc.group.robot"]
 type = "vector"
 
+# Every blessed sink gets the same on-disk buffer, so a downstream outage (the aggregator
+# unreachable) doesn't drop Records — they queue here until delivery succeeds.
 [sinks.to_aggregator.buffer]
 max_size = 268435488
 type = "disk"
 
+# Where Records enter this Shipper: the local shipper ingest protocol socket the Bridge
+# (dc_bridge) forwards to, fixed regardless of which Destinations are configured.
 [sources.dc_bridge_in]
 address = "127.0.0.1:24224"
 type = "fluent"
 
+# The `route` transform: fans normalized Records out to each Destination's sink by Tag.
 [transforms.dc]
 inputs = ["dc_bridge_normalize"]
 reroute_unmatched = false
 type = "route"
 
+# One branch per Tag reaching a Destination. `/dc/group/robot`'s Tag is `dc.group.robot`;
+# a Record matching this VRL predicate flows out on the `dc.dc.group.robot` route that
+# `sinks.to_aggregator.inputs` above consumes.
 [transforms.dc.route."dc.group.robot"]
 source = '.tag == "dc.group.robot"'
 type = "vrl"
 
+# The `remap` transform: writes each Destination's normalized timestamp field before
+# routing. `vector` gets no special normalization beyond this — no column mapping to do,
+# since the downstream Shipper's own sink (whatever it is) sees the same JSON payload.
 [transforms.dc_bridge_normalize]
 inputs = ["dc_bridge_in"]
 source = """
