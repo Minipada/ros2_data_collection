@@ -241,16 +241,18 @@ Files (images, maps, videos) never travel through the Shipper. A `receives: file
 Destination is served by the Bridge's Uploader, and the per-File status Records it
 produces go to whichever Destination `files.metadata_destination` names. The Uploader's
 durable upload intent queue and multipart-resume state live under `uploader.data_dir`,
-which defaults to `shipper.data_dir` — set it separately if the Shipper's buffer and the
-Uploader's state should be mounted as different volumes.
+separate from the Shipper's own disk buffer under `shipper.data_dir` — set both, as below,
+so it's obvious on disk (and later in volume mounts) which files belong to which owner.
+If `uploader.data_dir` is omitted it defaults to `shipper.data_dir`, so existing configs
+that only set the latter keep working unchanged.
 
 ```yaml
 dc_bridge:
   ros__parameters:
     shipper:
-      data_dir: "$HOME/.dc/buffer"
+      data_dir: "$HOME/.dc/shipper"
     uploader:
-      data_dir: "$HOME/.dc/buffer"            # optional; defaults to shipper.data_dir
+      data_dir: "$HOME/.dc/uploader"
     destinations: ["pgsql", "rustfs"]
     pgsql:                                    # the Records, and the File status log
       type: postgres
