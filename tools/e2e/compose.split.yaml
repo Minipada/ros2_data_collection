@@ -29,15 +29,11 @@
 # Uploader itself stays inside the Bridge process until #446 extracts it into its own
 # container) are three separate volumes, matching #441's data-directory split.
 #
-# vector gets a fixed address on this network (below) rather than relying on its
-# `vector` service-name DNS alias: dc_bridge's own Forwarder and readiness prober
-# (forwarder.cpp/readiness.cpp) parse `vector_forward_host` with `inet_pton()` — a literal
-# IPv4 parse, not a resolver call — so a hostname there fails immediately ("invalid host
-# address"), discovered by actually running this file rather than by reading dc_bridge's
-# code. Postgres/RustFS keep their plain service-name DNS: their hosts are read by
-# Vector's own sinks and by aws-sdk-cpp's HTTP client (the Uploader), both of which do
-# resolve hostnames — this constraint is specific to the shipper ingest protocol's raw
-# C++ socket path, nothing else in this file.
+# All four services are reached by their plain compose service-name DNS alias
+# (postgres/rustfs/vector) — including vector_forward_host, dc_bridge's own address for
+# the Shipper: dc_bridge/src/net_resolve.cpp resolves it with `getaddrinfo()`, not a
+# literal-IPv4-only `inet_pton()` parse (discovered needing that fix by actually running
+# this file with a hostname there first — see net_resolve.cpp's own history, #445).
 services:
   postgres:
     image: docker.io/library/postgres:13
@@ -80,9 +76,6 @@ services:
     # container and native/apt install paths run the identical Shipper build.
     image: docker.io/timberio/vector:0.57.0-debian
     container_name: dc_e2e_split_vector
-    networks:
-      default:
-        ipv4_address: 10.89.76.10
     volumes:
       - dc_e2e_split_buffer:/var/lib/vector
       - dc_e2e_split_config:/etc/dc/shipper:ro
@@ -120,11 +113,6 @@ volumes:
   dc_e2e_split_buffer:
     name: dc_e2e_split_buffer
 
-# Fixed subnet so vector's ipv4_address above (10.89.76.10) is guaranteed to fall inside
-# it — required for a static address assignment on a podman-compose bridge network.
 networks:
   default:
     name: dc_e2e_split_net
-    ipam:
-      config:
-        - subnet: 10.89.76.0/24

@@ -3,7 +3,6 @@
 
 #include "dc_bridge/readiness.hpp"
 
-#include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <poll.h>
@@ -11,6 +10,8 @@
 #include <unistd.h>
 
 #include <cerrno>
+
+#include "dc_bridge/net_resolve.hpp"
 
 namespace dc_bridge
 {
@@ -24,9 +25,7 @@ bool probe(const std::string& host, std::uint16_t port, std::chrono::millisecond
   }
 
   sockaddr_in sa{};
-  sa.sin_family = AF_INET;
-  sa.sin_port = htons(port);
-  if (::inet_pton(AF_INET, host.c_str(), &sa.sin_addr) != 1)
+  if (!resolve_ipv4(host, port, sa))
   {
     ::close(fd);
     return false;

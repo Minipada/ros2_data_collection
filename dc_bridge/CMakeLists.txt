@@ -38,6 +38,7 @@ find_package(AWSSDK REQUIRED COMPONENTS s3)
 add_library(dc_bridge_core
   src/forwarder.cpp
   src/readiness.cpp
+  src/net_resolve.cpp
   src/topic_config.cpp
   src/supervisor.cpp
   src/vector_binary.cpp
