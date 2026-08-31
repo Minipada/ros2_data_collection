@@ -771,19 +771,23 @@ def main() -> int:
     )
     parser.add_argument(
         "--passthrough-file",
-        required=True,
-        help="newline-delimited JSON extracted from the ADR-0003 passthrough sink's output",
+        default=None,
+        help="newline-delimited JSON extracted from the ADR-0003 passthrough sink's output; "
+        "omit for a scenario that doesn't configure the passthrough sink (#445's split-"
+        "topology mode has no custom_config_files at all — Vector runs from the upstream "
+        "image alone, so there's no passthrough output to extract)",
     )
     parser.add_argument(
         "--mcap-summary-file",
-        required=True,
+        default=None,
         help="JSON summary (scripts/mcap_summary.py output) of the ADR-0009 MCAP "
-        "passthrough writer's .mcap capture",
+        "passthrough writer's .mcap capture; omit like --passthrough-file above",
     )
     parser.add_argument(
         "--raw-file",
-        required=True,
-        help="newline-delimited JSON extracted from the raw (#227) `file` Destination",
+        default=None,
+        help="newline-delimited JSON extracted from the raw (#227) `file` Destination; "
+        "omit like --passthrough-file above",
     )
     parser.add_argument("--report", default=None, help="write a JSON report to this path")
     parser.add_argument(
@@ -818,11 +822,14 @@ def main() -> int:
         check_real_tag(pg, tag, violations, notes, details)
     check_files(pg, violations, notes, details)
     check_timestamp_resolution(pg, FAST_TAG, violations, notes, details)
-    check_passthrough(args.passthrough_file, published, boundaries, violations, notes, details)
-    check_mcap_passthrough(
-        args.mcap_summary_file, published, boundaries, violations, notes, details
-    )
-    check_raw(args.raw_file, boundaries, violations, notes, details)
+    if args.passthrough_file is not None:
+        check_passthrough(args.passthrough_file, published, boundaries, violations, notes, details)
+    if args.mcap_summary_file is not None:
+        check_mcap_passthrough(
+            args.mcap_summary_file, published, boundaries, violations, notes, details
+        )
+    if args.raw_file is not None:
+        check_raw(args.raw_file, boundaries, violations, notes, details)
 
     report = {"pass": not violations, "violations": violations, "notes": notes, "details": details}
     if args.conditions_file:

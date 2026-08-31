@@ -1,0 +1,250 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# The split-topology E2E scenario's workload (#445): the same reference measurements as
+# params/e2e_params.yaml, minus the ADR-0003/ADR-0009/#227 passthrough coverage
+# (custom_config_files, the raw_file Destination, and the raw: block) — those sinks are
+# static Vector config that don't exercise anything specific to the container split, and
+# wiring them across the new dc-ros/vector container boundary (a second shared volume for
+# raw_file's output path, retargeting the MCAP socket sink at the dc-ros container instead
+# of 127.0.0.1) would add plumbing with no bearing on #445's own acceptance criteria. Records
+# and Files coverage — the two things this scenario exists to prove survive the split — are
+# unchanged from e2e_params.yaml.
+#
+# Differences from e2e_params.yaml, all required by running dc_bridge and the Shipper as
+# separate containers (compose.split.yaml) instead of one:
+#   - dc_bridge.shipper.managed: false — the Shipper's lifecycle belongs to the container
+#     runtime (#444), not the Bridge.
+#   - dc_bridge.shipper.config_path — on the volume shared with the vector container
+#     (compose.split.yaml's dc_e2e_split_config), instead of the managed-mode temp file.
+#   - dc_bridge.shipper.data_dir is a path inside the *vector* container's own filesystem
+#     (/var/lib/vector, that container's disk-buffer volume) rather than a dc-ros path: the
+#     Bridge never touches this directory itself in either mode (bridge_node.cpp only ever
+#     embeds it into the rendered Vector config; see render.cpp), only Vector does, and in
+#     unmanaged mode that's a different container's filesystem entirely.
+#   - Every host that used to be 127.0.0.1 because everything ran in one container/network
+#     namespace is now the peer's compose network address: pgsql_records/pgsql_files and
+#     rustfs use the peer's compose *service name* (postgres/rustfs) — DNS resolution on the
+#     compose-managed network is what "a shared network" (#445's first acceptance criterion)
+#     buys over the all-in-one mode's implicit localhost. vector_forward_host is the
+#     exception: it's the *literal* fixed IP compose.split.yaml assigns the vector service
+#     (10.89.76.10), not the "vector" DNS name, because dc_bridge's Forwarder and readiness
+#     prober (forwarder.cpp/readiness.cpp) parse this value with `inet_pton()` — a literal
+#     IPv4 parse, not a resolver call — so a hostname there fails startup outright ("invalid
+#     host address"). tcp_health.host is set the same way for consistency, though that
+#     Measurement never actually dials it (TCPHealth.getPortHealth() checks whether *this*
+#     process can bind the port locally, not whether the named host is reachable — so its
+#     `active` field is not a meaningful Shipper-reachability signal in *any* topology; kept
+#     here only because e2e_params.yaml already exercises the Measurement's own Record
+#     cadence, which verify_zero_loss.py's REAL_TAGS check still expects).
+measurement_server:
+  ros__parameters:
+    save_local_base_path: "$HOME/.dc/e2e/data/%Y/%M/%D/%H"
+    all_base_path: "e2e"
+    measurement_plugins: ["memory", "os", "storage", "uptime", "tcp_health", "dummy", "synth00", "synth01", "synth02", "synth03", "synth04", "synth05", "synth06", "synth07", "synth08", "synth09", "synth10", "synth11", "synth12", "synth13", "camera"]
+
+    memory:
+      plugin: "dc_measurements/Memory"
+      polling_interval: 200
+      group_key: "memory"
+
+    os:
+      plugin: "dc_measurements/OS"
+      polling_interval: 1000
+      group_key: "os"
+
+    storage:
+      plugin: "dc_measurements/Storage"
+      polling_interval: 1000
+      path: "/tmp"
+      group_key: "storage"
+
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      polling_interval: 1000
+      group_key: "uptime"
+
+    tcp_health:
+      plugin: "dc_measurements/TCPHealth"
+      polling_interval: 1000
+      name: "vector_forward"
+      host: "10.89.76.10"
+      port: 24224
+      group_key: "tcp_health"
+
+    dummy:
+      plugin: "dc_measurements/Dummy"
+      polling_interval: 1000
+      group_key: "dummy"
+
+    camera:
+      plugin: "dc_measurements/Camera"
+      polling_interval: 15000
+      cam_name: "e2e_camera"
+      cam_topic: "/dc/e2e/camera/image_raw"
+      draw_det_barcodes: false
+      save_raw_img: true
+      save_rotated_img: false
+      save_detections_img: false
+      save_raw_base64: false
+      save_rotated_base64: false
+      save_inspected_base64: false
+      remote_keys: ["rustfs"]
+      remote_prefixes: ["camera"]
+      group_key: "camera"
+
+    synth00:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth00"
+      timer_based: true
+
+    synth01:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth01"
+      timer_based: true
+
+    synth02:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth02"
+      timer_based: true
+
+    synth03:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth03"
+      timer_based: true
+
+    synth04:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth04"
+      timer_based: true
+
+    synth05:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth05"
+      timer_based: true
+
+    synth06:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth06"
+      timer_based: true
+
+    synth07:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth07"
+      timer_based: true
+
+    synth08:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth08"
+      timer_based: true
+
+    synth09:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth09"
+      timer_based: true
+
+    synth10:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth10"
+      timer_based: true
+
+    synth11:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth11"
+      timer_based: true
+
+    synth12:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth12"
+      timer_based: true
+
+    synth13:
+      plugin: "dc_measurements/StringStamped"
+      enable_validator: false
+      polling_interval: 1000
+      topic: "/dc/e2e/synth/synth13"
+      timer_based: true
+
+dc_bridge:
+  ros__parameters:
+    shipper:
+      managed: false
+      # Shared with the vector container's dc_e2e_split_config volume (compose.split.yaml).
+      config_path: "/etc/dc/shipper/vector.toml"
+      # A path inside the *vector* container (its dc_e2e_split_buffer volume), not dc-ros —
+      # see this file's header.
+      data_dir: "/var/lib/vector"
+    uploader:
+      data_dir: "$HOME/.dc/e2e/uploader"
+    destinations: ["pgsql_records", "pgsql_files", "rustfs"]
+    pgsql_records:
+      type: postgres
+      receives: records
+      inputs: ["/dc/measurement/memory", "/dc/measurement/os", "/dc/measurement/storage", "/dc/measurement/uptime", "/dc/measurement/tcp_health", "/dc/measurement/dummy", "/dc/measurement/synth00", "/dc/measurement/synth01", "/dc/measurement/synth02", "/dc/measurement/synth03", "/dc/measurement/synth04", "/dc/measurement/synth05", "/dc/measurement/synth06", "/dc/measurement/synth07", "/dc/measurement/synth08", "/dc/measurement/synth09", "/dc/measurement/synth10", "/dc/measurement/synth11", "/dc/measurement/synth12", "/dc/measurement/synth13"]
+      host: "postgres"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc_records"
+      time_key: "date"
+
+    pgsql_files:
+      type: postgres
+      receives: records
+      host: "postgres"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc_files"
+      time_key: "date"
+
+    rustfs:
+      type: s3
+      receives: files
+      inputs: ["/dc/measurement/camera"]
+      bucket: "dc-e2e"
+      endpoint: "http://rustfs:9000"
+      region: "us-east-1"
+      access_key_id: "rustfsadmin"
+      secret_access_key: "rustfsadmin"
+      force_path_style: true
+
+    files:
+      delete_when_sent: false
+      metadata_destination: "pgsql_files"
+
+    vector_forward_host: "10.89.76.10"
+    vector_forward_port: 24224
+
+lifecycle_manager_dc:
+  ros__parameters:
+    node_names: ["measurement_server"]
+    transitions: [configure, activate]
