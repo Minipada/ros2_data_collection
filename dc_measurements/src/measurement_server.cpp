@@ -3,10 +3,73 @@
 
 #include "dc_measurements/measurement_server.hpp"
 
+#include <unistd.h>
+
+#include <cerrno>
+#include <cstring>
+
 namespace measurement_server
 {
 
 using namespace std::chrono_literals;  // NOLINT
+
+namespace
+{
+
+// robot_name is the one custom key whose identity a fleet can't hand-edit per robot (#442):
+// literal value, then a file's contents, then the machine's hostname as the default.
+constexpr const char* kRobotNameKey = "robot_name";
+
+std::string resolveRobotNameFromHostname()
+{
+  char hostname_buf[256] = { 0 };
+  if (gethostname(hostname_buf, sizeof(hostname_buf) - 1) != 0)
+  {
+    throw std::runtime_error(std::string("robot_name: failed to resolve hostname: ") + std::strerror(errno));
+  }
+  return std::string(hostname_buf);
+}
+
+std::string resolveRobotNameFromFile(const std::string& path)
+{
+  std::ifstream ifs(path);
+  if (!ifs.good())
+  {
+    throw std::runtime_error("robot_name: could not read value_from_file '" + path + "'");
+  }
+  return dc_util::get_file_content(path);
+}
+
+std::string resolveRobotName(const std::string& value, const std::string& value_from_file)
+{
+  std::string resolved;
+  std::string source;
+
+  if (!value.empty())
+  {
+    resolved = value;
+    source = "the literal value";
+  }
+  else if (!value_from_file.empty())
+  {
+    resolved = resolveRobotNameFromFile(value_from_file);
+    source = "value_from_file '" + value_from_file + "'";
+  }
+  else
+  {
+    resolved = resolveRobotNameFromHostname();
+    source = "the hostname";
+  }
+
+  if (resolved.empty())
+  {
+    throw std::runtime_error("robot_name: resolved to an empty value from " + source);
+  }
+
+  return resolved;
+}
+
+}  // namespace
 
 MeasurementServer::MeasurementServer(const rclcpp::NodeOptions& options,
                                      const std::vector<std::string>& measurement_plugins)
@@ -56,7 +119,11 @@ void MeasurementServer::setCustomKeys()
 
     custom_keys_[i]["key"] = key;
     custom_keys_[i]["override"] = force_override;
-    if (!value.empty())
+    if (custom_key == kRobotNameKey)
+    {
+      custom_keys_[i]["value"] = resolveRobotName(value, value_from_file);
+    }
+    else if (!value.empty())
     {
       custom_keys_[i]["value"] = value;
     }

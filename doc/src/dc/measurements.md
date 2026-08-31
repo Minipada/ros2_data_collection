@@ -52,6 +52,21 @@ the Record as a `tags` field, but it has no routing effect — remove it. See th
 | run_id.counter_path                          | Path to store the last run. It is expanded with environment variables id                                                                                  | str         | "$HOME/run_id"                |
 | run_id.uuid                                  | Generate a new run ID by using a random UUID                                                                                                              | str         | false                         |
 
+### robot_name resolution
+
+`robot_name` is a custom key like any other, but when it appears in `custom_key_str_list`
+its value resolves in a fixed order rather than always being a literal string, so a fleet
+does not need one hand-edited params file per robot:
+
+1. `custom_keys_str.robot_name.value` — a literal string, unchanged from before.
+2. `custom_keys_str.robot_name.value_from_file` — the contents of a file, e.g. one written
+   by the provisioning process.
+3. The machine's hostname — the default when neither of the above is set.
+
+A `value_from_file` that names a file that cannot be read, or any source that resolves to
+an empty string, fails node configuration with a clear error rather than shipping Records
+with a missing or blank `robot_name`.
+
 ### Custom keys on Files
 
 The keys listed in `custom_key_str_list` label a Measurement's **Files** as well as its

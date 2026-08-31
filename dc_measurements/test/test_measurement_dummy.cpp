@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
+#include <unistd.h>
+
+#include <filesystem>
+#include <fstream>
+
 #include <gtest/gtest.h>
 
 #include "dc_interfaces/msg/string_stamped.hpp"
@@ -98,6 +103,85 @@ TEST_F(MeasurementDummyTest, CustomKeysAreDeclaredInTheRecord)
 
   EXPECT_EQ(dummy_record_["site"], "warehouse-3");
   EXPECT_EQ(dummy_record_["custom_keys"], nlohmann::json::array({ "site" }));
+}
+
+// robot_name is the one custom key whose resolution is flexible: literal, hostname, or a
+// file's contents, in that order, with hostname as the default when nothing is set (#442).
+
+TEST_F(MeasurementDummyTest, RobotNameLiteralValueIsUnchanged)
+{
+  ms_node_->declare_parameter("dummy.plugin", std::string("dc_measurements/Dummy"));
+  ms_node_->declare_parameter("dummy.topic_output", std::string("/dc/measurement/dummy"));
+  ms_node_->declare_parameter("dummy.record", std::string("{\"message\": \"My message\"}"));
+  ms_node_->declare_parameter("custom_key_str_list", std::vector<std::string>{ "robot_name" });
+  ms_node_->declare_parameter("custom_keys_str.robot_name.name", std::string("robot_name"));
+  ms_node_->declare_parameter("custom_keys_str.robot_name.value", std::string("C3PO"));
+
+  startLifecycleNode();
+
+  while (!dummy_callback_)
+  {
+    rclcpp::spin_some(ms_node_->get_node_base_interface());
+  }
+
+  EXPECT_EQ(dummy_record_["robot_name"], "C3PO");
+}
+
+TEST_F(MeasurementDummyTest, RobotNameDefaultsToTheHostname)
+{
+  ms_node_->declare_parameter("dummy.plugin", std::string("dc_measurements/Dummy"));
+  ms_node_->declare_parameter("dummy.topic_output", std::string("/dc/measurement/dummy"));
+  ms_node_->declare_parameter("dummy.record", std::string("{\"message\": \"My message\"}"));
+  ms_node_->declare_parameter("custom_key_str_list", std::vector<std::string>{ "robot_name" });
+  ms_node_->declare_parameter("custom_keys_str.robot_name.name", std::string("robot_name"));
+
+  startLifecycleNode();
+
+  while (!dummy_callback_)
+  {
+    rclcpp::spin_some(ms_node_->get_node_base_interface());
+  }
+
+  char hostname_buf[256] = { 0 };
+  ASSERT_EQ(gethostname(hostname_buf, sizeof(hostname_buf) - 1), 0);
+  EXPECT_EQ(dummy_record_["robot_name"], std::string(hostname_buf));
+}
+
+TEST_F(MeasurementDummyTest, RobotNameResolvesFromFile)
+{
+  auto robot_name_file = (std::filesystem::temp_directory_path() / "dc_measurement_dummy_robot_name_file").u8string();
+  std::ofstream(robot_name_file) << "TB-42";
+
+  ms_node_->declare_parameter("dummy.plugin", std::string("dc_measurements/Dummy"));
+  ms_node_->declare_parameter("dummy.topic_output", std::string("/dc/measurement/dummy"));
+  ms_node_->declare_parameter("dummy.record", std::string("{\"message\": \"My message\"}"));
+  ms_node_->declare_parameter("custom_key_str_list", std::vector<std::string>{ "robot_name" });
+  ms_node_->declare_parameter("custom_keys_str.robot_name.name", std::string("robot_name"));
+  ms_node_->declare_parameter("custom_keys_str.robot_name.value_from_file", robot_name_file);
+
+  startLifecycleNode();
+
+  while (!dummy_callback_)
+  {
+    rclcpp::spin_some(ms_node_->get_node_base_interface());
+  }
+
+  EXPECT_EQ(dummy_record_["robot_name"], "TB-42");
+
+  std::filesystem::remove(robot_name_file);
+}
+
+TEST_F(MeasurementDummyTest, RobotNameMissingFileFailsConfigureClearly)
+{
+  ms_node_->declare_parameter("dummy.plugin", std::string("dc_measurements/Dummy"));
+  ms_node_->declare_parameter("dummy.topic_output", std::string("/dc/measurement/dummy"));
+  ms_node_->declare_parameter("dummy.record", std::string("{\"message\": \"My message\"}"));
+  ms_node_->declare_parameter("custom_key_str_list", std::vector<std::string>{ "robot_name" });
+  ms_node_->declare_parameter("custom_keys_str.robot_name.name", std::string("robot_name"));
+  ms_node_->declare_parameter("custom_keys_str.robot_name.value_from_file",
+                               std::string("/nonexistent/dc_robot_name_that_does_not_exist"));
+
+  EXPECT_THROW(ms_node_->configure(), std::runtime_error);
 }
 
 TEST_F(MeasurementDummyTest, NoCustomKeysLeavesTheRecordUntouched)
