@@ -10,16 +10,24 @@ from an in-memory unacked window, so a Record is only forgotten once the Shipper
 actually durably buffered it — see "Delivery guarantees" below. It renders Vector's
 configuration from ROS parameters for the blessed Destination set (`postgres`, `s3`,
 `file`, `console` — ADR-0003) and passes raw Vector snippets (`custom_config_files`)
-through for everything else. It also hosts the
-**Uploader** (ADR-0005): `receives: files` Destinations are served by the Bridge itself —
-Records referencing Files get their Files uploaded to S3-compatible object storage
-(multipart + resumable), verified, and reported as status/metadata Records under the
-`dc.files` Tag. Pending uploads are durable (#265): each is written to a disk-backed
-intent queue before being handed to the Uploader, so a Bridge restart replays whatever
-never got acked instead of forgetting it. That queue and the Uploader's multipart-resume
-state live under `uploader.data_dir` (#441), a directory separate from the Shipper's own
-`shipper.data_dir` buffer — they default to the same path, so a deployment that only ever
-set `shipper.data_dir` keeps working unchanged, but each can be mounted as its own volume.
+through for everything else.
+
+This package also builds **`dc_uploader`** (ADR-0005, docs/adr/0014-uploader-runs-as-its-
+own-process.md): a separate, ROS-free executable that serves `receives: files`
+Destinations — Records referencing Files get their Files uploaded to S3-compatible object
+storage (multipart + resumable), verified, and reported as status/metadata Records under
+the `dc.files` Tag. The Bridge's own job for a files Destination is only to subscribe and
+durably enqueue (#265): each Record referencing a File is written to a disk-backed intent
+queue before the callback returns, so a Bridge *or* `dc_uploader` restart replays whatever
+never got acked instead of forgetting it. `dc_uploader` is configured entirely by
+`DC_UPLOADER_*` environment variables, not ROS parameters — see `process_config.hpp`. The
+queue and `dc_uploader`'s multipart-resume state live under `uploader.data_dir` (#441), a
+directory separate from the Shipper's own `shipper.data_dir` buffer — they default to the
+same path, so a deployment that only ever set `shipper.data_dir` keeps working unchanged,
+but each can be mounted as its own volume. `dc_bringup.launch.py` starts `dc_uploader`
+alongside `dc_bridge` automatically whenever a `receives: files` Destination is
+configured, translating that Destination plus `files.*`/`uploader.data_dir` into
+`dc_uploader`'s environment — no separate manual step.
 
 `dc_bridge` is an ordinary `ament_cmake` C++ package. It builds with the same `rosdep
 install` + `colcon build` as every other `dc_*` package. See
@@ -46,26 +54,31 @@ install` + `colcon build` as every other `dc_*` package. See
   - `atomic_write` — writes a file crash/partial-write-safe (write to `<path>.tmp`, then
     `rename()`, #444), used for the rendered Shipper config so a reader polling the path
     never observes a partial write.
-  - `uploader/` — the Uploader (ADR-0005): `group` (parses the Files a Record
+  - `uploader/` — the Uploader's logic (ADR-0005): `group` (parses the Files a Record
     references), `content_type` (magic-byte sniffing), `status` (the Humble-compatible
     status-row shapes), `multipart` (resumable multipart with a per-part JSON checkpoint
     sidecar), `intent_queue` (#265 — the disk-backed durable queue of pending uploads:
     crash-atomic tmp+rename enqueue, ack-by-unlink, oldest-first sweep with per-entry
-    exponential backoff, replayed on startup), and `uploader` (the verify-then-delete
-    orchestration). All built on an abstract `ObjectStore` interface, so the logic is
-    tested against an in-memory fake with no cloud dependency.
+    exponential backoff, replayed on startup; `rescan()`, #446, is how a second process's
+    own instance over the same directory learns about an intent it didn't enqueue
+    itself), `uploader` (the verify-then-delete orchestration), and `process_config`
+    (#446 — parses `dc_uploader`'s `DC_UPLOADER_*` environment-variable configuration).
+    All built on an abstract `ObjectStore` interface, so the logic is tested against an
+    in-memory fake with no cloud dependency.
 - **`src/raw_subscriptions.cpp`** (`dc_bridge_ros`) — raw / generic-subscription mode's
   rclcpp half (#227): topic discovery, `create_generic_subscription`, and the runtime
   introspection walk that turns a message of a type the Bridge was never compiled against
   into JSON. Its own library rather than a file in the executable, so the conversion is
   gtested against real message types without the node, Vector or the AWS SDK.
 - **`src/uploader/s3_object_store.cpp`** — the aws-sdk-cpp implementation of
-  `ObjectStore` (the only Uploader piece that links the SDK, via `aws_sdk_vendor`).
-  Verified against RustFS (PutObject + multipart) before adoption.
+  `ObjectStore`, linked only into `dc_uploader` (the only Uploader piece that links the
+  SDK, via `aws_sdk_vendor`) — `dc_bridge` itself no longer does. Verified against RustFS
+  (PutObject + multipart) before adoption.
 - **`src/bridge_node.cpp` / `src/main.cpp`** — the `rclcpp` node: declares the
-  `shipper`/`uploader`/`destinations`/`files` parameters (ADR-0003 config contract + ADR-0005),
-  renders and atomically writes the config (write then rename, #444), subscribes to every
-  Destination's `inputs` topics, forwards Records, runs the Uploader worker thread, and
+  `shipper`/`uploader`/`destinations`/`files.metadata_destination` parameters (ADR-0003
+  config contract + ADR-0005), renders and atomically writes the config (write then
+  rename, #444), subscribes to every Destination's `inputs` topics, forwards Records,
+  writes upload intents to the durable queue for `dc_uploader` to read (#446), and
   exposes a `~/ready` (`std_srvs/Trigger`) service. In the default **managed** mode
   (`shipper.managed: true`) it also locates the vendored Vector binary, `vector
   validate`s the merged config, and spawns/supervises Vector. In **unmanaged** mode
@@ -77,8 +90,14 @@ install` + `colcon build` as every other `dc_*` package. See
   probe against the Shipper's ingest port, independent of who spawned it. `rclcpp` handles
   SIGINT/SIGTERM and `on_shutdown` stops Vector in managed mode (a no-op in unmanaged
   mode, nothing to stop), so it's never orphaned.
+- **`src/uploader_main.cpp`** — `dc_uploader`'s entry point (#446, no `rclcpp`): loads
+  `DC_UPLOADER_*` configuration, builds the S3 `ObjectStore`, and runs the same
+  upload/retention poll loop the Bridge's worker thread used to run, now against its own
+  `IntentQueue` instance (kept in sync with the Bridge's via `rescan()`). SIGINT/SIGTERM
+  set an atomic flag the loop checks every poll.
 - **`test/`** — gtest suites (`forwarder`, `supervisor`, `render`, `misc`, `uploader`,
-  `intent_queue`), all linking only the aws-free core.
+  `intent_queue`, `retention`, `thumbnail`, `raw_config`, `process_config`), all linking
+  only the aws-free core.
 
 ## Config renderer (ADR-0003)
 

@@ -12,10 +12,11 @@
 // processing actually succeeds — no cap, no drop-oldest, no dead-letter. An upload
 // intent and its Files live and die together.
 //
-// The in-process wake-up channel (a condition_variable in BridgeNode) is still how the
-// worker learns "there's new work" cheaply; this directory is the crash-recovery state,
-// not the communication path — on startup every unacked intent left over from a
-// previous run is replayed, oldest-first, alongside live traffic.
+// This directory is the crash-recovery state, not a notification channel: on startup
+// every unacked intent left over from a previous run is replayed, oldest-first, alongside
+// live traffic. Since #446 split the Uploader into its own process, there is no
+// in-process wake-up signal at all — a Bridge process enqueues and a separate dc_uploader
+// process discovers new intents purely by polling rescan() (see that method below).
 #ifndef DC_BRIDGE__UPLOADER__INTENT_QUEUE_HPP_
 #define DC_BRIDGE__UPLOADER__INTENT_QUEUE_HPP_
 
@@ -93,6 +94,17 @@ public:
   std::size_t size() const;
   bool empty() const;
 
+  /// Picks up any `*.json` file that exists on disk but isn't yet known to this
+  /// instance — the multi-process split (#446): a Bridge process enqueues intents while a
+  /// separate Uploader process holds the read side (next_ready()/ack()/record_failure()),
+  /// each with its own IntentQueue instance over the same directory. enqueue() only
+  /// updates its own caller's in-memory view, so the Uploader's instance never otherwise
+  /// learns about an intent a different process wrote; this is what closes that gap.
+  /// Already-known entries are left untouched (so in-flight backoff state survives);
+  /// returns the number of newly discovered intents. Safe to call from the same loop that
+  /// already polls for next_ready(), same cost as the constructor's initial scan.
+  std::size_t rescan();
+
 private:
   struct Entry
   {
@@ -105,6 +117,12 @@ private:
   };
 
   std::string path_for(const std::string& id) const;
+  /// Every "*.json" filename currently on disk under `dir`, sorted oldest-first (ids sort
+  /// lexicographically in enqueue order — see intent_queue.cpp's make_id()).
+  static std::vector<std::string> list_json_names(const std::string& dir);
+  /// Parses one intent file's body into an Entry, or nullopt if it can't be read/parsed (a
+  /// "final" .json file should always be complete, since rename is atomic).
+  static std::optional<Entry> load_entry(const std::string& dir, const std::string& name);
 
   mutable std::mutex mutex_;
   std::string dir_;

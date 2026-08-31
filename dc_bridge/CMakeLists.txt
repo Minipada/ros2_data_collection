@@ -33,8 +33,8 @@ find_package(AWSSDK REQUIRED COMPONENTS s3)
 
 # ROS-independent core: Forwarder/Supervisor/Readiness/TopicConfig/ConfigRenderer/
 # vector_binary plus the Uploader logic (ADR-0005). Deliberately aws-free — the S3
-# ObjectStore implementation lives in the node target below — so the Uploader is
-# unit-tested with an in-memory fake and plain gtest, no cloud dependency.
+# ObjectStore implementation lives in the dc_uploader executable below (#446) — so the
+# Uploader is unit-tested with an in-memory fake and plain gtest, no cloud dependency.
 add_library(dc_bridge_core
   src/forwarder.cpp
   src/readiness.cpp
@@ -52,7 +52,8 @@ add_library(dc_bridge_core
   src/uploader/intent_queue.cpp
   src/uploader/thumbnail.cpp
   src/uploader/uploader.cpp
-  src/uploader/retention.cpp)
+  src/uploader/retention.cpp
+  src/uploader/process_config.cpp)
 target_include_directories(dc_bridge_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -79,16 +80,26 @@ target_link_libraries(dc_bridge_ros dc_bridge_core)
 ament_target_dependencies(dc_bridge_ros
   rclcpp rosidl_runtime_cpp rosidl_typesupport_introspection_cpp rcpputils)
 
-# The ROS node, plus the aws-sdk-cpp S3 ObjectStore implementation (the only Uploader
-# piece that links the SDK).
+# The ROS node. No longer links the AWS SDK (#446): uploading moved to dc_uploader below,
+# so the ROS container never needs to hold object-storage credentials (epic #440's user
+# story 5) and the Bridge's own link line stays aws-free.
 add_executable(dc_bridge
   src/main.cpp
-  src/bridge_node.cpp
-  src/uploader/s3_object_store.cpp)
-target_link_libraries(dc_bridge dc_bridge_core dc_bridge_ros ${AWSSDK_LINK_LIBRARIES})
+  src/bridge_node.cpp)
+target_link_libraries(dc_bridge dc_bridge_core dc_bridge_ros)
 ament_target_dependencies(dc_bridge rclcpp dc_interfaces std_msgs std_srvs)
 
-install(TARGETS dc_bridge DESTINATION lib/${PROJECT_NAME})
+# The Uploader's own entrypoint (#446): reads the durable intent queue the Bridge above
+# writes, uploads Files to object storage, and emits each File's metadata Record itself —
+# a standalone process, configured entirely by DC_UPLOADER_* environment variables
+# (dc_bridge/uploader/process_config.hpp), with no ROS dependency. Links the aws-sdk-cpp
+# S3 ObjectStore implementation, the one Uploader piece that needs it.
+add_executable(dc_uploader
+  src/uploader_main.cpp
+  src/uploader/s3_object_store.cpp)
+target_link_libraries(dc_uploader dc_bridge_core ${AWSSDK_LINK_LIBRARIES})
+
+install(TARGETS dc_bridge dc_uploader DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
@@ -97,7 +108,7 @@ if(BUILD_TESTING)
   # dc_bridge itself needs no part of it — the Bridge is deliberately unaware of incident capture.
   find_package(dc_common REQUIRED)
   # All gtests link only the aws-free core (uploader_test uses an in-memory ObjectStore).
-  foreach(t forwarder supervisor render misc uploader intent_queue retention thumbnail raw_config)
+  foreach(t forwarder supervisor render misc uploader intent_queue retention thumbnail raw_config process_config)
     ament_add_gtest(${t}_test test/${t}_test.cpp)
     target_link_libraries(${t}_test dc_bridge_core)
     ament_target_dependencies(${t}_test dc_common)

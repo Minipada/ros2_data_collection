@@ -209,6 +209,55 @@ TEST(IntentQueue, BackoffDoublesAndCapsAtMaxBackoff)
   EXPECT_TRUE(q.next_ready(now + std::chrono::milliseconds(3001)).has_value());
 }
 
+TEST(IntentQueue, RescanPicksUpAnIntentEnqueuedByAnotherInstance)
+{
+  // Models the #446 split: one IntentQueue instance (the Bridge process) enqueues, a
+  // second instance (the Uploader process) over the same directory only learns about it
+  // via rescan() — enqueue() on the first instance never touches the second's in-memory
+  // state.
+  Fixture fx;
+  IntentQueue writer(fx.dir.string());
+  IntentQueue reader(fx.dir.string());
+  EXPECT_TRUE(reader.empty());
+
+  const std::string id = writer.enqueue("dc.measurement.camera", json{ { "name", "camera" } });
+  EXPECT_TRUE(reader.empty());  // not yet rescanned
+
+  EXPECT_EQ(reader.rescan(), 1u);
+  EXPECT_EQ(reader.size(), 1u);
+  auto ready = reader.next_ready();
+  ASSERT_TRUE(ready.has_value());
+  EXPECT_EQ(ready->id, id);
+  EXPECT_EQ(ready->payload["name"], "camera");
+}
+
+TEST(IntentQueue, RescanLeavesAlreadyKnownEntriesAndTheirBackoffUntouched)
+{
+  Fixture fx;
+  IntentQueue reader(fx.dir.string(), std::chrono::milliseconds(1000), std::chrono::milliseconds(60000));
+  const std::string id = reader.enqueue("dc.measurement.camera", json{ { "seq", 1 } });
+  const auto now = std::chrono::steady_clock::now();
+  reader.record_failure(id, now);  // now backing off
+
+  EXPECT_EQ(reader.rescan(), 0u);                                                     // nothing new on disk
+  EXPECT_FALSE(reader.next_ready(now + std::chrono::milliseconds(500)).has_value());  // backoff preserved
+}
+
+TEST(IntentQueue, RescanNeverRediscoversAnAlreadyAckedIntent)
+{
+  Fixture fx;
+  IntentQueue writer(fx.dir.string());
+  IntentQueue reader(fx.dir.string());
+  const std::string id = writer.enqueue("dc.measurement.camera", json{ { "seq", 1 } });
+
+  ASSERT_EQ(reader.rescan(), 1u);
+  reader.ack(id);
+  EXPECT_TRUE(reader.empty());
+
+  EXPECT_EQ(reader.rescan(), 0u);  // the file is gone; nothing to rediscover
+  EXPECT_TRUE(reader.empty());
+}
+
 TEST(IntentQueue, RecordsWithoutFilesNeverLingerInSteadyState)
 {
   // A files-less Record still gets enqueued (the callback that writes to disk doesn't

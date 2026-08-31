@@ -4,7 +4,7 @@
 import os
 
 import yaml
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import get_package_prefix, get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
@@ -63,6 +63,132 @@ def _topic_to_dc_tag_route(topic: str) -> str:
     """
     tag = topic.lstrip("/").replace("/", ".")
     return f"dc.{tag}"
+
+
+def build_uploader_action(raw_params):
+    """Build the `dc_uploader` process (#446) for the `dc_bridge:` block's files Destination.
+
+    The Uploader used to run on a worker thread inside `dc_bridge`; it is now a
+    standalone process (docs/adr/0014-uploader-runs-as-its-own-process.md),
+    configured entirely by `DC_UPLOADER_*` environment variables
+    (`dc_bridge/uploader/process_config.hpp`) rather than ROS parameters, so it has
+    no ROS dependency. This function is what still makes it *configure* like one
+    block in the params file: it reads the `dc_bridge:` block's single `receives:
+    files` Destination (if any) plus `uploader.data_dir`/`vector_forward_host`/
+    `vector_forward_port`/`files.*`, and translates them into that process's
+    environment — the one place a files Destination's settings cross from ROS
+    params into `DC_UPLOADER_*` env vars.
+
+    Started the same way `dc_mcap_writer` is (see build_bridge_and_mcap_actions):
+    `ExecuteProcess` running the installed binary directly, not `ros2 run` (which
+    would not forward signals to it — see that function's docstring), with
+    `respawn=True` so an Uploader crash restarts it freely without taking the
+    Bridge down (#446's "killing the Uploader does not affect Record collection").
+
+    Args:
+        raw_params: The parsed params file (same dict build_bridge_and_mcap_actions
+            already loaded from `dc_params_file`).
+
+    Returns:
+        A list with one `ExecuteProcess` action if a `receives: files` Destination
+        is configured, otherwise an empty list.
+    """
+    dc_bridge_params = (raw_params.get("dc_bridge") or {}).get("ros__parameters") or {}
+    destination_names = dc_bridge_params.get("destinations", [])
+
+    def _receives(destination_name):
+        return (dc_bridge_params.get(destination_name) or {}).get("receives")
+
+    files_destination_names = [name for name in destination_names if _receives(name) == "files"]
+    if not files_destination_names:
+        return []
+    if len(files_destination_names) > 1:
+        # The split (#446) carries one object-storage endpoint's worth of
+        # DC_UPLOADER_* env vars; supporting more is future work, not silent data
+        # loss for one of them.
+        raise RuntimeError(
+            "dc_uploader launch wiring supports at most one `receives: files` destination per "
+            f"dc_bridge params file; found {files_destination_names}"
+        )
+    name = files_destination_names[0]
+    dest = dc_bridge_params.get(name) or {}
+
+    shipper_params = dc_bridge_params.get("shipper") or {}
+    shipper_data_dir = os.path.expanduser(
+        os.path.expandvars(shipper_params.get("data_dir", "$HOME/.dc/buffer"))
+    )
+    uploader_params = dc_bridge_params.get("uploader") or {}
+    uploader_data_dir = os.path.expanduser(
+        os.path.expandvars(uploader_params.get("data_dir", shipper_data_dir))
+    )
+    files_params = dc_bridge_params.get("files") or {}
+    retention_params = files_params.get("retention") or {}
+    delete_when_sent = files_params.get("delete_when_sent", False)
+
+    uploader_env = {
+        "DC_UPLOADER_STORAGE_NAME": str(name),
+        # Mirrors bridge_node.cpp's own `<uploader.data_dir>/queue/upload` and
+        # `<uploader.data_dir>/uploader` — the two processes must agree on these
+        # paths without either hard-coding the other's binary.
+        "DC_UPLOADER_QUEUE_DIR": os.path.join(uploader_data_dir, "queue", "upload"),
+        "DC_UPLOADER_STATE_DIR": os.path.join(uploader_data_dir, "uploader"),
+        "DC_UPLOADER_SHIPPER_HOST": str(dc_bridge_params.get("vector_forward_host", "127.0.0.1")),
+        "DC_UPLOADER_SHIPPER_PORT": str(dc_bridge_params.get("vector_forward_port", 24224)),
+        "DC_UPLOADER_S3_BUCKET": str(dest.get("bucket", "")),
+        "DC_UPLOADER_DELETE_WHEN_SENT": "true" if delete_when_sent else "false",
+    }
+    if dest.get("region"):
+        uploader_env["DC_UPLOADER_S3_REGION"] = str(dest["region"])
+    if dest.get("endpoint"):
+        uploader_env["DC_UPLOADER_S3_ENDPOINT"] = str(dest["endpoint"])
+    if dest.get("key_prefix"):
+        uploader_env["DC_UPLOADER_S3_KEY_PREFIX"] = str(dest["key_prefix"])
+    if dest.get("access_key_id") and dest.get("secret_access_key"):
+        uploader_env["DC_UPLOADER_S3_ACCESS_KEY_ID"] = str(dest["access_key_id"])
+        # Secrets support $VAR-style env references (ADR-0003), same as
+        # declare_destination's C++ side expands `secret_access_key`/`password`.
+        secret = os.path.expandvars(str(dest["secret_access_key"]))
+        uploader_env["DC_UPLOADER_S3_SECRET_ACCESS_KEY"] = secret
+    force_path_style = dest.get("force_path_style")
+    if force_path_style is not None:
+        uploader_env["DC_UPLOADER_S3_FORCE_PATH_STYLE"] = "true" if force_path_style else "false"
+    max_bytes = retention_params.get("max_bytes")
+    if max_bytes:
+        uploader_env["DC_UPLOADER_RETENTION_MAX_BYTES"] = str(max_bytes)
+    max_age_days = retention_params.get("max_age_days")
+    if max_age_days:
+        uploader_env["DC_UPLOADER_RETENTION_MAX_AGE_DAYS"] = str(max_age_days)
+    if files_params.get("ffprobe_binary"):
+        uploader_env["DC_UPLOADER_FFPROBE_BINARY"] = str(files_params["ffprobe_binary"])
+    multipart_threshold = files_params.get("multipart_threshold_bytes")
+    if multipart_threshold:
+        uploader_env["DC_UPLOADER_MULTIPART_THRESHOLD_BYTES"] = str(multipart_threshold)
+    multipart_part_size = files_params.get("multipart_part_size_bytes")
+    if multipart_part_size:
+        uploader_env["DC_UPLOADER_MULTIPART_PART_SIZE_BYTES"] = str(multipart_part_size)
+
+    thumbnails_params = files_params.get("thumbnails") or {}
+    if thumbnails_params.get("enabled", False):
+        uploader_env["DC_UPLOADER_THUMBNAILS_ENABLED"] = "true"
+    max_dimension = thumbnails_params.get("max_dimension")
+    if max_dimension:
+        uploader_env["DC_UPLOADER_THUMBNAIL_MAX_DIMENSION"] = str(max_dimension)
+    if thumbnails_params.get("ffmpeg_binary"):
+        uploader_env["DC_UPLOADER_FFMPEG_BINARY"] = str(thumbnails_params["ffmpeg_binary"])
+
+    uploader_binary = os.path.join(
+        get_package_prefix("dc_bridge"), "lib", "dc_bridge", "dc_uploader"
+    )
+    return [
+        ExecuteProcess(
+            cmd=[uploader_binary],
+            name="dc_uploader",
+            output={"stdout": "screen", "stderr": "screen"},
+            additional_env=uploader_env,
+            respawn=True,
+            respawn_delay=2.0,
+        )
+    ]
 
 
 def build_bridge_and_mcap_actions(configured_params):
@@ -196,6 +322,7 @@ def build_bridge_and_mcap_actions(configured_params):
             respawn_delay=2.0,
             parameters=bridge_parameters,
         )
+        extra_actions.extend(build_uploader_action(raw_params))
         return [dc_bridge_node, *extra_actions]
 
     return OpaqueFunction(function=_build)

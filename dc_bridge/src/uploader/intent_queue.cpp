@@ -71,51 +71,92 @@ std::chrono::system_clock::time_point enqueued_at_from_id(const std::string& id)
 
 }  // namespace
 
-IntentQueue::IntentQueue(std::string dir, std::chrono::milliseconds base_backoff, std::chrono::milliseconds max_backoff)
-  : dir_(std::move(dir)), base_backoff_(base_backoff), max_backoff_(max_backoff)
+std::vector<std::string> IntentQueue::list_json_names(const std::string& dir)
 {
-  std::filesystem::create_directories(dir_);
-
   std::vector<std::string> names;
-  for (const auto& e : std::filesystem::directory_iterator(dir_))
+  for (const auto& e : std::filesystem::directory_iterator(dir))
   {
-    if (!e.is_regular_file())
-    {
-      continue;
-    }
-    // ".json.tmp" leftovers from a crash mid tmp+rename are simply not ".json" and are
-    // left alone rather than loaded as pending intents.
-    if (e.path().extension() != ".json")
+    if (!e.is_regular_file() || e.path().extension() != ".json")
     {
       continue;
     }
     names.push_back(e.path().filename().string());
   }
   std::sort(names.begin(), names.end());
+  return names;
+}
 
-  for (auto& name : names)
+std::optional<IntentQueue::Entry> IntentQueue::load_entry(const std::string& dir, const std::string& name)
+{
+  std::ifstream in(dir + "/" + name, std::ios::binary);
+  if (!in.good())
   {
-    std::ifstream in(dir_ + "/" + name, std::ios::binary);
-    if (!in.good())
+    return std::nullopt;
+  }
+  nlohmann::json doc;
+  try
+  {
+    in >> doc;
+  }
+  catch (const nlohmann::json::exception&)
+  {
+    return std::nullopt;
+  }
+  Entry entry;
+  entry.tag = doc.value("tag", "");
+  entry.payload = doc.value("payload", nlohmann::json::object());
+  entry.enqueued_at = enqueued_at_from_id(name);
+  return entry;
+}
+
+IntentQueue::IntentQueue(std::string dir, std::chrono::milliseconds base_backoff, std::chrono::milliseconds max_backoff)
+  : dir_(std::move(dir)), base_backoff_(base_backoff), max_backoff_(max_backoff)
+{
+  std::filesystem::create_directories(dir_);
+
+  for (auto& name : list_json_names(dir_))
+  {
+    auto entry = load_entry(dir_, name);
+    if (!entry)
     {
       continue;
     }
-    nlohmann::json doc;
-    try
-    {
-      in >> doc;
-    }
-    catch (const nlohmann::json::exception&)
-    {
-      continue;  // a "final" .json file should always be complete (rename is atomic).
-    }
-    Entry entry;
-    entry.tag = doc.value("tag", "");
-    entry.payload = doc.value("payload", nlohmann::json::object());
-    entry.enqueued_at = enqueued_at_from_id(name);
-    entries_.emplace(name, std::move(entry));
+    entries_.emplace(name, std::move(*entry));
     order_.push_back(name);
   }
+}
+
+std::size_t IntentQueue::rescan()
+{
+  std::size_t discovered = 0;
+  for (auto& name : list_json_names(dir_))
+  {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (entries_.count(name) > 0)
+      {
+        continue;
+      }
+    }
+    auto entry = load_entry(dir_, name);
+    if (!entry)
+    {
+      continue;
+    }
+    std::lock_guard<std::mutex> lock(mutex_);
+    // entries_ is only ever mutated while mutex_ is held, and rescan() itself isn't
+    // reentrant (the caller's single poll loop is the only caller) — no second check is
+    // needed here, unlike a true check-then-act race.
+    entries_.emplace(name, std::move(*entry));
+    order_.push_back(name);
+    ++discovered;
+  }
+  if (discovered > 0)
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::sort(order_.begin(), order_.end());
+  }
+  return discovered;
 }
 
 std::string IntentQueue::path_for(const std::string& id) const
