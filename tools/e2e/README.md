@@ -325,7 +325,7 @@ Two discoveries came out of implementing this, both recorded rather than worked 
 1. **Files bypass the two-tier chain.** The Uploader — File bytes over its own AWS SDK
    client, plus its own file-metadata Records — talks directly to whatever `s3`/
    `postgres` Destination host is configured, with no Vector hop at all
-   (`dc_bridge/src/bridge_node.cpp`'s `run_uploader_worker` never touches the rendered
+   (`dc_bridge/src/uploader_main.cpp`'s `dc_uploader` process never touches the rendered
    Vector config). There is no way to route Files through the aggregating Shipper without
    new DC code, so `e2e_limits_params.yaml` points the Files-side Destinations straight at
    the real shared Postgres/RustFS. Extending true two-tier coverage to Files is left as a

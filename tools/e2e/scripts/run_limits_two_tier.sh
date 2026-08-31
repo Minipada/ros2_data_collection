@@ -52,8 +52,8 @@
 # This composer only routes `receives: records` Measurement Records through the two-tier
 # chain. The Uploader — File bytes over its own AWS SDK client, plus its own
 # file-metadata Records — talks directly to whatever `s3`/`postgres` Destination host is
-# configured, with no Vector hop at all (dc_bridge/src/bridge_node.cpp's
-# run_uploader_worker never touches the rendered Vector config). There is no way to route
+# configured, with no Vector hop at all (dc_bridge/src/uploader_main.cpp's dc_uploader
+# process never touches the rendered Vector config). There is no way to route
 # Files through the aggregating Shipper without new DC code, so
 # params/e2e_limits_params.yaml points the Files-side Destinations straight at the real
 # shared Postgres/RustFS instead of through the chain. Extending true two-tier coverage

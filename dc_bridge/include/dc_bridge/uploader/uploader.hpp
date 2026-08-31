@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 
+#include "dc_bridge/uploader/file_status_tag.hpp"
 #include "dc_bridge/uploader/group.hpp"
 #include "dc_bridge/uploader/object_store.hpp"
 #include "dc_bridge/uploader/status.hpp"
@@ -29,9 +30,6 @@
 
 namespace dc_bridge::uploader
 {
-
-/// The Tag the Uploader emits status/metadata Records under.
-inline constexpr const char* FILE_STATUS_TAG = "dc.files";
 
 struct UploaderConfig
 {

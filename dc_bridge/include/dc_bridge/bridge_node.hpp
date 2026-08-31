@@ -19,12 +19,13 @@
 // Records-Destination's `inputs` topics and forwards each Record to Vector over the
 // shipper ingest protocol.
 //
-// `receives: files` Destinations (ADR-0005, the Uploader) are handled in Phase 2.
+// `receives: files` Destinations (ADR-0005): the Bridge subscribes and writes upload
+// intents to the durable queue; a separate dc_uploader process (#446) reads, uploads, and
+// emits the resulting status Records — see docs/adr/0014-uploader-runs-as-its-own-process.md.
 #ifndef DC_BRIDGE__BRIDGE_NODE_HPP_
 #define DC_BRIDGE__BRIDGE_NODE_HPP_
 
 #include <atomic>
-#include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <nlohmann/json.hpp>
@@ -40,10 +41,8 @@
 #include "dc_bridge/readiness.hpp"
 #include "dc_bridge/render.hpp"
 #include "dc_bridge/supervisor.hpp"
+#include "dc_bridge/uploader/file_status_tag.hpp"
 #include "dc_bridge/uploader/intent_queue.hpp"
-#include "dc_bridge/uploader/object_store.hpp"
-#include "dc_bridge/uploader/retention.hpp"
-#include "dc_bridge/uploader/uploader.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
 
 namespace dc_bridge
@@ -62,11 +61,6 @@ public:
 
 private:
   void run_prober(std::string forward_host, std::uint16_t forward_port);
-  // The Uploader worker (ADR-0005/#265): sweeps the durable intent queue oldest-first
-  // (per-entry backoff on failure — one permanently-failing intent can't starve the
-  // backlog), processes each Record, acks (unlinks) its intent on success, and emits
-  // status Records through its own Forwarder connection under FILE_STATUS_TAG.
-  void run_uploader_worker(std::string forward_host, std::uint16_t forward_port);
 
   std::shared_ptr<Supervisor> supervisor_;
   std::mutex supervisor_mutex_;
@@ -82,28 +76,12 @@ private:
   std::atomic<bool> prober_stop_{ false };
   std::atomic<bool> stopped_{ false };
 
-  // Uploader (ADR-0005) — created only when a `receives: files` destination is
-  // configured. Records on files-destination topics are enqueued into the durable
-  // intent_queue_ (#265); the worker thread replays/sweeps it, uploads Files, and emits
-  // status Records.
-  std::unique_ptr<uploader::Uploader> uploader_;
+  // The durable upload intent queue (ADR-0005/#265) — created only when a `receives:
+  // files` destination is configured. Records on files-destination topics are enqueued
+  // here so they survive a Bridge crash/restart. The Bridge only writes; a separate
+  // dc_uploader process (#446) owns reading, replaying, uploading, and emitting status
+  // Records — see docs/adr/0014-uploader-runs-as-its-own-process.md.
   std::unique_ptr<uploader::IntentQueue> intent_queue_;
-  std::thread uploader_thread_;
-  std::mutex uploader_wake_mutex_;
-  std::condition_variable uploader_wake_cv_;
-  bool upload_stop_{ false };
-
-  // Files retention (#267) — a copy of the storages the Uploader was built with (kept
-  // alongside it since the Uploader moves its own copy) so the worker thread can build
-  // shed audit rows without needing an Uploader accessor; a no-op sweep when disabled
-  // (the default) either way.
-  uploader::RetentionConfig retention_config_;
-  std::vector<Storage> files_storages_;
-
-  // Thumbnails (#256) — the configured generator binary, kept for the uploader worker's
-  // "couldn't generate any previews" warning, which is the only place a failed preview
-  // is observable (it never fails the upload itself).
-  std::string thumbnail_binary_;
 
   // Raw / generic-subscription mode (#227) — created only when `raw.enabled` is true.
   // Its Records go out through the same Forwarder as the Measurement Records above,

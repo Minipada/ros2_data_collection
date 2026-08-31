@@ -43,19 +43,6 @@ std::string expand_with_env(const std::string& input)
   return expand_env(input, env_lookup);
 }
 
-// Stamps a Bridge-generated Record (File status, retention audit) with the current time,
-// split into the seconds/nanoseconds pair the ingest protocol's EventTime carries. These
-// Records have no ROS header to take a stamp from, unlike the ones forwarded from a
-// Measurement's topic. Truncating this to whole seconds was part of #308.
-void stamp_now(Record& record)
-{
-  const auto since_epoch = std::chrono::system_clock::now().time_since_epoch();
-  const auto secs = std::chrono::duration_cast<std::chrono::seconds>(since_epoch);
-  record.timestamp_secs = static_cast<std::uint64_t>(secs.count());
-  record.timestamp_nanos =
-      static_cast<std::uint32_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(since_epoch - secs).count());
-}
-
 // Declares `name` with dynamic typing and a PARAMETER_NOT_SET default, so a value the
 // user didn't provide reads back as nullopt (rather than forcing a sentinel/default).
 std::optional<std::string> declare_optional_string(rclcpp::Node* node, const std::string& name)
@@ -274,31 +261,13 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
     target->tag_prefixes.push_back(raw_config_.tag_prefix);
   }
 
-  // files.* parameters (ADR-0005).
-  const bool files_delete_when_sent = this->declare_parameter<bool>("files.delete_when_sent", false);
-  const std::string files_ffprobe = this->declare_parameter<std::string>("files.ffprobe_binary", "ffprobe");
-  const auto files_multipart_threshold = declare_optional_int(this, "files.multipart_threshold_bytes");
-  const auto files_multipart_part_size = declare_optional_int(this, "files.multipart_part_size_bytes");
+  // files.metadata_destination (ADR-0005): the only files.* parameter the Bridge itself
+  // still needs. Everything else the Uploader used to read from files.*/uploader.data_dir
+  // (delete_when_sent, ffprobe/ffmpeg binaries, multipart sizing, thumbnails, retention)
+  // moved with it into dc_uploader's own DC_UPLOADER_* environment variables (#446,
+  // docs/adr/0014-uploader-runs-as-its-own-process.md) — the Bridge no longer uploads, so
+  // it has nothing to configure there.
   const std::string metadata_destination = this->declare_parameter<std::string>("files.metadata_destination", "");
-
-  // files.thumbnails.* (#256): opt-in derived previews next to each uploaded image/video
-  // File. Off by default; see dc_bridge/uploader/thumbnail.hpp for why generation shells
-  // out to ffmpeg rather than linking a decoder.
-  const bool files_thumbnails = this->declare_parameter<bool>("files.thumbnails.enabled", false);
-  thumbnail_binary_ = this->declare_parameter<std::string>("files.thumbnails.ffmpeg_binary", "ffmpeg");
-  const auto files_thumbnail_max_dim = declare_optional_int(this, "files.thumbnails.max_dimension");
-
-  // files.retention.* (#267): default off (0/absent = unlimited, Humble parity) —
-  // declared unconditionally like the files.* params above, whether or not a
-  // `receives: files` destination even exists.
-  if (const auto v = declare_optional_int(this, "files.retention.max_bytes"))
-  {
-    retention_config_.max_bytes = static_cast<std::uint64_t>(std::max<std::int64_t>(0, *v));
-  }
-  if (const auto v = declare_optional_int(this, "files.retention.max_age_days"))
-  {
-    retention_config_.max_age_days = static_cast<std::uint32_t>(std::max<std::int64_t>(0, *v));
-  }
 
   if (!files_destinations.empty())
   {
@@ -316,47 +285,23 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
     }
     // The Uploader's status Records land at the configured metadata destination: append
     // its Tag to that Destination's routed set (rendered/normalized/consumed like any
-    // topic-derived Tag).
+    // topic-derived Tag). The Uploader itself runs as dc_uploader, a separate process
+    // (#446); the Bridge's job here is only to make sure Vector routes dc.files there.
     target->extra_tags.push_back(uploader::FILE_STATUS_TAG);
-
-    // Build the Uploader (ADR-0005): one S3 storage per `receives: files` Destination.
-    std::vector<Storage> storages;
     for (const auto& dest : files_destinations)
     {
-      const auto* s3 = std::get_if<S3Params>(&dest.kind);
-      if (s3 == nullptr)
+      if (std::get_if<S3Params>(&dest.kind) == nullptr)
       {
         // destination_from_raw enforces `type: s3` for `receives: files`.
         throw std::runtime_error("internal error: files destination '" + dest.name + "' is not object storage");
       }
-      storages.push_back(make_s3_storage(dest.name, *s3));
     }
-    // Retention (#267) needs its own copy — the Uploader below moves its own — for the
-    // worker thread's periodic sweep. Cheap: Storage is name/prefix strings plus a
-    // shared_ptr<ObjectStore>.
-    files_storages_ = storages;
-    uploader::UploaderConfig ucfg(uploader_data_dir + "/uploader", files_delete_when_sent);
-    if (files_multipart_threshold)
-    {
-      ucfg.multipart_threshold_bytes =
-          static_cast<std::uint64_t>(std::max<std::int64_t>(1, *files_multipart_threshold));
-    }
-    if (files_multipart_part_size)
-    {
-      ucfg.multipart_part_size_bytes =
-          static_cast<std::uint64_t>(std::max<std::int64_t>(1, *files_multipart_part_size));
-    }
-    ucfg.thumbnails.enabled = files_thumbnails;
-    if (files_thumbnail_max_dim)
-    {
-      ucfg.thumbnails.max_dimension = static_cast<std::uint32_t>(std::max<std::int64_t>(1, *files_thumbnail_max_dim));
-    }
-    uploader_ = std::make_unique<uploader::Uploader>(std::move(ucfg), std::move(storages),
-                                                     uploader::ffprobe_duration_prober(files_ffprobe),
-                                                     uploader::ffmpeg_thumbnail_generator(thumbnail_binary_));
-    // The durable intent queue (#265): sibling to the Uploader's own
-    // <uploader.data_dir>/uploader multipart-resume state, replayed on every startup so a
-    // Bridge restart never forgets a pending upload.
+
+    // The durable intent queue (#265/#446): the Bridge writes an intent for every Record
+    // a files-Destination's subscription receives and never reads it back — a separate
+    // dc_uploader process owns replay, backoff, and acking. Its own directory
+    // (uploader.data_dir's multipart-resume state) is dc_uploader's concern now, not the
+    // Bridge's.
     intent_queue_ = std::make_unique<uploader::IntentQueue>(uploader_data_dir + "/queue/upload");
   }
 
@@ -453,14 +398,9 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
   // Background prober: respawns Vector if it dies and keeps the readiness flag current.
   prober_thread_ = std::thread(&BridgeNode::run_prober, this, vector_host, forward_port);
 
-  // The Uploader worker (ADR-0005), if any `receives: files` destination is configured.
-  if (uploader_)
-  {
-    uploader_thread_ = std::thread(&BridgeNode::run_uploader_worker, this, vector_host, forward_port);
-  }
-
   // Topics feeding Records destinations (forwarded to Vector) vs. topics feeding files
-  // destinations (scanned for File references by the Uploader). A topic can be in both.
+  // destinations (scanned for File references, whose intents the Bridge writes for the
+  // separate dc_uploader process to read, #446). A topic can be in both.
   std::set<std::string> records_topics;
   for (const auto& d : render_config.destinations)
   {
@@ -503,11 +443,11 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
           if (feeds_uploader)
           {
             // Durable enqueue (#265): the intent lands on disk before this callback
-            // returns, so it survives a Bridge crash/restart even if the worker never
-            // gets to it. The condition variable is only a cheap in-process wake-up
-            // signal, not the source of truth.
+            // returns, so it survives a Bridge crash/restart (or the separate dc_uploader
+            // process, #446, never having been up at all). dc_uploader's own poll loop
+            // picks it up by rescanning the queue directory; there is no in-process
+            // wake-up signal to a different OS process.
             intent_queue_->enqueue(tag, payload);
-            uploader_wake_cv_.notify_one();
           }
 
           if (forward_to_vector)
@@ -603,155 +543,6 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
   }
 }
 
-void BridgeNode::run_uploader_worker(std::string forward_host, std::uint16_t forward_port)
-{
-  // The Uploader's own Forwarder connection, so long uploads never hold the subscription
-  // callbacks' Forwarder lock.
-  ForwarderConfig fcfg;
-  fcfg.host = forward_host;
-  fcfg.port = forward_port;
-  fcfg.on_warning = [this](const std::string& msg) { RCLCPP_WARN(this->get_logger(), "%s", msg.c_str()); };
-  Forwarder forwarder(fcfg);
-
-  auto emit = [&forwarder](const nlohmann::json& row) {
-    Record record;
-    record.tag = uploader::FILE_STATUS_TAG;
-    stamp_now(record);
-    record.payload = row;
-    // Vector may be briefly down (restart, backpressure); keep trying for a while before
-    // handing the whole Record back for an idempotent retry.
-    std::string last_err;
-    for (int i = 0; i < 120; ++i)
-    {
-      try
-      {
-        forwarder.send(record);
-        return;
-      }
-      catch (const std::exception& e)
-      {
-        last_err = e.what();
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-      }
-    }
-    throw std::runtime_error(last_err);
-  };
-
-  // Retention's own audit rows (#267) are strictly best-effort: a single send, no
-  // 60s-of-retries loop like `emit` above — the shed itself (relieving disk pressure)
-  // must never be held up by "the Shipper is reachable right now".
-  auto retention_emit = [&forwarder](const nlohmann::json& row) {
-    Record record;
-    record.tag = uploader::FILE_STATUS_TAG;
-    stamp_now(record);
-    record.payload = row;
-    forwarder.send(record);
-  };
-  auto is_verified_everywhere = [this](const uploader::FileGroup& group) {
-    return uploader_->is_verified_everywhere(group);
-  };
-  auto retention_warn = [this](const std::string& msg) { RCLCPP_WARN(this->get_logger(), "%s", msg.c_str()); };
-  // Sweeping on every wake (every ~500ms) would hammer the storage backend with
-  // is_verified_everywhere's HEAD checks for no benefit — retention is an occasional,
-  // opt-in safety valve, not a hot path. A fixed, generous interval is enough; it isn't
-  // exposed as a parameter since #267 doesn't ask for that knob.
-  constexpr std::chrono::seconds RETENTION_SWEEP_INTERVAL{ 30 };
-  // `steady_clock::time_point::min()` would look like the natural "run immediately"
-  // sentinel here, but `now - last_retention_sweep` below is a *subtraction*, not a
-  // comparison (unlike IntentQueue's own next_attempt sentinel) — min() so vastly
-  // predates any real `now` that the difference overflows steady_clock::duration's
-  // range, wrapping around to a large *negative* value that then never legitimately
-  // reaches the interval again. Backdating by the interval itself keeps the value
-  // anchored to the real clock (so the first sweep still runs immediately) without the
-  // overflow.
-  auto last_retention_sweep = std::chrono::steady_clock::now() - RETENTION_SWEEP_INTERVAL;
-
-  for (;;)
-  {
-    {
-      std::unique_lock<std::mutex> lock(uploader_wake_mutex_);
-      if (upload_stop_)
-      {
-        return;
-      }
-      // The condition_variable is only a cheap wake-up signal for a fresh enqueue; the
-      // bounded wait also re-checks periodically so a backed-off intent's retry time
-      // elapsing gets noticed even without a new Record arriving (#265 — the queue
-      // itself has no timer, only next_ready()'s point-in-time check).
-      uploader_wake_cv_.wait_for(lock, std::chrono::milliseconds(500));
-      if (upload_stop_)
-      {
-        return;
-      }
-    }
-
-    // Keeps this Forwarder's own unacked window (#266) converging between status-Record
-    // emissions, same reason the main prober thread polls the subscription Forwarder.
-    forwarder.poll();
-
-    if (retention_config_.enabled())
-    {
-      const auto now = std::chrono::steady_clock::now();
-      if (now - last_retention_sweep >= RETENTION_SWEEP_INTERVAL)
-      {
-        last_retention_sweep = now;
-        uploader::sweep(*intent_queue_, files_storages_, retention_config_, is_verified_everywhere, retention_emit,
-                        retention_warn);
-      }
-    }
-
-    auto item = intent_queue_->next_ready();
-    if (!item)
-    {
-      continue;  // empty, or every pending intent is still backing off.
-    }
-
-    try
-    {
-      const auto summary = uploader_->process_record(item->payload, item->tag, emit);
-      intent_queue_->ack(item->id);
-      if (summary.files > 0)
-      {
-        RCLCPP_INFO(this->get_logger(),
-                    "uploader: group '%s': %zu file(s), %zu verified, %zu missing, %zu deleted, complete=%d",
-                    item->tag.c_str(), summary.files, summary.verified, summary.missing, summary.deleted,
-                    static_cast<int>(summary.group_complete));
-      }
-      // A custom key naming a field the Uploader emits itself keeps the Uploader's value
-      // (#419); saying so here is the difference between a defined rule and a silent drop.
-      if (!summary.dropped_custom_keys.empty())
-      {
-        std::string joined;
-        for (const auto& key : summary.dropped_custom_keys)
-        {
-          joined += (joined.empty() ? "" : ", ") + key;
-        }
-        RCLCPP_WARN(this->get_logger(),
-                    "uploader: group '%s': custom key(s) %s name fields the File metadata Records already carry — "
-                    "the Uploader's own values are kept and the custom values are not written",
-                    item->tag.c_str(), joined.c_str());
-      }
-      // Previews are best-effort and never fail an upload (#256), so a File the operator
-      // asked to have one and didn't get is only visible here. Warn rather than info:
-      // silently shipping galleries with no previews is the failure mode worth surfacing.
-      if (summary.thumbnails_failed > 0)
-      {
-        RCLCPP_WARN(this->get_logger(),
-                    "uploader: group '%s': %zu thumbnail(s) generated, %zu could not be generated (is `%s` on PATH?) — "
-                    "the Files themselves uploaded normally",
-                    item->tag.c_str(), summary.thumbnails, summary.thumbnails_failed, thumbnail_binary_.c_str());
-      }
-    }
-    catch (const std::exception& e)
-    {
-      // Retryable: the intent stays on disk (ack() never ran), so even a Bridge
-      // crash/restart right after this replays it — processing is idempotent (#248).
-      intent_queue_->record_failure(item->id);
-      RCLCPP_WARN(this->get_logger(), "uploader: %s; will retry intent %s with backoff", e.what(), item->id.c_str());
-    }
-  }
-}
-
 void BridgeNode::run_prober(std::string forward_host, std::uint16_t forward_port)
 {
   while (!prober_stop_.load())
@@ -788,15 +579,6 @@ void BridgeNode::stop()
   if (prober_thread_.joinable())
   {
     prober_thread_.join();
-  }
-  {
-    std::lock_guard<std::mutex> lock(uploader_wake_mutex_);
-    upload_stop_ = true;
-  }
-  uploader_wake_cv_.notify_all();
-  if (uploader_thread_.joinable())
-  {
-    uploader_thread_.join();
   }
   std::lock_guard<std::mutex> lock(supervisor_mutex_);
   if (supervisor_)
