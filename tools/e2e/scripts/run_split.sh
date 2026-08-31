@@ -2,51 +2,22 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-# Split-topology E2E scenario (#445, part of #440's split-deployment epic): the same
-# zero-loss guarantee run.sh already proves for the all-in-one mode (see that script and
-# tools/e2e/README.md), but with the Bridge (dc-ros) and the Shipper (vector) running as
-# separate containers under Compose (tools/e2e/compose.split.yaml) instead of one process
-# tree. Reuses the same dc-e2e image and scripts/verify_zero_loss.py **unmodified** in its
-# core logic (only its --passthrough-file/--mcap-summary-file/--raw-file flags become
-# optional, since this scenario's own params file, params/e2e_split_params.yaml, carries no
-# passthrough/MCAP/raw configuration at all — see that file's header for why).
+# Split-topology E2E scenario (#445, part of #440): the same zero-loss guarantee run.sh
+# proves for the all-in-one mode, but with dc-ros and vector as separate Compose-managed
+# containers (compose.split.yaml). See tools/e2e/README.md for what this proves.
 #
 #   ./tools/e2e/scripts/run_split.sh
 #
-# What this proves, matching #445's acceptance criteria one-for-one:
-#   - dc-ros and vector actually come up as two Compose-managed containers on one shared
-#     network (compose.split.yaml has no `network_mode: host` anywhere) — every peer,
-#     vector included, is reached by its plain compose service-name DNS alias. That
-#     requires dc_bridge/src/net_resolve.cpp (#445) to resolve `vector_forward_host` with
-#     `getaddrinfo()`; the previous literal-IPv4-only `inet_pton()` parse would have
-#     rejected a hostname there outright.
-#   - vector runs from the unmodified upstream image, no ROS workspace in it.
-#   - vector's own entrypoint override waits for the Bridge-rendered config to exist, then
-#     runs with `--watch-config` so a later render reloads without a container restart.
-#   - dc-ros reaches vector over the shipper ingest protocol and reports ready.
-#   - The Shipper's buffer (dc_e2e_split_buffer) and the Bridge's upload state
-#     (dc_e2e_split_uploader) are on separate volumes.
-#   - Starting dc-ros well before vector, with no `depends_on` between them anywhere in
-#     compose.split.yaml, and observing dc-ros recover on its own once vector appears,
-#     proves no orchestrator-level ordering is required (dc_bringup's existing readiness
-#     gate — dc_bringup/scripts/bridge_ready_gate.py — already polls for up to its own
-#     deadline rather than failing fast).
-#   - Zero loss across an induced Postgres+RustFS outage, same standard as run.sh.
-#
 # Env vars (all optional):
-#   DC_E2E_SPLIT_VECTOR_DELAY_SECONDS    how long dc-ros runs before vector is started
-#                                        (default 20 — comfortably under
-#                                        bridge_ready_gate's 120s default deadline, so
-#                                        recovery happens via that existing poll loop
-#                                        alone, with no container restart)
-#   DC_E2E_SPLIT_RECOVERY_TIMEOUT_SECONDS  deadline for the first Record to land once
-#                                          vector starts (default 60)
-#   DC_E2E_SPLIT_STEADY_STATE_SECONDS    warmup before the outage (default 15)
-#   DC_E2E_SPLIT_OUTAGE_SECONDS          outage duration (default 60)
-#   DC_E2E_SPLIT_DRAIN_SECONDS           settle time after recovery, before verifying
-#                                        (default 30)
-#   DC_E2E_KEEP                          "true" to leave the stack up after a failure
-#   DC_E2E_IMAGE / DC_WORKSPACE_IMAGE    same meaning as run.sh
+#   DC_E2E_SPLIT_VECTOR_DELAY_SECONDS      how long dc-ros runs before vector starts
+#                                          (default 20, under bridge_ready_gate's 120s)
+#   DC_E2E_SPLIT_RECOVERY_TIMEOUT_SECONDS  deadline for the first Record once vector
+#                                          starts (default 60)
+#   DC_E2E_SPLIT_STEADY_STATE_SECONDS      warmup before the outage (default 15)
+#   DC_E2E_SPLIT_OUTAGE_SECONDS            outage duration (default 60)
+#   DC_E2E_SPLIT_DRAIN_SECONDS             settle time before verifying (default 30)
+#   DC_E2E_KEEP                            "true" to leave the stack up on failure
+#   DC_E2E_IMAGE / DC_WORKSPACE_IMAGE      same meaning as run.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -128,9 +99,8 @@ compose up -d postgres rustfs
 
 timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
   || { log "Postgres never became ready"; exit 1; }
-# No --network host here (unlike run.sh) — Postgres/RustFS sit on compose's own
-# dc_e2e_split_net, so readiness is a TCP probe run from a container on that same
-# network, exactly like run_degraded.sh's own non-host-network readiness check.
+# No --network host here (unlike run.sh) — probe from a container on dc_e2e_split_net,
+# same as run_degraded.sh.
 log "waiting for RustFS to accept TCP connections on dc_e2e_split_net"
 timeout 60 bash -c "until podman run --rm --network dc_e2e_split_net '$DC_IMAGE' \
   python3 /opt/e2e/measure_rtt.py $RUSTFS_C 9000 --count 1 --timeout 2 >/dev/null 2>&1; do sleep 1; done" \
@@ -143,10 +113,7 @@ podman run --rm --network dc_e2e_split_net \
   --endpoint-url "http://$RUSTFS_C:9000" s3 mb s3://dc-e2e
 
 # --- start dc-ros alone, prove no orchestrator-level ordering is needed --------------
-# vector is deliberately NOT started yet: compose.split.yaml has no depends_on between
-# dc-ros and vector, and #445's acceptance criterion is that dc-ros recovers on its own if
-# the Shipper container starts late. dc_bringup's existing readiness gate
-# (bridge_ready_gate.py, default 120s deadline) is what tolerates this, not new logic.
+# vector deliberately isn't up yet: no depends_on in compose.split.yaml.
 log "starting dc-ros alone (vector is not up yet — proving no orchestrator-level ordering is required)"
 compose up -d dc-ros
 sleep "$VECTOR_DELAY_SECONDS"

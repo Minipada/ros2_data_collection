@@ -16,8 +16,7 @@ bool resolve_ipv4(const std::string& host, std::uint16_t port, sockaddr_in& out)
   hints.ai_socktype = SOCK_STREAM;
 
   addrinfo* result = nullptr;
-  // NULL service: hints.ai_socktype/ai_family alone are enough to pick a resolver
-  // strategy; the port is applied to whichever address comes back, below.
+  // Port applied below, once we know which address came back.
   const int rc = ::getaddrinfo(host.c_str(), nullptr, &hints, &result);
   if (rc != 0 || result == nullptr)
   {

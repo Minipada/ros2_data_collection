@@ -1,40 +1,16 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-# The split-topology E2E scenario's workload (#445): the same reference measurements as
-# params/e2e_params.yaml, minus the ADR-0003/ADR-0009/#227 passthrough coverage
-# (custom_config_files, the raw_file Destination, and the raw: block) — those sinks are
-# static Vector config that don't exercise anything specific to the container split, and
-# wiring them across the new dc-ros/vector container boundary (a second shared volume for
-# raw_file's output path, retargeting the MCAP socket sink at the dc-ros container instead
-# of 127.0.0.1) would add plumbing with no bearing on #445's own acceptance criteria. Records
-# and Files coverage — the two things this scenario exists to prove survive the split — are
-# unchanged from e2e_params.yaml.
-#
-# Differences from e2e_params.yaml, all required by running dc_bridge and the Shipper as
-# separate containers (compose.split.yaml) instead of one:
-#   - dc_bridge.shipper.managed: false — the Shipper's lifecycle belongs to the container
-#     runtime (#444), not the Bridge.
-#   - dc_bridge.shipper.config_path — on the volume shared with the vector container
-#     (compose.split.yaml's dc_e2e_split_config), instead of the managed-mode temp file.
-#   - dc_bridge.shipper.data_dir is a path inside the *vector* container's own filesystem
-#     (/var/lib/vector, that container's disk-buffer volume) rather than a dc-ros path: the
-#     Bridge never touches this directory itself in either mode (bridge_node.cpp only ever
-#     embeds it into the rendered Vector config; see render.cpp), only Vector does, and in
-#     unmanaged mode that's a different container's filesystem entirely.
-#   - Every host that used to be 127.0.0.1 because everything ran in one container/network
-#     namespace is now the peer's compose *service name* (postgres/rustfs/vector) — DNS
-#     resolution on the compose-managed network is what "a shared network" (#445's first
-#     acceptance criterion) buys over the all-in-one mode's implicit localhost.
-#     vector_forward_host resolving as a hostname at all depends on dc_bridge/src/
-#     net_resolve.cpp using `getaddrinfo()` rather than a literal-IPv4-only `inet_pton()`
-#     parse (#445) — without that fix this value would have to be a literal IP instead.
-#     tcp_health.host is set the same way for consistency, though that Measurement never
-#     actually dials it (TCPHealth.getPortHealth() checks whether *this* process can bind
-#     the port locally, not whether the named host is reachable — so its `active` field is
-#     not a meaningful Shipper-reachability signal in *any* topology; kept here only
-#     because e2e_params.yaml already exercises the Measurement's own Record cadence,
-#     which verify_zero_loss.py's REAL_TAGS check still expects).
+# The split-topology E2E scenario's workload (#445). Same as e2e_params.yaml, minus the
+# passthrough/MCAP/raw sinks (#227, ADR-0003, ADR-0009) — out of scope for this
+# container-boundary proof — plus:
+#   - shipper.managed: false, shipper.config_path on the shared config volume (#444).
+#   - shipper.data_dir is a path inside the *vector* container (/var/lib/vector), not
+#     dc-ros — the Bridge only ever embeds this into the rendered config, never uses it
+#     itself.
+#   - Every host is now the peer's compose service name (postgres/rustfs/vector) instead
+#     of 127.0.0.1. tcp_health.host follows suit for consistency, though that Measurement
+#     never actually dials it.
 measurement_server:
   ros__parameters:
     save_local_base_path: "$HOME/.dc/e2e/data/%Y/%M/%D/%H"
