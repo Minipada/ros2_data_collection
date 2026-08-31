@@ -28,6 +28,7 @@ add_library(dc_bridge_core
   ${CORE_ROOT}/src/vector_binary.cpp
   ${CORE_ROOT}/src/render.cpp
   ${CORE_ROOT}/src/raw_config.cpp
+  ${CORE_ROOT}/src/atomic_write.cpp
   ${CORE_ROOT}/src/uploader/content_type.cpp
   ${CORE_ROOT}/src/uploader/group.cpp
   ${CORE_ROOT}/src/uploader/status.cpp

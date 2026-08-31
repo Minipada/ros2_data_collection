@@ -7,12 +7,17 @@
 //
 // Vector's own configuration is produced by dc_bridge::render (ADR-0003) from the
 // `shipper`/`destinations` parameters; this node declares those parameters, expands the
-// $HOME/$DC_PG_PASSWORD-style env references the config contract uses, hands the result
-// to the Supervisor, subscribes to the union of every Records-Destination's `inputs`
-// topics, and forwards each Record to Vector over the shipper ingest protocol. Raw
-// Vector snippets in `custom_config_files` (ADR-0003 passthrough) are collision-checked
-// and `vector validate`d together with the rendered config so a bad snippet fails loudly
-// at startup.
+// $HOME/$DC_PG_PASSWORD-style env references the config contract uses, and atomically
+// writes the result to `shipper.config_path`. In the default managed mode
+// (`shipper.managed: true`) it also hands the config to the Supervisor, which locates,
+// `vector validate`s, and spawns/supervises the vendored Vector binary — raw Vector
+// snippets in `custom_config_files` (ADR-0003 passthrough) are collision-checked and
+// validated together with the rendered config so a bad snippet fails loudly at startup.
+// In unmanaged mode (`shipper.managed: false`, #440/#444) none of that runs: an
+// orchestrator owns the Shipper's lifecycle instead, and the Bridge only renders the
+// config and connects. Either way the node subscribes to the union of every
+// Records-Destination's `inputs` topics and forwards each Record to Vector over the
+// shipper ingest protocol.
 //
 // `receives: files` Destinations (ADR-0005, the Uploader) are handled in Phase 2.
 #ifndef DC_BRIDGE__BRIDGE_NODE_HPP_

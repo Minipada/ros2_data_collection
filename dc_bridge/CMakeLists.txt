@@ -43,6 +43,7 @@ add_library(dc_bridge_core
   src/vector_binary.cpp
   src/render.cpp
   src/raw_config.cpp
+  src/atomic_write.cpp
   src/uploader/content_type.cpp
   src/uploader/group.cpp
   src/uploader/status.cpp
