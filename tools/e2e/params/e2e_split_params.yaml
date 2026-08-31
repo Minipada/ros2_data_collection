@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-# The split-topology E2E scenario's workload (#445). Same as e2e_params.yaml, minus the
-# passthrough/MCAP/raw sinks (#227, ADR-0003, ADR-0009) — out of scope for this
-# container-boundary proof — plus:
+# The split-topology E2E scenario's workload (#445, extended to three containers by
+# #447). Same as e2e_params.yaml, minus the passthrough/MCAP/raw sinks (#227, ADR-0003,
+# ADR-0009) — out of scope for this container-boundary proof — plus:
 #   - shipper.managed: false, shipper.config_path on the shared config volume (#444).
 #   - shipper.data_dir is a path inside the *vector* container (/var/lib/vector), not
 #     dc-ros — the Bridge only ever embeds this into the rendered config, never uses it
@@ -11,6 +11,14 @@
 #   - Every host is now the peer's compose service name (postgres/rustfs/vector) instead
 #     of 127.0.0.1. tcp_health.host follows suit for consistency, though that Measurement
 #     never actually dials it.
+#   - rustfs carries no access_key_id/secret_access_key (#447): dc_uploader now runs in
+#     its own container and reads its own DC_UPLOADER_S3_* env vars directly
+#     (compose.split.yaml's dc-uploader service) — the Bridge never uploads (#446) and
+#     doesn't need them either (bucket alone is enough for the intents it writes), so
+#     object-storage credentials never reach the dc-ros container at all. dc-ros also
+#     launches with `run_uploader:=false` so it never spawns its own dc_uploader
+#     subprocess (dc_bringup.launch.py's build_uploader_action, which would otherwise
+#     read those same credentials into its environment).
 measurement_server:
   ros__parameters:
     save_local_base_path: "$HOME/.dc/e2e/data/%Y/%M/%D/%H"
@@ -174,6 +182,11 @@ dc_bridge:
       # A path inside the *vector* container (its dc_e2e_split_buffer volume), not dc-ros —
       # see this file's header.
       data_dir: "/var/lib/vector"
+      # The Shipper's own listen address, distinct from vector_forward_host below (#447):
+      # vector's fluent source only accepts a literal address to bind, never a hostname —
+      # "0.0.0.0" listens on every interface inside vector's own container, reachable from
+      # dc-ros over dc_e2e_split_net at whatever address vector_forward_host names.
+      bind_host: "0.0.0.0"
     uploader:
       data_dir: "$HOME/.dc/e2e/uploader"
     destinations: ["pgsql_records", "pgsql_files", "rustfs"]
@@ -205,11 +218,7 @@ dc_bridge:
       receives: files
       inputs: ["/dc/measurement/camera"]
       bucket: "dc-e2e"
-      endpoint: "http://rustfs:9000"
-      region: "us-east-1"
-      access_key_id: "rustfsadmin"
-      secret_access_key: "rustfsadmin"
-      force_path_style: true
+      # No access_key_id/secret_access_key here — see this file's header (#447).
 
     files:
       delete_when_sent: false

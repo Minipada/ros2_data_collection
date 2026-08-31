@@ -182,6 +182,18 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
   const std::int64_t vector_port = this->declare_parameter<std::int64_t>("vector_forward_port", 24224);
   const std::string vector_binary_override = this->declare_parameter<std::string>("vector_binary", "");
   const auto forward_port = static_cast<std::uint16_t>(vector_port);
+  // The fluent source's own listen address, embedded verbatim into the rendered config
+  // (RenderConfig::forward_host) — distinct from vector_forward_host, which is where
+  // *this* process's Forwarder/readiness prober connect. The two coincide in
+  // managed/native mode (both default to "127.0.0.1"); in split mode (#445/#447) they
+  // diverge: the Shipper binds "0.0.0.0" inside its own container while the Bridge
+  // connects to it by that container's DNS name. Vector's fluent source only accepts a
+  // literal SocketAddr for `address` (confirmed against the pinned 0.57.0 binary: a
+  // hostname there fails config validation with "data did not match any variant of
+  // untagged enum FluentModeDe"), so it must never receive vector_forward_host verbatim
+  // in that mode. Defaults to vector_forward_host, unchanged for every deployment that
+  // doesn't set it.
+  const std::string shipper_bind_host = this->declare_parameter<std::string>("shipper.bind_host", vector_host);
 
   // --- shipper + destinations parameters (ADR-0003 config contract) ---
   const std::string shipper_data_dir =
@@ -306,7 +318,7 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
   }
 
   RenderConfig render_config;
-  render_config.forward_host = vector_host;
+  render_config.forward_host = shipper_bind_host;
   render_config.forward_port = forward_port;
   render_config.data_dir = shipper_data_dir;
   render_config.buffer_max_bytes = static_cast<std::uint64_t>(std::max<std::int64_t>(0, buffer_max_bytes));

@@ -2,9 +2,10 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-# Split-topology E2E scenario (#445, part of #440): the same zero-loss guarantee run.sh
-# proves for the all-in-one mode, but with dc-ros and vector as separate Compose-managed
-# containers (compose.split.yaml). See tools/e2e/README.md for what this proves.
+# Split-topology E2E scenario (#445/#447, part of #440): the same zero-loss guarantee
+# run.sh proves for the all-in-one mode, but with dc-ros, vector and dc-uploader as
+# separate Compose-managed containers (compose.split.yaml). See tools/e2e/README.md for
+# what this proves.
 #
 #   ./tools/e2e/scripts/run_split.sh
 #
@@ -39,6 +40,7 @@ export PODMAN_COMPOSE_PROVIDER="${PODMAN_COMPOSE_PROVIDER:-podman-compose}"
 PG_C=dc_e2e_split_postgres
 RUSTFS_C=dc_e2e_split_rustfs
 DC_ROS_C=dc_e2e_split_dc_ros
+UPLOADER_C=dc_e2e_split_dc_uploader
 VECTOR_C=dc_e2e_split_vector
 
 mkdir -p "$RUN_DIR"
@@ -64,6 +66,7 @@ cleanup() {
   fi
   log "tearing down"
   podman logs "$DC_ROS_C" > "$RUN_DIR/dc-ros.log" 2>&1 || true
+  podman logs "$UPLOADER_C" > "$RUN_DIR/dc-uploader.log" 2>&1 || true
   podman logs "$VECTOR_C" > "$RUN_DIR/vector.log" 2>&1 || true
   remove_stack
   exit "$exit_code"
@@ -100,22 +103,35 @@ compose up -d postgres rustfs
 timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
   || { log "Postgres never became ready"; exit 1; }
 # No --network host here (unlike run.sh) — probe from a container on dc_e2e_split_net,
-# same as run_degraded.sh.
+# same as run_degraded.sh. --entrypoint python3 is required: $DC_IMAGE's own ENTRYPOINT
+# is entrypoint.sh (the full DC stack), so without overriding it the probe args land as
+# extra ros2-launch arguments instead of actually running measure_rtt.py — the container
+# would always exit non-zero regardless of RustFS's actual reachability.
 log "waiting for RustFS to accept TCP connections on dc_e2e_split_net"
-timeout 60 bash -c "until podman run --rm --network dc_e2e_split_net '$DC_IMAGE' \
-  python3 /opt/e2e/measure_rtt.py $RUSTFS_C 9000 --count 1 --timeout 2 >/dev/null 2>&1; do sleep 1; done" \
+timeout 60 bash -c "until podman run --rm --network dc_e2e_split_net --entrypoint python3 '$DC_IMAGE' \
+  /opt/e2e/measure_rtt.py $RUSTFS_C 9000 --count 1 --timeout 2 >/dev/null 2>&1; do sleep 1; done" \
   || { log "RustFS never became reachable on dc_e2e_split_net"; exit 1; }
 
 log "creating the RustFS bucket (the S3 sink doesn't create it)"
+# The compose service name, not $RUSTFS_C: aws-cli's own --endpoint-url validation
+# rejects underscores as an invalid hostname, and $RUSTFS_C (the container_name) has
+# them — the compose service name ("rustfs") resolves the same way on
+# dc_e2e_split_net and has none. dc-uploader's DC_UPLOADER_S3_ENDPOINT and
+# e2e_split_params.yaml's rustfs.endpoint already use the service name for the same
+# reason.
 podman run --rm --network dc_e2e_split_net \
   -e AWS_ACCESS_KEY_ID=rustfsadmin -e AWS_SECRET_ACCESS_KEY=rustfsadmin -e AWS_DEFAULT_REGION=us-east-1 \
   docker.io/amazon/aws-cli:latest \
-  --endpoint-url "http://$RUSTFS_C:9000" s3 mb s3://dc-e2e
+  --endpoint-url "http://rustfs:9000" s3 mb s3://dc-e2e
 
-# --- start dc-ros alone, prove no orchestrator-level ordering is needed --------------
-# vector deliberately isn't up yet: no depends_on in compose.split.yaml.
-log "starting dc-ros alone (vector is not up yet — proving no orchestrator-level ordering is required)"
-compose up -d dc-ros
+# --- start dc-ros + dc-uploader, prove no orchestrator-level ordering is needed ------
+# vector deliberately isn't up yet: no depends_on in compose.split.yaml. dc-uploader
+# comes up alongside dc-ros for the same reason — no depends_on between them either;
+# IntentQueue::rescan() (#446) is what lets dc-uploader notice intents dc-ros writes
+# after it has already started, and what lets dc-ros write intents dc-uploader hasn't
+# started reading yet.
+log "starting dc-ros + dc-uploader (vector is not up yet — proving no orchestrator-level ordering is required)"
+compose up -d dc-ros dc-uploader
 sleep "$VECTOR_DELAY_SECONDS"
 
 log "starting vector (the Shipper), ${VECTOR_DELAY_SECONDS}s after dc-ros — measuring recovery"
@@ -139,6 +155,17 @@ if [ -z "$FIRST_RECORD_LATENCY" ]; then
 fi
 log "PASS: dc-ros recovered on its own (first Record ${FIRST_RECORD_LATENCY}s after vector started, no restart needed)"
 
+# dc-uploader's own independent-restart proof (#447's per-container restart
+# requirement) lives here, in steady state before the outage — not layered onto the
+# outage/dc-ros-restart window below, which is timed against the zero-loss ledger
+# comparison. Restarting two containers back to back was found to add enough jitter
+# to the DDS-to-Shipper handoff to occasionally cost a Record outside the harness's
+# per-restart kill-point tolerance (unrelated to dc_uploader itself, which shares no
+# process or address space with dc-ros/vector — see ADR-0014); proving the restart
+# here instead avoids that without weakening the guarantee it's proving.
+log "restarting dc-uploader on its own, in steady state (proves it doesn't need dc-ros or vector restarted alongside it)"
+podman restart "$UPLOADER_C" >/dev/null
+
 log "steady state for ${STEADY_STATE_SECONDS}s"
 sleep "$STEADY_STATE_SECONDS"
 
@@ -147,7 +174,7 @@ log "inducing outage: stopping Postgres + RustFS for ${OUTAGE_SECONDS}s (dc-ros/
 podman stop "$PG_C" "$RUSTFS_C" >/dev/null
 sleep "$OUTAGE_SECONDS"
 
-log "restarting dc-ros while destinations are still down (proves recovery doesn't depend on dc-ros having stayed up, nor on vector restarting alongside it)"
+log "restarting dc-ros while destinations are still down (proves recovery doesn't depend on dc-ros having stayed up, nor on vector or dc-uploader restarting alongside it)"
 podman restart "$DC_ROS_C" >/dev/null
 
 log "restoring Postgres + RustFS"
@@ -159,7 +186,7 @@ log "draining for ${DRAIN_SECONDS}s"
 sleep "$DRAIN_SECONDS"
 
 log "stopping the workload so counts settle before verification"
-podman stop "$DC_ROS_C" "$VECTOR_C" >/dev/null
+podman stop "$DC_ROS_C" "$UPLOADER_C" "$VECTOR_C" >/dev/null
 sleep 5
 
 # --- durable upload intent queue (#265) — same check as run.sh -----------------------
