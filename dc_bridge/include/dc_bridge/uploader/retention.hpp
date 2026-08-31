@@ -57,7 +57,7 @@ struct SweepResult
 };
 
 /// One retention sweep: stats the on-disk pool of Files referenced by `queue`'s pending
-/// intents (every intent still in `<data_dir>/queue/upload/` — the Uploader hasn't
+/// intents (every intent still in `<uploader.data_dir>/queue/upload/` — the Uploader hasn't
 /// finished with it, so this excludes Records whose Files already uploaded, verified, and
 /// left the queue via ack()) and, while either configured limit is exceeded, sheds the
 /// oldest eligible intent's Files — File and intent removed together, never one without
