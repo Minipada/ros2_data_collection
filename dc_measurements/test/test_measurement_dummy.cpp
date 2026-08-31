@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
+#include <gtest/gtest.h>
 #include <unistd.h>
 
 #include <filesystem>
 #include <fstream>
-
-#include <gtest/gtest.h>
 
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement_server.hpp"
@@ -179,7 +178,7 @@ TEST_F(MeasurementDummyTest, RobotNameMissingFileFailsConfigureClearly)
   ms_node_->declare_parameter("custom_key_str_list", std::vector<std::string>{ "robot_name" });
   ms_node_->declare_parameter("custom_keys_str.robot_name.name", std::string("robot_name"));
   ms_node_->declare_parameter("custom_keys_str.robot_name.value_from_file",
-                               std::string("/nonexistent/dc_robot_name_that_does_not_exist"));
+                              std::string("/nonexistent/dc_robot_name_that_does_not_exist"));
 
   EXPECT_THROW(ms_node_->configure(), std::runtime_error);
 }
