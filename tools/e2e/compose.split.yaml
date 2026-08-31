@@ -1,39 +1,17 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-# The two-container split deployment (#445, scenario 2 of #440's split-deployment epic):
-# dc-ros (every ROS node plus the Bridge, in unmanaged-shipper mode, #444) and vector (the
-# unmodified upstream Vector image — no ROS workspace in it) as separate containers on one
-# shared, compose-managed network, instead of #440's scenario 1 (today's default: one
-# process tree, the Bridge spawning and supervising its own vendored Vector child). No
-# edge, no fleet: Destinations (postgres/rustfs here, standing in for a real deployment's
-# reachable Postgres/S3) are still reached directly, exactly as in scenario 1.
+# Two-container split deployment (#445, scenario 2 of #440): dc-ros (ROS + the Bridge,
+# unmanaged-shipper mode, #444) and vector (the unmodified upstream image) as separate
+# containers on one shared network, instead of one process tree. Postgres/RustFS stand in
+# for real Destinations, still reached directly.
 #
-# Postgres and RustFS are bundled here too, the same test-dependency-store role
-# compose.test.yaml already gives them, so this file is a single runnable artifact: `podman
-# compose -f compose.split.yaml up` brings up the whole scenario 2 topology standalone, with
-# no other tooling required. tools/e2e/scripts/run_split.sh drives this same file (bringing
-# services up individually rather than all at once, so it can start the Shipper late and
-# induce an outage) to fold the scenario into the zero-loss E2E harness.
+# `podman compose -f compose.split.yaml up` runs this standalone; run_split.sh drives the
+# same file service-by-service to fold it into the zero-loss E2E harness.
 #
-# No `depends_on` between dc-ros and vector anywhere in this file — that absence is the
-# point (#445's acceptance criterion: "no orchestrator-level ordering"). dc_bridge's own
-# readiness gate (dc_bringup/scripts/bridge_ready_gate.py) already tolerates a Shipper that
-# isn't up yet by polling for up to its own deadline before giving up, and `restart:
-# unless-stopped` means a dc-ros that does give up first gets tried again — recovery is the
-# existing readiness gate plus a restart policy, not new ordering logic.
-#
-# Volumes: the Shipper's buffer (vector only), the rendered Shipper config (written by
-# dc-ros, read by vector — the "config handover across a volume boundary" this scenario
-# exists to prove), and the upload intent queue / local data dir (dc-ros only, since the
-# Uploader itself stays inside the Bridge process until #446 extracts it into its own
-# container) are three separate volumes, matching #441's data-directory split.
-#
-# All four services are reached by their plain compose service-name DNS alias
-# (postgres/rustfs/vector) — including vector_forward_host, dc_bridge's own address for
-# the Shipper: dc_bridge/src/net_resolve.cpp resolves it with `getaddrinfo()`, not a
-# literal-IPv4-only `inet_pton()` parse (discovered needing that fix by actually running
-# this file with a hostname there first — see net_resolve.cpp's own history, #445).
+# No `depends_on` between dc-ros and vector — that's the point (#445: no
+# orchestrator-level ordering). dc_bringup's readiness gate plus `restart: unless-stopped`
+# is what lets dc-ros recover if vector starts late.
 services:
   postgres:
     image: docker.io/library/postgres:13
@@ -53,15 +31,14 @@ services:
     restart: unless-stopped
 
   rustfs:
-    # Same pinned digest as compose.test.yaml — see that file's header for why a digest,
-    # not :latest.
+    # Same pinned digest as compose.test.yaml.
     image: docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c
     container_name: dc_e2e_split_rustfs
     volumes:
       - dc_e2e_split_rustfs_data:/data
     restart: unless-stopped
 
-  dc-ros: # every ROS node plus the Bridge (#440 scenario 2's "dc-ros" container).
+  dc-ros:
     image: ${DC_E2E_IMAGE:-dc-e2e:latest}
     container_name: dc_e2e_split_dc_ros
     volumes:
@@ -71,20 +48,14 @@ services:
       - ./params/e2e_split_params.yaml:/opt/e2e/e2e_params.yaml:ro
     restart: unless-stopped
 
-  vector: # the upstream Vector image — the "vector" container from #440 scenario 2.
-    # Pin matches ros2_data_collection.repos' vector_vendor version (v0.57.0) so the
-    # container and native/apt install paths run the identical Shipper build.
+  vector:
+    # Version matches ros2_data_collection.repos' vector_vendor pin (v0.57.0).
     image: docker.io/timberio/vector:0.57.0-debian
     container_name: dc_e2e_split_vector
     volumes:
       - dc_e2e_split_buffer:/var/lib/vector
       - dc_e2e_split_config:/etc/dc/shipper:ro
-    # Overrides the upstream image's own ENTRYPOINT/CMD (which assumes a config file is
-    # already in place at container start). dc-ros writes /etc/dc/shipper/vector.toml
-    # atomically (write-then-rename, #444) only once it has rendered it, which can be
-    # later than this container's own start — so wait for it to exist rather than fail
-    # fast, then hand off to Vector's own `--watch-config` (built into the vendored
-    # v0.57.0 binary) so a later re-render reloads without a container restart.
+    # Wait for dc-ros's atomically-written config, then watch it for reload-without-restart.
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >
@@ -94,11 +65,8 @@ services:
     restart: unless-stopped
 
 # Explicit `name:` on every volume: podman-compose otherwise prefixes each with its own
-# derived project name (e.g. "e2e_dc_e2e_split_config"), which would silently point
-# run_split.sh's own one-off `podman run -v dc_e2e_split_uploader:...` extraction/
-# verification steps at a different, empty volume instead of the one dc-ros/vector
-# actually write to — a false pass, caught only by actually running this compose file and
-# checking `podman volume ls`/`podman inspect`, not by reading the YAML.
+# project name, which would point run_split.sh's own `podman run -v dc_e2e_split_...`
+# checks at the wrong (empty) volume.
 volumes:
   dc_e2e_split_pgdata:
     name: dc_e2e_split_pgdata

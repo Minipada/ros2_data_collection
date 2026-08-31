@@ -51,8 +51,7 @@ TEST(Readiness, ProbeFailsOnAClosedPort)
 
 TEST(Readiness, ProbeAcceptsAHostnameNotOnlyALiteralIp)
 {
-  // #445: a container-network peer's readiness (e.g. a Compose service) is checked by
-  // name, not only ever by a literal IP — this must resolve, not fail at parse time.
+  // #445: host can be a hostname, not just a literal IP.
   int listen_fd = ::socket(AF_INET, SOCK_STREAM, 0);
   sockaddr_in sa{};
   sa.sin_family = AF_INET;
