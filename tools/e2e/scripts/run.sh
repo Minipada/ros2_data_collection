@@ -53,13 +53,19 @@ STARTUP_TIMEOUT_SECONDS="${DC_E2E_STARTUP_TIMEOUT_SECONDS:-10}"
 KEEP="${DC_E2E_KEEP:-false}"
 
 # Container + volume names. Volumes are named (not host bind-mounts) so a full stack
-# restart (podman restart / stop+start) preserves dc_bridge's on-disk buffer
-# (shipper.data_dir) and Postgres's data directory — that persistence is what makes the
-# zero-loss guarantee (ADR-0002) survive a restart, not just a live process.
+# restart (podman restart / stop+start) preserves dc_bridge's on-disk state
+# (shipper.data_dir, uploader.data_dir) and Postgres's data directory — that persistence
+# is what makes the zero-loss guarantee (ADR-0002) survive a restart, not just a live
+# process. dc_e2e_buffer and dc_e2e_uploader are deliberately separate volumes (#441):
+# params/e2e_params.yaml points shipper.data_dir and uploader.data_dir at different
+# directories, so this harness actually exercises the split — the Shipper's disk buffer
+# and the Uploader's intent queue / multipart-resume state living on genuinely different
+# mounts, the way a real deployment would split them across containers — rather than
+# only ever proving the same-directory default still works.
 PG_C=dc_e2e_postgres
 RUSTFS_C=dc_e2e_rustfs
 DC_C=dc_e2e_dc
-VOLUMES=(dc_e2e_pgdata dc_e2e_rustfs_data dc_e2e_buffer dc_e2e_data)
+VOLUMES=(dc_e2e_pgdata dc_e2e_rustfs_data dc_e2e_buffer dc_e2e_uploader dc_e2e_data)
 
 mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
@@ -160,6 +166,7 @@ log "starting the DC stack — measuring launch-to-first-Record latency"
 START_TS=$(date +%s.%N)
 podman run -d --network host --name "$DC_C" \
   -v dc_e2e_buffer:/root/.dc/e2e/buffer \
+  -v dc_e2e_uploader:/root/.dc/e2e/uploader \
   -v dc_e2e_data:/root/.dc/e2e/data \
   "$DC_IMAGE" >/dev/null
 
@@ -224,9 +231,11 @@ STATS_PID=""
 # in-memory queue would have silently forgotten anything pending across the
 # `podman restart` above) — so assert the on-disk queue is empty via the same named
 # volume dc_bridge writes it to, overriding the image's entrypoint for a one-off `find`.
+# The queue lives under uploader.data_dir (#441), not shipper.data_dir — on its own
+# dc_e2e_uploader volume here, separate from the Shipper's dc_e2e_buffer.
 log "verifying the durable upload intent queue drained (no orphaned intents after the outage+restart)"
 LEFTOVER_INTENTS=$(podman run --rm --entrypoint bash \
-  -v dc_e2e_buffer:/vol:ro "$DC_IMAGE" \
+  -v dc_e2e_uploader:/vol:ro "$DC_IMAGE" \
   -c 'find /vol/queue/upload -maxdepth 1 -name "*.json" 2>/dev/null | wc -l')
 if [ "${LEFTOVER_INTENTS:-0}" -ne 0 ]; then
   log "FAIL: ${LEFTOVER_INTENTS} orphaned upload intent(s) left in the queue after the run"

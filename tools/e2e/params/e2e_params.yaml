@@ -167,6 +167,11 @@ dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/e2e/buffer"
+    # Deliberately a different directory from shipper.data_dir (#441), on its own
+    # dc_e2e_uploader volume (see run.sh) — exercises the split rather than only ever
+    # proving the same-directory default still works.
+    uploader:
+      data_dir: "$HOME/.dc/e2e/uploader"
     destinations: ["pgsql_records", "pgsql_files", "rustfs", "raw_file"]
     pgsql_records:
       type: postgres
