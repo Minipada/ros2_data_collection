@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+name: Compute image ref
+description: >-
+  Sluggifies the branch/PR ref and emits ghcr.io image references: an
+  immutable :<sha> ref (pushed on every build, PR included) and a floating
+  :<slug> branch ref (master -> :master; a PR uses its head branch). Ported
+  from ~/dev/monorepo's .github/actions/image-ref — same slug algorithm, ghcr
+  in place of registry.bensoussan.de. dc-ros/dc-uploader additionally derive
+  a fixed :latest ref from sha_ref themselves (CLAUDE.md's convention for the
+  first images this repo publishes for others to deploy); dc-workspace/dc-e2e
+  use only sha_ref, unchanged.
+
+inputs:
+  name:
+    description: Image name (e.g. dc-ros), without registry host or tag.
+    required: true
+
+outputs:
+  tag:
+    description: Sluggified branch/PR ref (e.g. "jazzy", "feature-450-foo").
+    value: ${{ steps.compute.outputs.tag }}
+  sha_ref:
+    description: ghcr.io/<owner>/<repo>/<name>:<github.sha>
+    value: ${{ steps.compute.outputs.sha_ref }}
+  branch_ref:
+    description: ghcr.io/<owner>/<repo>/<name>:<tag>
+    value: ${{ steps.compute.outputs.branch_ref }}
+
+runs:
+  using: composite
+  steps:
+    - id: compute
+      shell: bash
+      env:
+        # head_ref is set only for pull_request (the source branch); otherwise
+        # ref_name (= jazzy for push/schedule/dispatch on jazzy).
+        HEAD_REF: ${{ github.head_ref }}
+        REF_NAME: ${{ github.ref_name }}
+        SHA: ${{ github.sha }}
+        REPO: ${{ github.repository }}
+        NAME: ${{ inputs.name }}
+      run: |
+        set -euo pipefail
+        REGISTRY="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
+        REF="${HEAD_REF:-$REF_NAME}"
+        # Image tag rules: [A-Za-z0-9_][A-Za-z0-9_.-]{0,127}. Replace invalid
+        # runs with '-', trim leading/trailing '.'/'-', cap at 128 chars.
+        SLUG="$(printf '%s' "$REF" \
+          | sed -E 's#[^A-Za-z0-9_.-]+#-#g' \
+          | sed -E 's#^[.-]+##; s#[.-]+$##' \
+          | cut -c1-128)"
+        if [ -z "$SLUG" ]; then
+          echo "::error::Could not derive a valid image tag from ref '$REF'"
+          exit 1
+        fi
+        {
+          echo "tag=$SLUG"
+          echo "sha_ref=$REGISTRY/$NAME:$SHA"
+          echo "branch_ref=$REGISTRY/$NAME:$SLUG"
+        } >> "$GITHUB_OUTPUT"
