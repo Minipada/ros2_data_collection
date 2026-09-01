@@ -588,18 +588,155 @@ jobs:
           sudo mv ./kind /usr/local/bin/kind
           sudo mv ./kubectl /usr/local/bin/kubectl
 
-      - name: Run the kind + NetworkPolicy harness
+      # No wrapper script from here on — every step below is the literal command a
+      # developer runs by hand too (doc/src/dc/deploy_kind_networkpolicy.md walks
+      # through the same sequence). CLAUDE.md's "one script for CI and dev" rule still
+      # holds where there's real control flow worth not duplicating
+      # (verify_network_policy.sh); a fixed sequence of one-shot commands doesn't need
+      # a script wrapping it just to have somewhere to put a name.
+      - name: Pull the dc-ros image
         env:
           DC_ROS_IMAGE: ${{ needs.build-dc-ros-image.outputs.sha_ref }}
-        run: ./tools/kind/scripts/run.sh
+        run: podman pull "$DC_ROS_IMAGE"
 
-      - name: Upload harness diagnostics (on failure)
+      # Same source of truth every other scenario reads this from (#448) — exported to
+      # every later step via GITHUB_ENV rather than recomputed each time.
+      - name: Compute the Vector image ref
+        run: |
+          VECTOR_VERSION="$(grep -A3 'vector_vendor:' ros2_data_collection.repos | grep -oP 'version: v\K[0-9.]+')"
+          echo "VECTOR_IMAGE=docker.io/timberio/vector:${VECTOR_VERSION}-debian" >> "$GITHUB_ENV"
+          echo "DC_ROS_IMAGE=${{ needs.build-dc-ros-image.outputs.sha_ref }}" >> "$GITHUB_ENV"
+
+      - name: kind create cluster (kubeadm, no default CNI)
+        run: kind create cluster --name dc-kind --config tools/kind/kind-config.yaml
+
+      - name: Install Calico (a real, policy-enforcing CNI — kindnet isn't)
+        run: |
+          kubectl --context kind-dc-kind apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.32.2/manifests/calico.yaml
+          kubectl --context kind-dc-kind -n kube-system rollout status daemonset/calico-node --timeout=180s
+          kubectl --context kind-dc-kind -n kube-system rollout status deployment/calico-kube-controllers --timeout=180s
+          kubectl --context kind-dc-kind wait --for=condition=Ready nodes --all --timeout=180s
+
+      # `kind load docker-image` reads from the *Docker* image store, which this repo's
+      # own podman-built images never populate — a tar round trip instead, which also
+      # means the robot Pod below never needs a ghcr.io pull secret.
+      - name: Load dc-ros into the cluster (no registry)
+        run: |
+          podman save -o /tmp/dc-ros.tar "$DC_ROS_IMAGE"
+          kind load image-archive /tmp/dc-ros.tar --name dc-kind
+          rm -f /tmp/dc-ros.tar
+
+      - name: Apply namespaces
+        run: kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/namespaces.yaml
+
+      - name: Render ConfigMaps from source files
+        run: |
+          kubectl --context kind-dc-kind create configmap hub-init-sql -n dc-hub \
+            --from-file=tools/e2e/sql/init.sql --dry-run=client -o yaml \
+            | kubectl --context kind-dc-kind apply -f -
+          kubectl --context kind-dc-kind create configmap edge-a-vector-config -n dc-edge-a \
+            --from-file=vector.toml=tools/kind/params/edge-a-vector.toml --dry-run=client -o yaml \
+            | kubectl --context kind-dc-kind apply -f -
+          kubectl --context kind-dc-kind create configmap robot-a-params -n dc-robot-a \
+            --from-file=robot_params.yaml=tools/kind/params/robot-a-params.yaml --dry-run=client -o yaml \
+            | kubectl --context kind-dc-kind apply -f -
+
+      - name: Apply steady-state NetworkPolicy
+        run: kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/networkpolicies.yaml
+
+      - name: Apply the hub tier
+        run: kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/hub-postgres.yaml
+
+      - name: Apply the edge tier (site A)
+        run: sed "s|\${VECTOR_IMAGE}|$VECTOR_IMAGE|g" tools/kind/kubernetes/edge-a.yaml | kubectl --context kind-dc-kind apply -f -
+
+      - name: Apply the probe Pods
+        run: kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/probes.yaml
+
+      # rollout status, not `wait --for=condition=Ready pod -l ...`: the Deployment
+      # object exists synchronously after apply, but its Pods don't yet, and
+      # `kubectl wait` against a selector that currently matches nothing returns
+      # immediately instead of waiting for one to appear.
+      - name: Wait for the hub, edge and probe Pods to become ready
+        run: |
+          kubectl --context kind-dc-kind rollout status -n dc-hub deployment/hub-postgres --timeout=180s
+          kubectl --context kind-dc-kind rollout status -n dc-edge-a deployment/edge-vector --timeout=180s
+          kubectl --context kind-dc-kind wait -n dc-robot-a --for=condition=Ready pod/robot-a-probe --timeout=60s
+          kubectl --context kind-dc-kind wait -n dc-edge-a --for=condition=Ready pod/edge-a-probe --timeout=60s
+          kubectl --context kind-dc-kind wait -n dc-edge-b --for=condition=Ready pod/edge-b-probe --timeout=60s
+
+      - name: Apply the robot tier (site A)
+        run: |
+          sed -e "s|\${DC_ROS_IMAGE}|$DC_ROS_IMAGE|g" -e "s|\${VECTOR_IMAGE}|$VECTOR_IMAGE|g" \
+            tools/kind/kubernetes/robot-a.yaml | kubectl --context kind-dc-kind apply -f -
+
+      - name: Wait for dc-ros to report ready
+        run: |
+          timeout 90 bash -c \
+            "until kubectl --context kind-dc-kind logs -n dc-robot-a dc-robot -c dc-ros 2>&1 | grep -q 'dc_bridge reports ready'; do sleep 2; done" \
+            || { echo "::error::dc-ros never reported ready"; kubectl --context kind-dc-kind logs -n dc-robot-a dc-robot -c dc-ros --tail=50; exit 1; }
+
+      - name: Verify NetworkPolicy enforcement (internet, site-to-site, positive controls)
+        run: ./tools/kind/scripts/verify_network_policy.sh
+
+      - name: Wait for the first Record to reach the hub through the edge aggregator
+        run: |
+          for _ in $(seq 1 30); do
+            N="$(kubectl --context kind-dc-kind exec -n dc-hub deploy/hub-postgres -- psql -U dc -d dc -tAc 'SELECT count(*) FROM dc_records' 2>/dev/null | tr -d '[:space:]')"
+            [ -n "$N" ] && [ "$N" -gt 0 ] 2>/dev/null && break
+            sleep 2
+          done
+          if [ -z "${N:-}" ] || [ "$N" -eq 0 ]; then
+            echo "::error::no Record reached the hub within 60s"
+            exit 1
+          fi
+
+      # A real NetworkPolicy change, not a stopped container: replaces dc-robot-a's
+      # NetworkPolicy (same name/namespace) with a version that drops the
+      # egress-to-edge rule, so the robot tier keeps collecting and buffering to disk
+      # (ADR-0002) with nowhere to send it, then restores the original policy and
+      # checks the backlog flushed rather than being lost.
+      - name: Induced outage — robot keeps buffering, loses nothing
+        run: |
+          sleep 15  # steady state
+          COUNT_BEFORE="$(kubectl --context kind-dc-kind exec -n dc-hub deploy/hub-postgres -- psql -U dc -d dc -tAc 'SELECT count(*) FROM dc_records' | tr -d '[:space:]')"
+          WINDOW_START_TS="$(date +%s)"
+
+          kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/networkpolicy-robot-outage.yaml
+          sleep 30  # outage
+          kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/networkpolicies.yaml  # restore
+          sleep 15  # drain
+
+          COUNT_AFTER="$(kubectl --context kind-dc-kind exec -n dc-hub deploy/hub-postgres -- psql -U dc -d dc -tAc 'SELECT count(*) FROM dc_records' | tr -d '[:space:]')"
+          WINDOW_ELAPSED=$(( $(date +%s) - WINDOW_START_TS ))
+          DELTA=$(( COUNT_AFTER - COUNT_BEFORE ))
+          # uptime publishes at 1Hz (tools/kind/params/robot-a-params.yaml) — the
+          # records added across the window should track elapsed time at that rate
+          # regardless of the outage in the middle. A generous 70% lower bound covers
+          # Vector's own batch/flush cadence without hiding a gap the size of the
+          # outage window itself.
+          EXPECTED_DELTA=$(( WINDOW_ELAPSED * 1 ))
+          MIN_ACCEPTABLE_DELTA=$(( EXPECTED_DELTA * 70 / 100 ))
+
+          echo "records: $COUNT_BEFORE before the outage window, $COUNT_AFTER after restore+drain (+$DELTA over ${WINDOW_ELAPSED}s, expected ~${EXPECTED_DELTA}, minimum acceptable ${MIN_ACCEPTABLE_DELTA})"
+          [ "$DELTA" -gt 0 ] || { echo "::error::record count did not grow across the outage — delivery never resumed"; exit 1; }
+          [ "$DELTA" -ge "$MIN_ACCEPTABLE_DELTA" ] || { echo "::error::only $DELTA new record(s) arrived, far below the ~${EXPECTED_DELTA} predicted — Records were lost, not just delayed"; exit 1; }
+
+      - name: Collect diagnostics (on failure)
         if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: kind-networkpolicy-diagnostics
-          path: tools/kind/.run/**
-          if-no-files-found: ignore
+        run: |
+          kubectl --context kind-dc-kind get pods -A -o wide || true
+          for ns in dc-robot-a dc-edge-a dc-edge-b dc-hub; do
+            kubectl --context kind-dc-kind get events -n "$ns" || true
+          done
+          kubectl --context kind-dc-kind logs -n dc-robot-a dc-robot -c dc-ros --tail=100 || true
+          kubectl --context kind-dc-kind logs -n dc-robot-a dc-robot -c vector --tail=100 || true
+          kubectl --context kind-dc-kind logs -n dc-edge-a deploy/edge-vector --tail=100 || true
+          kubectl --context kind-dc-kind logs -n dc-hub deploy/hub-postgres --tail=100 || true
+
+      - name: kind delete cluster
+        if: always()
+        run: kind delete cluster --name dc-kind
 
   # tools/e2e/scripts/raw_volume.py is stdlib Python shared by the zero-loss verifier and
   # the sim-backed volume benchmark (#326) — no workspace image, no simulator, no database.
