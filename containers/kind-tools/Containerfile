@@ -9,7 +9,7 @@
 # binaries itself. verify-kind-networkpolicy extracts them with `podman cp` — it never
 # runs this image directly, since kind needs the runner's own Docker daemon, not one
 # nested inside a container.
-FROM docker.io/library/debian:bookworm-slim
+FROM docker.io/library/debian:trixie-slim
 
 ARG KIND_VERSION=v0.33.0
 ARG KUBECTL_VERSION=v1.31.4
