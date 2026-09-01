@@ -76,7 +76,10 @@ repos:
             -w,
             --ignore-words=.codespell.txt,
             -S,
-            "*.pgm,uv.lock,tools/infrastructure/docker/config/grafana/dashboards/*",
+            # deploy/robot/docs/*.html: delivered, checksummed diagram artifacts
+            # (Archify) bundling minified JS — codespell's fixer mis-rewrites
+            # identifiers there (e.g. "logicalY" -> "logically"), corrupting them.
+            "*.pgm,uv.lock,tools/infrastructure/docker/config/grafana/dashboards/*,deploy/robot/docs/*.html",
           ]
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v15.0.7
