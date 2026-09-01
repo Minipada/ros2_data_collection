@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# k3d dev-loop overlay (#451) over ../kubernetes/robot-pod.yaml (#450): points
+# dc-ros/dc-uploader at locally built images instead of ghcr.io, so a k3d cluster with
+# no registry configured can run the Pod — see ../README.md for the full command
+# sequence (`podman build`, `k3d image import`, `kubectl apply -k`). `vector` keeps
+# pulling the real upstream image unchanged; local-image substitution only applies to
+# what this repository actually builds.
+#
+# `newTag: dev` is a convention, not a requirement — build with a different tag and
+# override `newTag` here, or pass `--set` at kustomize-build time.
+resources:
+  - ../kubernetes/robot-pod.yaml
+
+images:
+  - name: ghcr.io/minipada/ros2_data_collection/dc-ros
+    newName: docker.io/library/dc-ros
+    newTag: dev
+  - name: ghcr.io/minipada/ros2_data_collection/dc-uploader
+    newName: docker.io/library/dc-uploader
+    newTag: dev
+
+patches:
+  - path: pull-policy.yaml

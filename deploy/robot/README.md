@@ -69,21 +69,65 @@ claim `verify_network_isolation.sh` proves at the Podman-network level, this tim
 
 ## k3d development loop (#451)
 
-```sh
-podman build -t dc-ros:dev -f containers/dc-ros/Containerfile containers/dc-ros
-podman build -t dc-uploader:dev -f containers/dc-uploader/Containerfile containers/dc-uploader
-./deploy/robot/scripts/k3d_up.sh    # create (or reuse) the cluster, load the images, apply the Pod
-./deploy/robot/scripts/k3d_down.sh  # delete the cluster
-```
-
 `verify_kube_play.sh` above proves the manifest runs; it proves nothing about the manifest
 *as Kubernetes*, because `podman kube play` has no scheduler, no Services, and no DNS. This
 is the fast loop for that: a disposable single-node [k3d](https://k3d.io) cluster (k3d wraps
 k3s) running `kubernetes/robot-pod.yaml` for real, so changes to the manifest can be
 iterated against an actual scheduler in seconds rather than the minutes a full cluster
-normally costs. Re-running `k3d_up.sh` after rebuilding an image reloads it and recreates
-the Pod without recreating the cluster — the fast half of "create and delete" the issue asks
-for; `k3d_down.sh` is the other half (a few seconds, see the scripts' own timing notes).
+normally costs. There is no wrapper script — every step below is a plain `podman`/`k3d`/
+`kubectl` command, so what the loop actually does is never hidden behind a script:
+
+```sh
+# 1. Build the two images this repository ships, tagged for local use. The
+#    docker.io/library/ prefix matters: it's what a bare `image: name:tag` in the
+#    manifest resolves to once it reaches the cluster's containerd, and Podman would
+#    otherwise namespace a locally-built image as localhost/name:tag instead — a
+#    mismatch that surfaces as ErrImageNeverPull despite the image having imported
+#    "successfully".
+podman build -t docker.io/library/dc-ros:dev -f containers/dc-ros/Containerfile containers/dc-ros
+podman build -t docker.io/library/dc-uploader:dev -f containers/dc-uploader/Containerfile containers/dc-uploader
+
+# 2. Create the cluster. --volume stages params/robot_params.yaml where
+#    kubernetes/robot-pod.yaml's hostPath volume expects it, on the node itself
+#    (mirrors verify_kube_play.sh's own host-staging step, just done by k3d instead of
+#    `sudo install`). --k3s-arg works around k3s's kubelet hard-failing on
+#    `open /dev/kmsg: operation not permitted` in restricted/rootless container
+#    environments (WSL2, devcontainers, some CI runners) that don't expose /dev/kmsg
+#    to the node container — harmless where /dev/kmsg is already available.
+k3d cluster create dc-robot-dev \
+  --volume "$(pwd)/deploy/robot/params:/etc/dc/robot@server:0" \
+  --k3s-arg '--kubelet-arg=feature-gates=KubeletInUserNamespace=true@server:*'
+
+# 3. Load the images straight into the cluster's containerd — no push, no pull, no
+#    registry. `podman save` refuses to overwrite a tar it already wrote, hence `rm -f`
+#    on each iteration.
+rm -f /tmp/dc-ros.tar && podman save docker.io/library/dc-ros:dev -o /tmp/dc-ros.tar && k3d image import /tmp/dc-ros.tar -c dc-robot-dev
+rm -f /tmp/dc-uploader.tar && podman save docker.io/library/dc-uploader:dev -o /tmp/dc-uploader.tar && k3d image import /tmp/dc-uploader.tar -c dc-robot-dev
+
+# 4. Run the Pod. `k3d/kustomization.yaml` overlays kubernetes/robot-pod.yaml: the two
+#    images above instead of ghcr.io, and imagePullPolicy: Never so kubelet uses what
+#    was just imported instead of trying (and failing — no registry exists for a local
+#    :dev tag) to pull it. `apply -k` itself refuses a base outside its own directory,
+#    which is why this pipes through `kustomize` (which accepts the override) instead.
+kubectl kustomize deploy/robot/k3d --load-restrictor LoadRestrictionsNone | kubectl --context k3d-dc-robot-dev apply -f -
+
+# 5. Watch it come up — same readiness signal verify_kube_play.sh checks.
+kubectl --context k3d-dc-robot-dev get pod dc-robot --watch
+kubectl --context k3d-dc-robot-dev logs dc-robot -c dc-ros --follow
+
+# 6. Iterate: rebuild an image, redo step 3, then recreate the Pod (Pod spec fields —
+#    including the image — are immutable in place, so this needs a delete first;
+#    cheap on a single-node cluster).
+kubectl --context k3d-dc-robot-dev delete pod dc-robot
+kubectl kustomize deploy/robot/k3d --load-restrictor LoadRestrictionsNone | kubectl --context k3d-dc-robot-dev apply -f -
+
+# 7. Tear down.
+k3d cluster delete dc-robot-dev
+```
+
+Measured against this loop with placeholder images standing in for `dc-ros`/`dc-uploader`:
+cluster create ~15-20s, an image-reload-and-recreate iteration ~10s, teardown ~2s — fast
+enough to repeat many times in a session, which is the whole point.
 
 This is **explicitly not** the production-parity check. k3d's default CNI (Flannel) does not
 enforce `NetworkPolicy`, so it cannot stand in for `verify_network_isolation.sh`'s isolation
@@ -91,18 +135,12 @@ claim — that enforcement proof is #452's kind cluster with Calico/Cilium. Noth
 in CI; it is a local inner-loop tool only, same spirit as `podman kube play` but with a real
 scheduler underneath.
 
-**Loading local images without a registry**: `k3d_up.sh` takes whatever `DC_ROS_IMAGE`/
-`DC_UPLOADER_IMAGE` you've already built with Podman (`dc-ros:dev`/`dc-uploader:dev` by
-default) and imports them straight into the cluster's containerd via `podman save` +
-`k3d image import` — no push, no pull, no registry involved. The upstream `vector` image is
-still pulled from `docker.io` on first boot, same as every other rendering here.
-
 **Docker dependency, scoped**: k3d's nodes are Docker containers, so this is the one place
 in this repository's container tooling that touches Docker instead of Podman (`CLAUDE.md`
-"Containers: Podman, not Docker"). It is confined to these two scripts — building and
-shipping `dc-ros`/`dc-uploader` still goes through Podman unchanged, and nothing else in the
-repo assumes Docker is present. #452's kind cluster carries the identical, equally-scoped
-exception, for the same reason (kind is Docker-based too).
+"Containers: Podman, not Docker"). It is confined to `k3d/` (the overlay) and the commands
+above — building and shipping `dc-ros`/`dc-uploader` still goes through Podman unchanged,
+and nothing else in the repo assumes Docker is present. #452's kind cluster carries the
+identical, equally-scoped exception, for the same reason (kind is Docker-based too).
 
 ## Network isolation
 
