@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Quadlet container unit for the robot-tier Shipper (#450): the unmodified upstream
+# Vector image, unmanaged by the Bridge (docs/adr/0001, docs/adr/0015). Same topology
+# as compose.yaml's vector service. Version pinned to ros2_data_collection.repos'
+# vector_vendor version — Quadlet has no env-var interpolation, so unlike compose.yaml
+# this can't read $VECTOR_VERSION; bump this tag by hand alongside vector_vendor (#448).
+
+[Unit]
+Description=vector — DC Shipper (robot tier)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=docker.io/timberio/vector:0.57.0-debian
+ContainerName=dc_robot_vector
+# dc-ros/dc-uploader address this container as "vector" (robot_params.yaml's
+# vector_forward_host, dc-uploader.container's DC_UPLOADER_SHIPPER_HOST) — an explicit
+# alias, since aardvark-dns resolves by this, not by ContainerName.
+NetworkAlias=vector
+
+Volume=dc-robot-buffer.volume:/var/lib/vector
+Volume=dc-robot-config.volume:/etc/dc/shipper:ro
+
+# Wait for dc-ros's atomically-written config, then watch it for reload-without-restart.
+Entrypoint=/bin/sh
+Exec=-c "trap exit TERM; until [ -f /etc/dc/shipper/vector.toml ]; do sleep 0.2; done; exec vector --config /etc/dc/shipper/vector.toml --watch-config"
+
+Network=dc-robot.network
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

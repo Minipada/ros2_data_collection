@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Quadlet container unit for dc-ros (#450): every ROS node plus the Bridge, unmanaged-
+# shipper mode, same topology as compose.yaml's dc-ros service. Copy
+# /path/to/robot_params.yaml (start from ../params/robot_params.yaml) to
+# /etc/dc/robot/robot_params.yaml on the host before starting this unit — Quadlet bind
+# mounts a host path directly, unlike compose.yaml's relative `./params/...` mount.
+
+[Unit]
+Description=dc-ros — DC ROS stack + Bridge (robot tier)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/minipada/ros2_data_collection/dc-ros:latest
+ContainerName=dc_robot_dc_ros
+
+Volume=dc-robot-uploader.volume:/root/.dc/robot/uploader
+Volume=dc-robot-config.volume:/etc/dc/shipper
+Volume=/etc/dc/robot/robot_params.yaml:/opt/dc/robot_params.yaml:ro,Z
+
+Exec=dc_params_file:=/opt/dc/robot_params.yaml run_uploader:=false
+
+Network=dc-robot.network
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

@@ -17,8 +17,8 @@
 #
 #   build-workspace (build + colcon test + coverage) ─┬─▶ sim                    (pull dc-workspace, simulation smoke check)
 #                                                      ├─▶ build-e2e-image ────▶ e2e   (pull dc-e2e, zero-loss harness)
-#                                                      ├─▶ build-dc-ros-image ─┐
-#                                                      └─▶ build-dc-uploader-image ─▶ verify-published-images (pull + run, no build)
+#                                                      ├─▶ build-dc-ros-image ─┬─▶ verify-published-images  (pull + run, no build)
+#                                                      └─▶ build-dc-uploader-image ─┴─▶ verify-robot-manifests (#450: podman kube play + network isolation)
 #   kpi-views (standalone: SQL + a throwaway Postgres, no workspace image needed)
 #   raw-volume (standalone: stdlib Python fixtures over the shared volume accounting)
 #
@@ -415,6 +415,38 @@ jobs:
           name: verify-published-images-logs
           path: tools/release/.run/**
           if-no-files-found: ignore
+
+  # Proves the Kubernetes and Podman-network renderings of the robot topology (#450)
+  # against the same published images verify-published-images uses: `podman kube play`
+  # runs deploy/robot/kubernetes/robot-pod.yaml with no cluster and it reaches ready,
+  # and plain Podman networks demonstrate the robot tier's routing claim (no internet
+  # route, outbound-only robot-to-edge connectivity). deploy/robot/compose.yaml and
+  # deploy/robot/quadlet/*.container describe the identical topology but need no
+  # separate runtime proof here — Compose is already exercised by
+  # tools/e2e/compose.split.yaml, and Quadlet generates the same container/volume/
+  # network shape podman kube play and compose.yaml already prove runnable.
+  verify-robot-manifests:
+    needs: [build-workspace, build-dc-ros-image, build-dc-uploader-image]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Log in to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: podman kube play reaches ready
+        run: ./deploy/robot/scripts/verify_kube_play.sh
+
+      - name: Podman networks prove the isolation properties
+        run: ./deploy/robot/scripts/verify_network_isolation.sh
 
   # tools/e2e/scripts/raw_volume.py is stdlib Python shared by the zero-loss verifier and
   # the sim-backed volume benchmark (#326) — no workspace image, no simulator, no database.

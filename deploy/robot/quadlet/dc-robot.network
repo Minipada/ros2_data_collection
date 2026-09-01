@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Quadlet network unit for the robot tier (#450) — shared by dc-ros, vector and
+# dc-uploader, same topology as compose.yaml's default network. Podman-generated
+# systemd unit, not manually managed (CLAUDE.md "Containers: Podman, not Docker").
+# Install: copy deploy/robot/quadlet/*.{container,network} into
+# ~/.config/containers/systemd/ (rootless), then `systemctl --user daemon-reload`.
+
+[Network]
+NetworkName=dc-robot

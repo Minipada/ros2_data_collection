@@ -13,6 +13,11 @@ repos:
         entry: ./tools/ci/pre-commit/build_doc.sh
         language: script
         pass_filenames: false
+      - id: kubeconform
+        name: Validate Kubernetes manifests against their schema
+        entry: ./tools/ci/pre-commit/kubeconform.sh
+        language: script
+        files: (^|/)kubernetes/.*\.ya?ml$
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:

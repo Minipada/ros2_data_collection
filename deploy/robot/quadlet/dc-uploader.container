@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Quadlet container unit for dc-uploader (#450, docs/adr/0014): the standalone Uploader
+# process, configured entirely by DC_UPLOADER_* env vars — no ROS params. Same topology
+# as compose.yaml's dc-uploader service. S3 credentials belong in an EnvironmentFile
+# (not committed) at deploy time — placeholders here are literal so the unit is
+# runnable as shipped, same tradeoff compose.yaml makes.
+
+[Unit]
+Description=dc-uploader — DC standalone Uploader (robot tier)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/minipada/ros2_data_collection/dc-uploader:latest
+ContainerName=dc_robot_dc_uploader
+
+Environment=DC_UPLOADER_STORAGE_NAME=edge
+Environment=DC_UPLOADER_QUEUE_DIR=/root/.dc/robot/uploader/queue/upload
+Environment=DC_UPLOADER_STATE_DIR=/root/.dc/robot/uploader/uploader
+Environment=DC_UPLOADER_SHIPPER_HOST=vector
+Environment=DC_UPLOADER_SHIPPER_PORT=24224
+# Placeholder — the edge tier's object storage is outside this repository (see
+# ../README.md). Override for a real deployment, ideally via EnvironmentFile.
+Environment=DC_UPLOADER_S3_BUCKET=dc-robot
+Environment=DC_UPLOADER_S3_ENDPOINT=http://edge.site.example:9000
+Environment=DC_UPLOADER_S3_ACCESS_KEY_ID=changeme
+Environment=DC_UPLOADER_S3_SECRET_ACCESS_KEY=changeme
+Environment=DC_UPLOADER_DELETE_WHEN_SENT=true
+
+Volume=dc-robot-uploader.volume:/root/.dc/robot/uploader
+
+Network=dc-robot.network
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# The upload intent queue and the Files themselves: written by dc-ros, read by
+# dc-uploader. vector never mounts this, same scoping as compose.yaml's
+# dc_robot_uploader volume.
+
+[Volume]
