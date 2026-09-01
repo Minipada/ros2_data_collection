@@ -32,7 +32,9 @@ mkdir -p "$RUN_DIR"
 
 DC_ROS_IMAGE="${DC_ROS_IMAGE:?DC_ROS_IMAGE must be set to a published dc-ros image ref}"
 DC_UPLOADER_IMAGE="${DC_UPLOADER_IMAGE:?DC_UPLOADER_IMAGE must be set to a published dc-uploader image ref}"
-VECTOR_VERSION="${VECTOR_VERSION:-$(grep -oP 'version: v\K[0-9.]+' "$REPO_ROOT/ros2_data_collection.repos")}"
+# -A3, not a bare grep across the whole file: aws_sdk_vendor's own `version: v...` line
+# would otherwise match too, embedding a second version (and a newline) in this value.
+VECTOR_VERSION="${VECTOR_VERSION:-$(grep -A3 'vector_vendor:' "$REPO_ROOT/ros2_data_collection.repos" | grep -oP 'version: v\K[0-9.]+')}"
 VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
 TIMEOUT_SECONDS="${DC_RELEASE_TIMEOUT_SECONDS:-60}"
 
