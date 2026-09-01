@@ -11,10 +11,10 @@ policy-enforcing CNI — unlike the [k3d dev loop](https://github.com/minipada/r
 default Flannel, which silently accepts `NetworkPolicy` objects without enforcing them.
 
 ```admonish info
-Every command below is exactly what `tools/kind/scripts/run.sh` runs — CI's
-`verify-kind-networkpolicy` job, a local reproduction, and this page are the same
-sequence, not three different ones. Running the script end to end is the normal way to
-do this; read on for what it does and why, or to run a step by hand.
+Every command below is exactly what CI's `verify-kind-networkpolicy` job
+(`.github/workflows/ci.yaml`) runs, one step each — no wrapper script standing between
+this page and CI to fall out of sync with either. Run them in order to reproduce
+locally, or read on for what each does and why.
 ```
 
 ## Prerequisites
@@ -24,14 +24,20 @@ do this; read on for what it does and why, or to run a step by hand.
 - `kind` and `kubectl`, pinned versions baked into `containers/kind-tools/Containerfile`
   ([`tools/kind/README.md`](https://github.com/minipada/ros2_data_collection/tree/jazzy/tools/kind))
 
-## 1. Build (or obtain) the `dc-ros` image
+## 1. Build (or obtain) the `dc-ros` image, and the Vector image ref
 
 ```sh
 podman build -t dc-ros:kind -f containers/dc-ros/Containerfile --build-arg BASE_IMAGE=dc-workspace:latest containers/dc-ros
+export DC_ROS_IMAGE=dc-ros:kind
+
+VECTOR_VERSION="$(grep -A3 'vector_vendor:' ros2_data_collection.repos | grep -oP 'version: v\K[0-9.]+')"
+export VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
 ```
 
 CI instead pulls the image `build-dc-ros-image` already built and pushed for this commit
-— no rebuild, same image `verify-robot-manifests`/`verify-published-images` exercise.
+— no rebuild, same image `verify-robot-manifests`/`verify-published-images` exercise. The
+Vector version comes from `ros2_data_collection.repos`' `vector_vendor` pin (#448) — one
+source of truth for both the apt and container paths.
 
 ## 2. Bring up the cluster and its CNI
 
@@ -75,9 +81,23 @@ kubectl --context kind-dc-kind create configmap robot-a-params -n dc-robot-a \
 
 kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/networkpolicies.yaml
 kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/hub-postgres.yaml
-kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/edge-a.yaml    # ${VECTOR_IMAGE} substituted first — see run.sh
+
+# edge-a.yaml and robot-a.yaml reference ${VECTOR_IMAGE}/${DC_ROS_IMAGE} placeholders —
+# substitute the values step 1 exported before applying either.
+sed "s|\${VECTOR_IMAGE}|$VECTOR_IMAGE|g" tools/kind/kubernetes/edge-a.yaml | kubectl --context kind-dc-kind apply -f -
 kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/probes.yaml
-kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/robot-a.yaml  # ${DC_ROS_IMAGE}/${VECTOR_IMAGE} substituted first
+
+kubectl --context kind-dc-kind rollout status -n dc-hub deployment/hub-postgres --timeout=180s
+kubectl --context kind-dc-kind rollout status -n dc-edge-a deployment/edge-vector --timeout=180s
+kubectl --context kind-dc-kind wait -n dc-robot-a --for=condition=Ready pod/robot-a-probe --timeout=60s
+kubectl --context kind-dc-kind wait -n dc-edge-a --for=condition=Ready pod/edge-a-probe --timeout=60s
+kubectl --context kind-dc-kind wait -n dc-edge-b --for=condition=Ready pod/edge-b-probe --timeout=60s
+
+sed -e "s|\${DC_ROS_IMAGE}|$DC_ROS_IMAGE|g" -e "s|\${VECTOR_IMAGE}|$VECTOR_IMAGE|g" \
+  tools/kind/kubernetes/robot-a.yaml | kubectl --context kind-dc-kind apply -f -
+
+timeout 90 bash -c \
+  "until kubectl --context kind-dc-kind logs -n dc-robot-a dc-robot -c dc-ros 2>&1 | grep -q 'dc_bridge reports ready'; do sleep 2; done"
 ```
 
 Four namespaces: `dc-robot-a` and `dc-edge-a` (site A, the real topology under test),
@@ -109,9 +129,19 @@ Postgres through the edge aggregator, and check the row count.
 ## 6. Induced outage: buffering, not loss
 
 ```sh
+sleep 15  # steady state
+COUNT_BEFORE="$(kubectl --context kind-dc-kind exec -n dc-hub deploy/hub-postgres -- psql -U dc -d dc -tAc 'SELECT count(*) FROM dc_records' | tr -d '[:space:]')"
+WINDOW_START_TS="$(date +%s)"
+
 kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/networkpolicy-robot-outage.yaml  # cuts robot -> edge
-sleep 30
+sleep 30  # outage
 kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/networkpolicies.yaml              # restores it
+sleep 15  # drain
+
+COUNT_AFTER="$(kubectl --context kind-dc-kind exec -n dc-hub deploy/hub-postgres -- psql -U dc -d dc -tAc 'SELECT count(*) FROM dc_records' | tr -d '[:space:]')"
+WINDOW_ELAPSED=$(( $(date +%s) - WINDOW_START_TS ))
+DELTA=$(( COUNT_AFTER - COUNT_BEFORE ))
+echo "records: $COUNT_BEFORE before, $COUNT_AFTER after (+$DELTA over ${WINDOW_ELAPSED}s)"
 ```
 
 `networkpolicy-robot-outage.yaml` replaces `dc-robot-a`'s `NetworkPolicy` object (same
@@ -119,8 +149,9 @@ name, same namespace) with a version that drops the egress-to-edge rule and keep
 DNS — a real policy-enforced site-link outage, not a stopped container. `dc-ros` and its
 local Vector Shipper keep running and buffering to disk the whole time (ADR-0002); once
 the policy is restored, the buffered backlog flushes and the hub's row count catches back
-up. `run.sh` checks the count grew by roughly what the collection rate over the whole
-window predicts — a real loss would show up as a permanent shortfall, not a transient dip.
+up. CI additionally checks `DELTA` against `WINDOW_ELAPSED` seconds at the `uptime`
+Measurement's 1Hz rate (`tools/kind/params/robot-a-params.yaml`), with a 70% lower bound
+— a real loss would show up as a permanent shortfall there, not a transient dip.
 
 ## 7. Tear down
 

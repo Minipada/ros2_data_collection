@@ -18,20 +18,13 @@ second site, and a hub, and proves the claim by attempted connection:
 | Records collected on the robot tier arrive at the hub through the edge aggregator | a real `dc-ros` produces Records; the hub's Postgres row count is checked |
 | The robot tier keeps collecting and buffering while the edge tier is unreachable, losing nothing when it returns | `NetworkPolicy` is swapped to cut robot -> edge for a window, then restored; the row count must have grown by roughly what the collection rate over that window predicts |
 
-Run it end to end:
-
-```sh
-./tools/kind/scripts/run.sh
-```
-
-`scripts/run.sh` is the *only* script here — CI, a local reproduction, and anyone else
-exercising this validation all run exactly this, so there is one path to drift out of
-sync, not several (no separate `up`/`down`/dev-convenience scripts wrapping the
-individual `podman`/`kind`/`kubectl` commands, and none of those commands duplicated
-anywhere else). Its own header documents every env var (image refs, outage timing,
-`DC_KIND_KEEP` to leave a failed cluster up for debugging). See
-[the manual doc page](../../doc/src/dc/deploy_kind_networkpolicy.md) for the same
-commands walked through step by step, for reading or running by hand without the script.
+There is no wrapper script here — `.github/workflows/ci.yaml`'s `verify-kind-networkpolicy`
+job and [the doc page](../../doc/src/dc/deploy_kind_networkpolicy.md) both run the same
+`podman`/`kind`/`kubectl` commands directly, one place each, so there's nothing for the
+two to drift out of sync from beyond each other (CLAUDE.md's "one script for CI and dev"
+rule doesn't apply to a fixed sequence of one-shot commands with no control flow — it's
+`verify_network_policy.sh` below, which *does* have real logic, that stays a script
+rather than being duplicated). Follow the doc page to run this by hand.
 
 ## What this is not
 
@@ -78,7 +71,7 @@ have experimental kind support (`KIND_EXPERIMENTAL_PROVIDER=podman`), but #452 c
 to depend on that: this harness is throwaway CI test infrastructure, not something DC
 ships, so it uses real Docker rather than an experimental path this repo doesn't
 otherwise rely on. Building and shipping DC itself stays on Podman, unchanged
-(CLAUDE.md "Containers: Podman, not Docker") — `scripts/run.sh` deliberately routes the
+(CLAUDE.md "Containers: Podman, not Docker") — the load step deliberately routes the
 `dc-ros` image through `podman save` / `kind load image-archive` rather than
 `kind load docker-image`, so Podman stays the tool that ever touches a DC image; Docker's
 only job is running the kind nodes themselves. GitHub-hosted `ubuntu-latest` runners
