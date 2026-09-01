@@ -30,6 +30,13 @@ path = [
 SPDX-FileCopyrightText = "2022-2026 David Bensoussan"
 SPDX-License-Identifier = "MPL-2.0"
 
+# Self-contained interactive diagrams (Archify output, #450): an inline header would
+# have to sit before `<!DOCTYPE html>`, which risks quirks mode in some engines.
+[[annotations]]
+path = "deploy/robot/docs/*.html"
+SPDX-FileCopyrightText = "2022-2026 David Bensoussan"
+SPDX-License-Identifier = "MPL-2.0"
+
 # --- Documentation site assets ------------------------------------------------------
 
 # mdBook's default theme, as generated into the book.
