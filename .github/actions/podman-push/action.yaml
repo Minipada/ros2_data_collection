@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+name: Push podman image with retry
+description: >-
+  Tags and pushes a container image to a registry, retrying transient push
+  failures. The first ref in `refs` must already exist locally (e.g. just
+  built by `podman build`); any additional refs are `podman tag`-ed from it
+  before all of them are pushed. Factored out of ci.yaml's dc-ros/dc-uploader
+  publish jobs (#448), which both push the same :<sha> image under a second,
+  floating :latest tag.
+
+inputs:
+  refs:
+    description: >-
+      Newline-separated image refs to push. The first must already be a
+      locally-tagged image; every other ref is created via `podman tag` from
+      it first.
+    required: true
+  retry_count:
+    description: Push attempts per ref before failing the step.
+    default: "3"
+  retry_wait_seconds:
+    description: Seconds to wait between push attempts.
+    default: "10"
+
+runs:
+  using: composite
+  steps:
+    - name: Tag and push
+      shell: bash
+      env:
+        REFS: ${{ inputs.refs }}
+        RETRY_COUNT: ${{ inputs.retry_count }}
+        RETRY_WAIT_SECONDS: ${{ inputs.retry_wait_seconds }}
+      run: |
+        set -euo pipefail
+        mapfile -t refs <<< "$REFS"
+        primary="${refs[0]}"
+        for ref in "${refs[@]:1}"; do
+          podman tag "$primary" "$ref"
+        done
+        for ref in "${refs[@]}"; do
+          for attempt in $(seq 1 "$RETRY_COUNT"); do
+            podman push "$ref" && continue 2
+            echo "push $ref attempt $attempt/$RETRY_COUNT failed; retrying in ${RETRY_WAIT_SECONDS}s" >&2
+            sleep "$RETRY_WAIT_SECONDS"
+          done
+          echo "push $ref failed after $RETRY_COUNT attempts" >&2
+          exit 1
+        done
