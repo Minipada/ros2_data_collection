@@ -34,7 +34,7 @@ spec:
       hostnames: ["vector"]
   containers:
     - name: dc-ros
-      image: ghcr.io/minipada/ros2_data_collection/dc-ros:latest
+      image: ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy
       args: ["dc_params_file:=/opt/dc/robot_params.yaml", "run_uploader:=false"]
       volumeMounts:
         - name: uploader
@@ -50,7 +50,7 @@ spec:
     # storage, outside this repository (see ../README.md); a real deployment
     # overrides these, ideally from a Secret rather than inline env.
     - name: dc-uploader
-      image: ghcr.io/minipada/ros2_data_collection/dc-uploader:latest
+      image: ghcr.io/minipada/ros2_data_collection/dc-uploader:jazzy
       env:
         - name: DC_UPLOADER_STORAGE_NAME
           value: edge

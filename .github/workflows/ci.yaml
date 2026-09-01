@@ -17,10 +17,10 @@
 # PR just built, catching a broken image before merge rather than only after. Their refs
 # come from .github/actions/image-ref (#450, ported from ~/dev/monorepo's action of the
 # same name), which also computes a sluggified branch ref (jazzy -> :jazzy, a PR -> its
-# head branch's slug). Both that branch ref and a fixed :latest tag — the ref a fleet
-# robot would actually pin to — are pushed only on `push` to `jazzy`, mirroring
-# monorepo's own podman-push, which withholds branch_ref on pull_request the same way:
-# a not-yet-merged PR must never move either floating ref.
+# head branch's slug) — that branch ref, `:jazzy`, is the one a fleet robot actually
+# pins to; this repo pushes no `:latest` tag at all. It's pushed only on `push` to
+# `jazzy`, mirroring monorepo's own podman-push, which withholds branch_ref on
+# pull_request the same way: a not-yet-merged PR must never move that floating ref.
 #
 #   build-workspace (build + colcon test + coverage) ─┬─▶ sim                    (pull dc-workspace, simulation smoke check)
 #                                                      ├─▶ build-e2e-image ────▶ e2e   (pull dc-e2e, zero-loss harness)
@@ -320,12 +320,12 @@ jobs:
   # below pushes sha_ref on every run (PR included — same CI-internal-reuse reasoning
   # as dc-workspace/dc-e2e above, and what lets verify-published-images/
   # verify-robot-manifests test the real image a PR just built) and pushes branch_ref
-  # plus a fixed :latest tag (CLAUDE.md's convention for the first images this repo
-  # publishes for others to deploy) only on `push` — mirroring monorepo's own
-  # podman-push, which withholds branch_ref on pull_request events the same way. A
-  # not-yet-merged PR must never move either floating ref. Thin `FROM` layers over the
-  # already-tested workspace image (containers/dc-ros, containers/dc-uploader), same
-  # shape as build-e2e-image above, just with no E2E-only content.
+  # (`:jazzy` — the ref a fleet robot actually pins to; this repo pushes no `:latest`
+  # tag) only on `push` — mirroring monorepo's own podman-push, which withholds
+  # branch_ref on pull_request events the same way. A not-yet-merged PR must never move
+  # that floating ref. Thin `FROM` layers over the already-tested workspace image
+  # (containers/dc-ros, containers/dc-uploader), same shape as build-e2e-image above,
+  # just with no E2E-only content.
   build-dc-ros-image:
     needs: build-workspace
     runs-on: ubuntu-latest
@@ -356,7 +356,8 @@ jobs:
           SHA_REF: ${{ steps.image.outputs.sha_ref }}
         run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$SHA_REF" -f containers/dc-ros/Containerfile containers/dc-ros
 
-      # :latest and branch_ref only on push to jazzy — see this job's header comment.
+      # branch_ref only on push to jazzy — see this job's header comment. No :latest:
+      # this repo doesn't push that tag.
       - name: Determine refs to push
         id: push_refs
         env:
@@ -368,12 +369,11 @@ jobs:
             echo "$SHA_REF"
             if [ "${{ github.event_name }}" = "push" ]; then
               echo "$BRANCH_REF"
-              echo "${SHA_REF%:*}:latest"
             fi
             echo "PUSH_REFS_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Push the dc-ros image (:<sha>, plus branch and :latest on push to jazzy)
+      - name: Push the dc-ros image (:<sha>, plus branch on push to jazzy)
         uses: ./.github/actions/podman-push
         with:
           refs: ${{ steps.push_refs.outputs.refs }}
@@ -408,7 +408,8 @@ jobs:
           SHA_REF: ${{ steps.image.outputs.sha_ref }}
         run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$SHA_REF" -f containers/dc-uploader/Containerfile containers/dc-uploader
 
-      # :latest and branch_ref only on push to jazzy — see build-dc-ros-image's header comment.
+      # branch_ref only on push to jazzy — see build-dc-ros-image's header comment. No
+      # :latest: this repo doesn't push that tag.
       - name: Determine refs to push
         id: push_refs
         env:
@@ -420,12 +421,11 @@ jobs:
             echo "$SHA_REF"
             if [ "${{ github.event_name }}" = "push" ]; then
               echo "$BRANCH_REF"
-              echo "${SHA_REF%:*}:latest"
             fi
             echo "PUSH_REFS_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Push the dc-uploader image (:<sha>, plus branch and :latest on push to jazzy)
+      - name: Push the dc-uploader image (:<sha>, plus branch on push to jazzy)
         uses: ./.github/actions/podman-push
         with:
           refs: ${{ steps.push_refs.outputs.refs }}
