@@ -61,7 +61,25 @@ dc-edge-b (stand-in, site B) -- denied both directions to/from site A's tiers
 `kubernetes/` holds the Kubernetes manifests (kubeconform-validated, same pre-commit hook
 as `deploy/robot/kubernetes/`); `params/` holds the two files that differ from their
 `deploy/robot/` counterparts only in pointing at real in-cluster DNS names instead of
-placeholders — see each file's own header for what and why.
+placeholders — see each file's own header for what and why. `kustomization.yaml`
+(kubectl's built-in `apply -k`, no separate binary) applies most of `kubernetes/` — and
+generates two of the three ConfigMaps from `params/*` — in one command instead of one
+`kubectl apply -f`/`create configmap` per file; see its own header for what it
+deliberately leaves out and why.
+
+### Why not Helm
+
+Helm charts earn their keep when the same application gets deployed with different
+values across environments — that's not this. This harness has exactly one topology,
+identical on every run: one robot, one edge, one hub, no per-site or per-robot
+variation to parameterize. A Helm chart here would template a variance that doesn't
+exist, and add a new tool this repo doesn't otherwise depend on (its own pinned
+installer action, `Chart.yaml`/`values.yaml` conventions to maintain). Kustomize
+already ships inside `kubectl`. The real fleet deployment tooling
+(`deploy/robot/`, and whatever comes for edge/hub) is a different problem — many robots
+and sites genuinely needing different config is exactly what
+Helm-plus-per-site-Kustomize-overlays is for — but that's a separate design question,
+tracked as #466, not this harness.
 
 ## Docker dependency
 

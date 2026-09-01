@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# The steady-state topology (#452), one `kubectl apply -k .` instead of a `kubectl apply
+# -f` per file plus imperative `kubectl create configmap --dry-run=client | apply`
+# commands. `kubectl` bundles this — no separate `kustomize` binary, no Helm: this
+# harness deploys one fixed topology every run, never a different one per environment,
+# so there is nothing for a chart's templating/values to parameterize (see
+# README.md's "Why not Helm" for the fuller reasoning).
+#
+# Root is here, not kubernetes/, so params/ (a sibling of kubernetes/) is in reach —
+# kustomize refuses to read a file outside its own root by design. hub-init-sql is
+# still not generated here even so: its source, tools/e2e/sql/init.sql, is genuinely
+# outside this tree (the E2E harness's own file, not duplicated here) — CI creates that
+# one ConfigMap with a plain `kubectl create configmap --from-file` before this build,
+# same as before.
+#
+# kubernetes/networkpolicy-robot-outage.yaml is deliberately not a resource here — it
+# is applied and later reverted on its own, mid-run, to induce the outage window
+# (.github/workflows/ci.yaml's verify-kind-networkpolicy job); folding it in here would
+# make a plain re-apply of this file toggle the outage on and off by accident.
+#
+# CI patches kubernetes/robot-a.yaml's dc-ros image ref in place (sed) before this file
+# is built, to test the PR's own just-built image — see that file's own header.
+resources:
+  - kubernetes/namespaces.yaml
+  - kubernetes/networkpolicies.yaml
+  - kubernetes/hub-postgres.yaml
+  - kubernetes/edge-a.yaml
+  - kubernetes/probes.yaml
+  - kubernetes/robot-a.yaml
+
+# Generated, not applied by hand: each ConfigMap's content stays a single source file
+# (params/*), never duplicated into this repo a second time. Default content-hash
+# suffixing is left on — edge-a.yaml/robot-a.yaml reference each by its unsuffixed
+# name, and kustomize rewrites those references to the generated name automatically
+# since generator and consumers build together here.
+configMapGenerator:
+  - name: edge-a-vector-config
+    namespace: dc-edge-a
+    files:
+      - vector.toml=params/edge-a-vector.toml
+  - name: robot-a-params
+    namespace: dc-robot-a
+    files:
+      - robot_params.yaml=params/robot-a-params.yaml
