@@ -99,6 +99,13 @@ real jazzy docs build is tracked at #252 (DC 2.0 S11), not done as part of this 
 New Podman-based container tooling otherwise lives under `tools/e2e/` (#249 is the first
 jazzy-line CI/container work).
 
+**Scoped exception — k3d/kind:** `deploy/robot/scripts/k3d_up.sh`/`k3d_down.sh` (#451, a
+fast local dev loop for the Kubernetes rendering) and #452's kind + NetworkPolicy
+validation both wrap Kubernetes distributions that run their nodes as Docker containers —
+neither ships a Podman-based option. The dependency is confined to those two harnesses:
+building and shipping `dc-ros`/`dc-uploader` still goes through Podman unchanged, nothing
+else in the repo assumes Docker is present, and neither harness runs in CI.
+
 Conventions for new container tooling here, adapted from the monorepo (no private
 registry or self-hosted runners in this repo, so the parts of that pattern needing
 those are dropped):

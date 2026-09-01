@@ -67,6 +67,43 @@ inner loop) and #452 (a kind cluster with a policy-enforcing CNI, proving the sa
 claim `verify_network_isolation.sh` proves at the Podman-network level, this time enforced by
 `NetworkPolicy`).
 
+## k3d development loop (#451)
+
+```sh
+podman build -t dc-ros:dev -f containers/dc-ros/Containerfile containers/dc-ros
+podman build -t dc-uploader:dev -f containers/dc-uploader/Containerfile containers/dc-uploader
+./deploy/robot/scripts/k3d_up.sh    # create (or reuse) the cluster, load the images, apply the Pod
+./deploy/robot/scripts/k3d_down.sh  # delete the cluster
+```
+
+`verify_kube_play.sh` above proves the manifest runs; it proves nothing about the manifest
+*as Kubernetes*, because `podman kube play` has no scheduler, no Services, and no DNS. This
+is the fast loop for that: a disposable single-node [k3d](https://k3d.io) cluster (k3d wraps
+k3s) running `kubernetes/robot-pod.yaml` for real, so changes to the manifest can be
+iterated against an actual scheduler in seconds rather than the minutes a full cluster
+normally costs. Re-running `k3d_up.sh` after rebuilding an image reloads it and recreates
+the Pod without recreating the cluster — the fast half of "create and delete" the issue asks
+for; `k3d_down.sh` is the other half (a few seconds, see the scripts' own timing notes).
+
+This is **explicitly not** the production-parity check. k3d's default CNI (Flannel) does not
+enforce `NetworkPolicy`, so it cannot stand in for `verify_network_isolation.sh`'s isolation
+claim — that enforcement proof is #452's kind cluster with Calico/Cilium. Nothing here runs
+in CI; it is a local inner-loop tool only, same spirit as `podman kube play` but with a real
+scheduler underneath.
+
+**Loading local images without a registry**: `k3d_up.sh` takes whatever `DC_ROS_IMAGE`/
+`DC_UPLOADER_IMAGE` you've already built with Podman (`dc-ros:dev`/`dc-uploader:dev` by
+default) and imports them straight into the cluster's containerd via `podman save` +
+`k3d image import` — no push, no pull, no registry involved. The upstream `vector` image is
+still pulled from `docker.io` on first boot, same as every other rendering here.
+
+**Docker dependency, scoped**: k3d's nodes are Docker containers, so this is the one place
+in this repository's container tooling that touches Docker instead of Podman (`CLAUDE.md`
+"Containers: Podman, not Docker"). It is confined to these two scripts — building and
+shipping `dc-ros`/`dc-uploader` still goes through Podman unchanged, and nothing else in the
+repo assumes Docker is present. #452's kind cluster carries the identical, equally-scoped
+exception, for the same reason (kind is Docker-based too).
+
 ## Network isolation
 
 `verify_network_isolation.sh` creates an `--internal` Podman network for the robot
