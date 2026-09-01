@@ -211,14 +211,9 @@ jobs:
 
       - name: Push the workspace image
         if: success()
-        env:
-          REF: ${{ steps.refs.outputs.workspace_ref }}
-        run: |
-          for attempt in 1 2 3; do
-            podman push "$REF" && exit 0
-            echo "push $REF attempt $attempt failed; retrying in 10s"; sleep 10
-          done
-          exit 1
+        uses: ./.github/actions/podman-push
+        with:
+          refs: ${{ steps.refs.outputs.workspace_ref }}
 
       - name: Upload C++ coverage
         if: always()
@@ -314,14 +309,9 @@ jobs:
         run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$E2E_REF" -f tools/e2e/Containerfile.e2e tools/e2e
 
       - name: Push the E2E image
-        env:
-          E2E_REF: ${{ needs.build-workspace.outputs.e2e_ref }}
-        run: |
-          for attempt in 1 2 3; do
-            podman push "$E2E_REF" && exit 0
-            echo "push $E2E_REF attempt $attempt failed; retrying in 10s"; sleep 10
-          done
-          exit 1
+        uses: ./.github/actions/podman-push
+        with:
+          refs: ${{ needs.build-workspace.outputs.e2e_ref }}
 
   # Publishes the first runnable images this repo ships (#448) — every earlier ghcr push
   # (dc-workspace, dc-e2e above) exists purely for CI-internal reuse. Only on `push` to
