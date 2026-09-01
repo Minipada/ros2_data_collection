@@ -37,6 +37,13 @@ KEEP="${DC_E2E_KEEP:-false}"
 # Docker"; matches ci.yaml's own compose.test.yaml usage) — it needs no Podman API socket.
 export PODMAN_COMPOSE_PROVIDER="${PODMAN_COMPOSE_PROVIDER:-podman-compose}"
 
+# compose.split.yaml's vector service interpolates this (#448: the Vector image tag and
+# vector_vendor's pinned version come from one place) — same grep already used by
+# run_limits_two_tier.sh / run_load_driver_shipper_test.sh / run_limits_drain_rate.sh /
+# run_limits_shipper_fanin.sh, so the apt and container paths cannot drift apart.
+VECTOR_VERSION="$(grep -oP 'version: v\K[0-9.]+' "$E2E_DIR/../../ros2_data_collection.repos")"
+export VECTOR_VERSION
+
 PG_C=dc_e2e_split_postgres
 RUSTFS_C=dc_e2e_split_rustfs
 DC_ROS_C=dc_e2e_split_dc_ros

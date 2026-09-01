@@ -9,12 +9,16 @@
 # Podman (CLAUDE.md "Containers: Podman, not Docker").
 #
 # One job builds each artifact and pushes it; the others pull and use it (build once, use
-# many). The immutable :<sha> ref is the only tag published — per CLAUDE.md, a floating
-# :<branch> ref is added only once the repo publishes runnable images for others, which it
-# doesn't yet; here the images exist purely for CI-internal reuse + traceability.
+# many). dc-workspace/dc-e2e stay :<sha>-only — they exist purely for CI-internal reuse +
+# traceability, never pulled by anything outside this workflow. dc-ros and dc-uploader
+# (#448) are different: the first images this repo publishes for others to actually
+# deploy, so they get :<sha> *and* a floating :latest, per CLAUDE.md's convention, and
+# only on `push` to `jazzy` — never from a PR build.
 #
-#   build-workspace (build + colcon test + coverage) ─┬─▶ sim               (pull dc-workspace, simulation smoke check)
-#                                                      └─▶ build-e2e-image ─▶ e2e   (pull dc-e2e, zero-loss harness)
+#   build-workspace (build + colcon test + coverage) ─┬─▶ sim                    (pull dc-workspace, simulation smoke check)
+#                                                      ├─▶ build-e2e-image ────▶ e2e   (pull dc-e2e, zero-loss harness)
+#                                                      ├─▶ build-dc-ros-image ─┐
+#                                                      └─▶ build-dc-uploader-image ─▶ verify-published-images (pull + run, no build)
 #   kpi-views (standalone: SQL + a throwaway Postgres, no workspace image needed)
 #   raw-volume (standalone: stdlib Python fixtures over the shared volume accounting)
 #
@@ -72,6 +76,10 @@ jobs:
       workspace_ref: ${{ steps.refs.outputs.workspace_ref }}
       e2e_ref: ${{ steps.refs.outputs.e2e_ref }}
       cache_ref: ${{ steps.refs.outputs.cache_ref }}
+      dc_ros_ref: ${{ steps.refs.outputs.dc_ros_ref }}
+      dc_ros_latest_ref: ${{ steps.refs.outputs.dc_ros_latest_ref }}
+      dc_uploader_ref: ${{ steps.refs.outputs.dc_uploader_ref }}
+      dc_uploader_latest_ref: ${{ steps.refs.outputs.dc_uploader_latest_ref }}
     steps:
       - uses: actions/checkout@v5
 
@@ -95,6 +103,10 @@ jobs:
             echo "workspace_ref=$IMAGE/dc-workspace:$SHA"
             echo "e2e_ref=$IMAGE/dc-e2e:$SHA"
             echo "cache_ref=$IMAGE/dc-workspace-cache"
+            echo "dc_ros_ref=$IMAGE/dc-ros:$SHA"
+            echo "dc_ros_latest_ref=$IMAGE/dc-ros:latest"
+            echo "dc_uploader_ref=$IMAGE/dc-uploader:$SHA"
+            echo "dc_uploader_latest_ref=$IMAGE/dc-uploader:latest"
           } >> "$GITHUB_OUTPUT"
 
       # `podman compose` shells out to a host-side provider — it can't be baked into an
@@ -310,6 +322,123 @@ jobs:
             echo "push $E2E_REF attempt $attempt failed; retrying in 10s"; sleep 10
           done
           exit 1
+
+  # Publishes the first runnable images this repo ships (#448) — every earlier ghcr push
+  # (dc-workspace, dc-e2e above) exists purely for CI-internal reuse. Only on `push` to
+  # `jazzy` (never on a PR build): a fleet pins robots to `:<sha>`/`:latest`, so a
+  # not-yet-merged PR must never produce a ref someone could pull. Thin `FROM` layers
+  # over the already-tested workspace image (containers/dc-ros, containers/dc-uploader),
+  # same shape as build-e2e-image above, just with no E2E-only content.
+  build-dc-ros-image:
+    needs: build-workspace
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Log in to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build the dc-ros image
+        env:
+          BASE_IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
+          DC_ROS_REF: ${{ needs.build-workspace.outputs.dc_ros_ref }}
+        run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$DC_ROS_REF" -f containers/dc-ros/Containerfile containers/dc-ros
+
+      - name: Push the dc-ros image (:<sha> and :latest)
+        env:
+          DC_ROS_REF: ${{ needs.build-workspace.outputs.dc_ros_ref }}
+          DC_ROS_LATEST_REF: ${{ needs.build-workspace.outputs.dc_ros_latest_ref }}
+        run: |
+          podman tag "$DC_ROS_REF" "$DC_ROS_LATEST_REF"
+          for ref in "$DC_ROS_REF" "$DC_ROS_LATEST_REF"; do
+            for attempt in 1 2 3; do
+              podman push "$ref" && continue 2
+              echo "push $ref attempt $attempt failed; retrying in 10s"; sleep 10
+            done
+            exit 1
+          done
+
+  build-dc-uploader-image:
+    needs: build-workspace
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Log in to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build the dc-uploader image
+        env:
+          BASE_IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
+          DC_UPLOADER_REF: ${{ needs.build-workspace.outputs.dc_uploader_ref }}
+        run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$DC_UPLOADER_REF" -f containers/dc-uploader/Containerfile containers/dc-uploader
+
+      - name: Push the dc-uploader image (:<sha> and :latest)
+        env:
+          DC_UPLOADER_REF: ${{ needs.build-workspace.outputs.dc_uploader_ref }}
+          DC_UPLOADER_LATEST_REF: ${{ needs.build-workspace.outputs.dc_uploader_latest_ref }}
+        run: |
+          podman tag "$DC_UPLOADER_REF" "$DC_UPLOADER_LATEST_REF"
+          for ref in "$DC_UPLOADER_REF" "$DC_UPLOADER_LATEST_REF"; do
+            for attempt in 1 2 3; do
+              podman push "$ref" && continue 2
+              echo "push $ref attempt $attempt failed; retrying in 10s"; sleep 10
+            done
+            exit 1
+          done
+
+  # Proves the two images build-dc-ros-image/build-dc-uploader-image just pushed are
+  # actually runnable as the three-container topology (#448 acceptance criteria) — pull
+  # + run only, no podman build. See tools/release/scripts/verify_published_images.sh.
+  verify-published-images:
+    needs: [build-workspace, build-dc-ros-image, build-dc-uploader-image]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Log in to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Install podman-compose
+        run: pip install --user "podman-compose==1.5.0" && echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run the published-image smoke check
+        env:
+          DC_ROS_IMAGE: ${{ needs.build-workspace.outputs.dc_ros_ref }}
+          DC_UPLOADER_IMAGE: ${{ needs.build-workspace.outputs.dc_uploader_ref }}
+        run: ./tools/release/scripts/verify_published_images.sh
+
+      - name: Upload smoke-check logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-published-images-logs
+          path: tools/release/.run/**
+          if-no-files-found: ignore
 
   # tools/e2e/scripts/raw_volume.py is stdlib Python shared by the zero-loss verifier and
   # the sim-backed volume benchmark (#326) — no workspace image, no simulator, no database.
