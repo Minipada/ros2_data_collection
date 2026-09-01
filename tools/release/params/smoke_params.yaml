@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Minimal params for verify_published_images.sh (#448): proves the published `dc-ros`
+# image boots in unmanaged-shipper mode and ships a Record through a real Vector
+# container to Postgres — nothing else. Not the E2E harness's zero-loss proof (that's
+# tools/e2e/params/e2e_split_params.yaml, an existing, separate seam per #440's Testing
+# Decisions); this only has to show the published image itself is runnable.
+measurement_server:
+  ros__parameters:
+    save_local_base_path: "$HOME/.dc/smoke/data/%Y/%M/%D/%H"
+    all_base_path: "smoke"
+    measurement_plugins: ["uptime"]
+
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      polling_interval: 500
+      group_key: "uptime"
+
+dc_bridge:
+  ros__parameters:
+    shipper:
+      managed: false
+      config_path: "/etc/dc/shipper/vector.toml"
+      data_dir: "/var/lib/vector"
+      bind_host: "0.0.0.0"
+    destinations: ["pgsql_records"]
+    pgsql_records:
+      type: postgres
+      receives: records
+      inputs: ["/dc/measurement/uptime"]
+      host: "127.0.0.1"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc_records"
+      time_key: "date"
+
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
+
+lifecycle_manager_dc:
+  ros__parameters:
+    node_names: ["measurement_server"]
+    transitions: [configure, activate]

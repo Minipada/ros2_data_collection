@@ -96,8 +96,12 @@ services:
     restart: unless-stopped
 
   vector:
-    # Version matches ros2_data_collection.repos' vector_vendor pin (v0.57.0).
-    image: docker.io/timberio/vector:0.57.0-debian
+    # VECTOR_VERSION comes from ros2_data_collection.repos' vector_vendor pin (#448: the
+    # Vector image tag and vector_vendor's pinned version come from one place) —
+    # run_split.sh exports it before calling compose; the literal default here only
+    # matters for a standalone `podman compose -f compose.split.yaml up` (see this
+    # file's header) where nothing has exported it.
+    image: docker.io/timberio/vector:${VECTOR_VERSION:-0.57.0}-debian
     container_name: dc_e2e_split_vector
     volumes:
       - dc_e2e_split_buffer:/var/lib/vector

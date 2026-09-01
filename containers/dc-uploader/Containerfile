@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# The `dc-uploader` runtime image (#448): the standalone Uploader process (#446,
+# docs/adr/0014) for the three-container split topology (#440 scenario 2/3, #447). A
+# thin `FROM` on top of tools/e2e/Containerfile's tested `workspace` stage — same
+# pattern as tools/e2e/Containerfile.e2e, but with no E2E-only content. Published to
+# ghcr.io on merge to `jazzy` (see .github/workflows/ci.yaml's build-dc-uploader-image
+# job). Configured entirely by `DC_UPLOADER_*` environment variables (no ROS params, no
+# ROS dependency of its own — see entrypoint.sh).
+
+ARG BASE_IMAGE=dc-workspace:latest
+FROM ${BASE_IMAGE}
+
+COPY entrypoint.sh /opt/dc/entrypoint.sh
+RUN chmod +x /opt/dc/entrypoint.sh
+
+ENTRYPOINT ["/opt/dc/entrypoint.sh"]
