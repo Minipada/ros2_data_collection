@@ -1,0 +1,64 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Robot tier, site A (#452). Two of deploy/robot/kubernetes/robot-pod.yaml's three
+# containers — dc-ros and vector, not dc-uploader: ../params/robot-a-params.yaml's only Measurement
+# (`uptime`) produces no Files, so there is nothing for an Uploader to do, and adding one
+# with no work would test nothing #452's acceptance criteria ask for (Records only).
+# deploy/robot/kubernetes/robot-pod.yaml remains the real three-container deployable
+# reference; this is a deliberately narrower harness Pod.
+#
+# ConfigMap instead of that file's hostPath, per its own header: "a Pod-scoped
+# Secret/ConfigMap object is the real-cluster mechanism" — this is that real cluster.
+# scripts/run.sh creates the `robot-a-params` ConfigMap from ../params/robot-a-params.yaml before
+# applying this file, and substitutes ${DC_ROS_IMAGE}/${VECTOR_IMAGE} the same way
+# deploy/robot/scripts/verify_kube_play.sh substitutes image refs.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dc-robot
+  namespace: dc-robot-a
+  labels:
+    app.kubernetes.io/part-of: dc-robot-tier
+spec:
+  restartPolicy: Always
+  # Both containers share the Pod's network namespace, same as robot-pod.yaml — dc-ros's
+  # vector_forward_host: "vector" (robot-a-params.yaml) resolves via this alias.
+  hostAliases:
+    - ip: "127.0.0.1"
+      hostnames: ["vector"]
+  containers:
+    - name: dc-ros
+      image: ${DC_ROS_IMAGE}
+      args: ["dc_params_file:=/opt/dc/robot_params.yaml", "run_uploader:=false"]
+      volumeMounts:
+        - name: config
+          mountPath: /etc/dc/shipper
+        - name: robot-params
+          mountPath: /opt/dc/robot_params.yaml
+          subPath: robot_params.yaml
+          readOnly: true
+
+    - name: vector
+      image: ${VECTOR_IMAGE}
+      command: ["/bin/sh", "-c"]
+      args:
+        - >
+          trap exit TERM;
+          until [ -f /etc/dc/shipper/vector.toml ]; do sleep 0.2; done;
+          exec vector --config /etc/dc/shipper/vector.toml --watch-config
+      volumeMounts:
+        - name: buffer
+          mountPath: /var/lib/vector
+        - name: config
+          mountPath: /etc/dc/shipper
+          readOnly: true
+
+  volumes:
+    - name: config
+      emptyDir: {}
+    - name: buffer
+      emptyDir: {}
+    - name: robot-params
+      configMap:
+        name: robot-a-params

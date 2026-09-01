@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Replaces networkpolicies.yaml's robot-isolation policy for the duration of
+# scripts/run.sh's induced-outage window: same object (name+namespace), egress-to-edge
+# rule removed, DNS kept. This is what makes the edge tier "unreachable" — a real
+# NetworkPolicy change enforced by Calico, not a stopped container — so the robot tier's
+# buffering claim is proven against the same mechanism the rest of this harness proves
+# isolation with. `kubectl apply -f networkpolicies.yaml` afterwards restores the
+# original rule set.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: robot-isolation
+  namespace: dc-robot-a
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

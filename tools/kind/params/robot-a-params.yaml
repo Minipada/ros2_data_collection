@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Same params as deploy/robot/params/robot_params.yaml (#450) — copied rather than
+# referenced because `edge_vector.host` has to be a real, reachable Service DNS name
+# here instead of that file's `edge.site.example` placeholder; every other field is
+# identical and should be kept that way by hand. `uptime`'s 1s polling_interval is what
+# scripts/run.sh's induced-outage record-rate check assumes.
+measurement_server:
+  ros__parameters:
+    save_local_base_path: "$HOME/.dc/robot/data/%Y/%M/%D/%H"
+    all_base_path: "robot"
+    measurement_plugins: ["uptime"]
+
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      polling_interval: 1000
+      group_key: "uptime"
+
+dc_bridge:
+  ros__parameters:
+    shipper:
+      managed: false
+      config_path: "/etc/dc/shipper/vector.toml"
+      data_dir: "/var/lib/vector"
+      bind_host: "0.0.0.0"
+    # No Uploader container here (see robot-a.yaml's header) — the Bridge still declares
+    # this param (ADR-0014: it keeps the Files-subscription/intent-writing side
+    # regardless), but with no File-producing Measurement configured it's never
+    # exercised; a plain container-local path is enough, no volume needed.
+    uploader:
+      data_dir: "/root/.dc/robot/uploader"
+    destinations: ["edge_vector"]
+    edge_vector:
+      type: vector
+      receives: records
+      inputs: ["/dc/measurement/uptime"]
+      host: "edge-vector.dc-edge-a.svc.cluster.local"
+      port: 24224
+
+    vector_forward_host: "vector"
+    vector_forward_port: 24224
+
+lifecycle_manager_dc:
+  ros__parameters:
+    node_names: ["measurement_server"]
+    transitions: [configure, activate]

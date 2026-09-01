@@ -63,9 +63,10 @@ Kubernetes cluster. `podman kube play` runs the Kubernetes Pod manifest directly
 possible only because the robot tier is a single Pod (see `kubernetes/robot-pod.yaml`'s
 header). Cluster-backed validation of Kubernetes semantics themselves (Services, DNS, a real
 scheduler, `NetworkPolicy` enforced by a CNI) is out of scope here — that is #451 (a fast k3d
-inner loop) and #452 (a kind cluster with a policy-enforcing CNI, proving the same isolation
-claim `verify_network_isolation.sh` proves at the Podman-network level, this time enforced by
-`NetworkPolicy`).
+inner loop) and `tools/kind/` (#452: a kind cluster with Calico, a policy-enforcing CNI,
+proving the same isolation claim `verify_network_isolation.sh` proves at the Podman-network
+level, this time enforced by `NetworkPolicy` against a real robot/edge/hub topology — see
+`tools/kind/README.md`).
 
 ## Network isolation
 

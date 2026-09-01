@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# The three tiers under test (#452), plus dc-edge-b: a second site's edge, standing in
+# for a fleet with more than one site so "sites cannot reach each other" has something to
+# fail against. It never runs DC — just a probe (kubernetes/probes.yaml) — because the
+# claim under test is that dc-edge-a cannot reach it and vice versa, not a second full
+# stack. NetworkPolicy peer selectors below use the built-in kubernetes.io/metadata.name
+# label, so no extra namespace labels are needed here.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dc-robot-a
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dc-edge-a
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dc-edge-b
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dc-hub

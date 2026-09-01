@@ -25,6 +25,7 @@
 #   build-workspace (build + colcon test + coverage) ─┬─▶ sim                    (pull dc-workspace, simulation smoke check)
 #                                                      ├─▶ build-e2e-image ────▶ e2e   (pull dc-e2e, zero-loss harness)
 #                                                      ├─▶ build-dc-ros-image ─┬─▶ verify-published-images  (pull + run, no build)
+#                                                      │                      ├─▶ verify-kind-networkpolicy (#452: kind + Calico, NetworkPolicy proof)
 #                                                      └─▶ build-dc-uploader-image ─┴─▶ verify-robot-manifests (#450: podman kube play + network isolation)
 #   kpi-views (standalone: SQL + a throwaway Postgres, no workspace image needed)
 #   raw-volume (standalone: stdlib Python fixtures over the shared volume accounting)
@@ -499,6 +500,59 @@ jobs:
 
       - name: Podman networks prove the isolation properties
         run: ./deploy/robot/scripts/verify_network_isolation.sh
+
+  # kind validation of the three-tier topology with NetworkPolicy (#452, epic #440): the
+  # production-parity check verify-robot-manifests explicitly defers — a real kubeadm
+  # cluster with Calico (a policy-enforcing CNI, unlike k3d/#451's default Flannel)
+  # proving the fleet's isolation claims by attempted connection, not just by rendering.
+  # A pre-merge check, separate from build-workspace's colcon test / prek's fast loop —
+  # see tools/kind/README.md. kind itself is Docker-based (ubuntu-latest ships Docker
+  # preinstalled); this is the one job in this file that touches it instead of Podman —
+  # see that README's "Docker dependency" section for why that's scoped to here.
+  verify-kind-networkpolicy:
+    needs: build-dc-ros-image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify podman and docker
+        run: podman --version && docker --version
+
+      - name: Install kind
+        env:
+          KIND_VERSION: v0.33.0
+        run: |
+          curl -Lo ./kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Install kubectl
+        env:
+          KUBECTL_VERSION: v1.31.4
+        run: |
+          curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          chmod +x ./kubectl
+          sudo mv ./kubectl /usr/local/bin/kubectl
+
+      - name: Log in to ghcr.io (to pull the dc-ros image)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Run the kind + NetworkPolicy harness
+        env:
+          DC_ROS_IMAGE: ${{ needs.build-dc-ros-image.outputs.sha_ref }}
+        run: ./tools/kind/scripts/run.sh
+
+      - name: Upload harness diagnostics (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kind-networkpolicy-diagnostics
+          path: tools/kind/.run/**
+          if-no-files-found: ignore
 
   # tools/e2e/scripts/raw_volume.py is stdlib Python shared by the zero-loss verifier and
   # the sim-backed volume benchmark (#326) — no workspace image, no simulator, no database.

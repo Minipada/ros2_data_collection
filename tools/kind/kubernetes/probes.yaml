@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Dedicated probe Pods for scripts/verify_network_policy.sh (#452) — plain Alpine, same
+# convention as deploy/robot/scripts/verify_network_isolation.sh's Podman-network probes.
+# `podSelector: {}` in networkpolicies.yaml applies to every Pod in a namespace, so a
+# probe Pod here is bound by the exact same policy dc-ros/vector or the edge aggregator
+# would be — it exists to make connection attempts without depending on those images
+# having `nc` installed, not to bypass the policy under test.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: robot-a-probe
+  namespace: dc-robot-a
+spec:
+  containers:
+    - name: probe
+      image: docker.io/library/alpine:3.20
+      command: ["sleep", "infinity"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: edge-a-probe
+  namespace: dc-edge-a
+spec:
+  containers:
+    - name: probe
+      image: docker.io/library/alpine:3.20
+      command: ["sleep", "infinity"]
+---
+# Stands in for a second site's edge tier (see namespaces.yaml) — a listener as well as
+# a client, so it can be both the target and the source of the site-to-site checks.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: edge-b-probe
+  namespace: dc-edge-b
+  labels:
+    app: edge-b-probe
+spec:
+  containers:
+    - name: probe
+      image: docker.io/library/alpine:3.20
+      command: ["sh", "-c", "while true; do nc -l -p 8080; done"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: edge-b-probe
+  namespace: dc-edge-b
+spec:
+  selector:
+    app: edge-b-probe
+  ports:
+    - port: 8080
+      targetPort: 8080

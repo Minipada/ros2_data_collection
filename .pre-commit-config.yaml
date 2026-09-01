@@ -38,6 +38,13 @@ repos:
         name: Verify json syntax
       - id: check-yaml
         name: Verify yaml syntax
+        # tools/kind/kubernetes/*.yaml are multi-document (one file per tier/concern,
+        # several `---`-separated objects each) — check-yaml's default rejects that.
+        # kubeconform (this file's `kubeconform` hook, scoped to the same `kubernetes/`
+        # dirs) already parses and schema-validates every document in these files, so
+        # excluding them here doesn't drop coverage, just the redundant single-document
+        # check.
+        exclude: "(^|/)tools/kind/kubernetes/.*\\.ya?ml$"
       - id: check-toml
         name: Verify toml syntax
       - id: check-xml
