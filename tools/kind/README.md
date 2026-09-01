@@ -77,3 +77,11 @@ routes the `dc-ros` image through `podman save` / `kind load image-archive` rath
 `kind load docker-image`, so Podman stays the tool that ever touches a DC image; Docker's
 only job is running the kind nodes themselves. GitHub-hosted `ubuntu-latest` runners
 ship Docker preinstalled, so CI needs no extra setup step for it.
+
+`kind` and `kubectl` themselves are pinned binaries baked into
+`containers/kind-tools/Containerfile`, built once by CI's `build-kind-tools-image` job
+and `podman cp`-extracted by `verify-kind-networkpolicy` — install once, reuse, rather
+than every job `curl`-downloading both tools itself (see CLAUDE.md's "Podman-built images
+for CI tools, not inline installs"). A local run needs both on `PATH` already; extract
+them from that same image (`podman create`, `podman cp`, same as the CI step) instead of
+installing them another way, so a local run and CI always agree on the exact version.

@@ -125,6 +125,16 @@ those are dropped):
 - **`hadolint`** lints every Containerfile (already wired into `.pre-commit-config.yaml`
   for the legacy `docker/*/Dockerfile`s — new `Containerfile`s are covered by the same
   hook via its glob).
+- **Podman-built images for CI tools, not inline installs.** A CI step that `curl`s or
+  `apt`s a tool re-downloads it on every run, on every job that needs it. If a tool has
+  a pinned version and no reason to change per-commit (a CLI binary, not DC's own code),
+  bake it into a small image instead: build it once with `podman build`, push it, and
+  have every job that needs the tool pull that image and `podman cp` the binary out (or
+  run the image directly, if the tool's job is to run inside a container rather than on
+  the runner itself) — reuse `--cache-from`/`--cache-to` (this file's `CACHE_REF`
+  pattern) so an unchanged pin is a cache hit, not a rebuild. `containers/kind-tools/`
+  (`kind` + `kubectl` for `tools/kind/`'s `verify-kind-networkpolicy` job, #452) is the
+  reference example.
 
 ## Comments
 
