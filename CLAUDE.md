@@ -139,16 +139,18 @@ those are dropped):
 - **`hadolint`** lints every Containerfile (already wired into `.pre-commit-config.yaml`
   for the legacy `docker/*/Dockerfile`s — new `Containerfile`s are covered by the same
   hook via its glob).
-- **Podman-built images for CI tools, not inline installs.** A CI step that `curl`s or
-  `apt`s a tool re-downloads it on every run, on every job that needs it. If a tool has
-  a pinned version and no reason to change per-commit (a CLI binary, not DC's own code),
-  bake it into a small image instead: build it once with `podman build`, push it, and
-  have every job that needs the tool pull that image and `podman cp` the binary out (or
-  run the image directly, if the tool's job is to run inside a container rather than on
-  the runner itself) — reuse `--cache-from`/`--cache-to` (this file's `CACHE_REF`
-  pattern) so an unchanged pin is a cache hit, not a rebuild. `containers/kind-tools/`
-  (`kind` + `kubectl` for `tools/kind/`'s `verify-kind-networkpolicy` job, #452) is the
-  reference example.
+- **Pinned installs for CI tools, not repeated inline `curl`/`apt`.** A CI step that
+  `curl`s or `apt`s a tool re-downloads it on every run, on every job that needs it, with
+  no checksum verification unless the step author added it by hand. For a tool with a
+  pinned version and no reason to change per-commit (a CLI binary, not DC's own code),
+  reach for a well-maintained, version-pinned installer first — a first-party or
+  widely-used marketplace GitHub Action (pinned to a commit SHA, per standard supply-chain
+  practice, e.g. `helm/kind-action@<sha> # vX.Y.Z` for `kind`/`kubectl` in
+  `tools/kind/`'s `verify-kind-networkpolicy` job, #452), which typically installs once,
+  caches, and checksum-verifies for you. Only bake a small Podman-built image
+  (`podman build`, push, every job that needs it `podman cp`s the binary out — reuse
+  `--cache-from`/`--cache-to`, this file's `CACHE_REF` pattern, so an unchanged pin is a
+  cache hit) when no such installer exists for the tool in question.
 
 ## Comments
 
