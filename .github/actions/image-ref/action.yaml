@@ -7,10 +7,9 @@ description: >-
   immutable :<sha> ref (pushed on every build, PR included) and a floating
   :<slug> branch ref (master -> :master; a PR uses its head branch). Ported
   from ~/dev/monorepo's .github/actions/image-ref — same slug algorithm, ghcr
-  in place of registry.bensoussan.de. dc-ros/dc-uploader additionally derive
-  a fixed :latest ref from sha_ref themselves (CLAUDE.md's convention for the
-  first images this repo publishes for others to deploy); dc-workspace/dc-e2e
-  use only sha_ref, unchanged.
+  in place of registry.bensoussan.de. dc-ros/dc-uploader push branch_ref
+  (:jazzy) as the ref a real deployment pins to — this repo pushes no
+  :latest tag; dc-workspace/dc-e2e use only sha_ref, unchanged.
 
 inputs:
   name:

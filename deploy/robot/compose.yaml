@@ -17,7 +17,7 @@
 # lets it recover regardless of start order.
 services:
   dc-ros:
-    image: ${DC_ROS_IMAGE:-ghcr.io/minipada/ros2_data_collection/dc-ros:latest}
+    image: ${DC_ROS_IMAGE:-ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy}
     container_name: dc_robot_dc_ros
     volumes:
       - dc_robot_uploader:/root/.dc/robot/uploader
@@ -29,7 +29,7 @@ services:
   # The Uploader as its own container (docs/adr/0014). Files go to edge-local object
   # storage (DC_UPLOADER_S3_*), configured entirely by env — no ROS params.
   dc-uploader:
-    image: ${DC_UPLOADER_IMAGE:-ghcr.io/minipada/ros2_data_collection/dc-uploader:latest}
+    image: ${DC_UPLOADER_IMAGE:-ghcr.io/minipada/ros2_data_collection/dc-uploader:jazzy}
     container_name: dc_robot_dc_uploader
     environment:
       DC_UPLOADER_STORAGE_NAME: "edge"

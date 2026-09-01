@@ -12,9 +12,9 @@
 #
 # Env vars:
 #   DC_ROS_IMAGE       image ref for the dc-ros container (default: the manifest's own
-#                      committed :latest ref). CI passes the :<sha> ref
+#                      committed :jazzy ref). CI passes the :<sha> ref
 #                      build-dc-ros-image just pushed, so a PR run tests the image it
-#                      just built, not whatever :latest happened to be last.
+#                      just built, not whatever :jazzy happened to be last.
 #   DC_UPLOADER_IMAGE  same, for the dc-uploader container.
 #   DC_RELEASE_TIMEOUT_SECONDS  deadline for dc-ros to report ready (default 60).
 set -euo pipefail
@@ -52,14 +52,14 @@ cleanup() {
 trap cleanup EXIT
 
 # Substitute image refs only when overridden — an unset DC_ROS_IMAGE/DC_UPLOADER_IMAGE
-# leaves the manifest's own committed :latest refs untouched, so a plain local run
+# leaves the manifest's own committed :jazzy refs untouched, so a plain local run
 # behaves exactly as the committed file describes.
 cp "$POD_MANIFEST" "$RUN_MANIFEST"
 if [ -n "${DC_ROS_IMAGE:-}" ]; then
-  sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-ros:latest|$DC_ROS_IMAGE|" "$RUN_MANIFEST"
+  sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy|$DC_ROS_IMAGE|" "$RUN_MANIFEST"
 fi
 if [ -n "${DC_UPLOADER_IMAGE:-}" ]; then
-  sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-uploader:latest|$DC_UPLOADER_IMAGE|" "$RUN_MANIFEST"
+  sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-uploader:jazzy|$DC_UPLOADER_IMAGE|" "$RUN_MANIFEST"
 fi
 
 log "staging robot_params.yaml at $HOST_PARAMS_FILE"
