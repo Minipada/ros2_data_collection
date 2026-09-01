@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MPL-2.0
 
 # kind validation of the three-tier topology with NetworkPolicy (#452, epic #440). Brings
-# up a kubeadm cluster with Calico enforcing NetworkPolicy (up.sh), a robot tier (site A),
-# an edge aggregator (site A), a stand-in second site (dc-edge-b), and a hub, then proves:
+# up a kubeadm cluster with Calico enforcing NetworkPolicy, a robot tier (site A), an edge
+# aggregator (site A), a stand-in second site (dc-edge-b), and a hub, then proves:
 #
 #   - the robot tier has no internet route, and cannot reach a different site
 #     (verify_network_policy.sh);
@@ -18,6 +18,14 @@
 # policy-enforcing) is the fast local iteration loop, not this. See ../README.md for the
 # Docker-dependency note both harnesses share.
 #
+# This is the *only* script for this harness — no separate up/down helpers. CI, a local
+# reproduction, and anyone else exercising this validation all run exactly this, so there
+# is one path to drift out of sync, not several: what CI asserts is exactly what a
+# developer can run by hand. ../README.md documents the same bring-up/teardown commands
+# used below (kind create/delete cluster, kubectl apply, podman save + kind load
+# image-archive) for reading without running the script, but they are the same commands,
+# not a parallel path.
+#
 #   ./tools/kind/scripts/run.sh
 #
 # Env vars (all optional):
@@ -25,6 +33,9 @@
 #                                  workspace image, same as CI's build-dc-ros-image job.
 #   DC_WORKSPACE_IMAGE            workspace image to build DC_ROS_IMAGE from, if unset
 #                                  (default: build via tools/e2e/scripts/build.sh)
+#   DC_KIND_CLUSTER               kind cluster name (default dc-kind)
+#   DC_KIND_CALICO_VERSION        Calico manifest version to install (default v3.32.2)
+#   DC_KIND_READY_TIMEOUT         deadline for cluster/Calico readiness (default 180s)
 #   DC_KIND_STEADY_STATE_SECONDS  warmup before the induced outage (default 15)
 #   DC_KIND_OUTAGE_SECONDS        outage duration (default 30)
 #   DC_KIND_DRAIN_SECONDS         settle time after the outage before verifying (default 15)
@@ -39,12 +50,14 @@ PARAMS_DIR="$KIND_DIR/params"
 RUN_DIR="$KIND_DIR/.run"
 
 CLUSTER_NAME="${DC_KIND_CLUSTER:-dc-kind}"
+CALICO_VERSION="${DC_KIND_CALICO_VERSION:-v3.32.2}"
+READY_TIMEOUT="${DC_KIND_READY_TIMEOUT:-180s}"
 STEADY_STATE_SECONDS="${DC_KIND_STEADY_STATE_SECONDS:-15}"
 OUTAGE_SECONDS="${DC_KIND_OUTAGE_SECONDS:-30}"
 DRAIN_SECONDS="${DC_KIND_DRAIN_SECONDS:-15}"
 KEEP="${DC_KIND_KEEP:-false}"
-# The uptime Measurement's own polling_interval (robot-a-params.yaml) — the rate the
-# induced-outage zero-loss check computes its expected count from.
+# The uptime Measurement's own polling_interval (params/robot-a-params.yaml) — the rate
+# the induced-outage zero-loss check computes its expected count from.
 UPTIME_RATE_HZ=1
 
 mkdir -p "$RUN_DIR"
@@ -78,7 +91,7 @@ cleanup() {
     fi
   fi
   log "tearing down"
-  "$SCRIPT_DIR/down.sh" || true
+  kind delete cluster --name "$CLUSTER_NAME" || true
   exit "$exit_code"
 }
 trap cleanup EXIT
@@ -97,7 +110,7 @@ else
     "$REPO_ROOT/tools/e2e/scripts/build.sh"
     WORKSPACE_IMAGE="dc-workspace:latest"
   fi
-  log "building dc-ros (containers/dc-ros/Containerfile, FROM the workspace image)"
+  log "building dc-ros (podman build, containers/dc-ros/Containerfile, FROM the workspace image)"
   podman build --build-arg "BASE_IMAGE=$WORKSPACE_IMAGE" -t dc-ros:kind -f "$REPO_ROOT/containers/dc-ros/Containerfile" "$REPO_ROOT/containers/dc-ros"
   DC_ROS_IMAGE="dc-ros:kind"
 fi
@@ -107,12 +120,35 @@ VECTOR_VERSION="$(grep -A3 'vector_vendor:' "$REPO_ROOT/ros2_data_collection.rep
 export VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
 export DC_ROS_IMAGE
 
-# --- cluster + images -------------------------------------------------------------------
-"$SCRIPT_DIR/up.sh"
-"$SCRIPT_DIR/load_images.sh" "$CLUSTER_NAME" "$DC_ROS_IMAGE"
+# --- cluster: kind create + Calico (kindnet/Flannel don't enforce NetworkPolicy) --------
+if kind get clusters 2>/dev/null | grep -qx "$CLUSTER_NAME"; then
+  log "cluster $CLUSTER_NAME already exists, reusing it"
+else
+  log "kind create cluster --name $CLUSTER_NAME (kubeadm, no default CNI)"
+  kind create cluster --name "$CLUSTER_NAME" --config "$KIND_DIR/kind-config.yaml"
+fi
+kubectl config use-context "kind-$CLUSTER_NAME" >/dev/null
 
-# --- namespaces, config, hub + edge tiers -------------------------------------------------
-log "applying namespaces"
+log "kubectl apply: Calico $CALICO_VERSION"
+kx apply -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml"
+kx -n kube-system rollout status daemonset/calico-node --timeout="$READY_TIMEOUT"
+kx -n kube-system rollout status deployment/calico-kube-controllers --timeout="$READY_TIMEOUT"
+kx wait --for=condition=Ready nodes --all --timeout="$READY_TIMEOUT"
+log "PASS: cluster $CLUSTER_NAME is up with Calico enforcing NetworkPolicy"
+
+# --- load the dc-ros image into the cluster, no registry involved ----------------------
+# `kind load docker-image` reads from the *Docker* image store, which this repo's own
+# podman-built images never populate (CLAUDE.md "Containers: Podman, not Docker") — a tar
+# round trip instead: `podman save` -> `kind load image-archive`. This also means the
+# robot Pod below never needs a ghcr.io pull secret.
+log "podman save $DC_ROS_IMAGE, kind load image-archive"
+DC_ROS_TAR="$(mktemp -t kind-image.XXXXXX.tar)"
+podman save -o "$DC_ROS_TAR" "$DC_ROS_IMAGE"
+kind load image-archive "$DC_ROS_TAR" --name "$CLUSTER_NAME"
+rm -f "$DC_ROS_TAR"
+
+# --- namespaces, config, hub + edge tiers -----------------------------------------------
+log "kubectl apply: namespaces"
 kx apply -f "$K8S_DIR/namespaces.yaml"
 
 log "rendering ConfigMaps from source files (single source of truth stays the file, not this script)"
@@ -120,16 +156,16 @@ kx create configmap hub-init-sql -n dc-hub --from-file="$REPO_ROOT/tools/e2e/sql
 kx create configmap edge-a-vector-config -n dc-edge-a --from-file="vector.toml=$PARAMS_DIR/edge-a-vector.toml" --dry-run=client -o yaml | kx apply -f -
 kx create configmap robot-a-params -n dc-robot-a --from-file="robot_params.yaml=$PARAMS_DIR/robot-a-params.yaml" --dry-run=client -o yaml | kx apply -f -
 
-log "applying steady-state NetworkPolicy"
+log "kubectl apply: steady-state NetworkPolicy"
 kx apply -f "$K8S_DIR/networkpolicies.yaml"
 
-log "starting the hub tier"
+log "kubectl apply: hub tier"
 kx apply -f "$K8S_DIR/hub-postgres.yaml"
 
-log "starting the edge tier (site A)"
+log "kubectl apply: edge tier (site A)"
 sed "s|\${VECTOR_IMAGE}|$VECTOR_IMAGE|g" "$K8S_DIR/edge-a.yaml" | kx apply -f -
 
-log "starting the probe Pods"
+log "kubectl apply: probe Pods"
 kx apply -f "$K8S_DIR/probes.yaml"
 
 # rollout status, not `wait --for=condition=Ready pod -l ...`: the Deployment object
@@ -146,7 +182,7 @@ kx wait -n dc-edge-a --for=condition=Ready pod/edge-a-probe --timeout=60s
 kx wait -n dc-edge-b --for=condition=Ready pod/edge-b-probe --timeout=60s
 
 # --- robot tier (last: its own destination, edge-a, is already up) -----------------------
-log "starting the robot tier (site A)"
+log "kubectl apply: robot tier (site A)"
 sed -e "s|\${DC_ROS_IMAGE}|$DC_ROS_IMAGE|g" -e "s|\${VECTOR_IMAGE}|$VECTOR_IMAGE|g" "$K8S_DIR/robot-a.yaml" | kx apply -f -
 
 log "waiting up to 90s for dc-ros to report ready"

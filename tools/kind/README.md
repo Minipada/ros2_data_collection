@@ -24,8 +24,14 @@ Run it end to end:
 ./tools/kind/scripts/run.sh
 ```
 
-`scripts/run.sh`'s own header documents every env var (image refs, outage timing,
-`DC_KIND_KEEP` to leave a failed cluster up for debugging).
+`scripts/run.sh` is the *only* script here — CI, a local reproduction, and anyone else
+exercising this validation all run exactly this, so there is one path to drift out of
+sync, not several (no separate `up`/`down`/dev-convenience scripts wrapping the
+individual `podman`/`kind`/`kubectl` commands, and none of those commands duplicated
+anywhere else). Its own header documents every env var (image refs, outage timing,
+`DC_KIND_KEEP` to leave a failed cluster up for debugging). See
+[the manual doc page](../../doc/src/dc/deploy_kind_networkpolicy.md) for the same
+commands walked through step by step, for reading or running by hand without the script.
 
 ## What this is not
 
@@ -72,8 +78,8 @@ have experimental kind support (`KIND_EXPERIMENTAL_PROVIDER=podman`), but #452 c
 to depend on that: this harness is throwaway CI test infrastructure, not something DC
 ships, so it uses real Docker rather than an experimental path this repo doesn't
 otherwise rely on. Building and shipping DC itself stays on Podman, unchanged
-(CLAUDE.md "Containers: Podman, not Docker") — `scripts/load_images.sh` deliberately
-routes the `dc-ros` image through `podman save` / `kind load image-archive` rather than
+(CLAUDE.md "Containers: Podman, not Docker") — `scripts/run.sh` deliberately routes the
+`dc-ros` image through `podman save` / `kind load image-archive` rather than
 `kind load docker-image`, so Podman stays the tool that ever touches a DC image; Docker's
 only job is running the kind nodes themselves. GitHub-hosted `ubuntu-latest` runners
 ship Docker preinstalled, so CI needs no extra setup step for it.

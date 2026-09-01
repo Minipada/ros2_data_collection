@@ -85,6 +85,7 @@
   - [Ip camera](./dc/infrastructure_setup/ip_camera.md)
   - [RustFS](./dc/infrastructure_setup/rustfs.md)
   - [PostgreSQL](./dc/infrastructure_setup/postgresql.md)
+- [kind: NetworkPolicy validation](./dc/deploy_kind_networkpolicy.md)
 - [CLI tools](./dc/cli.md)
 - [Requirements](./dc/requirements.md)
 - [Future work and Roadmap](./dc/future_work.md)

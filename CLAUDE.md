@@ -76,6 +76,20 @@ file (that branch's own tree, `industrial_ci` inside Docker) — same filename,
 unrelated content, since each
 branch keeps its own `.github/workflows/`.
 
+**One script for CI, local dev, and any other environment that runs the same
+validation.** `build.sh` above is the pattern, not a one-off: a CI job's `run:` step
+should be `./path/to/script.sh` with env vars for what genuinely differs (an image ref,
+a timeout), never a sequence of steps that only exists in the workflow YAML and that a
+developer or a later "prod-parity" harness would have to reconstruct by hand. Two
+copies of "how to do X" — one in CI, one in a doc or a developer's head — *will* drift,
+and the drift only surfaces the first time it matters, at the worst time to find out.
+`tools/e2e/scripts/run.sh` and `tools/kind/scripts/run.sh` (#452) are both this: CI
+calls the exact script a developer runs locally to reproduce a failure, with no
+CI-only variant. Don't split a single validation into an `up`/`down` (or
+create/teardown) script pair either — one script that does the whole thing top to
+bottom (bring up, verify, tear down) is what stays runnable by hand and by CI without
+the two ever meaning slightly different things.
+
 ## Containers: Podman, not Docker
 
 New container tooling in this repo (CI images, E2E harness) uses **Podman**, not
