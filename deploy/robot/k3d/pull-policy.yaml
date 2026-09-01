@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Strategic-merge patch applied by ./kustomization.yaml. Without it dc-ros/dc-uploader
+# keep the base manifest's imagePullPolicy: Always (Kubernetes' default for an
+# explicit :latest tag) — kubelet would then try, and fail, to pull the local :dev
+# image from a registry that does not exist instead of using the image `k3d image
+# import` already placed on the node.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dc-robot
+spec:
+  containers:
+    - name: dc-ros
+      imagePullPolicy: Never
+    - name: dc-uploader
+      imagePullPolicy: Never

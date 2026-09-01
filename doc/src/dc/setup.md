@@ -119,6 +119,23 @@ IMAGE_TAG=dc-workspace:local ./tools/e2e/scripts/build.sh
 `tools/e2e/scripts/run.sh` drives the zero-loss end-to-end harness. See
 [`tools/e2e/README.md`](https://github.com/minipada/ros2_data_collection/blob/jazzy/tools/e2e/README.md).
 
+### Deployment renderings and a local Kubernetes loop
+
+`deploy/robot/` describes the three-container robot tier (`dc-ros`, `vector`,
+`dc-uploader` — see [Deployment modes](./destinations.md#deployment-modes-shippermanaged))
+as Compose, Podman Quadlet and Kubernetes manifests, for whichever a site already runs. For
+iterating on the Kubernetes rendering itself, a loop of plain `podman build`,
+[k3d](https://k3d.io) and `kubectl` commands brings up a disposable local cluster in
+seconds — no wrapper script, no registry, just the commands themselves. See
+[`deploy/robot/README.md`](https://github.com/minipada/ros2_data_collection/blob/jazzy/deploy/robot/README.md)
+for the full command sequence and what each step is for.
+
+```admonish warning title="Development loop, not production parity"
+k3d's default CNI does not enforce `NetworkPolicy`, so it cannot validate the fleet's
+network-isolation claims. It is the fast inner loop only, deliberately not the
+production-parity check.
+```
+
 ## Infrastructure
 
 DC delivers to systems you run yourself. `tools/infrastructure/docker/` has compose
