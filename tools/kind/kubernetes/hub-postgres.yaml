@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# The hub tier (#452): stands in for the "Postgres" box in ADR-0015's fleet diagram — the
+# only thing this harness needs from the hub to prove Records arrive, since Files aren't
+# part of #452's acceptance criteria (deploy/robot/params/robot_params.yaml's own
+# `measurement_plugins: ["uptime"]` produces no Files either). Same credentials and
+# tools/e2e/sql/init.sql schema as every other E2E scenario in this repo, so
+# `dc_records` means the same thing here it does everywhere else.
+#
+# scripts/run.sh creates the `hub-init-sql` ConfigMap this Deployment mounts
+# (`kubectl create configmap --from-file=tools/e2e/sql/init.sql`) before applying this
+# file — the source of truth stays a single file, not duplicated here.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hub-postgres
+  namespace: dc-hub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hub-postgres
+  template:
+    metadata:
+      labels:
+        app: hub-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: docker.io/library/postgres:13
+          env:
+            - name: POSTGRES_USER
+              value: dc
+            - name: POSTGRES_PASSWORD
+              value: password
+            - name: POSTGRES_DB
+              value: dc
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: init-sql
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "dc"]
+            initialDelaySeconds: 3
+            periodSeconds: 2
+      volumes:
+        - name: init-sql
+          configMap:
+            name: hub-init-sql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hub-postgres
+  namespace: dc-hub
+spec:
+  selector:
+    app: hub-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

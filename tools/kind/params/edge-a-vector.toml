@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# The edge tier's aggregator (#452): plain Vector, no DC/ROS (ADR-0015's fleet scenario —
+# "No DC and no ROS run here"). Same aggregator shape tools/e2e/scripts/run_limits_two_tier.sh
+# already proved: a `type = "vector"` source receiving robot-tier relays over Vector's
+# native inter-instance protocol, a `type = "postgres"` sink writing straight into the
+# hub's dc_records table (matches ADR-0015's diagram: `vector (aggregator) --> Postgres`).
+# Mounted read-only into kubernetes/edge-a.yaml's Deployment via the `edge-a-vector-config`
+# ConfigMap scripts/run.sh creates from this file.
+data_dir = "/var/lib/vector"
+
+[acknowledgements]
+enabled = true
+
+# robot-a's dc-ros (deploy/robot/params/robot_params.yaml's `edge_vector` destination,
+# host overridden to this Service's DNS name by robot-a-params.yaml) relays
+# here. Port matches that file's `edge_vector.port`.
+[sources.from_robot]
+type = "vector"
+address = "0.0.0.0:24224"
+
+[sinks.to_hub]
+type = "postgres"
+inputs = ["from_robot"]
+endpoint = "postgres://dc:password@hub-postgres.dc-hub.svc.cluster.local:5432/dc"
+table = "dc_records"
+
+[sinks.to_hub.buffer]
+type = "disk"
+max_size = 268435488

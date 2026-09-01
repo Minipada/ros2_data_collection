@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Edge tier, site A (#452). A Deployment for the usual reasons (self-healing, an update
+# strategy if this ever needed one) — scripts/run.sh's induced-outage window uses a
+# NetworkPolicy swap (kubernetes/networkpolicy-robot-outage.yaml), not a replica count
+# change, so the edge tier itself is never scaled down.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edge-vector
+  namespace: dc-edge-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: edge-vector
+  template:
+    metadata:
+      labels:
+        app: edge-vector
+    spec:
+      containers:
+        - name: vector
+          # ${VECTOR_IMAGE} substituted by scripts/run.sh from
+          # ros2_data_collection.repos' vector_vendor pin (#448) — same convention as
+          # tools/e2e/scripts/run_split.sh/run_limits_two_tier.sh.
+          image: ${VECTOR_IMAGE}
+          args: ["-c", "/etc/vector/vector.toml"]
+          ports:
+            - containerPort: 24224
+          volumeMounts:
+            - name: config
+              mountPath: /etc/vector
+              readOnly: true
+            - name: buffer
+              mountPath: /var/lib/vector
+          readinessProbe:
+            tcpSocket:
+              port: 24224
+            initialDelaySeconds: 2
+            periodSeconds: 2
+      volumes:
+        - name: config
+          configMap:
+            name: edge-a-vector-config
+        - name: buffer
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: edge-vector
+  namespace: dc-edge-a
+spec:
+  selector:
+    app: edge-vector
+  ports:
+    - port: 24224
+      targetPort: 24224

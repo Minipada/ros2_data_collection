@@ -1,0 +1,115 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Steady-state policy for all four namespaces (#452): the fleet's security claims —
+# no robot internet route, no site-to-site connectivity, connections only flow
+# outward (robot -> edge -> hub) — expressed as real NetworkPolicy, enforced by Calico.
+# Each policy is `policyTypes: [Ingress, Egress]` with only the listed rules allowed:
+# specifying the type with no matching rule denies it, so these are complete
+# default-deny-plus-allow-list policies, not deny-all policies layered under separate
+# allow policies. scripts/verify_network_policy.sh asserts every claim below by attempted
+# connection, not by reading this file.
+#
+# scripts/run.sh swaps dc-robot-a's policy for
+# kubernetes/networkpolicy-robot-outage.yaml during the induced-outage window (drops the
+# egress-to-edge rule, keeps DNS) and reapplies this file afterwards — the same
+# mechanism, not a separate one, so the "outage" is a real policy-enforced site-link
+# loss, not a stopped container.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: robot-isolation
+  namespace: dc-robot-a
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  # No inbound rule: the robot never accepts a connection (epic #440's "no inbound port
+  # blocked" claim).
+  ingress: []
+  egress:
+    # The one permitted outbound hop: robot -> edge-a's Vector aggregator.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: dc-edge-a
+      ports:
+        - protocol: TCP
+          port: 24224
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: edge-isolation
+  namespace: dc-edge-a
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Only its own site's robot tier, never dc-edge-b or anything else.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: dc-robot-a
+      ports:
+        - protocol: TCP
+          port: 24224
+  egress:
+    # The one permitted outbound hop: edge -> hub.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: dc-hub
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hub-isolation
+  namespace: dc-hub
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: dc-edge-a
+      ports:
+        - protocol: TCP
+          port: 5432
+  # The hub answers connections and never initiates one (epic #440's reference
+  # architecture) — no egress rule at all.
+  egress: []
+---
+# dc-edge-b: fully isolated. It exists only as the "other site" NetworkPolicy denies
+# dc-robot-a/dc-edge-a from reaching, and vice versa — no legitimate peer needs it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: edge-b-isolation
+  namespace: dc-edge-b
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress: []

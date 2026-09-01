@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# kind cluster for #452: kubeadm plus a real, policy-enforcing CNI (Calico), unlike k3d's
+# default Flannel (#451), so NetworkPolicy actually gets enforced rather than silently
+# accepted and ignored. disableDefaultCNI stops kind installing kindnet (also
+# non-enforcing); scripts/up.sh installs Calico afterwards. podSubnet matches Calico's own
+# documented kind quickstart.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  disableDefaultCNI: true
+  podSubnet: "192.168.0.0/16"
+nodes:
+  - role: control-plane
