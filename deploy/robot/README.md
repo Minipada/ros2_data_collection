@@ -78,14 +78,16 @@ normally costs. There is no wrapper script — every step below is a plain `podm
 `kubectl` command, so what the loop actually does is never hidden behind a script:
 
 ```sh
-# 1. Build the two images this repository ships, tagged for local use. The
-#    docker.io/library/ prefix matters: it's what a bare `image: name:tag` in the
-#    manifest resolves to once it reaches the cluster's containerd, and Podman would
-#    otherwise namespace a locally-built image as localhost/name:tag instead — a
-#    mismatch that surfaces as ErrImageNeverPull despite the image having imported
-#    "successfully".
-podman build -t docker.io/library/dc-ros:dev -f containers/dc-ros/Containerfile containers/dc-ros
-podman build -t docker.io/library/dc-uploader:dev -f containers/dc-uploader/Containerfile containers/dc-uploader
+# 1. Get the images into local Podman storage. This example uses the images this
+#    branch already publishes, tagged :jazzy — ghcr.io tags follow the branch name
+#    here, never :latest, the same way ROS's own images are tagged by distro codename
+#    (ros:jazzy-ros-base), never ros:latest. --entrypoint true skips actually launching
+#    DC; this step exists only to fetch the image. To test your own local changes
+#    instead, build containers/dc-ros/Containerfile the same way CI does (BASE_IMAGE
+#    from tools/e2e/scripts/build.sh) and tag the result identically — nothing below
+#    changes.
+podman run --rm --entrypoint true ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy
+podman run --rm --entrypoint true ghcr.io/minipada/ros2_data_collection/dc-uploader:jazzy
 
 # 2. Create the cluster. --volume stages params/robot_params.yaml where
 #    kubernetes/robot-pod.yaml's hostPath volume expects it, on the node itself
@@ -98,16 +100,20 @@ k3d cluster create dc-robot-dev \
   --volume "$(pwd)/deploy/robot/params:/etc/dc/robot@server:0" \
   --k3s-arg '--kubelet-arg=feature-gates=KubeletInUserNamespace=true@server:*'
 
-# 3. Load the images straight into the cluster's containerd — no push, no pull, no
-#    registry. `podman save` refuses to overwrite a tar it already wrote, hence `rm -f`
-#    on each iteration.
-rm -f /tmp/dc-ros.tar && podman save docker.io/library/dc-ros:dev -o /tmp/dc-ros.tar && k3d image import /tmp/dc-ros.tar -c dc-robot-dev
-rm -f /tmp/dc-uploader.tar && podman save docker.io/library/dc-uploader:dev -o /tmp/dc-uploader.tar && k3d image import /tmp/dc-uploader.tar -c dc-robot-dev
+# 3. Load the images straight into the cluster's containerd — no push, no further
+#    pull, no registry reachable from inside the cluster. `podman save` refuses to
+#    overwrite a tar it already wrote, hence `rm -f` on each iteration. These images
+#    are large (~17 GB as published today, since the runtime stage isn't stripped down
+#    from the build workspace) — this step needs that much free disk twice over
+#    (Podman's own storage, plus the tar) and is the slow part of the loop; everything
+#    after it is fast.
+rm -f /tmp/dc-ros.tar && podman save ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy -o /tmp/dc-ros.tar && k3d image import /tmp/dc-ros.tar -c dc-robot-dev
+rm -f /tmp/dc-uploader.tar && podman save ghcr.io/minipada/ros2_data_collection/dc-uploader:jazzy -o /tmp/dc-uploader.tar && k3d image import /tmp/dc-uploader.tar -c dc-robot-dev
 
-# 4. Run the Pod. `k3d/kustomization.yaml` overlays kubernetes/robot-pod.yaml: the two
-#    images above instead of ghcr.io, and imagePullPolicy: Never so kubelet uses what
-#    was just imported instead of trying (and failing — no registry exists for a local
-#    :dev tag) to pull it. `apply -k` itself refuses a base outside its own directory,
+# 4. Run the Pod. `k3d/kustomization.yaml` overlays kubernetes/robot-pod.yaml: pins
+#    both images to :jazzy instead of the base manifest's :latest, and sets
+#    imagePullPolicy: Never so kubelet uses what was just imported instead of reaching
+#    out to ghcr.io itself. `apply -k` itself refuses a base outside its own directory,
 #    which is why this pipes through `kustomize` (which accepts the override) instead.
 kubectl kustomize deploy/robot/k3d --load-restrictor LoadRestrictionsNone | kubectl --context k3d-dc-robot-dev apply -f -
 
@@ -115,9 +121,9 @@ kubectl kustomize deploy/robot/k3d --load-restrictor LoadRestrictionsNone | kube
 kubectl --context k3d-dc-robot-dev get pod dc-robot --watch
 kubectl --context k3d-dc-robot-dev logs dc-robot -c dc-ros --follow
 
-# 6. Iterate: rebuild an image, redo step 3, then recreate the Pod (Pod spec fields —
-#    including the image — are immutable in place, so this needs a delete first;
-#    cheap on a single-node cluster).
+# 6. Iterate: rebuild/re-pull an image, redo step 3, then recreate the Pod (Pod spec
+#    fields — including the image — are immutable in place, so this needs a delete
+#    first; cheap on a single-node cluster).
 kubectl --context k3d-dc-robot-dev delete pod dc-robot
 kubectl kustomize deploy/robot/k3d --load-restrictor LoadRestrictionsNone | kubectl --context k3d-dc-robot-dev apply -f -
 
@@ -125,9 +131,10 @@ kubectl kustomize deploy/robot/k3d --load-restrictor LoadRestrictionsNone | kube
 k3d cluster delete dc-robot-dev
 ```
 
-Measured against this loop with placeholder images standing in for `dc-ros`/`dc-uploader`:
-cluster create ~15-20s, an image-reload-and-recreate iteration ~10s, teardown ~2s — fast
-enough to repeat many times in a session, which is the whole point.
+Measured against this loop: cluster create ~15-20s, an image-reload-and-recreate
+iteration ~10s excluding the save/import in step 3 (dominated by the image's own size,
+several minutes for a ~17 GB image), teardown ~2s. Once an image is loaded, iterating on
+the manifest itself (steps 4-6 without redoing step 3) is the genuinely fast part.
 
 This is **explicitly not** the production-parity check. k3d's default CNI (Flannel) does not
 enforce `NetworkPolicy`, so it cannot stand in for `verify_network_isolation.sh`'s isolation
