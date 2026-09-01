@@ -594,18 +594,19 @@ jobs:
       # holds where there's real control flow worth not duplicating
       # (verify_network_policy.sh); a fixed sequence of one-shot commands doesn't need
       # a script wrapping it just to have somewhere to put a name.
-      - name: Pull the dc-ros image
-        env:
-          DC_ROS_IMAGE: ${{ needs.build-dc-ros-image.outputs.sha_ref }}
-        run: podman pull "$DC_ROS_IMAGE"
 
-      # Same source of truth every other scenario reads this from (#448) — exported to
-      # every later step via GITHUB_ENV rather than recomputed each time.
-      - name: Compute the Vector image ref
+      # Pulls the PR's just-built image, same as verify-robot-manifests/
+      # verify-published-images — testing what this run actually built, not whatever
+      # :jazzy happens to be. Exported via GITHUB_ENV: kubernetes/robot-a.yaml commits
+      # a real default (ghcr.io/.../dc-ros:jazzy, the same floating ref a real
+      # deployment runs), so this is only an override, same convention as
+      # deploy/robot/scripts/verify_kube_play.sh — a plain local run with DC_ROS_IMAGE
+      # unset exercises that committed default instead, one workflow either way.
+      - name: Pull the dc-ros image
         run: |
-          VECTOR_VERSION="$(grep -A3 'vector_vendor:' ros2_data_collection.repos | grep -oP 'version: v\K[0-9.]+')"
-          echo "VECTOR_IMAGE=docker.io/timberio/vector:${VECTOR_VERSION}-debian" >> "$GITHUB_ENV"
-          echo "DC_ROS_IMAGE=${{ needs.build-dc-ros-image.outputs.sha_ref }}" >> "$GITHUB_ENV"
+          DC_ROS_IMAGE="${{ needs.build-dc-ros-image.outputs.sha_ref }}"
+          podman pull "$DC_ROS_IMAGE"
+          echo "DC_ROS_IMAGE=$DC_ROS_IMAGE" >> "$GITHUB_ENV"
 
       - name: kind create cluster (kubeadm, no default CNI)
         run: kind create cluster --name dc-kind --config tools/kind/kind-config.yaml
@@ -648,7 +649,7 @@ jobs:
         run: kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/hub-postgres.yaml
 
       - name: Apply the edge tier (site A)
-        run: sed "s|\${VECTOR_IMAGE}|$VECTOR_IMAGE|g" tools/kind/kubernetes/edge-a.yaml | kubectl --context kind-dc-kind apply -f -
+        run: kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/edge-a.yaml
 
       - name: Apply the probe Pods
         run: kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/probes.yaml
@@ -665,9 +666,13 @@ jobs:
           kubectl --context kind-dc-kind wait -n dc-edge-a --for=condition=Ready pod/edge-a-probe --timeout=60s
           kubectl --context kind-dc-kind wait -n dc-edge-b --for=condition=Ready pod/edge-b-probe --timeout=60s
 
+      # robot-a.yaml commits ghcr.io/.../dc-ros:jazzy as dc-ros's real default (the
+      # floating ref build-dc-ros-image pushes on every merge, same as
+      # deploy/robot/kubernetes/robot-pod.yaml) — substituted here with the PR's own
+      # just-built :<sha> image, so this run tests what this PR actually built.
       - name: Apply the robot tier (site A)
         run: |
-          sed -e "s|\${DC_ROS_IMAGE}|$DC_ROS_IMAGE|g" -e "s|\${VECTOR_IMAGE}|$VECTOR_IMAGE|g" \
+          sed "s|ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy|$DC_ROS_IMAGE|" \
             tools/kind/kubernetes/robot-a.yaml | kubectl --context kind-dc-kind apply -f -
 
       - name: Wait for dc-ros to report ready

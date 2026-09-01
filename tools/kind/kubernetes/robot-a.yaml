@@ -10,9 +10,18 @@
 #
 # ConfigMap instead of that file's hostPath, per its own header: "a Pod-scoped
 # Secret/ConfigMap object is the real-cluster mechanism" — this is that real cluster.
-# scripts/run.sh creates the `robot-a-params` ConfigMap from ../params/robot-a-params.yaml before
-# applying this file, and substitutes ${DC_ROS_IMAGE}/${VECTOR_IMAGE} the same way
-# deploy/robot/scripts/verify_kube_play.sh substitutes image refs.
+# The `robot-a-params` ConfigMap is created from ../params/robot-a-params.yaml before
+# this file is applied.
+#
+# Image refs are real, committed defaults, not a harness-only tag: `dc-ros:jazzy` is
+# the floating branch ref `build-dc-ros-image` pushes on every merge to jazzy — the ref
+# a real deployment actually pins to (`:latest` isn't a tag this repo relies on). The
+# same literal `vector` version robot-pod.yaml pins — bump both by hand alongside that
+# file's own, per #448. `dc-ros`'s ref is substituted only when overridden (same
+# convention as deploy/robot/scripts/verify_kube_play.sh: an unset DC_ROS_IMAGE leaves
+# the manifest's own committed ref untouched), which is what lets CI test the PR's
+# just-built image while a plain local run exercises the real one — one workflow for
+# both, not a dev-only shortcut.
 apiVersion: v1
 kind: Pod
 metadata:
@@ -29,7 +38,7 @@ spec:
       hostnames: ["vector"]
   containers:
     - name: dc-ros
-      image: ${DC_ROS_IMAGE}
+      image: ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy
       args: ["dc_params_file:=/opt/dc/robot_params.yaml", "run_uploader:=false"]
       volumeMounts:
         - name: config
@@ -40,7 +49,7 @@ spec:
           readOnly: true
 
     - name: vector
-      image: ${VECTOR_IMAGE}
+      image: docker.io/timberio/vector:0.57.0-debian
       command: ["/bin/sh", "-c"]
       args:
         - >

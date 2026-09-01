@@ -19,25 +19,36 @@ locally, or read on for what each does and why.
 
 ## Prerequisites
 
-- Podman (building `dc-ros`, loading it into the cluster)
+- Podman (pulling or building `dc-ros`, loading it into the cluster)
 - Docker (kind's node runtime — see [Docker dependency](#docker-dependency) below)
 - `kind` and `kubectl`, pinned versions baked into `containers/kind-tools/Containerfile`
   ([`tools/kind/README.md`](https://github.com/minipada/ros2_data_collection/tree/jazzy/tools/kind))
 
-## 1. Build (or obtain) the `dc-ros` image, and the Vector image ref
+## 1. Get the `dc-ros` image
+
+`kubernetes/robot-a.yaml` commits a real default: `ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy`
+— the same floating ref `build-dc-ros-image` pushes on every merge to `jazzy`, and the
+same one `deploy/robot/kubernetes/robot-pod.yaml` runs. (Not `:latest` — this repo
+doesn't push that tag; `:jazzy` is the one a real deployment actually pins to.) The
+simplest reproduction just pulls it:
 
 ```sh
-podman build -t dc-ros:kind -f containers/dc-ros/Containerfile --build-arg BASE_IMAGE=dc-workspace:latest containers/dc-ros
-export DC_ROS_IMAGE=dc-ros:kind
-
-VECTOR_VERSION="$(grep -A3 'vector_vendor:' ros2_data_collection.repos | grep -oP 'version: v\K[0-9.]+')"
-export VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
+podman pull ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy
+export DC_ROS_IMAGE=ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy
 ```
 
-CI instead pulls the image `build-dc-ros-image` already built and pushed for this commit
-— no rebuild, same image `verify-robot-manifests`/`verify-published-images` exercise. The
-Vector version comes from `ros2_data_collection.repos`' `vector_vendor` pin (#448) — one
-source of truth for both the apt and container paths.
+CI instead pulls the PR's just-built `:<sha>` image (`build-dc-ros-image`'s own output)
+— testing what this run actually built, same as `verify-robot-manifests`/
+`verify-published-images`. To reproduce *that* case locally instead — testing a change
+before it's pushed — build it yourself and point `DC_ROS_IMAGE` at the local tag:
+
+```sh
+podman build -t dc-ros:local -f containers/dc-ros/Containerfile --build-arg BASE_IMAGE=dc-workspace:latest containers/dc-ros
+export DC_ROS_IMAGE=dc-ros:local
+```
+
+Either way, step 4 substitutes `DC_ROS_IMAGE` into the manifest's default only when it
+differs from `:jazzy` — one workflow, whichever image you're pointing at.
 
 ## 2. Bring up the cluster and its CNI
 
@@ -56,7 +67,7 @@ Calico is applied.
 ## 3. Load `dc-ros` into the cluster — no registry
 
 ```sh
-podman save -o /tmp/dc-ros.tar dc-ros:kind
+podman save -o /tmp/dc-ros.tar "$DC_ROS_IMAGE"
 kind load image-archive /tmp/dc-ros.tar --name dc-kind
 ```
 
@@ -81,10 +92,7 @@ kubectl --context kind-dc-kind create configmap robot-a-params -n dc-robot-a \
 
 kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/networkpolicies.yaml
 kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/hub-postgres.yaml
-
-# edge-a.yaml and robot-a.yaml reference ${VECTOR_IMAGE}/${DC_ROS_IMAGE} placeholders —
-# substitute the values step 1 exported before applying either.
-sed "s|\${VECTOR_IMAGE}|$VECTOR_IMAGE|g" tools/kind/kubernetes/edge-a.yaml | kubectl --context kind-dc-kind apply -f -
+kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/edge-a.yaml
 kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/probes.yaml
 
 kubectl --context kind-dc-kind rollout status -n dc-hub deployment/hub-postgres --timeout=180s
@@ -93,7 +101,9 @@ kubectl --context kind-dc-kind wait -n dc-robot-a --for=condition=Ready pod/robo
 kubectl --context kind-dc-kind wait -n dc-edge-a --for=condition=Ready pod/edge-a-probe --timeout=60s
 kubectl --context kind-dc-kind wait -n dc-edge-b --for=condition=Ready pod/edge-b-probe --timeout=60s
 
-sed -e "s|\${DC_ROS_IMAGE}|$DC_ROS_IMAGE|g" -e "s|\${VECTOR_IMAGE}|$VECTOR_IMAGE|g" \
+# robot-a.yaml commits ghcr.io/.../dc-ros:jazzy as dc-ros's real default — substitute
+# only if step 1 pointed DC_ROS_IMAGE somewhere else.
+sed "s|ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy|$DC_ROS_IMAGE|" \
   tools/kind/kubernetes/robot-a.yaml | kubectl --context kind-dc-kind apply -f -
 
 timeout 90 bash -c \
