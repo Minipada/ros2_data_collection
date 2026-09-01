@@ -1,0 +1,116 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Kubernetes rendering of the robot tier (#450, epic #440 scenario 3): a single Pod
+# with the same three containers and shared-volume shape as compose.yaml and
+# quadlet/*.container — one Pod because the robot tier is one machine's worth of
+# containers, which is what lets `podman kube play` run this manifest directly with no
+# cluster (see ../scripts/verify_kube_play.sh). A real edge-hosted Kubernetes turns
+# this into a Deployment/DaemonSet per site's own conventions; that composition is
+# deployment-time, same as Compose vs. Quadlet, not encoded here.
+#
+# emptyDir volumes: correct for `podman kube play` and for #451/#452's disposable
+# clusters, where the Pod's lifetime is the volume's lifetime anyway. A production edge
+# cluster substitutes a PersistentVolumeClaim per volume — a site-specific storage
+# class choice this manifest does not make for it.
+#
+# `restartPolicy: Always` matches compose.yaml's `restart: unless-stopped` and
+# quadlet/*.container's `Restart=always`.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dc-robot
+  labels:
+    app.kubernetes.io/part-of: dc-robot-tier
+spec:
+  restartPolicy: Always
+  # All three containers share the Pod's network namespace — Compose/Quadlet give
+  # each container its own namespace instead, so robot_params.yaml's
+  # vector_forward_host and dc-uploader's DC_UPLOADER_SHIPPER_HOST both name "vector"
+  # rather than 127.0.0.1, to stay identical across all three renderings. This alias
+  # is what makes that hostname resolve correctly inside a shared Pod namespace too.
+  hostAliases:
+    - ip: "127.0.0.1"
+      hostnames: ["vector"]
+  containers:
+    - name: dc-ros
+      image: ghcr.io/minipada/ros2_data_collection/dc-ros:latest
+      args: ["dc_params_file:=/opt/dc/robot_params.yaml", "run_uploader:=false"]
+      volumeMounts:
+        - name: uploader
+          mountPath: /root/.dc/robot/uploader
+        - name: config
+          mountPath: /etc/dc/shipper
+        - name: robot-params
+          mountPath: /opt/dc/robot_params.yaml
+          subPath: robot_params.yaml
+          readOnly: true
+
+    # The Uploader as its own container (docs/adr/0014), configured entirely by
+    # DC_UPLOADER_* env — no ROS params. Placeholders point at the edge tier's object
+    # storage, outside this repository (see ../README.md); a real deployment
+    # overrides these, ideally from a Secret rather than inline env.
+    - name: dc-uploader
+      image: ghcr.io/minipada/ros2_data_collection/dc-uploader:latest
+      env:
+        - name: DC_UPLOADER_STORAGE_NAME
+          value: edge
+        - name: DC_UPLOADER_QUEUE_DIR
+          value: /root/.dc/robot/uploader/queue/upload
+        - name: DC_UPLOADER_STATE_DIR
+          value: /root/.dc/robot/uploader/uploader
+        - name: DC_UPLOADER_SHIPPER_HOST
+          value: vector
+        - name: DC_UPLOADER_SHIPPER_PORT
+          value: "24224"
+        - name: DC_UPLOADER_S3_BUCKET
+          value: dc-robot
+        - name: DC_UPLOADER_S3_ENDPOINT
+          value: http://edge.site.example:9000
+        - name: DC_UPLOADER_S3_ACCESS_KEY_ID
+          value: changeme
+        - name: DC_UPLOADER_S3_SECRET_ACCESS_KEY
+          value: changeme
+        - name: DC_UPLOADER_DELETE_WHEN_SENT
+          value: "true"
+      volumeMounts:
+        - name: uploader
+          mountPath: /root/.dc/robot/uploader
+
+    # The unmodified upstream Vector image, unmanaged by the Bridge (docs/adr/0001,
+    # docs/adr/0015). Waits for dc-ros's atomically-written config, then watches it for
+    # reload-without-restart — same shell wrapper as compose.yaml/vector.container.
+    # Version pinned to ros2_data_collection.repos' vector_vendor version; bump by hand
+    # alongside vector_vendor (#448), same constraint as quadlet/vector.container.
+    - name: vector
+      image: docker.io/timberio/vector:0.57.0-debian
+      command: ["/bin/sh", "-c"]
+      args:
+        - >
+          trap exit TERM;
+          until [ -f /etc/dc/shipper/vector.toml ]; do sleep 0.2; done;
+          exec vector --config /etc/dc/shipper/vector.toml --watch-config
+      volumeMounts:
+        - name: buffer
+          mountPath: /var/lib/vector
+        - name: config
+          mountPath: /etc/dc/shipper
+          readOnly: true
+
+  volumes:
+    - name: uploader
+      emptyDir: {}
+    - name: config
+      emptyDir: {}
+    - name: buffer
+      emptyDir: {}
+    # `podman kube play` (unlike a cluster) reads a ConfigMap only from a matching
+    # `-cm.yaml`/`--configmap` file; a Pod-scoped Secret/ConfigMap object is the real-
+    # cluster mechanism (kustomize or a site's own GitOps tool, epic #440's "Out of
+    # Scope") for getting robot_params.yaml onto the Pod. This hostPath is the local
+    # runtime-free-check equivalent — see ../scripts/verify_kube_play.sh. Same host
+    # path convention as quadlet/dc-ros.container's bind mount.
+    - name: robot-params
+      hostPath:
+        path: /etc/dc/robot/robot_params.yaml
+        type: File

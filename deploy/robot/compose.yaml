@@ -1,0 +1,81 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Compose rendering of the robot tier (#450, epic #440 scenario 3) — the deployable
+# shape, not the test shape. Contrast tools/e2e/compose.split.yaml, which adds
+# Postgres/RustFS standing in for reachable Destinations for the zero-loss E2E harness;
+# this file ships no stand-in Destinations because the robot tier has none to reach
+# directly (see ./README.md and params/robot_params.yaml). Same three containers, same
+# volume/network shape as compose.split.yaml — the topology is one decision
+# (docs/adr/0015-split-deployment-topology.md), not three.
+#
+# `podman compose -f deploy/robot/compose.yaml up`
+#
+# No `depends_on` between dc-ros, vector and dc-uploader, same reasoning as
+# compose.split.yaml: dc_bringup's readiness gate plus `restart: unless-stopped` lets
+# dc-ros recover if vector starts late; dc_uploader's own IntentQueue::rescan() polling
+# lets it recover regardless of start order.
+services:
+  dc-ros:
+    image: ${DC_ROS_IMAGE:-ghcr.io/minipada/ros2_data_collection/dc-ros:latest}
+    container_name: dc_robot_dc_ros
+    volumes:
+      - dc_robot_uploader:/root/.dc/robot/uploader
+      - dc_robot_config:/etc/dc/shipper
+      - ./params/robot_params.yaml:/opt/dc/robot_params.yaml:ro
+    command: ["dc_params_file:=/opt/dc/robot_params.yaml", "run_uploader:=false"]
+    restart: unless-stopped
+
+  # The Uploader as its own container (docs/adr/0014). Files go to edge-local object
+  # storage (DC_UPLOADER_S3_*), configured entirely by env — no ROS params.
+  dc-uploader:
+    image: ${DC_UPLOADER_IMAGE:-ghcr.io/minipada/ros2_data_collection/dc-uploader:latest}
+    container_name: dc_robot_dc_uploader
+    environment:
+      DC_UPLOADER_STORAGE_NAME: "edge"
+      DC_UPLOADER_QUEUE_DIR: "/root/.dc/robot/uploader/queue/upload"
+      DC_UPLOADER_STATE_DIR: "/root/.dc/robot/uploader/uploader"
+      DC_UPLOADER_SHIPPER_HOST: "vector"
+      DC_UPLOADER_SHIPPER_PORT: "24224"
+      # Placeholder — the edge tier's object storage is outside this repository
+      # (see ./README.md). Override for a real deployment.
+      DC_UPLOADER_S3_BUCKET: "dc-robot"
+      DC_UPLOADER_S3_ENDPOINT: "http://edge.site.example:9000"
+      DC_UPLOADER_S3_ACCESS_KEY_ID: "changeme"
+      DC_UPLOADER_S3_SECRET_ACCESS_KEY: "changeme"
+      DC_UPLOADER_DELETE_WHEN_SENT: "true"
+    volumes:
+      # Intent queue + Files: shared with dc-ros, which writes both.
+      - dc_robot_uploader:/root/.dc/robot/uploader
+    restart: unless-stopped
+
+  vector:
+    # Pinned to ros2_data_collection.repos' vector_vendor version (VECTOR_VERSION not
+    # substitutable here without a wrapper — see quadlet/vector.container's own note).
+    # Bump deliberately alongside vector_vendor.
+    image: docker.io/timberio/vector:0.57.0-debian
+    container_name: dc_robot_vector
+    volumes:
+      - dc_robot_buffer:/var/lib/vector
+      - dc_robot_config:/etc/dc/shipper:ro
+    # Wait for dc-ros's atomically-written config, then watch it for reload-without-restart.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        trap exit TERM;
+        until [ -f /etc/dc/shipper/vector.toml ]; do sleep 0.2; done;
+        exec vector --config /etc/dc/shipper/vector.toml --watch-config
+    restart: unless-stopped
+
+# Explicit `name:` on every volume, same reasoning as compose.split.yaml.
+volumes:
+  dc_robot_uploader:
+    name: dc_robot_uploader
+  dc_robot_config:
+    name: dc_robot_config
+  dc_robot_buffer:
+    name: dc_robot_buffer
+
+networks:
+  default:
+    name: dc_robot_net

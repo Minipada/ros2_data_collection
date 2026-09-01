@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Rendered Shipper config: written by dc-ros, watched by vector. Scoped to its two
+# readers/writers only, same as compose.yaml's dc_robot_config volume.
+
+[Volume]

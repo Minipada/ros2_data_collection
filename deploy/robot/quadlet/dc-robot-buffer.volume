@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# The Shipper's own disk buffer. Owned by vector alone — dc-ros and dc-uploader never
+# mount this, same scoping as compose.yaml's dc_robot_buffer volume.
+
+[Volume]

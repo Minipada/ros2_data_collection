@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Minimal params for the robot-tier renderings (#450, epic #440 scenario 3): proves
+# dc-ros boots in unmanaged-shipper mode and reaches ready (see
+# tools/release/scripts/verify_published_images.sh's "dc_bridge reports ready" check,
+# which deploy/robot/scripts/verify_kube_play.sh reuses) — not a reference workload.
+# Add real Measurements and a real edge address for an actual deployment; see
+# tools/e2e/params/e2e_split_params.yaml for a fuller example (that one is the
+# *test*-scenario shape — direct-to-Destination, not edge-forwarding).
+#
+# Unlike the single-machine "Containers" scenario (#447's compose.split.yaml, which
+# reaches postgres/s3 Destinations directly), the robot tier here has no internet
+# access (epic #440 scenario 3): its only Records Destination is the blessed `vector`
+# type, forwarding to an edge aggregator, and Files go to edge-local object storage —
+# both `edge.site.example` placeholders below. That edge infrastructure is outside this
+# repository (epic #440's "Out of Scope"); a real deployment overrides both hostnames
+# to point at its own edge tier.
+measurement_server:
+  ros__parameters:
+    save_local_base_path: "$HOME/.dc/robot/data/%Y/%M/%D/%H"
+    all_base_path: "robot"
+    measurement_plugins: ["uptime"]
+
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      polling_interval: 1000
+      group_key: "uptime"
+
+dc_bridge:
+  ros__parameters:
+    shipper:
+      managed: false
+      # Shared with the vector container's config volume (compose.yaml/quadlet/robot-pod.yaml).
+      config_path: "/etc/dc/shipper/vector.toml"
+      # A path inside the *vector* container's buffer volume, not dc-ros — the Bridge
+      # only ever embeds this into the rendered config, never uses it itself.
+      data_dir: "/var/lib/vector"
+      # vector's fluent source only accepts a literal address to bind, never a
+      # hostname — "0.0.0.0" listens on every interface inside vector's own container,
+      # reachable from dc-ros/dc-uploader over the shared network below.
+      bind_host: "0.0.0.0"
+    uploader:
+      data_dir: "$HOME/.dc/robot/uploader"
+    destinations: ["edge_vector"]
+    edge_vector:
+      type: vector
+      receives: records
+      inputs: ["/dc/measurement/uptime"]
+      # Placeholder: the edge aggregator's own address (epic #440 scenario 3). Override
+      # for a real deployment — this repository does not ship edge infrastructure.
+      host: "edge.site.example"
+      port: 24224
+
+    vector_forward_host: "vector"
+    vector_forward_port: 24224
+
+lifecycle_manager_dc:
+  ros__parameters:
+    node_names: ["measurement_server"]
+    transitions: [configure, activate]
