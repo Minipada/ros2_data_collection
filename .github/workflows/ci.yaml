@@ -353,18 +353,11 @@ jobs:
         run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$DC_ROS_REF" -f containers/dc-ros/Containerfile containers/dc-ros
 
       - name: Push the dc-ros image (:<sha> and :latest)
-        env:
-          DC_ROS_REF: ${{ needs.build-workspace.outputs.dc_ros_ref }}
-          DC_ROS_LATEST_REF: ${{ needs.build-workspace.outputs.dc_ros_latest_ref }}
-        run: |
-          podman tag "$DC_ROS_REF" "$DC_ROS_LATEST_REF"
-          for ref in "$DC_ROS_REF" "$DC_ROS_LATEST_REF"; do
-            for attempt in 1 2 3; do
-              podman push "$ref" && continue 2
-              echo "push $ref attempt $attempt failed; retrying in 10s"; sleep 10
-            done
-            exit 1
-          done
+        uses: ./.github/actions/podman-push
+        with:
+          refs: |
+            ${{ needs.build-workspace.outputs.dc_ros_ref }}
+            ${{ needs.build-workspace.outputs.dc_ros_latest_ref }}
 
   build-dc-uploader-image:
     needs: build-workspace
@@ -390,18 +383,11 @@ jobs:
         run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$DC_UPLOADER_REF" -f containers/dc-uploader/Containerfile containers/dc-uploader
 
       - name: Push the dc-uploader image (:<sha> and :latest)
-        env:
-          DC_UPLOADER_REF: ${{ needs.build-workspace.outputs.dc_uploader_ref }}
-          DC_UPLOADER_LATEST_REF: ${{ needs.build-workspace.outputs.dc_uploader_latest_ref }}
-        run: |
-          podman tag "$DC_UPLOADER_REF" "$DC_UPLOADER_LATEST_REF"
-          for ref in "$DC_UPLOADER_REF" "$DC_UPLOADER_LATEST_REF"; do
-            for attempt in 1 2 3; do
-              podman push "$ref" && continue 2
-              echo "push $ref attempt $attempt failed; retrying in 10s"; sleep 10
-            done
-            exit 1
-          done
+        uses: ./.github/actions/podman-push
+        with:
+          refs: |
+            ${{ needs.build-workspace.outputs.dc_uploader_ref }}
+            ${{ needs.build-workspace.outputs.dc_uploader_latest_ref }}
 
   # Proves the two images build-dc-ros-image/build-dc-uploader-image just pushed are
   # actually runnable as the three-container topology (#448 acceptance criteria) — pull
