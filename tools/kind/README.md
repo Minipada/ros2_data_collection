@@ -77,10 +77,15 @@ otherwise rely on. Building and shipping DC itself stays on Podman, unchanged
 only job is running the kind nodes themselves. GitHub-hosted `ubuntu-latest` runners
 ship Docker preinstalled, so CI needs no extra setup step for it.
 
-`kind` and `kubectl` themselves are pinned binaries baked into
-`containers/kind-tools/Containerfile`, built once by CI's `build-kind-tools-image` job
-and `podman cp`-extracted by `verify-kind-networkpolicy` — install once, reuse, rather
-than every job `curl`-downloading both tools itself (see CLAUDE.md's "Podman-built images
-for CI tools, not inline installs"). A local run needs both on `PATH` already; extract
-them from that same image (`podman create`, `podman cp`, same as the CI step) instead of
-installing them another way, so a local run and CI always agree on the exact version.
+`kind` and `kubectl` themselves come from
+[`helm/kind-action`](https://github.com/helm/kind-action) with `install_only: true` —
+pinned versions, checksum-verified against their own published sha256sums, no custom
+Containerfile to maintain for two binaries a well-maintained action already installs
+correctly. `install_only` is required, not optional: the action otherwise always runs
+`kind create cluster --wait=<duration>`, which blocks for node readiness — impossible
+here before Calico is installed, since `disableDefaultCNI` leaves every node NotReady
+until then. Cluster creation stays a plain `kind create cluster` (no `--wait`), same as
+a local run. A local run needs `kind`/`kubectl` on `PATH` some other way (a package
+manager, or `kind`'s own install docs) — nothing here pins that for you the way CI's
+step does, so match `kind`/`kubectl`'s versions above by hand if reproducing a failure
+exactly matters.

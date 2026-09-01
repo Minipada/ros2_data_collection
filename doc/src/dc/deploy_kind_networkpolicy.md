@@ -21,8 +21,11 @@ locally, or read on for what each does and why.
 
 - Podman (pulling or building `dc-ros`, loading it into the cluster)
 - Docker (kind's node runtime — see [Docker dependency](#docker-dependency) below)
-- `kind` and `kubectl`, pinned versions baked into `containers/kind-tools/Containerfile`
-  ([`tools/kind/README.md`](https://github.com/minipada/ros2_data_collection/tree/jazzy/tools/kind))
+- `kind` (`v0.33.0`) and `kubectl` (`v1.31.4`) on `PATH` — CI installs these via
+  [`helm/kind-action`](https://github.com/helm/kind-action)'s `install_only: true` mode;
+  see [`tools/kind/README.md`](https://github.com/minipada/ros2_data_collection/tree/jazzy/tools/kind)
+  for why (`kind create cluster --wait`, which that action otherwise always runs, can't
+  succeed before Calico is installed)
 
 ## 1. Get the `dc-ros` image
 
