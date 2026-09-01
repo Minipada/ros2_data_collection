@@ -71,12 +71,24 @@ The DC component that receives Records from ROS topics and hands them to the Shi
 The external process (Vector by default) that buffers, transforms, and reliably delivers Records to Destinations.
 _Avoid_: forwarder, agent, data plane, backend
 
+**Shipper buffer**:
+The Shipper's own on-disk buffer, where it holds Records it has already accepted but not yet delivered to a Destination, so a Shipper restart or an unreachable Destination doesn't lose Records the Bridge already handed off.
+_Avoid_: queue (reserved for the upload intent queue, below — a separate store with a different owner)
+
 **Shipper ingest protocol**:
-The wire format on the local socket between the Bridge and the Shipper (default port 24224). It is Fluentd's open "Forward" specification — chosen as the cheapest Shipper-native listener with built-in receipt acknowledgement (ADR-0002) — but **no Fluentd or Fluent Bit software runs anywhere in DC 2.0**: the Bridge implements the sender side itself (~170 lines of msgpack). Say "shipper ingest protocol"; the word "fluent" should only appear in the generated Shipper config (`type = "fluent"`) and interop docs.
-_Avoid_: "Fluent Forward" as a component name — it is a message format, not software in the pipeline
+The wire format between the Bridge and the Shipper (default port 24224) — a socket that is local to one machine in native and single-machine container deployments, and crosses a container or host boundary in a split deployment. It is Fluentd's open "Forward" specification — chosen as the cheapest Shipper-native listener with built-in receipt acknowledgement (ADR-0002) — but **no Fluentd or Fluent Bit software runs anywhere in DC 2.0**: the Bridge implements the sender side itself (~170 lines of msgpack). Say "shipper ingest protocol"; the word "fluent" should only appear in the generated Shipper config (`type = "fluent"`) and interop docs.
+_Avoid_: "Fluent Forward" as a component name — it is a message format, not software in the pipeline; "local socket" — true only of some deployments, not the protocol itself
 
 **File**:
 A binary artifact produced by a Measurement (image, video, map) that is uploaded to object storage as-is; only its metadata travels as a Record.
+
+**Uploader**:
+The process that reads the upload intent queue, uploads Files to object storage, verifies they landed, and emits the resulting metadata Record. Runs independently of the Bridge, so a failed or crashed upload never stops Record collection.
+_Avoid_: Bridge (the Bridge only receives Files and writes upload intents; it does not upload them)
+
+**Upload intent queue**:
+The durable on-disk record of Files the Uploader still owes a Destination, written by the Bridge when it receives a File and consumed by the Uploader. It is what lets an interrupted or restarted Uploader resume every upload it owes, without the Bridge and the Uploader needing to run in the same process — or agree on anything beyond this queue.
+_Avoid_: buffer (reserved for the Shipper buffer, above — a separate store with a different owner)
 
 **Tag**:
 A label carried by a Record naming a Destination that must receive it.
@@ -86,9 +98,12 @@ _Avoid_: route (a "route" is the Shipper-side path a Tag selects)
 
 - A **Measurement** emits **Records**, optionally gated by one or more **Conditions**
 - A **Group** merges Records from several **Measurements** into one **Record**
-- The **Bridge** forwards every **Record** to the **Shipper**
-- The **Shipper** delivers Records to one or more **Destinations**
-- A **File** is uploaded to an object-storage **Destination**; its metadata becomes a **Record**
+- The **Bridge** forwards every **Record** to the **Shipper** over the **shipper ingest
+  protocol**
+- The **Shipper** holds undelivered Records in its **Shipper buffer** and delivers them to
+  one or more **Destinations**
+- A **File** is uploaded to an object-storage **Destination** by the **Uploader**, via the
+  **upload intent queue**; its metadata becomes a **Record**
 - A **Record** carries **Tags**; each Tag names a **Destination**
 - A **Trigger** fires a **FlushEvent**; every Measurement listening for it releases its
   buffered **Records** and **Files** as one **Incident**
