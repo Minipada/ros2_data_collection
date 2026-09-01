@@ -43,7 +43,6 @@ spec:
           mountPath: /etc/dc/shipper
         - name: robot-params
           mountPath: /opt/dc/robot_params.yaml
-          subPath: robot_params.yaml
           readOnly: true
 
     # The Uploader as its own container (docs/adr/0014), configured entirely by

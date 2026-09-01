@@ -41,7 +41,7 @@ export PODMAN_COMPOSE_PROVIDER="${PODMAN_COMPOSE_PROVIDER:-podman-compose}"
 # vector_vendor's pinned version come from one place) — same grep already used by
 # run_limits_two_tier.sh / run_load_driver_shipper_test.sh / run_limits_drain_rate.sh /
 # run_limits_shipper_fanin.sh, so the apt and container paths cannot drift apart.
-VECTOR_VERSION="$(grep -oP 'version: v\K[0-9.]+' "$E2E_DIR/../../ros2_data_collection.repos")"
+VECTOR_VERSION="$(grep -A3 'vector_vendor:' "$E2E_DIR/../../ros2_data_collection.repos" | grep -oP 'version: v\K[0-9.]+')"
 export VECTOR_VERSION
 
 PG_C=dc_e2e_split_postgres
