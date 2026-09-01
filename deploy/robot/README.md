@@ -34,6 +34,22 @@ aggregator, and Files go to edge-local object storage. Both are placeholder host
 storage are deployment infrastructure outside this repository (epic #440's "Out of Scope"),
 not something these manifests can stand up.
 
+## Diagrams
+
+`docs/` holds standalone, interactive diagrams of the three deployment shapes discussed
+above — open any of them directly in a browser (dark/light, pan/zoom, guided views):
+
+| Diagram | Shape |
+|---|---|
+| `docs/single-robot-quick-setup.html` | Scenario 1 (native/all-in-one): everything in one container, managed-shipper mode — fast local tests, no fleet needs. |
+| `docs/containers-single-machine.html` | This directory's Compose/Quadlet rendering: the three containers above, direct to Postgres/S3 — testing the deployment architecture before fleet rollout. |
+| `docs/fleet-topology.html` | Scenario 3: the fleet shape these renderings target — robots behind an edge tier, no direct internet access. |
+
+Each includes a "Weaknesses" callout grounded in
+[A Reference Architecture for Robot Fleets](https://blog.bensoussan.de/post/2026-08-25-a-reference-architecture-for-robot-fleets/):
+why direct-to-destination shapes don't survive contact with a real fleet deployment
+(security exposure, no edge buffer, sites that won't allow it on their network).
+
 ## Validating the renderings
 
 ```sh
