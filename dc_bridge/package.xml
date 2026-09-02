@@ -8,7 +8,7 @@ SPDX-License-Identifier: MPL-2.0
 
 <package format="3">
   <name>dc_bridge</name>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
   <description>
     Bridge node (C++): subscribes to StringStamped Record topics and forwards them to the
     Vector shipper over the Fluent Forward protocol, rendering Vector's config from ROS
