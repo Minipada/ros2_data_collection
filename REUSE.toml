@@ -116,13 +116,38 @@ SPDX-FileCopyrightText = "Open Robotics"
 SPDX-License-Identifier = "CC-BY-4.0"
 
 # From the Gazebo Classic model database (osrf/gazebo_models), which is CC-BY-3.0 as a
-# whole; cutout_wall's model.config still credits its OSRF author.
+# whole; cutout_wall's model.config still credits its OSRF author. drc_practice_*,
+# table, pickup and construction_cone are #268 placeholders (simplified to primitive
+# geometry, no gz-sim port upstream) but still stand in for and are named after their
+# osrf/gazebo_models originals. charging_dock is deliberately NOT in this group: it's
+# original DC content built for #364, with no upstream sourcing at all.
 [[annotations]]
 path = [
   "dc_simulation/models/bag/**",
+  "dc_simulation/models/construction_cone/**",
   "dc_simulation/models/cutout_wall/**",
+  "dc_simulation/models/drc_practice_angled_barrier_135/**",
+  "dc_simulation/models/drc_practice_orange_jersey_barrier/**",
+  "dc_simulation/models/drc_practice_white_jersey_barrier/**",
+  "dc_simulation/models/drc_practice_yellow_parking_block/**",
   "dc_simulation/models/europallet/**",
   "dc_simulation/models/europallet_10/**",
+  "dc_simulation/models/pickup/**",
+  "dc_simulation/models/table/**",
 ]
 SPDX-FileCopyrightText = "2012 Nathan Koenig"
 SPDX-License-Identifier = "CC-BY-3.0"
+
+# #268 placeholders (simplified to primitive geometry, no gz-sim port upstream) that
+# stand in for and are named after their aws-robotics/aws-robomaker-small-warehouse-world
+# originals.
+[[annotations]]
+path = [
+  "dc_simulation/models/aws_robomaker_warehouse_ClutteringC_01/**",
+  "dc_simulation/models/aws_robomaker_warehouse_ClutteringD_01/**",
+  "dc_simulation/models/aws_robomaker_warehouse_ShelfD_01/**",
+  "dc_simulation/models/aws_robomaker_warehouse_ShelfF_01/**",
+  "dc_simulation/models/aws_robomaker_warehouse_TrashCanC_01/**",
+]
+SPDX-FileCopyrightText = "Amazon.com, Inc. or its affiliates"
+SPDX-License-Identifier = "MIT"
