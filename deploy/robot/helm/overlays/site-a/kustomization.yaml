@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Site A overlay (#466, docs/adr/0016): inflates ../../dc-robot with this site's values
+# (edge address, robot identity — the chart's own values surface), then patches in a
+# namespace and a nodeSelector pinning the Pod to this site's labeled edge-adjacent
+# node. Neither is a chart value (see ../dc-robot/values.yaml's header): which
+# namespace/node a site's robot Pod lands on is a per-cluster placement decision the
+# chart has no business knowing about — exactly the kind of difference Kustomize
+# overlays exist for, per this issue's own framing ("patches on top of the chart's
+# rendered output ... for the environment-specific differences a chart's own values
+# don't cover").
+#
+# Render: kubectl kustomize --enable-helm --helm-command="$(which helm)" \
+#           deploy/robot/helm/overlays/site-a
+# (--enable-helm is required: kustomize's Helm chart inflator is opt-in, and `apply -k`
+# itself doesn't accept it — same `kubectl kustomize | kubectl apply -f -` pattern
+# ../../k3d/kustomization.yaml already uses for a different reason.)
+namespace: dc-robot-site-a
+
+# chartHome points at the chart's parent directory (deploy/robot/helm/), relative to
+# this file; kustomize looks for <chartHome>/<name> before trying to fetch anything
+# from a repo, so this resolves to ../../dc-robot with no repo/version needed for an
+# in-tree chart.
+helmGlobals:
+  chartHome: ../..
+
+helmCharts:
+  - name: dc-robot
+    releaseName: dc-robot-site-a
+    valuesFile: values-site-a.yaml
+
+patches:
+  - path: node-selector.yaml

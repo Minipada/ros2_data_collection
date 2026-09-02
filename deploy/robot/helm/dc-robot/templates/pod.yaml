@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Templated version of ../../kubernetes/robot-pod.yaml (#450, docs/adr/0016): same
+# three-container/shared-volume/hostAlias shape — only image refs, resources, robot
+# identity and dc-uploader's per-site env become chart values (see ../values.yaml's own
+# header for what does and doesn't vary here). The one structural difference from that
+# file: robot-params mounts from the ConfigMap this chart renders
+# (../templates/configmap-robot-params.yaml) instead of a hostPath.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Values.robot.name }}
+  labels:
+    {{- include "dc-robot.labels" . | nindent 4 }}
+spec:
+  restartPolicy: Always
+  # All three containers share the Pod's network namespace, so dc-uploader's
+  # DC_UPLOADER_SHIPPER_HOST and the rendered robot_params.yaml's vector_forward_host
+  # both name "vector" rather than 127.0.0.1 — this alias is what makes that resolve.
+  hostAliases:
+    - ip: "127.0.0.1"
+      hostnames: ["vector"]
+  containers:
+    - name: dc-ros
+      image: "{{ .Values.images.dcRos.repository }}:{{ .Values.images.dcRos.tag }}"
+      imagePullPolicy: {{ .Values.images.pullPolicy }}
+      args: ["dc_params_file:=/opt/dc/robot_params.yaml", "run_uploader:=false"]
+      resources:
+        {{- toYaml .Values.resources.dcRos | nindent 8 }}
+      volumeMounts:
+        - name: uploader
+          mountPath: /root/.dc/robot/uploader
+        - name: config
+          mountPath: /etc/dc/shipper
+        - name: robot-params
+          mountPath: /opt/dc/robot_params.yaml
+          subPath: robot_params.yaml
+          readOnly: true
+
+    # The Uploader as its own container (docs/adr/0014), configured entirely by
+    # DC_UPLOADER_* env — no ROS params.
+    - name: dc-uploader
+      image: "{{ .Values.images.dcUploader.repository }}:{{ .Values.images.dcUploader.tag }}"
+      imagePullPolicy: {{ .Values.images.pullPolicy }}
+      resources:
+        {{- toYaml .Values.resources.dcUploader | nindent 8 }}
+      env:
+        - name: DC_UPLOADER_STORAGE_NAME
+          value: {{ .Values.uploader.storageName | quote }}
+        - name: DC_UPLOADER_QUEUE_DIR
+          value: /root/.dc/robot/uploader/queue/upload
+        - name: DC_UPLOADER_STATE_DIR
+          value: /root/.dc/robot/uploader/uploader
+        - name: DC_UPLOADER_SHIPPER_HOST
+          value: vector
+        - name: DC_UPLOADER_SHIPPER_PORT
+          value: "24224"
+        - name: DC_UPLOADER_S3_BUCKET
+          value: {{ .Values.uploader.s3.bucket | quote }}
+        - name: DC_UPLOADER_S3_ENDPOINT
+          value: {{ .Values.uploader.s3.endpoint | quote }}
+        - name: DC_UPLOADER_S3_ACCESS_KEY_ID
+          value: {{ .Values.uploader.s3.accessKeyId | quote }}
+        - name: DC_UPLOADER_S3_SECRET_ACCESS_KEY
+          value: {{ .Values.uploader.s3.secretAccessKey | quote }}
+        - name: DC_UPLOADER_DELETE_WHEN_SENT
+          value: {{ .Values.uploader.deleteWhenSent | quote }}
+      volumeMounts:
+        - name: uploader
+          mountPath: /root/.dc/robot/uploader
+
+    # The unmodified upstream Vector image, unmanaged by the Bridge (docs/adr/0001,
+    # docs/adr/0015). Waits for dc-ros's atomically-written config, then watches it for
+    # reload-without-restart.
+    - name: vector
+      image: "{{ .Values.images.vector.repository }}:{{ .Values.images.vector.tag }}"
+      imagePullPolicy: {{ .Values.images.pullPolicy }}
+      resources:
+        {{- toYaml .Values.resources.vector | nindent 8 }}
+      command: ["/bin/sh", "-c"]
+      args:
+        - >
+          trap exit TERM;
+          until [ -f /etc/dc/shipper/vector.toml ]; do sleep 0.2; done;
+          exec vector --config /etc/dc/shipper/vector.toml --watch-config
+      volumeMounts:
+        - name: buffer
+          mountPath: /var/lib/vector
+        - name: config
+          mountPath: /etc/dc/shipper
+          readOnly: true
+
+  volumes:
+    - name: uploader
+      emptyDir: {}
+    - name: config
+      emptyDir: {}
+    - name: buffer
+      emptyDir: {}
+    - name: robot-params
+      configMap:
+        name: {{ .Values.robot.name }}-params

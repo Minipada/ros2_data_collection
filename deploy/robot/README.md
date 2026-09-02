@@ -20,6 +20,47 @@ All three point at the same published images
 `build-dc-ros-image`/`build-dc-uploader-image` jobs — this ticket adds no new build or
 publish path (building and shipping still goes through Podman, unchanged).
 
+## Helm chart + Kustomize overlays per site/robot (#466)
+
+`kubernetes/robot-pod.yaml` above is one fixed topology — correct for the runtime-free
+check, k3d (#451) and kind (#452) loops, but a real fleet's robots genuinely differ:
+edge aggregator address, robot identity, resource limits, image tags, credentials.
+`helm/dc-robot/` is a chart that parameterizes exactly that (`docs/adr/0016`); its
+defaults reproduce `kubernetes/robot-pod.yaml` + `params/robot_params.yaml` field for
+field, so `helm template` with no overrides passes the same `kubeconform` check that
+file does — this is a parameterized rendering path alongside the other three, not a
+replacement of any of them. `helm/overlays/site-a/` is a reference Kustomize overlay
+showing per-site variation composed on top: a site's own `values-<site>.yaml` (robot
+identity, edge address — the chart's values surface) plus a patch for whatever a chart
+value shouldn't cover (here, a `nodeSelector` pinning the Pod to that site's labeled
+edge-adjacent node).
+
+```sh
+# Render the chart alone, with defaults (same shape as kubernetes/robot-pod.yaml):
+helm template dc-robot deploy/robot/helm/dc-robot
+
+# Render a site's overlay — chart values + Kustomize patches, in one command
+# (--enable-helm is required: kustomize's Helm inflator is opt-in; --load-restrictor
+# LoadRestrictionsNone is required because the overlay's base, the chart, lives outside
+# its own directory tree, same reason k3d/kustomization.yaml needs it):
+kubectl kustomize --enable-helm --load-restrictor LoadRestrictionsNone \
+  --helm-command="$(which helm)" deploy/robot/helm/overlays/site-a
+
+# Schema-validate either rendering the same way as kubernetes/robot-pod.yaml
+# (kubeconform.sh resolves its argument against the repo root, so render to a path
+# inside it, not /tmp):
+kubectl kustomize --enable-helm --load-restrictor LoadRestrictionsNone \
+  --helm-command="$(which helm)" deploy/robot/helm/overlays/site-a > deploy/robot/helm/.rendered-site-a.yaml
+./tools/ci/pre-commit/kubeconform.sh deploy/robot/helm/.rendered-site-a.yaml
+rm deploy/robot/helm/.rendered-site-a.yaml
+```
+
+A site with N robots installs N releases (one per robot, each its own
+`values-<robot>.yaml`/overlay), never one release templating N robots internally — see
+`docs/adr/0016` for the full design and rejected alternatives, including why this is a
+different call from `tools/kind/README.md`'s "Why not Helm" (a fixed one-topology CI
+harness, not a real fleet).
+
 ## What differs from `tools/e2e/compose.split.yaml`
 
 `compose.split.yaml` is the *test* rendering of the three-container topology (#447): it adds

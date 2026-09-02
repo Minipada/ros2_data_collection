@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Renders ../../params/robot_params.yaml as a ConfigMap (docs/adr/0016): the real-
+# cluster mechanism ../../kubernetes/robot-pod.yaml's own header already calls for
+# ("a Pod-scoped Secret/ConfigMap object is the real-cluster mechanism"), in place of
+# that file's hostPath (a podman-kube-play/k3d/kind convenience only, not something a
+# real cluster offers). templates/pod.yaml mounts this ConfigMap at the same
+# /opt/dc/robot_params.yaml path.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.robot.name }}-params
+  labels:
+    {{- include "dc-robot.labels" . | nindent 4 }}
+data:
+  # Two branches, not a partial template: robotParams.override is a full literal
+  # replacement (see values.yaml), never merged field-by-field with the templated
+  # default below — a site either takes the templated `uptime`-only shape or supplies
+  # its own file whole, same as hand-editing params/robot_params.yaml today.
+  robot_params.yaml: |
+{{- if .Values.robotParams.override }}
+{{ .Values.robotParams.override | indent 4 }}
+{{- else }}
+    measurement_server:
+      ros__parameters:
+        save_local_base_path: "$HOME/.dc/robot/data/%Y/%M/%D/%H"
+        all_base_path: "robot"
+        measurement_plugins: ["uptime"]
+
+        uptime:
+          plugin: "dc_measurements/Uptime"
+          polling_interval: 1000
+          group_key: "uptime"
+
+    dc_bridge:
+      ros__parameters:
+        shipper:
+          managed: false
+          config_path: "/etc/dc/shipper/vector.toml"
+          data_dir: "/var/lib/vector"
+          bind_host: "0.0.0.0"
+        uploader:
+          data_dir: "$HOME/.dc/robot/uploader"
+        destinations: ["edge_vector"]
+        edge_vector:
+          type: vector
+          receives: records
+          inputs: ["/dc/measurement/uptime"]
+          host: {{ .Values.edge.vectorHost | quote }}
+          port: {{ .Values.edge.vectorPort }}
+
+        vector_forward_host: "vector"
+        vector_forward_port: 24224
+
+    lifecycle_manager_dc:
+      ros__parameters:
+        node_names: ["measurement_server"]
+        transitions: [configure, activate]
+{{- end }}

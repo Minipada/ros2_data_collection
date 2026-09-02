@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Pins site A's robot Pod to its labeled edge-adjacent node — a per-cluster placement
+# fact the chart's values surface deliberately does not expose (see kustomization.yaml).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dc-robot-site-a
+spec:
+  nodeSelector:
+    dc.site: site-a
