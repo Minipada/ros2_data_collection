@@ -578,22 +578,6 @@ jobs:
           kind load image-archive /tmp/dc-ros.tar --name dc-kind
           rm -f /tmp/dc-ros.tar
 
-      # Namespace first, standalone: the hub-init-sql ConfigMap below needs dc-hub to
-      # already exist, and kustomize's own resource ordering (below) is a separate
-      # build, not visible to this imperative command.
-      - name: Apply namespaces
-        run: kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/namespaces.yaml
-
-      # The one ConfigMap tools/kind/kustomization.yaml doesn't generate: its source,
-      # tools/e2e/sql/init.sql, is the E2E harness's own file, genuinely outside this
-      # tree — kustomize refuses by design to read a file outside its root. See
-      # tools/kind/kustomization.yaml's header.
-      - name: Create the hub-init-sql ConfigMap
-        run: |
-          kubectl --context kind-dc-kind create configmap hub-init-sql -n dc-hub \
-            --from-file=tools/e2e/sql/init.sql --dry-run=client -o yaml \
-            | kubectl --context kind-dc-kind apply -f -
-
       # robot-a.yaml commits ghcr.io/.../dc-ros:jazzy as dc-ros's real default (the
       # floating ref build-dc-ros-image pushes on every merge, same as
       # deploy/robot/kubernetes/robot-pod.yaml) — patched in place, before the build
@@ -605,14 +589,16 @@ jobs:
           sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy|$DC_ROS_IMAGE|" \
             tools/kind/kubernetes/robot-a.yaml
 
-      # One `kubectl apply -k` for the rest of the steady-state topology (kustomize
-      # ships in kubectl — no separate binary): networkpolicies, the hub, edge and
-      # robot tiers, and the probe Pods, plus the two remaining ConfigMaps generated
-      # from tools/kind/params/*. See tools/kind/kustomization.yaml's own header for
-      # what's deliberately not a resource here (the outage-inducing NetworkPolicy
-      # variant) and why.
+      # One `kubectl apply -k` for the entire steady-state topology (kustomize ships
+      # in kubectl — no separate binary): namespaces, networkpolicies, the hub, edge
+      # and robot tiers, the probe Pods, and all three ConfigMaps (generated from
+      # tools/kind/params/* and tools/e2e/sql/init.sql). Namespace objects apply
+      # before namespaced resources that need them — kubectl's own apply-time Kind
+      # ordering — so this needs no separate namespace-first step. See
+      # tools/kustomization.yaml's own header for what's deliberately not a resource
+      # here (the outage-inducing NetworkPolicy variant) and why.
       - name: Apply the steady-state topology
-        run: kubectl --context kind-dc-kind apply -k tools/kind/
+        run: kubectl --context kind-dc-kind apply -k tools/
 
       # rollout status, not `wait --for=condition=Ready pod -l ...`: the Deployment
       # object exists synchronously after apply, but its Pods don't yet, and
@@ -660,7 +646,7 @@ jobs:
 
           kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/networkpolicy-robot-outage.yaml
           sleep 30  # outage
-          kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/networkpolicies.yaml  # restore
+          kubectl --context kind-dc-kind apply -k tools/  # restore: same command that brought the topology up
           sleep 15  # drain
 
           COUNT_AFTER="$(kubectl --context kind-dc-kind exec -n dc-hub deploy/hub-postgres -- psql -U dc -d dc -tAc 'SELECT count(*) FROM dc_records' | tr -d '[:space:]')"

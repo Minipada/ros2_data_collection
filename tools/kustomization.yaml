@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# The kind + NetworkPolicy harness's steady-state topology (#452, tools/kind/), one
+# `kubectl apply -k tools/` instead of a `kubectl apply -f`/`kubectl create configmap`
+# per file. `kubectl` bundles kustomize — no separate binary, no Helm: this harness
+# deploys one fixed topology every run, never a different one per environment, so there
+# is nothing for a chart's templating/values to parameterize (see
+# tools/kind/README.md's "Why not Helm" for the fuller reasoning).
+#
+# This file lives here, at the `tools/` root, rather than inside tools/kind/ itself,
+# for one reason: kustomize refuses by design to read a file outside its own root, and
+# the hub-init-sql ConfigMap's source (tools/e2e/sql/init.sql) and tools/kind/'s own
+# manifests/params share no closer common ancestor than tools/ itself. Nothing else
+# under tools/ is a resource here — only tools/kind/ and that one E2E-owned file.
+#
+# tools/kind/kubernetes/networkpolicy-robot-outage.yaml is deliberately not a resource
+# here — it is applied and later reverted on its own, mid-run, to induce the outage
+# window (.github/workflows/ci.yaml's verify-kind-networkpolicy job); folding it in
+# here would make a plain re-apply of this file toggle the outage on and off by
+# accident. That same job also restores the steady state after the outage by
+# re-applying this exact file — the one command that brings the topology up is also
+# the one that puts it back.
+#
+# CI patches kind/kubernetes/robot-a.yaml's dc-ros image ref in place (sed) before this
+# file is built, to test the PR's own just-built image — see that file's own header.
+resources:
+  - kind/kubernetes/namespaces.yaml
+  - kind/kubernetes/networkpolicies.yaml
+  - kind/kubernetes/hub-postgres.yaml
+  - kind/kubernetes/edge-a.yaml
+  - kind/kubernetes/probes.yaml
+  - kind/kubernetes/robot-a.yaml
+
+# Generated, not applied by hand: each ConfigMap's content stays a single source file
+# (tools/e2e/sql/init.sql, tools/kind/params/*), never duplicated into this repo a
+# second time. Default content-hash suffixing is left on — the consuming manifests
+# above reference each by its unsuffixed name, and kustomize rewrites those references
+# to the generated name automatically since generator and consumers build together
+# here. Namespace objects apply before namespaced resources that need them (kubectl's
+# own apply-time Kind ordering), so dc-hub/dc-edge-a/dc-robot-a existing before these
+# three ConfigMaps land in them needs no separate step.
+configMapGenerator:
+  - name: hub-init-sql
+    namespace: dc-hub
+    files:
+      - e2e/sql/init.sql
+  - name: edge-a-vector-config
+    namespace: dc-edge-a
+    files:
+      - vector.toml=kind/params/edge-a-vector.toml
+  - name: robot-a-params
+    namespace: dc-robot-a
+    files:
+      - robot_params.yaml=kind/params/robot-a-params.yaml
