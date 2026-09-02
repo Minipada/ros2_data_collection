@@ -8,7 +8,7 @@ SPDX-License-Identifier: MPL-2.0
 
 <package format="3">
   <name>dc_interfaces</name>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
   <description>Package containing data collection interfaces.</description>
   <maintainer email="d.bensoussan@proton.me">David Bensoussan</maintainer>
   <license>MPL-2.0</license>
