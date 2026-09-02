@@ -43,8 +43,10 @@ repos:
         # kubeconform (this file's `kubeconform` hook, scoped to the same `kubernetes/`
         # dirs) already parses and schema-validates every document in these files, so
         # excluding them here doesn't drop coverage, just the redundant single-document
-        # check.
-        exclude: "(^|/)tools/kind/kubernetes/.*\\.ya?ml$"
+        # check. deploy/robot/helm/dc-robot/templates/*.yaml are Helm templates (#466)
+        # — Go template syntax (`{{ }}`), not standalone YAML; `helm lint`/`helm
+        # template` (see deploy/robot/README.md) is that directory's own syntax check.
+        exclude: "(^|/)tools/kind/kubernetes/.*\\.ya?ml$|(^|/)deploy/robot/helm/dc-robot/templates/.*\\.ya?ml$"
       - id: check-toml
         name: Verify toml syntax
       - id: check-xml

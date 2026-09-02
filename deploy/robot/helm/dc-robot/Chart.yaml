@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Helm chart for the robot tier's Kubernetes rendering (#466, docs/adr/0016). Templates
+# the same three-container shape as ../../kubernetes/robot-pod.yaml (#450) — this chart
+# does not replace that file, which stays the runtime-free/k3d/kind reference; it is the
+# parameterized version for a real fleet, where edge address, robot identity, image tags
+# and resource limits genuinely vary per deployment.
+apiVersion: v2
+name: dc-robot
+description: DC robot tier (dc-ros + vector + dc-uploader) for a fleet's per-site/per-robot Kubernetes deployment
+type: application
+version: 0.1.0
+appVersion: "0.2.0"
+home: https://github.com/Minipada/ros2_data_collection
+sources:
+  - https://github.com/Minipada/ros2_data_collection

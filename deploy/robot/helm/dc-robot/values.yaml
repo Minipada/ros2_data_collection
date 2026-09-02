@@ -1,0 +1,70 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Defaults reproduce ../../kubernetes/robot-pod.yaml + ../../params/robot_params.yaml as
+# closely as a templated chart can (docs/adr/0016) — `helm template` with no `--set`/
+# `-f` renders the same topology, so this baseline is provably identical to the
+# hand-written reference, not a new design. Only what genuinely varies between
+# deployments (issue #466: edge address, robot identity, resource limits, image tags,
+# credentials) is a value; everything else — the three-container/shared-volume shape
+# itself, the vector hostAlias, the ConfigMap-vs-Secret split — stays in templates/.
+
+robot:
+  # Pod name, and the identity dc-uploader's DC_UPLOADER_STORAGE_NAME et al. render
+  # under. One release == one robot: a site with N robots installs this chart N times
+  # with a different robot.name (and, in practice, --namespace) each time.
+  name: dc-robot
+
+images:
+  dcRos:
+    repository: ghcr.io/minipada/ros2_data_collection/dc-ros
+    tag: jazzy
+  dcUploader:
+    repository: ghcr.io/minipada/ros2_data_collection/dc-uploader
+    tag: jazzy
+  vector:
+    # Pinned to ros2_data_collection.repos' vector_vendor version, same constraint as
+    # ../../compose.yaml/quadlet/vector.container/kubernetes/robot-pod.yaml — bump by
+    # hand alongside vector_vendor (#448).
+    repository: docker.io/timberio/vector
+    tag: 0.57.0-debian
+  pullPolicy: IfNotPresent
+
+# Per-container resource requests/limits. Empty by default (no request/limit set),
+# matching ../../kubernetes/robot-pod.yaml today; a real deployment sets these per its
+# own edge hardware.
+resources:
+  dcRos: {}
+  dcUploader: {}
+  vector: {}
+
+# The blessed `vector` Destination's forwarding target — the edge tier's own address
+# (epic #440 scenario 3), outside this repository. `edge.site.example` is the same
+# placeholder ../../params/robot_params.yaml ships; override per site.
+edge:
+  vectorHost: edge.site.example
+  vectorPort: 24224
+
+# dc-uploader is configured entirely by env (docs/adr/0014), no ROS params.
+uploader:
+  storageName: edge
+  s3:
+    bucket: dc-robot
+    # Placeholder — the edge tier's object storage is outside this repository. Override
+    # per site; endpoint/accessKeyId/secretAccessKey are exactly the "credentials" the
+    # issue calls out as genuinely per-deployment. For anything beyond local iteration,
+    # pass these via `helm install -f <site-secrets.yaml>` (not committed), never a
+    # committed values file.
+    endpoint: http://edge.site.example:9000
+    accessKeyId: changeme
+    secretAccessKey: changeme
+  deleteWhenSent: true
+
+# Escape hatch for a site whose Measurement config genuinely differs from the single
+# `uptime` plugin templates/configmap-robot-params.yaml renders by default (not a
+# reference workload — see ../../params/robot_params.yaml's own header). Set to the
+# full literal contents of robot_params.yaml to replace the templated default outright,
+# same tradeoff as hand-editing that file today, just scoped to one values field
+# instead of a second manifest to maintain.
+robotParams:
+  override: ""

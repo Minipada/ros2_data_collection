@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Site A's chart values (#466): robot identity and the edge aggregator address — the
+# per-site variation the chart itself parameterizes (../dc-robot/values.yaml). Image
+# tags/resources/credentials are left at chart defaults here for a focused
+# demonstration; a real site overrides those the same way, credentials from an
+# uncommitted file (see ../dc-robot/values.yaml's own note).
+robot:
+  name: dc-robot-site-a
+
+edge:
+  vectorHost: edge-a.site.example
+  vectorPort: 24224
+
+uploader:
+  s3:
+    endpoint: http://edge-a.site.example:9000
