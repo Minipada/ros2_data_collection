@@ -61,11 +61,14 @@ dc-edge-b (stand-in, site B) -- denied both directions to/from site A's tiers
 `kubernetes/` holds the Kubernetes manifests (kubeconform-validated, same pre-commit hook
 as `deploy/robot/kubernetes/`); `params/` holds the two files that differ from their
 `deploy/robot/` counterparts only in pointing at real in-cluster DNS names instead of
-placeholders — see each file's own header for what and why. `kustomization.yaml`
-(kubectl's built-in `apply -k`, no separate binary) applies most of `kubernetes/` — and
-generates two of the three ConfigMaps from `params/*` — in one command instead of one
-`kubectl apply -f`/`create configmap` per file; see its own header for what it
-deliberately leaves out and why.
+placeholders — see each file's own header for what and why. `../kustomization.yaml`
+(kubectl's built-in `apply -k`, no separate binary) applies the whole steady-state
+topology — namespaces, `kubernetes/*.yaml`, and all three ConfigMaps generated from
+`params/*` and `tools/e2e/sql/init.sql` — in one command instead of one `kubectl apply
+-f`/`create configmap` per file. It lives at the `tools/` root, not here: kustomize
+refuses by design to read a file outside its own root, and `tools/e2e/sql/init.sql`
+shares no closer common ancestor with this directory than `tools/` itself. See its own
+header for what it deliberately leaves out and why.
 
 ### Why not Helm
 

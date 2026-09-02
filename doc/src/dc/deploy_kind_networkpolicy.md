@@ -82,24 +82,18 @@ tar round trip is also what keeps this registry-free — the robot Pod below nee
 ## 4. Apply the topology
 
 ```sh
-kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/namespaces.yaml
-
-kubectl --context kind-dc-kind create configmap hub-init-sql -n dc-hub \
-  --from-file=tools/e2e/sql/init.sql --dry-run=client -o yaml \
-  | kubectl --context kind-dc-kind apply -f -
-
 # robot-a.yaml commits ghcr.io/.../dc-ros:jazzy as dc-ros's real default — patched in
 # place only if step 1 pointed DC_ROS_IMAGE somewhere else, before the kustomize build
 # below reads the file.
 sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy|$DC_ROS_IMAGE|" \
   tools/kind/kubernetes/robot-a.yaml
 
-# Everything else — networkpolicies, the hub, edge and robot tiers, the probe Pods, and
-# the two remaining ConfigMaps (generated from tools/kind/params/*) — in one apply.
-# kustomize ships in kubectl; see tools/kind/kustomization.yaml for what's deliberately
-# left out (the outage-inducing NetworkPolicy variant) and why hub-init-sql above isn't
-# generated the same way.
-kubectl --context kind-dc-kind apply -k tools/kind/
+# Namespaces, networkpolicies, the hub, edge and robot tiers, the probe Pods, and all
+# three ConfigMaps (generated from tools/kind/params/* and tools/e2e/sql/init.sql) — in
+# one apply. kustomize ships in kubectl; see tools/kustomization.yaml for what's
+# deliberately left out (the outage-inducing NetworkPolicy variant) and why the file
+# lives at the tools/ root rather than inside tools/kind/ itself.
+kubectl --context kind-dc-kind apply -k tools/
 
 kubectl --context kind-dc-kind rollout status -n dc-hub deployment/hub-postgres --timeout=180s
 kubectl --context kind-dc-kind rollout status -n dc-edge-a deployment/edge-vector --timeout=180s
@@ -146,7 +140,7 @@ WINDOW_START_TS="$(date +%s)"
 
 kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/networkpolicy-robot-outage.yaml  # cuts robot -> edge
 sleep 30  # outage
-kubectl --context kind-dc-kind apply -f tools/kind/kubernetes/networkpolicies.yaml              # restores it
+kubectl --context kind-dc-kind apply -k tools/  # restore: same command that brought the topology up
 sleep 15  # drain
 
 COUNT_AFTER="$(kubectl --context kind-dc-kind exec -n dc-hub deploy/hub-postgres -- psql -U dc -d dc -tAc 'SELECT count(*) FROM dc_records' | tr -d '[:space:]')"
