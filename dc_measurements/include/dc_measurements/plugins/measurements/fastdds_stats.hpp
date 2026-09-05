@@ -9,6 +9,7 @@
 
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_util/node_utils.hpp"
 #include "fastdds_statistics_backend/StatisticsBackend.hpp"
 #include "fastdds_statistics_backend/types/EntityId.hpp"
 
