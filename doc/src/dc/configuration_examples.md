@@ -24,8 +24,7 @@ ros2 launch dc_bringup dc_bringup.launch.py params_file:="my_file.yaml" group_no
 Every example follows the same shape: a `dc_bridge` block declaring **Destinations** and
 the topics each one `inputs`, and a `measurement_server` block declaring **Measurements**
 and the topic each one publishes on. Routing is the overlap between the two lists —
-nothing on the Measurement side names a Destination. If you are migrating a DC 1.x
-configuration, start with the [migration guide](./migration.md).
+nothing on the Measurement side names a Destination.
 ```
 
 ## Running the examples

@@ -106,7 +106,6 @@
   - [0015 - Split deployment topology: the Shipper and the Uploader as separable processes](./dc/adr/0015-split-deployment-topology.md)
   - [0016 - Helm chart for the robot tier, Kustomize overlays per site/robot](./dc/adr/0016-helm-chart-plus-kustomize-overlays.md)
 <!-- END GENERATED ADR LIST -->
-- [Migrating from DC 1.x to DC 2.0](./dc/migration.md)
 - [Future work and Roadmap](./dc/future_work.md)
 - [Contributing](./dc/contributing.md)
 - [FAQ](./dc/faq.md)

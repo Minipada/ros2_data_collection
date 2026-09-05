@@ -14,11 +14,6 @@ configures natively from ROS parameters; everything else in Vector's catalog wor
 through the [passthrough](./destinations.md#passthrough-custom_config_files) — see the
 question below.
 
-## I'm coming from DC 1.x and my `flb_*` destinations are gone
-
-They were replaced, not dropped. The [migration guide](./migration.md) maps every
-DC 1.x Destination to its DC 2.0 equivalent with before/after configuration.
-
 ## How can I send data to a Destination that isn't blessed?
 
 The Bridge (`dc_bridge`) renders its Shipper's (Vector) config from plain ROS

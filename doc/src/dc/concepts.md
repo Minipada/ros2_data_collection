@@ -132,14 +132,8 @@ the leading `/` is dropped and the remaining `/` become `.`.
 
 Tags are what the Shipper routes on, and the `dc.<tag>` route names are
 [stable public API](./destinations.md#the-dctag-routing-contract-public-api) that
-passthrough Destinations consume.
-
-```admonish warning title="Tags are not how you select a Destination"
-In DC 1.x, a Measurement's `tags` parameter named the destination plugins that should
-receive its Records. In DC 2.0 that is inverted: a Destination declares the **topics** it
-receives in its own `inputs` list, and Tags are derived, not configured. Delete `tags:`
-from Measurement and Group configurations — see the [migration guide](./migration.md#tags-what-changed).
-```
+passthrough Destinations consume. A Destination selects what it receives through its own
+`inputs` list of topics — Tags are derived from that, not configured directly.
 
 ## Destinations
 
