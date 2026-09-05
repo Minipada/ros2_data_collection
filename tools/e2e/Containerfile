@@ -185,3 +185,38 @@ RUN --mount=type=cache,id=dc-ccache,target=/root/.ccache \
 
 ENV ROS_UNDERLAY=/root/ws/install
 RUN echo "source ${ROS_UNDERLAY}/setup.bash" >> /etc/bash.bashrc
+
+# --- runtime: slim, deployable image — install/ only, exec-only system deps, no
+# source tree, no build/log dirs, no build toolchain (build-essential/git/ccache/
+# lcov/colcon extensions). containers/dc-ros and containers/dc-uploader FROM this
+# instead of `workspace`, which was a thin FROM on the raw CI test/coverage image
+# (source tree, build/log dirs and all) — 16.9GB for what ships to a robot.
+#
+# `COPY --from=workspace` pulls from the stage above *in this file*, so building
+# `--target runtime` implicitly builds `workspace` first with whatever `CCOV`
+# build-arg was passed — this is one stage, built twice (CCOV=false and CCOV=true),
+# not two stages to maintain. See ci.yaml's build-workspace / build-workspace-coverage.
+FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS runtime
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+WORKDIR /root/ws
+
+# --dependency-types=exec (rosdep, not colcon) resolves only <exec_depend>/<depend>
+# system packages — no compilers, no -dev headers, no build-essential. Relies on
+# dc_* package.xml files tagging deps correctly rather than the catch-all <depend>
+# for anything build-only.
+COPY --from=cacher /tmp/manifests/src ./src
+COPY rosdep src/ros2_data_collection/rosdep
+RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
+      > /etc/ros/rosdep/sources.list.d/10-dc.list && \
+    apt-get -q update && \
+    rosdep update --include-eol-distros && \
+    DEBIAN_FRONTEND=noninteractive \
+    rosdep install -y --from-paths src --ignore-src --rosdistro jazzy \
+      --as-root=apt:false --dependency-types=exec && \
+    rm -rf /var/lib/apt/lists/* src
+
+COPY --from=workspace /root/ws/install install
+
+ENV ROS_UNDERLAY=/root/ws/install
+RUN echo "source ${ROS_UNDERLAY}/setup.bash" >> /etc/bash.bashrc

@@ -22,13 +22,22 @@
 # `jazzy`, mirroring monorepo's own podman-push, which withholds branch_ref on
 # pull_request the same way: a not-yet-merged PR must never move that floating ref.
 #
-#   build-workspace (build + colcon test + coverage) ─┬─▶ sim                    (pull dc-workspace, simulation smoke check)
-#                                                      ├─▶ build-e2e-image ────▶ e2e   (pull dc-e2e, zero-loss harness)
-#                                                      ├─▶ build-dc-ros-image ─┬─▶ verify-published-images  (pull + run, no build)
-#                                                      │                      ├─▶ verify-kind-networkpolicy (#452: kind + Calico, NetworkPolicy proof)
-#                                                      └─▶ build-dc-uploader-image ─┴─▶ verify-robot-manifests (#450: podman kube play + network isolation)
+#   build-workspace (Release: build + colcon test) ─┬─▶ sim                    (pull dc-workspace, simulation smoke check)
+#                                                    ├─▶ build-e2e-image ────▶ e2e   (pull dc-e2e, zero-loss harness)
+#                                                    ├─▶ build-dc-ros-image ─┬─▶ verify-published-images  (pull + run, no build)
+#                                                    │                      ├─▶ verify-kind-networkpolicy (#452: kind + Calico, NetworkPolicy proof)
+#                                                    └─▶ build-dc-uploader-image ─┴─▶ verify-robot-manifests (#450: podman kube play + network isolation)
+#   build-workspace-coverage (CCOV=true, push/workflow_dispatch only) ─┬─▶ build-dc-ros-coverage-image      (dc-ros:jazzy-coverage)
+#                                                                      └─▶ build-dc-uploader-coverage-image (dc-uploader:jazzy-coverage)
 #   kpi-views (standalone: SQL + a throwaway Postgres, no workspace image needed)
 #   raw-volume (standalone: stdlib Python fixtures over the shared volume accounting)
+#
+# dc-ros/dc-uploader FROM the `runtime` stage (tools/e2e/Containerfile) now, not the
+# raw `workspace` image — install/ plus exec-only deps, not the full source/build/
+# coverage tree. build-workspace-coverage is CCOV=true only, for the coverage report
+# and the `-coverage` tag; its own `workspace` build stays local to that job, never
+# pushed — only its slim `runtime` derivative is. Skipped on plain `pull_request` —
+# see its own condition — so an ordinary PR pays for one workspace build, not two.
 #
 # e2e calls the same tools/e2e/scripts/run.sh a developer runs locally, driving the
 # harness with plain podman (no compose) so nothing extra is installed on the runner;
@@ -82,6 +91,7 @@ jobs:
       packages: write
     outputs:
       workspace_ref: ${{ steps.refs.outputs.workspace_ref }}
+      runtime_ref: ${{ steps.refs.outputs.runtime_ref }}
       e2e_ref: ${{ steps.refs.outputs.e2e_ref }}
       cache_ref: ${{ steps.refs.outputs.cache_ref }}
     steps:
@@ -106,6 +116,7 @@ jobs:
           IMAGE="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
           {
             echo "workspace_ref=$IMAGE/dc-workspace:$SHA"
+            echo "runtime_ref=$IMAGE/dc-runtime:$SHA"
             echo "e2e_ref=$IMAGE/dc-e2e:$SHA"
             echo "cache_ref=$IMAGE/dc-workspace-cache"
           } >> "$GITHUB_OUTPUT"
@@ -174,12 +185,12 @@ jobs:
       # `workspace` stage) — it's recorded in the image's own /root/ws/TEST_RESULT
       # instead, so the image still gets tagged and its coverage data is still
       # extractable below even when tests fail.
-      - name: Build + test the DC workspace (coverage-instrumented)
+      - name: Build + test the DC workspace (Release)
         env:
           IMAGE_TAG: ${{ steps.refs.outputs.workspace_ref }}
           CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
           BUILDAH_TMPDIR: ${{ runner.temp }}/buildah-tmp
-          CCOV: "true"
+          CCOV: "false"
         run: ./tools/e2e/scripts/build.sh
 
       - name: Stop the test-dependency stores
@@ -189,8 +200,140 @@ jobs:
         run: podman compose -f tools/e2e/compose.test.yaml down
 
       # Extracted via a short-lived container reading the already-built image, not a
-      # bind mount during the build — coverage/cpp.info and TEST_RESULT are both just
-      # files colcon/the Containerfile's RUN wrote into the image's own filesystem.
+      # bind mount during the build — TEST_RESULT is just a file the Containerfile's
+      # RUN wrote into the image's own filesystem. Coverage data only exists on the
+      # CCOV=true build (build-workspace-coverage), not this Release one.
+      - name: Extract test result
+        if: always()
+        env:
+          REF: ${{ steps.refs.outputs.workspace_ref }}
+        run: |
+          mkdir -p coverage
+          podman run --rm --entrypoint bash -v "${{ github.workspace }}/coverage:/out:Z" "$REF" -c '
+            cp /root/ws/TEST_RESULT /out/TEST_RESULT
+          '
+
+      - name: Fail the job if colcon test reported failures
+        if: always()
+        run: |
+          if [ "$(cat coverage/TEST_RESULT)" != "0" ]; then
+            echo "colcon test reported failures" >&2
+            exit 1
+          fi
+
+      - name: Push the workspace image
+        if: success()
+        uses: ./.github/actions/podman-push
+        with:
+          refs: ${{ steps.refs.outputs.workspace_ref }}
+
+      # Same build context/args as above, diverging only at the new `runtime` stage
+      # (tools/e2e/Containerfile) — podman's local layer cache makes this an
+      # incremental build reusing everything through `workspace`, not a rebuild.
+      - name: Build the slim runtime image
+        if: success()
+        env:
+          IMAGE_TAG: ${{ steps.refs.outputs.runtime_ref }}
+          CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
+          BUILDAH_TMPDIR: ${{ runner.temp }}/buildah-tmp
+          CCOV: "false"
+          TARGET: runtime
+        run: ./tools/e2e/scripts/build.sh
+
+      - name: Push the runtime image
+        if: success()
+        uses: ./.github/actions/podman-push
+        with:
+          refs: ${{ steps.refs.outputs.runtime_ref }}
+
+  # CCOV=true build: -O0/--coverage instrumented, source tree/build/log dirs and all —
+  # exists only for the coverage report and the `-coverage` image tag, not for
+  # anything else in this workflow (sim/e2e run against build-workspace's Release
+  # image above). No `needs:` — runs in parallel with build-workspace, not after it.
+  # `workspace_ref` here is a bare local tag (no registry): only the slim `runtime`
+  # derivative gets pushed, so the multi-GB coverage layer never reaches ghcr.io.
+  #
+  # Gated to push (a real merge to `jazzy`) or workflow_dispatch (manual — GitHub's
+  # "Run workflow" button, or `gh workflow run ci.yaml --ref <branch>`, against any
+  # branch/PR head) — never plain `pull_request`, which would double every PR's
+  # compute cost for a report almost no PR needs. build-dc-ros-coverage-image/
+  # build-dc-uploader-coverage-image below need no `if:` of their own: a job skipped
+  # by its own condition skips its `needs:` dependents too, by default.
+  build-workspace-coverage:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      runtime_ref: ${{ steps.refs.outputs.runtime_ref }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Log in to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Compute image refs
+        id: refs
+        env:
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          IMAGE="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
+          {
+            echo "workspace_ref=dc-workspace-coverage:$SHA"
+            echo "runtime_ref=$IMAGE/dc-runtime:$SHA-coverage"
+            echo "cache_ref=$IMAGE/dc-workspace-cache"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Cache podman-compose
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: podman-compose-1.5.0
+      - name: Install podman-compose
+        run: |
+          pip install --user "podman-compose==1.5.0"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Start the test-dependency stores (dc_bridge's store-backed tests hard-fail, never skip — see dc_bridge/README.md)
+        env:
+          PODMAN_COMPOSE_PROVIDER: podman-compose
+        run: |
+          podman compose -f tools/e2e/compose.test.yaml up -d
+          timeout 60 bash -c 'until podman exec dc_pg_test pg_isready -U dc >/dev/null 2>&1; do sleep 1; done'
+          timeout 60 bash -c 'until curl -sf http://127.0.0.1:9000 >/dev/null 2>&1 || curl -s http://127.0.0.1:9000 >/dev/null 2>&1; do sleep 1; done'
+          podman run --rm --network host \
+            -e AWS_ACCESS_KEY_ID=rustfsadmin -e AWS_SECRET_ACCESS_KEY=rustfsadmin -e AWS_DEFAULT_REGION=us-east-1 \
+            docker.io/amazon/aws-cli:latest \
+            --endpoint-url http://127.0.0.1:9000 s3 mb s3://dc-records
+
+      - name: Cache the ccache RUN --mount=type=cache content
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/buildah-tmp-coverage
+          key: buildah-ccache-coverage-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            buildah-ccache-coverage-${{ runner.os }}-
+
+      - name: Build + test the DC workspace (coverage-instrumented)
+        env:
+          IMAGE_TAG: ${{ steps.refs.outputs.workspace_ref }}
+          CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
+          BUILDAH_TMPDIR: ${{ runner.temp }}/buildah-tmp-coverage
+          CCOV: "true"
+        run: ./tools/e2e/scripts/build.sh
+
+      - name: Stop the test-dependency stores
+        if: always()
+        env:
+          PODMAN_COMPOSE_PROVIDER: podman-compose
+        run: podman compose -f tools/e2e/compose.test.yaml down
+
       - name: Extract C++ coverage and test result
         if: always()
         env:
@@ -210,12 +353,6 @@ jobs:
             exit 1
           fi
 
-      - name: Push the workspace image
-        if: success()
-        uses: ./.github/actions/podman-push
-        with:
-          refs: ${{ steps.refs.outputs.workspace_ref }}
-
       - name: Upload C++ coverage
         if: always()
         uses: codecov/codecov-action@v5
@@ -223,6 +360,24 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage/cpp.info
           flags: cpp-jazzy
+
+      # Same build context/args as above, diverging only at the new `runtime` stage —
+      # local layer cache makes this incremental over the build just above.
+      - name: Build the slim runtime image (coverage-instrumented)
+        if: success()
+        env:
+          IMAGE_TAG: ${{ steps.refs.outputs.runtime_ref }}
+          CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
+          BUILDAH_TMPDIR: ${{ runner.temp }}/buildah-tmp-coverage
+          CCOV: "true"
+          TARGET: runtime
+        run: ./tools/e2e/scripts/build.sh
+
+      - name: Push the runtime image
+        if: success()
+        uses: ./.github/actions/podman-push
+        with:
+          refs: ${{ steps.refs.outputs.runtime_ref }}
 
   # The simulation and demo layer is structurally invisible to the workspace build above
   # and the e2e harness below:
@@ -351,7 +506,7 @@ jobs:
 
       - name: Build the dc-ros image
         env:
-          BASE_IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
+          BASE_IMAGE: ${{ needs.build-workspace.outputs.runtime_ref }}
           SHA_REF: ${{ steps.image.outputs.sha_ref }}
         run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$SHA_REF" -f containers/dc-ros/Containerfile containers/dc-ros
 
@@ -403,7 +558,7 @@ jobs:
 
       - name: Build the dc-uploader image
         env:
-          BASE_IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
+          BASE_IMAGE: ${{ needs.build-workspace.outputs.runtime_ref }}
           SHA_REF: ${{ steps.image.outputs.sha_ref }}
         run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$SHA_REF" -f containers/dc-uploader/Containerfile containers/dc-uploader
 
@@ -425,6 +580,109 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Push the dc-uploader image (:<sha>, plus branch on push to jazzy)
+        uses: ./.github/actions/podman-push
+        with:
+          refs: ${{ steps.push_refs.outputs.refs }}
+
+  # Coverage-instrumented counterparts to build-dc-ros-image/build-dc-uploader-image
+  # above — same thin FROM, built from build-workspace-coverage's runtime image
+  # instead, tag_suffix -coverage (image-ref). Not part of the verify-* gating chain
+  # below: these exist to publish the -coverage tags, not to be proven runnable on
+  # every PR the way the production tag is.
+  build-dc-ros-coverage-image:
+    needs: build-workspace-coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Compute image ref
+        id: image
+        uses: ./.github/actions/image-ref
+        with:
+          name: dc-ros
+          tag_suffix: -coverage
+
+      - name: Log in to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build the dc-ros image (coverage-instrumented)
+        env:
+          BASE_IMAGE: ${{ needs.build-workspace-coverage.outputs.runtime_ref }}
+          SHA_REF: ${{ steps.image.outputs.sha_ref }}
+        run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$SHA_REF" -f containers/dc-ros/Containerfile containers/dc-ros
+
+      - name: Determine refs to push
+        id: push_refs
+        env:
+          SHA_REF: ${{ steps.image.outputs.sha_ref }}
+          BRANCH_REF: ${{ steps.image.outputs.branch_ref }}
+        run: |
+          {
+            echo "refs<<PUSH_REFS_EOF"
+            echo "$SHA_REF"
+            if [ "${{ github.event_name }}" = "push" ]; then
+              echo "$BRANCH_REF"
+            fi
+            echo "PUSH_REFS_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Push the dc-ros image (:<sha>-coverage, plus branch on push to jazzy)
+        uses: ./.github/actions/podman-push
+        with:
+          refs: ${{ steps.push_refs.outputs.refs }}
+
+  build-dc-uploader-coverage-image:
+    needs: build-workspace-coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Compute image ref
+        id: image
+        uses: ./.github/actions/image-ref
+        with:
+          name: dc-uploader
+          tag_suffix: -coverage
+
+      - name: Log in to ghcr.io
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build the dc-uploader image (coverage-instrumented)
+        env:
+          BASE_IMAGE: ${{ needs.build-workspace-coverage.outputs.runtime_ref }}
+          SHA_REF: ${{ steps.image.outputs.sha_ref }}
+        run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$SHA_REF" -f containers/dc-uploader/Containerfile containers/dc-uploader
+
+      - name: Determine refs to push
+        id: push_refs
+        env:
+          SHA_REF: ${{ steps.image.outputs.sha_ref }}
+          BRANCH_REF: ${{ steps.image.outputs.branch_ref }}
+        run: |
+          {
+            echo "refs<<PUSH_REFS_EOF"
+            echo "$SHA_REF"
+            if [ "${{ github.event_name }}" = "push" ]; then
+              echo "$BRANCH_REF"
+            fi
+            echo "PUSH_REFS_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Push the dc-uploader image (:<sha>-coverage, plus branch on push to jazzy)
         uses: ./.github/actions/podman-push
         with:
           refs: ${{ steps.push_refs.outputs.refs }}

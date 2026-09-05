@@ -15,6 +15,13 @@ inputs:
   name:
     description: Image name (e.g. dc-ros), without registry host or tag.
     required: true
+  tag_suffix:
+    description: >-
+      Appended to both emitted tags (e.g. "-coverage" -> :<sha>-coverage,
+      :jazzy-coverage). Lets one image name carry a second, coverage-
+      instrumented variant alongside the production tag. Defaults to none.
+    required: false
+    default: ""
 
 outputs:
   tag:
@@ -40,6 +47,7 @@ runs:
         SHA: ${{ github.sha }}
         REPO: ${{ github.repository }}
         NAME: ${{ inputs.name }}
+        TAG_SUFFIX: ${{ inputs.tag_suffix }}
       run: |
         set -euo pipefail
         REGISTRY="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
@@ -55,7 +63,7 @@ runs:
           exit 1
         fi
         {
-          echo "tag=$SLUG"
-          echo "sha_ref=$REGISTRY/$NAME:$SHA"
-          echo "branch_ref=$REGISTRY/$NAME:$SLUG"
+          echo "tag=$SLUG$TAG_SUFFIX"
+          echo "sha_ref=$REGISTRY/$NAME:$SHA$TAG_SUFFIX"
+          echo "branch_ref=$REGISTRY/$NAME:$SLUG$TAG_SUFFIX"
         } >> "$GITHUB_OUTPUT"

@@ -3,10 +3,10 @@
 
 # The `dc-ros` runtime image (#448): every ROS node plus the Bridge, for the
 # three-container split topology (#440 scenario 2/3, #447). A thin `FROM` on top of
-# tools/e2e/Containerfile's tested `workspace` stage — same pattern as
-# tools/e2e/Containerfile.e2e, but with no E2E-only content (workload generator, MCAP
-# writer, test params): this is the image a real deployment pulls and runs, published to
-# ghcr.io on merge to `jazzy` (see .github/workflows/ci.yaml's build-dc-ros-image job).
+# tools/e2e/Containerfile's `runtime` stage (install/ + exec-only deps, not the full
+# source/build/test workspace — that used to make this image 16.9GB): this is the
+# image a real deployment pulls and runs, published to ghcr.io on merge to `jazzy`
+# (see .github/workflows/ci.yaml's build-dc-ros-image job).
 #
 # Unlike Containerfile.e2e, this carries no default params file: `dc_bringup` already
 # installs one (dc_bringup/params/dc_params.yaml) as its `dc_params_file` launch
@@ -15,7 +15,7 @@
 # `dc_params_file:=/path/to/params.yaml run_uploader:=false` as container args (see
 # entrypoint.sh) the same way compose.split.yaml does for the E2E harness.
 
-ARG BASE_IMAGE=dc-workspace:latest
+ARG BASE_IMAGE=dc-runtime:latest
 FROM ${BASE_IMAGE}
 
 COPY entrypoint.sh /opt/dc/entrypoint.sh
