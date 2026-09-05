@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Local-destinations overlay for compose.yaml (docs/containers-single-machine.html):
+# a real Postgres + RustFS pair, so the three-container robot tier can be tried end to
+# end before fleet rollout instead of against compose.yaml's edge-aggregator placeholder.
+# Same images/credentials as tools/e2e/compose.split.yaml's stores — this is that same
+# direct-to-Destination shape, without the e2e workload generator/synthetic params
+# tying it to the test harness (see ./README.md).
+#
+#   DC_ROBOT_PARAMS=./params/robot_params_local.yaml \
+#     podman compose -f compose.yaml -f compose.local-destinations.yaml up
+#
+# No network/network_mode override here: postgres and rustfs join compose.yaml's
+# `default` network (named dc_robot_net) the same implicit way dc-ros/vector/dc-uploader
+# do, so dc-ros/vector reach them as plain hostnames ("postgres", "rustfs") — matching
+# params/robot_params_local.yaml's Destination `host` fields.
+services:
+  postgres:
+    image: docker.io/library/postgres:13
+    container_name: dc_robot_postgres
+    environment:
+      POSTGRES_USER: dc
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dc
+    # Published to the host too, for `psql -h 127.0.0.1` without a `podman exec`.
+    ports:
+      - 5432:5432
+    volumes:
+      - dc_robot_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dc"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  # Available alongside postgres for a files/S3 Destination; robot_params_local.yaml's
+  # default Measurement (uptime) doesn't produce Files, so nothing writes to this bucket
+  # until you add a files-producing Measurement and its `receives: files` Destination
+  # block (see dc_bringup/params/dc_params.yaml's commented rustfs example) — at which
+  # point dc-uploader's DC_UPLOADER_S3_* environment in compose.yaml also needs pointing
+  # here instead of the edge.site.example placeholder.
+  rustfs:
+    image: docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c
+    container_name: dc_robot_rustfs
+    ports:
+      - 9000:9000
+    volumes:
+      - dc_robot_rustfs_data:/data
+    restart: unless-stopped
+
+volumes:
+  dc_robot_pgdata:
+    name: dc_robot_pgdata
+  dc_robot_rustfs_data:
+    name: dc_robot_rustfs_data

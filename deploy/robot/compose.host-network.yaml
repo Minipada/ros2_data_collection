@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Host-network overlay for compose.aio.yaml + compose.local-destinations.yaml: every
+# service reaches the others on 127.0.0.1, so dc-ros needs no params override — the
+# `dc-ros` image already ships `dc_bringup/params/dc_params.yaml` with its Postgres
+# Destination pointed at 127.0.0.1:5432 (see doc/src/dc/setup.md). Not meant for
+# compose.yaml's three-container split (vector/dc-uploader aren't declared here — that
+# topology stays on the isolated network compose.yaml already sets up).
+services:
+  dc-ros:
+    network_mode: host
+  postgres:
+    network_mode: host
+  rustfs:
+    network_mode: host

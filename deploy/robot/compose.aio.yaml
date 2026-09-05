@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# All-in-one alternative to compose.yaml (docs/single-robot-quick-setup.html, ADR-0001's
+# original single-process-tree mode): every ROS node, the Bridge and the Shipper in one
+# `dc-ros` container (managed-shipper, the image's own defaults — no `vector`/
+# `dc-uploader` containers, contrast compose.yaml's unmanaged three-container split,
+# ADR-0015). Pick one base file, not both:
+#
+#   podman compose -f compose.aio.yaml            -f compose.local-destinations.yaml -f compose.host-network.yaml     up
+#   podman compose -f compose.aio.yaml -f compose.isolated-network.yaml -f compose.local-destinations.yaml up
+#
+# See ./README.md for what each stacked file does and why isolated mode needs the
+# params override that compose.isolated-network.yaml adds and host mode doesn't.
+services:
+  dc-ros:
+    image: ${DC_ROS_IMAGE:-ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy}
+    container_name: dc_robot_aio
+    volumes:
+      - dc_robot_aio_buffer:/root/.dc/buffer
+    restart: unless-stopped
+
+volumes:
+  dc_robot_aio_buffer:
+    name: dc_robot_aio_buffer
