@@ -3,6 +3,7 @@
 
 #include "dc_measurements/plugins/measurements/fastdds_stats.hpp"
 
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -116,43 +117,55 @@ dc_interfaces::msg::StringStamped FastddsStats::collect()
   {
     const auto latency = StatisticsBackend::get_data(DataKind::FASTDDS_LATENCY, datawriters, datareaders, 1, poll_start,
                                                      poll_end, StatisticKind::MEAN);
-    if (!latency.empty())
+    // A non-empty result can still be a single NaN bin -- the Statistics Backend's own
+    // documented behavior when a bin has no underlying samples. Treat that the same as "no
+    // data in the window" rather than writing a JSON `null` the schema (type: number) rejects.
+    const auto latency_mean = latency.empty() ? std::nan("") : mean(latency);
+    if (!std::isnan(latency_mean))
     {
       // Fast DDS's Statistics Module reports write-to-notification latency in nanoseconds.
-      data["latency_ns_mean"] = mean(latency);
+      data["latency_ns_mean"] = latency_mean;
     }
   }
   if (!datawriters.empty())
   {
     const auto throughput = StatisticsBackend::get_data(DataKind::PUBLICATION_THROUGHPUT, datawriters, 1, poll_start,
                                                         poll_end, StatisticKind::MEAN);
-    if (!throughput.empty())
+    const auto throughput_mean = throughput.empty() ? std::nan("") : mean(throughput);
+    if (!std::isnan(throughput_mean))
     {
-      data["publication_throughput_bytes_per_sec_mean"] = mean(throughput);
+      data["publication_throughput_bytes_per_sec_mean"] = throughput_mean;
     }
   }
   if (!datareaders.empty())
   {
     const auto throughput = StatisticsBackend::get_data(DataKind::SUBSCRIPTION_THROUGHPUT, datareaders, 1, poll_start,
                                                         poll_end, StatisticKind::MEAN);
-    if (!throughput.empty())
+    const auto throughput_mean = throughput.empty() ? std::nan("") : mean(throughput);
+    if (!std::isnan(throughput_mean))
     {
-      data["subscription_throughput_bytes_per_sec_mean"] = mean(throughput);
+      data["subscription_throughput_bytes_per_sec_mean"] = throughput_mean;
     }
   }
-  if (!participants.empty())
+  // RTPS_PACKETS_SENT/LOST are Participant->Locator DataKinds (per Fast-DDS-statistics-backend's
+  // own get_data table), not single-entity ones -- the single-entity overload throws BadParameter
+  // ("... but data_type requires two entities") for them.
+  const auto locators = StatisticsBackend::get_entities(EntityKind::LOCATOR, monitor_id_);
+  if (!participants.empty() && !locators.empty())
   {
-    const auto sent = StatisticsBackend::get_data(DataKind::RTPS_PACKETS_SENT, participants, 1, poll_start, poll_end,
-                                                  StatisticKind::SUM);
-    if (!sent.empty())
+    const auto sent = StatisticsBackend::get_data(DataKind::RTPS_PACKETS_SENT, participants, locators, 1, poll_start,
+                                                  poll_end, StatisticKind::SUM);
+    const auto sent_sum = sent.empty() ? std::nan("") : sum(sent);
+    if (!std::isnan(sent_sum))
     {
-      data["rtps_packets_sent"] = static_cast<int64_t>(sum(sent));
+      data["rtps_packets_sent"] = static_cast<int64_t>(sent_sum);
     }
-    const auto lost = StatisticsBackend::get_data(DataKind::RTPS_PACKETS_LOST, participants, 1, poll_start, poll_end,
-                                                  StatisticKind::SUM);
-    if (!lost.empty())
+    const auto lost = StatisticsBackend::get_data(DataKind::RTPS_PACKETS_LOST, participants, locators, 1, poll_start,
+                                                  poll_end, StatisticKind::SUM);
+    const auto lost_sum = lost.empty() ? std::nan("") : sum(lost);
+    if (!std::isnan(lost_sum))
     {
-      data["rtps_packets_lost"] = static_cast<int64_t>(sum(lost));
+      data["rtps_packets_lost"] = static_cast<int64_t>(lost_sum);
     }
   }
 
