@@ -89,7 +89,7 @@
 - [CLI tools](./dc/cli.md)
 - [Requirements](./dc/requirements.md)
 - [Architecture Decision Records](./dc/adr.md)
-<!-- BEGIN GENERATED ADR LIST -->
+  <!-- BEGIN GENERATED ADR LIST -->
   - [0001 - External shipper process replaces embedded Fluent Bit](./dc/adr/0001-external-shipper-replaces-embedded-fluent-bit.md)
   - [0002 - Vector is the blessed default shipper](./dc/adr/0002-vector-as-default-shipper.md)
   - [0003 - Destination config: blessed set via ROS params, everything else via passthrough](./dc/adr/0003-blessed-destinations-plus-passthrough.md)
@@ -105,7 +105,7 @@
   - [0014 - The Uploader runs as its own process](./dc/adr/0014-uploader-runs-as-its-own-process.md)
   - [0015 - Split deployment topology: the Shipper and the Uploader as separable processes](./dc/adr/0015-split-deployment-topology.md)
   - [0016 - Helm chart for the robot tier, Kustomize overlays per site/robot](./dc/adr/0016-helm-chart-plus-kustomize-overlays.md)
-<!-- END GENERATED ADR LIST -->
+  <!-- END GENERATED ADR LIST -->
 - [Future work and Roadmap](./dc/future_work.md)
 - [Contributing](./dc/contributing.md)
 - [FAQ](./dc/faq.md)

@@ -65,19 +65,27 @@ def copy_pages(found: list[Path]) -> None:
 
 
 def generated_block(found: list[Path]) -> str:
-    """The SUMMARY.md lines to place between the markers, one per ADR."""
-    lines = [BEGIN_MARKER]
+    """The SUMMARY.md lines to place between the markers, one per ADR.
+
+    Indented two spaces, markers included: mdbook's SUMMARY.md parser nests a list item
+    under its parent by indentation alone, and an unindented HTML comment between the
+    parent and its children breaks that nesting, dumping every ADR in as a top-level
+    chapter instead of under "Architecture Decision Records".
+    """
+    lines = [f"  {BEGIN_MARKER}"]
     for adr in found:
         number = NUMBER_RE.match(adr.name).group(1)
         lines.append(f"  - [{number} - {title_of(adr)}](./dc/adr/{adr.name})")
-    lines.append(END_MARKER)
+    lines.append(f"  {END_MARKER}")
     return "\n".join(lines)
 
 
 def rewrite_summary(found: list[Path]) -> None:
     """Replace the marker-delimited ADR list in SUMMARY.md, leaving the rest untouched."""
     text = SUMMARY.read_text()
-    pattern = re.compile(f"{re.escape(BEGIN_MARKER)}.*?{re.escape(END_MARKER)}", re.DOTALL)
+    # Leading whitespace is part of the match (not just the marker text) so a run's fixed
+    # two-space indent replaces the previous run's, rather than compounding on top of it.
+    pattern = re.compile(rf"[ \t]*{re.escape(BEGIN_MARKER)}.*?{re.escape(END_MARKER)}", re.DOTALL)
     if not pattern.search(text):
         sys.exit(
             f"{SUMMARY}: no {BEGIN_MARKER} .. {END_MARKER} block found -- "

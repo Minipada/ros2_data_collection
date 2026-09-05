@@ -20,6 +20,13 @@ PORT="${PORT:-3000}"
 build_doc_image
 generate_doc_inputs
 
+# `mdbook serve`'s own first build (pinned 0.4.52) skips copying the theme's static assets
+# (css/, book.js, ...) when doc/book/ doesn't already exist -- a plain `mdbook build` doesn't
+# have this problem, so seed doc/book/html with one before handing off to `serve`, which then
+# preserves it across its own incremental rebuilds.
+echo "==> Building the book once to seed static assets"
+run_in_image "/doc" mdbook build
+
 echo "==> Serving the book at http://127.0.0.1:${PORT} (Ctrl-C to stop)"
 "${ENGINE}" run --rm -it \
     -v "${REPO_ROOT}:/ws:z" \
