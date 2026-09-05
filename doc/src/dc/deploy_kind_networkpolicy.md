@@ -46,7 +46,8 @@ CI instead pulls the PR's just-built `:<sha>` image (`build-dc-ros-image`'s own 
 before it's pushed — build it yourself and point `DC_ROS_IMAGE` at the local tag:
 
 ```sh
-podman build -t dc-ros:local -f containers/dc-ros/Containerfile --build-arg BASE_IMAGE=dc-workspace:latest containers/dc-ros
+TARGET=runtime IMAGE_TAG=dc-runtime:local ./tools/e2e/scripts/build.sh
+podman build -t dc-ros:local -f containers/dc-ros/Containerfile --build-arg BASE_IMAGE=dc-runtime:local containers/dc-ros
 export DC_ROS_IMAGE=dc-ros:local
 ```
 
