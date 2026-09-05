@@ -9,9 +9,6 @@ other destination in Vector's sink catalog is available through the **passthroug
 Vector config snippets listed in the `custom_config_files` parameter, merged natively by
 Vector.
 
-Coming from DC 1.x and its `flb_*` destination plugins? See the
-[migration guide](./migration.md).
-
 ## Verified sink versions
 
 | Sink                          | Version verified            |

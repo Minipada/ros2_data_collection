@@ -28,14 +28,6 @@ that list them in `inputs` (see [Destinations](./destinations.md)). **Conditions
 pluginlib plugins loaded here too — optional predicates that gate whether a Measurement
 collects, e.g. only when the robot is not moving.
 
-```admonish warning title="tags no longer selects a Destination"
-In DC 1.x, a Measurement's `tags` parameter named the destination plugins that should
-receive its Records. In DC 2.0, a Destination declares the topics it receives in its own
-`inputs` list. The parameter is still read, and a non-empty value is still written into
-the Record as a `tags` field, but it has no routing effect — remove it. See the
-[migration guide](./migration.md#tags-what-changed).
-```
-
 | Parameter name                               | Description                                                                                                                                               | Type(s)     | Default                       |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ----------------------------- |
 | measurement_plugins                          | Name of the measurement plugins to load                                                                                                                   | list\[str\] | N/A (mandatory)               |
@@ -90,29 +82,29 @@ Each measurement is collected through a node and has these configuration paramet
 
 | Parameter name                 | Description                                                                                  | Type(s)     | Default                              |
 | ------------------------------ | -------------------------------------------------------------------------------------------- | ----------- | ------------------------------------ |
-| **plugin**                     | Name of the plugin to load                                                                   | str         | N/A (mandatory)                      |
-| **topic_output**               | Topic where result will be published                                                         | str         | "/dc/measurement/<measurement_name>" |
-| **group_key**                  | Value of the key used when grouped                                                           | str         | N/A (mandatory)                      |
-| **debug**                      | More verbose output                                                                          | bool        | false                                |
-| **polling_interval**           | Interval to which data is collected in milliseconds                                          | int (>=100) | 1000                                 |
-| **init_collect**               | Collect when the node starts instead of waiting the first tick                               | bool        | true                                 |
-| **init_max_measurements**      | Collect a maximum of n measurements when starting the node (-1 = never, 0 = infinite)        | int         | 0                                    |
+| **buffer_duration_sec**        | Seconds of history to buffer instead of publishing live; 0 disables buffering and preserves normal live publishing | float | 0 |
 | **condition_max_measurements** | Collect a maximum of n measurements when conditions are activated (-1 = never, 0 = infinite) | int         | 0                                    |
+| **cooldown_sec**               | Seconds to ignore further `FlushEvent`s once post-roll ends, before buffering re-arms itself; 0 re-arms immediately | float | 0 |
+| **debug**                      | More verbose output                                                                          | bool        | false                                |
 | **enable_validator**           | Will validate the data against a JSON schema                                                 | bool        | true                                 |
-| **json_schema_path**           | Path to the JSON schema, ignored if empty string                                             | str         | N/A (optional)                       |
-| **remote_prefixes**            | Prefixes to apply to the remote paths of the Files this Measurement produces                 | str         | N/A (optional)                       |
-| **remote_keys**                | Destination names the Files this Measurement produces are uploaded to; each becomes a key under the Record's `remote_paths` | list\[str\] | N/A (optional) |
+| **flush_topic**                | Topic to receive the `FlushEvent` (see [Triggers](./triggers.md)) that releases the buffered window, tagging each Record with the event's `incident_id` | str | "/dc/flush" |
+| **gate_condition**             | Name of a Condition that must become true once before any collection is published; then latches open permanently and is never consulted again | str | N/A (optional) |
+| **group_key**                  | Value of the key used when grouped                                                           | str         | N/A (mandatory)                      |
 | **if_all_conditions**          | Collect only if all conditions are activated                                                 | list\[str\] | N/A (optional)                       |
 | **if_any_conditions**          | Collect if any conditions is activated                                                       | list\[str\] | N/A (optional)                       |
 | **if_none_conditions**         | Collect only if all conditions are not activated                                             | list\[str\] | N/A (optional)                       |
-| **gate_condition**             | Name of a Condition that must become true once before any collection is published; then latches open permanently and is never consulted again | str | N/A (optional) |
 | **include_measurement_name**   | Include measurement name in the JSON data                                                    | bool        | false                                |
 | **include_measurement_plugin** | Include measurement plugin name in the JSON data                                             | bool        | false                                |
-| **buffer_duration_sec**        | Seconds of history to buffer instead of publishing live; 0 disables buffering and preserves normal live publishing | float | 0 |
-| **post_roll_duration_sec**     | Seconds to keep publishing live after a flush, still tagged with the same `incident_id`; 0 means pre-roll only | float | 0 |
-| **cooldown_sec**               | Seconds to ignore further `FlushEvent`s once post-roll ends, before buffering re-arms itself; 0 re-arms immediately | float | 0 |
+| **init_collect**               | Collect when the node starts instead of waiting the first tick                               | bool        | true                                 |
+| **init_max_measurements**      | Collect a maximum of n measurements when starting the node (-1 = never, 0 = infinite)        | int         | 0                                    |
+| **json_schema_path**           | Path to the JSON schema, ignored if empty string                                             | str         | N/A (optional)                       |
 | **max_flush_rate_hz**          | Ceiling on how fast the buffered window is emitted once a flush releases it; 0 releases the whole window in one burst | float | 0 |
-| **flush_topic**                | Topic to receive the `FlushEvent` (see [Triggers](./triggers.md)) that releases the buffered window, tagging each Record with the event's `incident_id` | str | "/dc/flush" |
+| **plugin**                     | Name of the plugin to load                                                                   | str         | N/A (mandatory)                      |
+| **polling_interval**           | Interval to which data is collected in milliseconds                                          | int (>=100) | 1000                                 |
+| **post_roll_duration_sec**     | Seconds to keep publishing live after a flush, still tagged with the same `incident_id`; 0 means pre-roll only | float | 0 |
+| **remote_keys**                | Destination names the Files this Measurement produces are uploaded to; each becomes a key under the Record's `remote_paths` | list\[str\] | N/A (optional) |
+| **remote_prefixes**            | Prefixes to apply to the remote paths of the Files this Measurement produces                 | str         | N/A (optional)                       |
+| **topic_output**               | Topic where result will be published                                                         | str         | "/dc/measurement/<measurement_name>" |
 
 ```admonish info title="buffer_duration_sec and friends: pre-event circular-buffer capture"
 When `buffer_duration_sec` is set above 0, this Measurement stops publishing live: each

@@ -27,12 +27,6 @@ The Group node is written in Python: allocating and passing a variable number of
 the `ApproximateTimeSynchronizer` is straightforward there and awkward in C++.
 ```
 
-```admonish warning title="tags no longer selects a Destination"
-As with Measurements, a Group's DC 1.x `tags` parameter no longer routes anything —
-remove it and list the Group's `output` topic in the receiving Destination's `inputs`.
-See the [migration guide](./migration.md#tags-what-changed).
-```
-
 ## Node parameters
 
 | Parameter | Description      | Type        | Default |

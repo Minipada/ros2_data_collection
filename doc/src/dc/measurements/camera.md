@@ -5,28 +5,6 @@
 Save camera image files: raw, rotated and/or inspected. Images can be inspected using different
 detection modules (e.g. barcode/QR detection, in-process via [ZXing-C++](https://github.com/zxing-cpp/zxing-cpp))
 
-```admonish info title="Keep the whole code in frame, and rotation is not a concern"
-ZXing-C++ replaced the Python `zbar`/`pyzbar` service (#123) mainly to remove a per-frame service
-round trip and the last Python runtime dependency in the detection path. Measured against
-`dc_simulation`'s demo QR assets under camera-realistic degradations, both libraries were perfect
-on straight-on views, dim lighting, downscale+blur and mild (20%) perspective skew, and
-ZXing-C++ is far more robust to **perspective/tilt distortion** (100% vs. 0% for `zbar` at a 35%
-skew) — the physically realistic failure mode for a robot camera viewing a code off-axis.
-
-This page previously warned that ZXing-C++ could not decode QR codes rotated 30-45° in-plane.
-**That was a measurement artifact, not a library limitation** (#297): the benchmark rotated the
-demo texture inside its own 290x365 bounds, and since the printed label offsets the 210 px code
-from the centre it turns about, a corner of the code — with a finder pattern in it — swings out
-of frame between 30° and 75°. A code the frame cuts a finder pattern off is unreadable at any
-angle by any decoder. With the code fully in frame, `libzxing` 2.2.1 (the exact version `rosdep`
-resolves on Ubuntu Noble/Jazzy) decodes it at every in-plane angle from 0° to 90°;
-`dc_measurements`' `test_barcode_rotation` asserts both halves of that.
-
-So the guidance is about framing, not angle: keep the whole code, plus its quiet zone, inside the
-image. `rotation_angle` below only re-orients the image by whole quarter turns — it neither
-causes nor fixes this, since it never crops.
-```
-
 ## Parameters
 
 | Parameter                 | Description                                                                                             | Type                 | Default                              |
