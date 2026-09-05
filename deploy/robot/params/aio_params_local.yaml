@@ -1,0 +1,42 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# dc_bringup/params/dc_params.yaml (the dc-ros image's own baked-in default), with its
+# Postgres Destination's `host` pointed at compose.local-destinations.yaml's `postgres`
+# service instead of 127.0.0.1 — needed only for compose.isolated-network.yaml, which
+# puts dc-ros on a named bridge network where "127.0.0.1" no longer reaches Postgres'
+# own container. The Bridge doesn't env-expand the `host` field (only credentials and
+# data-dir paths — see doc/src/dc/destinations.md), so this is a full file, not an
+# override var. compose.host-network.yaml needs none of this: 127.0.0.1 already works
+# there, so it runs the image with no params override at all.
+measurement_server:
+  ros__parameters:
+    measurement_plugins: ["uptime"]
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      group_key: "uptime"
+      topic_output: "/dc/measurement/uptime"
+
+dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["pgsql"]
+    pgsql:
+      type: postgres
+      receives: records
+      inputs: ["/dc/measurement/uptime"]
+      host: "postgres"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc"
+      time_key: "date"
+      time_format: "epoch_nanos"
+    # compose.local-destinations.yaml also brings up a `rustfs` service (S3-compatible),
+    # reachable here at http://rustfs:9000 — add a files-producing Measurement (camera,
+    # map, …) and a `receives: files` Destination block to exercise it; see
+    # dc_bringup/params/dc_params.yaml's own commented rustfs example for the shape.
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224

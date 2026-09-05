@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Isolated-network overlay for compose.aio.yaml + compose.local-destinations.yaml: a
+# named custom bridge network (matching compose.yaml's own dc_robot_net) instead of the
+# host's, so dc-ros reaches Postgres as the hostname "postgres" rather than 127.0.0.1 —
+# which means, unlike compose.host-network.yaml, dc-ros also needs a params override
+# pointed at that hostname instead of the image's baked-in 127.0.0.1 default (the Bridge
+# doesn't env-expand the `host` field — see params/aio_params_local.yaml's header).
+networks:
+  default:
+    name: dc_robot_net
+
+services:
+  dc-ros:
+    volumes:
+      - ${DC_ROBOT_AIO_PARAMS:-./params/aio_params_local.yaml}:/opt/dc/dc_params.yaml:ro
+    command: ["dc_params_file:=/opt/dc/dc_params.yaml"]

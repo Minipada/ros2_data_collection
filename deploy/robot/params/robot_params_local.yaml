@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# robot_params.yaml, with its Records Destination swapped from the fleet's edge-forward
+# (`edge_vector` -> edge.site.example) to a direct Postgres Destination reachable on
+# compose.local-destinations.yaml's `postgres` service — for trying the three-container
+# robot tier end to end before fleet rollout (docs/containers-single-machine.html). The
+# topology (unmanaged shipper, the local `vector` container) is otherwise unchanged: only
+# what the Bridge renders into vector's config differs, per ADR-0015 — see
+# doc/src/dc/destinations.md#deployment-modes-shippermanaged.
+measurement_server:
+  ros__parameters:
+    save_local_base_path: "$HOME/.dc/robot/data/%Y/%M/%D/%H"
+    all_base_path: "robot"
+    measurement_plugins: ["uptime"]
+
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      polling_interval: 1000
+      group_key: "uptime"
+
+dc_bridge:
+  ros__parameters:
+    shipper:
+      managed: false
+      config_path: "/etc/dc/shipper/vector.toml"
+      data_dir: "/var/lib/vector"
+      bind_host: "0.0.0.0"
+    uploader:
+      data_dir: "$HOME/.dc/robot/uploader"
+    destinations: ["pgsql"]
+    pgsql:
+      type: postgres
+      receives: records
+      inputs: ["/dc/measurement/uptime"]
+      # compose.local-destinations.yaml's postgres service, credentials to match.
+      host: "postgres"
+      port: 5432
+      user: "dc"
+      password: "password"
+      database: "dc"
+      table: "dc"
+      time_key: "date"
+      time_format: "epoch_nanos"
+
+    vector_forward_host: "vector"
+    vector_forward_port: 24224
+
+lifecycle_manager_dc:
+  ros__parameters:
+    node_names: ["measurement_server"]
+    transitions: [configure, activate]

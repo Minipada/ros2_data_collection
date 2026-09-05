@@ -75,6 +75,160 @@ aggregator, and Files go to edge-local object storage. Both are placeholder host
 storage are deployment infrastructure outside this repository (epic #440's "Out of Scope"),
 not something these manifests can stand up.
 
+## Trying it against a real store (`compose.local-destinations.yaml`)
+
+`compose.yaml`'s `dc-ros` ships `params/robot_params.yaml`, which points its only
+Destination at `edge.site.example` — a placeholder, since the robot tier has no
+internet access in the fleet shape it renders (see "What differs from
+`tools/e2e/compose.split.yaml`" above). To try the same three-container topology end to
+end before fleet rollout — the scenario `docs/containers-single-machine.html` describes
+— stack `compose.local-destinations.yaml` (a real Postgres + RustFS pair) on top and
+point `dc-ros` at `params/robot_params_local.yaml` instead, which swaps that one
+Destination block for a direct Postgres connection to it:
+
+```sh
+DC_ROBOT_PARAMS=./params/robot_params_local.yaml \
+  podman compose -f compose.yaml -f compose.local-destinations.yaml up
+```
+
+Same topology, same images, same volumes — only the rendered Vector config differs
+(ADR-0015). `psql -h 127.0.0.1 -U dc -d dc -c 'select * from dc order by date desc
+limit 5;'` (password `password`) checks Records are landing.
+
+### Running it by hand, one terminal per container
+
+`podman compose` backgrounds every container under one command; to watch each
+container's own log stream directly instead, run this same stack as five plain
+`podman run` commands, one per terminal — no compose file involved, same images,
+volumes and network names `podman compose config` resolves them to above. Set up the
+shared network and volumes once:
+
+```sh
+podman network create dc_robot_net
+podman volume create dc_robot_pgdata
+podman volume create dc_robot_rustfs_data
+podman volume create dc_robot_uploader
+podman volume create dc_robot_config
+podman volume create dc_robot_buffer
+```
+
+Then, one command per terminal (any order — nothing here uses `depends_on`; see this
+file's own compose.yaml header for why that's safe):
+
+```sh
+# Terminal 1 — Postgres
+podman run --rm -it --name dc_robot_postgres --network dc_robot_net \
+  -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
+  -p 5432:5432 -v dc_robot_pgdata:/var/lib/postgresql/data \
+  docker.io/library/postgres:13
+
+# Terminal 2 — RustFS
+podman run --rm -it --name dc_robot_rustfs --network dc_robot_net \
+  -p 9000:9000 -v dc_robot_rustfs_data:/data \
+  docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c
+
+# Terminal 3 — vector (the Shipper compose.yaml's dc-ros renders config for)
+podman run --rm -it --name dc_robot_vector --network dc_robot_net \
+  -v dc_robot_buffer:/var/lib/vector -v dc_robot_config:/etc/dc/shipper:ro \
+  --entrypoint /bin/sh docker.io/timberio/vector:0.57.0-debian -c \
+  'trap exit TERM; until [ -f /etc/dc/shipper/vector.toml ]; do sleep 0.2; done; exec vector --config /etc/dc/shipper/vector.toml --watch-config'
+
+# Terminal 4 — dc-ros (unmanaged shipper, run_uploader:=false — dc-uploader is its own container below)
+podman run --rm -it --name dc_robot_dc_ros --network dc_robot_net \
+  -v dc_robot_uploader:/root/.dc/robot/uploader -v dc_robot_config:/etc/dc/shipper \
+  -v "$(pwd)/params/robot_params_local.yaml:/opt/dc/robot_params.yaml:ro" \
+  ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy \
+  dc_params_file:=/opt/dc/robot_params.yaml run_uploader:=false
+
+# Terminal 5 — dc-uploader (still points at the edge.site.example S3 placeholder —
+# robot_params_local.yaml only swaps the Records/Postgres path, see
+# compose.local-destinations.yaml's rustfs comment for wiring Files to rustfs instead)
+podman run --rm -it --name dc_robot_dc_uploader --network dc_robot_net \
+  -e DC_UPLOADER_STORAGE_NAME=edge \
+  -e DC_UPLOADER_QUEUE_DIR=/root/.dc/robot/uploader/queue/upload \
+  -e DC_UPLOADER_STATE_DIR=/root/.dc/robot/uploader/uploader \
+  -e DC_UPLOADER_SHIPPER_HOST=vector -e DC_UPLOADER_SHIPPER_PORT=24224 \
+  -e DC_UPLOADER_S3_BUCKET=dc-robot -e DC_UPLOADER_S3_ENDPOINT=http://edge.site.example:9000 \
+  -e DC_UPLOADER_S3_ACCESS_KEY_ID=changeme -e DC_UPLOADER_S3_SECRET_ACCESS_KEY=changeme \
+  -e DC_UPLOADER_DELETE_WHEN_SENT=true \
+  -v dc_robot_uploader:/root/.dc/robot/uploader \
+  ghcr.io/minipada/ros2_data_collection/dc-uploader:jazzy
+```
+
+Tear down: `Ctrl-C` each terminal, then `podman network rm dc_robot_net` and `podman
+volume rm dc_robot_pgdata dc_robot_rustfs_data dc_robot_uploader dc_robot_config
+dc_robot_buffer` if you're done with the data too.
+
+## All-in-one, single container (`compose.aio.yaml`)
+
+For the other first-class mode ADR-0001/ADR-0015 describe — one container, managed
+shipper, no `vector`/`dc-uploader` split — `compose.aio.yaml` is an alternative base to
+`compose.yaml`, not something stacked with it. It reuses
+`compose.local-destinations.yaml` for its stores (Postgres + RustFS, same as above) and
+picks its network with one of two small overlays instead of a params-file choice alone,
+since the Bridge doesn't env-expand the `host` field a network change would otherwise need:
+
+```sh
+# Host network: every container reaches the others on 127.0.0.1, so this runs the
+# dc-ros image with no params override at all — its own baked-in default
+# (dc_bringup/params/dc_params.yaml) already points at 127.0.0.1:5432.
+podman compose -f compose.aio.yaml -f compose.local-destinations.yaml -f compose.host-network.yaml up
+
+# Isolated network: dc-ros joins the same named bridge network
+# (dc_robot_net) as compose.yaml's split topology, reaching Postgres as the hostname
+# "postgres" — needs params/aio_params_local.yaml, which compose.isolated-network.yaml
+# mounts in automatically.
+podman compose -f compose.aio.yaml -f compose.isolated-network.yaml -f compose.local-destinations.yaml up
+```
+
+`psql -h 127.0.0.1 -U dc -d dc -c 'select * from dc order by date desc limit 5;'`
+(password `password`) checks Records either way.
+
+### Running it by hand, one terminal per container
+
+Three plain `podman run` commands instead of the two-file `compose.aio.yaml` +
+`compose.local-destinations.yaml` stack — one per terminal, same images/volumes those
+resolve to. Host network (matches `compose.host-network.yaml`):
+
+```sh
+podman volume create dc_robot_pgdata
+podman volume create dc_robot_rustfs_data
+podman volume create dc_robot_aio_buffer
+
+# Terminal 1 — Postgres
+podman run --rm -it --network host --name dc_robot_postgres \
+  -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
+  -v dc_robot_pgdata:/var/lib/postgresql/data \
+  docker.io/library/postgres:13
+
+# Terminal 2 — RustFS
+podman run --rm -it --network host --name dc_robot_rustfs \
+  -v dc_robot_rustfs_data:/data \
+  docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c
+
+# Terminal 3 — dc-ros: no params override needed, its baked-in default
+# (dc_bringup/params/dc_params.yaml) already points at 127.0.0.1:5432.
+podman run --rm -it --network host --name dc_robot_aio \
+  -v dc_robot_aio_buffer:/root/.dc/buffer \
+  ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy
+```
+
+Isolated network (matches `compose.isolated-network.yaml`) — same three terminals, but
+create `dc_robot_net` first, drop every `--network host` for `--network dc_robot_net`,
+publish the stores' ports explicitly since there's no host networking to expose them
+through (`-p 5432:5432` / `-p 9000:9000`), and point dc-ros at
+`params/aio_params_local.yaml` (`host: "postgres"`) instead of running it bare:
+
+```sh
+podman network create dc_robot_net
+# Terminal 3, isolated variant:
+podman run --rm -it --network dc_robot_net --name dc_robot_aio \
+  -v dc_robot_aio_buffer:/root/.dc/buffer \
+  -v "$(pwd)/params/aio_params_local.yaml:/opt/dc/dc_params.yaml:ro" \
+  ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy \
+  dc_params_file:=/opt/dc/dc_params.yaml
+```
+
 ## Diagrams
 
 `docs/` holds standalone, interactive diagrams of the three deployment shapes discussed

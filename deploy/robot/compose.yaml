@@ -22,7 +22,10 @@ services:
     volumes:
       - dc_robot_uploader:/root/.dc/robot/uploader
       - dc_robot_config:/etc/dc/shipper
-      - ./params/robot_params.yaml:/opt/dc/robot_params.yaml:ro
+      # DC_ROBOT_PARAMS lets compose.local-destinations.yaml (see ./README.md) point
+      # dc-ros at params/robot_params_local.yaml instead, with no need to redeclare
+      # this service's volumes in that overlay.
+      - ${DC_ROBOT_PARAMS:-./params/robot_params.yaml}:/opt/dc/robot_params.yaml:ro
     command: ["dc_params_file:=/opt/dc/robot_params.yaml", "run_uploader:=false"]
     restart: unless-stopped
 
