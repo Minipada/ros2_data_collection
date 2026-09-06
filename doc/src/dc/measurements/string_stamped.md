@@ -16,13 +16,26 @@ Collect generic data from a topic publishing a StringStamped message and republi
 
 Given that the data is customized here, there is no default schema.
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
 my_data:
   plugin: "dc_measurements/StringStamped"
   topic_output: "/dc/measurement/my_data"
-  topic: "/hello-world"
+  topic: "/hello_world"
   timer_based: true
+  enable_validator: false # no schema exists for custom, per-topic data -- see Schema above
+```
+
+## Example output
+
+```json
+{
+  "flattened": false,
+  "name": "string_stamped",
+  "nested": false,
+  "run_id": "169",
+  "temperature": 21.5
+}
 ```

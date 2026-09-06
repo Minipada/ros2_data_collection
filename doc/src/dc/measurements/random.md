@@ -32,7 +32,7 @@ backpressure testing.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -43,4 +43,16 @@ random:
   min: 0.0
   max: 1.0
   seed: 42
+```
+
+## Example output
+
+```json
+{
+  "flattened": false,
+  "name": "random",
+  "nested": false,
+  "run_id": "169",
+  "value": 0.8265497558024156
+}
 ```

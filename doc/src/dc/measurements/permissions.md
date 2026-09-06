@@ -11,7 +11,7 @@ Collect UID, GID, if a file or directory exists and its permissions (in rwx or i
 | **format** | Format to collect permissions in                                                  | str(rwx or int) | "int"           |
 | **path**   | Path to the file or directory to collect data from, support environment variables | str             | N/A (mandatory) |
 
-## Schemas
+## Schema
 
 ```json
 {
@@ -47,7 +47,7 @@ neither is in the schema above. They're absent, not empty, when the file is owne
 id the container doesn't recognize (e.g. owned by the host, not the container).
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -56,4 +56,21 @@ permission_home_dc:
   topic_output: "/dc/measurement/permissions_home_dc"
   path: "$HOME/dc"
   format: "rwx"
+```
+
+## Example output
+
+```json
+{
+  "exists": true,
+  "flattened": false,
+  "gid": 0,
+  "group": "root",
+  "name": "permission_home_dc",
+  "nested": false,
+  "permissions": "rwx------",
+  "run_id": "169",
+  "uid": 0,
+  "user": "root"
+}
 ```

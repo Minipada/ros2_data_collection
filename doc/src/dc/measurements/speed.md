@@ -60,7 +60,7 @@ Collect robot speed using the Odom topic.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -68,4 +68,26 @@ speed:
   plugin: "dc_measurements/Speed"
   topic_output: "/dc/measurement/speed"
   odom_topic: "/odom"
+```
+
+## Example output
+
+```json
+{
+  "angular": {
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+  },
+  "computed": 0.5,
+  "flattened": false,
+  "linear": {
+    "x": 0.5,
+    "y": 0.0,
+    "z": 0.0
+  },
+  "name": "speed",
+  "nested": false,
+  "run_id": "169"
+}
 ```

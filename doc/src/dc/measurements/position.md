@@ -37,11 +37,25 @@ Collect x, y and yaw of the robot.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
 position:
   plugin: "dc_measurements/Position"
   topic_output: "/dc/measurement/position"
+```
+
+## Example output
+
+```json
+{
+  "flattened": false,
+  "name": "position",
+  "nested": false,
+  "run_id": "169",
+  "x": 0.0,
+  "y": 0.0,
+  "yaw": 0.0
+}
 ```

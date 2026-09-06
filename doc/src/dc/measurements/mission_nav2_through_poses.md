@@ -80,7 +80,7 @@ denominator.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -91,7 +91,9 @@ mission_nav2_through_poses:
   action_name: "navigate_through_poses"
 ```
 
-Example Record data, start:
+## Example output
+
+Start:
 
 ```json
 {

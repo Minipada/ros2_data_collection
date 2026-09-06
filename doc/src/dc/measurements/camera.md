@@ -114,59 +114,6 @@ than a hint:
   than centimetres.
 ```
 
-## Measurement node configuration
-The remote paths are also saved in the JSON under *<measurement_name>.<destination>_img_paths.(raw|rotated|inspected)*. If images want to be sent to a self-hosted S3-compatible store such as [RustFS](https://rustfs.com/), add "rustfs" in *remote_keys*. This will add a remote path that can later be used in your API.
-
-Note that this remote key is not included in the JSON schema, which only contains the local paths. If you want to enforce the schema with your custom remote key, you will need to write it and load it manually.
-
-```yaml
-...
-camera:
-  plugin: "dc_measurements/Camera"
-  group_key: "camera_with_codes"
-  topic_output: "/dc/measurement/camera_with_codes"
-  polling_interval: 10000
-  init_collect: true
-  node_name: "dc_measurement_camera"
-  cam_topic: "/camera_with_codes"
-  cam_name: my_camera_with_codes
-  enable_validator: false
-  draw_det_barcodes: true
-  save_raw_img: true
-  save_rotated_img: false
-  save_detections_img: true
-  save_raw_path: "camera_with_codes/raw/%Y-%m-%dT%H-%M-%S"
-  save_rotated_path: "camera_with_codes/rotated/%Y-%m-%dT%H-%M-%S"
-  save_inspected_path: "camera_with_codes/inspected/%Y-%m-%dT%H-%M-%S"
-  rotation_angle: 0
-  detection_modules: ["barcode"]
-  remote_prefixes: [""]
-  remote_keys: ["rustfs"] # Will create paths for RustFS, does not send the file
-```
-
-### Destination (dc_bridge) configuration
-Now that the path is set, it can be used to know where to send the image. The
-Destination name (`rustfs`) must match the `remote_keys` entry above — the Uploader
-matches a Record's `remote_paths` keys against `receives: files` Destination names (see
-[Destinations](../destinations.md)):
-
-```yaml
-dc_bridge:
-  ros__parameters:
-    destinations: ["rustfs", "pgsql"]
-    rustfs:
-      type: s3
-      receives: files
-      inputs: ["/dc/group/cameras"]
-      endpoint: "http://127.0.0.1:9000"
-      access_key_id: "XEYqG4ZcPY5jiq5i"
-      secret_access_key: "ji011KCtI82ZeQS6UwsQAg8x9VR4lSaQ"
-      force_path_style: true
-      bucket: "mybucket"
-    files:
-      metadata_destination: "pgsql"  # a receives: records Destination for status rows
-```
-
 ## Schema
 
 ```json
@@ -308,3 +255,84 @@ dc_bridge:
   "type": "object"
 }
 ```
+
+## Configuration
+
+The remote paths are also saved in the JSON under *<measurement_name>.<destination>_img_paths.(raw|rotated|inspected)*. If images want to be sent to a self-hosted S3-compatible store such as [RustFS](https://rustfs.com/), add "rustfs" in *remote_keys*. This will add a remote path that can later be used in your API.
+
+Note that this remote key is not included in the JSON schema, which only contains the local paths. If you want to enforce the schema with your custom remote key, you will need to write it and load it manually.
+
+```yaml
+...
+camera:
+  plugin: "dc_measurements/Camera"
+  group_key: "camera_with_codes"
+  topic_output: "/dc/measurement/camera_with_codes"
+  polling_interval: 10000
+  init_collect: true
+  node_name: "dc_measurement_camera"
+  cam_topic: "/camera_with_codes"
+  cam_name: my_camera_with_codes
+  enable_validator: false
+  draw_det_barcodes: true
+  save_raw_img: true
+  save_rotated_img: false
+  save_detections_img: true
+  save_raw_path: "camera_with_codes/raw/%Y-%m-%dT%H-%M-%S"
+  save_rotated_path: "camera_with_codes/rotated/%Y-%m-%dT%H-%M-%S"
+  save_inspected_path: "camera_with_codes/inspected/%Y-%m-%dT%H-%M-%S"
+  rotation_angle: 0
+  detection_modules: ["barcode"]
+  remote_prefixes: [""]
+  remote_keys: ["rustfs"] # Will create paths for RustFS, does not send the file
+```
+
+### Destination (dc_bridge) configuration
+Now that the path is set, it can be used to know where to send the image. The
+Destination name (`rustfs`) must match the `remote_keys` entry above — the Uploader
+matches a Record's `remote_paths` keys against `receives: files` Destination names (see
+[Destinations](../destinations.md)):
+
+```yaml
+dc_bridge:
+  ros__parameters:
+    destinations: ["rustfs", "pgsql"]
+    rustfs:
+      type: s3
+      receives: files
+      inputs: ["/dc/group/cameras"]
+      endpoint: "http://127.0.0.1:9000"
+      access_key_id: "XEYqG4ZcPY5jiq5i"
+      secret_access_key: "ji011KCtI82ZeQS6UwsQAg8x9VR4lSaQ"
+      force_path_style: true
+      bucket: "mybucket"
+    files:
+      metadata_destination: "pgsql"  # a receives: records Destination for status rows
+```
+
+## Example output
+
+With `estimate_pose: true` (same sample as [Code pose estimation](#code-pose-estimation) above):
+
+```json
+{
+  "camera_name": "my_camera_with_codes",
+  "inspected": {
+    "barcode": [
+      {
+        "data": "0001", "type": "QRCode",
+        "top": 210, "left": 295, "width": 84, "height": 84,
+        "pose": {
+          "frame_id": "base_link",
+          "x": 1.482, "y": 0.037, "z": 0.611,
+          "roll": 0.0, "pitch": 0.0, "yaw": 3.139,
+          "distance": 1.483
+        }
+      }
+    ]
+  }
+}
+```
+
+A plain capture with `estimate_pose: false` (no `pose` field, otherwise identical shape) has not
+been added yet.

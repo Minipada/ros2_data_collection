@@ -38,7 +38,7 @@ Collect storage information on a directory.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -46,4 +46,18 @@ storage_home:
   plugin: "dc_measurements/Storage"
   topic_output: "/dc/measurement/storage_home"
   path: "$HOME"
+```
+
+## Example output
+
+```json
+{
+  "capacity": 460041527296,
+  "flattened": false,
+  "free": 74388291584,
+  "free_percent": 11.073844909667969,
+  "name": "storage_home",
+  "nested": false,
+  "run_id": "169"
+}
 ```

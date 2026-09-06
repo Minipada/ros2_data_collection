@@ -50,7 +50,7 @@ up", copy-pasted from `uptime.json`. Corrected above; the schema file itself sti
 both bugs.
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -61,4 +61,19 @@ tcp_health:
   host: "127.0.0.1"
   port: 9000
   name: "rustfs_api"
+```
+
+## Example output
+
+```json
+{
+  "active": true,
+  "flattened": false,
+  "host": "127.0.0.1",
+  "name": "tcp_health",
+  "nested": false,
+  "port": 9000,
+  "run_id": "169",
+  "server_name": "test_service"
+}
 ```

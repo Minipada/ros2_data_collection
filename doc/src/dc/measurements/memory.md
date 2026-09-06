@@ -4,6 +4,10 @@
 
 Collect memory used in percentage.
 
+## Parameters
+
+This Measurement has no parameters beyond the [common Plugin parameters](../measurements.md#plugin-parameters).
+
 ## Schema
 
 ```json
@@ -22,7 +26,7 @@ Collect memory used in percentage.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -30,4 +34,16 @@ memory:
   plugin: "dc_measurements/Memory"
   topic_output: "/dc/measurement/memory"
   tags: ["console"]
+```
+
+## Example output
+
+```json
+{
+  "flattened": false,
+  "name": "memory",
+  "nested": false,
+  "run_id": "169",
+  "used": 91.44149017333984
+}
 ```
