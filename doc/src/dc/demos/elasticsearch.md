@@ -2,7 +2,8 @@
 
 `dc_bridge` blesses exactly five Destination types — `postgres`, `s3`, `file`, `console`,
 `vector` (see [Destinations](../destinations.md)) — and Elasticsearch is not one of them. This
-tutorial is the worked example for reaching everything else: the ADR-0003 **passthrough**,
+tutorial is the worked example for reaching everything else: the
+[ADR-0003](../adr/0003-blessed-destinations-plus-passthrough.md) **passthrough**,
 a raw [Vector](https://vector.dev) config snippet loaded through `custom_config_files`
 that consumes the same public `dc.<tag>` routes a blessed Destination consumes. Nothing in
 `dc_bridge` knows what Elasticsearch is, and no DC code was written to support it.
@@ -291,7 +292,8 @@ document fail to render an index name and get dropped.
 time-series data. `dc-records-*` is then a single Kibana data view, and expiring old data
 is deleting whole indices rather than running delete-by-query.
 
-**`id_key` + a deterministic `doc_id`** — the Shipper is at-least-once (ADR-0002). After an
+**`id_key` + a deterministic `doc_id`** — the Shipper is at-least-once
+([ADR-0002](../adr/0002-vector-as-default-shipper.md)). After an
 outage, Records that were in flight when it started are re-sent on recovery, and with
 Elasticsearch's default auto-generated `_id` every re-send becomes a *new document*.
 Hashing (Tag, Record timestamp, run id) into a stable id makes the write an upsert instead,

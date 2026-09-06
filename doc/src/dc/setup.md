@@ -132,8 +132,10 @@ For developing DC itself, or wherever containers aren't an option.
    git clone https://github.com/minipada/ros2_data_collection.git
    ```
 
-2. Pull in `vector_vendor` and `aws_sdk_vendor` (both their own repos — see ADR-0002's
-   amendment and ADR-0012), register DC's local rosdep rules (two header-only C++
+2. Pull in `vector_vendor` and `aws_sdk_vendor` (both their own repos — see
+   [ADR-0002](./adr/0002-vector-as-default-shipper.md)'s amendment and
+   [ADR-0012](./adr/0012-aws-sdk-vendor-flattened-source.md)), register DC's local rosdep
+   rules (two header-only C++
    libraries upstream rosdistro has no key for), then resolve dependencies:
 
    ```bash
@@ -154,11 +156,14 @@ For developing DC itself, or wherever containers aren't an option.
 
 That is the whole install. `colcon build` also runs `vector_vendor`, which fetches a
 pinned, checksummed [Vector](https://vector.dev/) release tarball live — the external
-**Shipper** the Bridge supervises at runtime (ADR-0002) — and `aws_sdk_vendor`, which
+**Shipper** the Bridge supervises at runtime
+([ADR-0002](./adr/0002-vector-as-default-shipper.md)) — and `aws_sdk_vendor`, which
 fetches and builds the AWS SDK for C++ (`core` + `s3`) the Bridge's Uploader uses
-(ADR-0007) live from `github.com/aws/aws-sdk-cpp` at a pinned tag; both steps need
-network access (ADR-0002, ADR-0012), and `aws_sdk_vendor`'s takes several minutes the
-first time.
+([ADR-0007](./adr/0007-bridge-returns-to-cpp.md)) live from `github.com/aws/aws-sdk-cpp`
+at a pinned tag; both steps need network access
+([ADR-0002](./adr/0002-vector-as-default-shipper.md),
+[ADR-0012](./adr/0012-aws-sdk-vendor-flattened-source.md)), and `aws_sdk_vendor`'s takes
+several minutes the first time.
 
 ### Python dependencies
 
@@ -201,7 +206,8 @@ copy, and [Destinations](./destinations.md) for the full Bridge configuration co
 
 ### What starts, in what order
 
-`dc_bringup.launch.py` brings the pipeline up deterministically (ADR-0006): the Bridge
+`dc_bringup.launch.py` brings the pipeline up deterministically
+([ADR-0006](./adr/0006-bridge-outside-lifecycle-manager.md)): the Bridge
 and its Shipper first, then a readiness gate, and only then the collection nodes. If the
 Shipper never becomes ready, the launch shuts down loudly instead of collecting data
 nowhere. [Data Pipeline](./data_pipeline.md) describes this in full.

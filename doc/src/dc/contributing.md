@@ -137,7 +137,7 @@ parameters that have no plugin namespace use the equivalent `dc_util::get_str_pa
 `get_str_array_param()` (no `plugin_name` argument).
 
 This is a single-source-of-truth convention deliberately, not just a style preference: see
-[ADR-0008](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0008-dc-util-owns-parameter-declaration.md)
+[ADR-0008](./adr/0008-dc-util-owns-parameter-declaration.md)
 for why `nav2_util` stays a dependency and `dc_util` wraps it rather than replacing it.
 
 `dc_group` (Python) has no plugins and no equivalent wrapper — `group_server.py` declares

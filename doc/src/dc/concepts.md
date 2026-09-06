@@ -106,13 +106,14 @@ configured input topics.
 
 DC gets the Shipper's disk buffering, backpressure handling, retries, and native
 Destination support (PostgreSQL, S3-compatible storage, and many more) without embedding
-or forking it (ADR-0001, ADR-0002 in
-[`docs/adr/`](https://github.com/minipada/ros2_data_collection/tree/jazzy/docs/adr)).
+or forking it ([ADR-0001](./adr/0001-external-shipper-replaces-embedded-fluent-bit.md),
+[ADR-0002](./adr/0002-vector-as-default-shipper.md)).
 
 ```admonish info title="Shipper ingest protocol"
 The wire format on the local Bridge↔Shipper socket (default port 24224) is Fluentd's
 open "Forward" specification — chosen as the cheapest Shipper-native listener with
-built-in receipt acknowledgement (ADR-0002). **No Fluentd or Fluent Bit software runs
+built-in receipt acknowledgement ([ADR-0002](./adr/0002-vector-as-default-shipper.md)).
+**No Fluentd or Fluent Bit software runs
 anywhere in DC 2.0**: the Bridge implements the sender side itself in a few hundred
 lines of msgpack. The word "fluent" only appears in the generated Shipper config
 (`type = "fluent"`).
@@ -197,7 +198,8 @@ Within DC, we use a wrapper of LifecycleNodes, nav2_util LifecycleNode from Nav2
 
 ```admonish info
 The Bridge is deliberately **not** a lifecycle node and **not** under the lifecycle
-manager (ADR-0006): it must be up and its Shipper ready *before* the collection nodes
+manager ([ADR-0006](./adr/0006-bridge-outside-lifecycle-manager.md)): it must be up and
+its Shipper ready *before* the collection nodes
 are allowed to activate. See [Data Pipeline](./data_pipeline.md).
 ```
 

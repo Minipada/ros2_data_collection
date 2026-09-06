@@ -10,10 +10,12 @@ set -euo pipefail
 # local docs build and the CI docs build run the same toolchain — there is no CI-only
 # docs script. The toolchain lives in a Podman image built from
 # containers/doc/Containerfile with pinned mdbook/strictdoc versions (mdbook's
-# preprocessor ABI is not stable across minor versions).
+# preprocessor ABI is not stable across minor versions). For an editing loop with live
+# reload instead of a one-shot build, see serve_doc.sh.
 #
-# Output: doc/book/html (site) and doc/src/dc/requirements/html (requirements export,
-# generated before mdbook runs so mdbook copies it into the site).
+# Output: doc/book/html (site), doc/src/dc/requirements/html (requirements export) and
+# doc/src/dc/adr/ (ADR pages mirrored from docs/adr/) — both generated before mdbook runs
+# so mdbook picks them up as part of the book.
 #
 # Environment:
 #   IMAGE_TAG   Tag for the builder image (default dc-doc:local; CI passes dc-doc:<sha>)
@@ -25,33 +27,11 @@ set -euo pipefail
 #               rust toolchain + cargo-installed mdbook/strictdoc RUN steps. Omit for a
 #               plain local build with no registry round-trip (the default).
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-IMAGE_TAG="${IMAGE_TAG:-dc-doc:local}"
-ENGINE="${ENGINE:-podman}"
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/_doc_common.sh"
 
-echo "==> Building the docs toolchain image ${IMAGE_TAG}"
-BUILD_ARGS=(build --layers -t "${IMAGE_TAG}" -f "${REPO_ROOT}/containers/doc/Containerfile")
-if [ -n "${CACHE_REF:-}" ]; then
-    BUILD_ARGS+=(--cache-from "${CACHE_REF}" --cache-to "${CACHE_REF}")
-fi
-BUILD_ARGS+=("${REPO_ROOT}/containers/doc")
-"${ENGINE}" "${BUILD_ARGS[@]}"
-
-run_in_image() {
-    "${ENGINE}" run --rm \
-        -v "${REPO_ROOT}:/ws:z" \
-        --workdir "/ws${1}" \
-        "${IMAGE_TAG}" \
-        "${@:2}"
-}
-
-echo "==> Exporting the strictdoc requirements"
-run_in_image "" strictdoc export requirements \
-    --experimental-enable-file-traceability \
-    --enable-mathjax \
-    --format=html \
-    --output-dir doc/src/dc/requirements \
-    --project-title "ROS 2 Data Collection"
+build_doc_image
+generate_doc_inputs
 
 echo "==> Building the book"
 run_in_image "/doc" mdbook build

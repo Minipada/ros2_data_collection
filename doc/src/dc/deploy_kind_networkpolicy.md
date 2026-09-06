@@ -153,7 +153,8 @@ echo "records: $COUNT_BEFORE before, $COUNT_AFTER after (+$DELTA over ${WINDOW_E
 `networkpolicy-robot-outage.yaml` replaces `dc-robot-a`'s `NetworkPolicy` object (same
 name, same namespace) with a version that drops the egress-to-edge rule and keeps only
 DNS — a real policy-enforced site-link outage, not a stopped container. `dc-ros` and its
-local Vector Shipper keep running and buffering to disk the whole time (ADR-0002); once
+local Vector Shipper keep running and buffering to disk the whole time
+([ADR-0002](./adr/0002-vector-as-default-shipper.md)); once
 the policy is restored, the buffered backlog flushes and the hub's row count catches back
 up. CI additionally checks `DELTA` against `WINDOW_ELAPSED` seconds at the `uptime`
 Measurement's 1Hz rate (`tools/kind/params/robot-a-params.yaml`), with a 70% lower bound

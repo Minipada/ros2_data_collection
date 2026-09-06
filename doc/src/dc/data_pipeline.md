@@ -13,22 +13,24 @@ and the pieces inside the Bridge (Component). The flowchart in
 [the next section](#the-path-of-a-record) stays as the at-a-glance narrative view of a
 single Record's journey; these diagrams complement it rather than replace it.
 
-### Context (C1)
+### DC and the systems it exchanges data with (C1)
 
 DC runs as one system on the robot. A robot operator configures it; analytics and
 dashboard consumers read from whatever Destinations it was configured to write to —
-PostgreSQL, S3-compatible object storage, and (via passthrough, ADR-0003) any other
+PostgreSQL, S3-compatible object storage, and (via passthrough,
+[ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md)) any other
 Shipper-supported sink.
 
 ![System context for DC (Data Collection)](../images/dc-c4-context.svg)
 
-### Container (C2)
+### Inside DC (C2)
 
 Inside DC, `measurement_server` is the node lifecycle-managed by
 `dc_lifecycle_manager` (see [Lifecycle Manager](./lifecycle_manager.md) for the
 managed-node list and why it's just the one node today). `group_server` runs as a plain
 node alongside it, not under lifecycle management. The Bridge (`dc_bridge`) and its
-supervised Shipper child are deliberately outside that boundary too (ADR-0006) — the
+supervised Shipper child are deliberately outside that boundary too
+([ADR-0006](./adr/0006-bridge-outside-lifecycle-manager.md)) — the
 Bridge has no meaningful deactivated state, so its readiness comes from launch ordering
 (`bridge_ready_gate`) instead of a lifecycle transition. See
 [Deterministic startup ordering](#deterministic-startup-ordering) for the sequence this
@@ -36,13 +38,15 @@ diagram's `bridge_ready_gate` → `dc_lifecycle_manager` relationship summarizes
 
 ![Container diagram for DC (Data Collection)](../images/dc-c4-container.svg)
 
-### Component (C3) — the Bridge
+### Inside the bridge container (C3)
 
 The pieces added across #244–#267, now invisible from the outside: `BridgeNode` wires a
 Forwarder (Records → Shipper), a Supervisor (owns the Vector child process), a Config
-renderer (ADR-0003's `shipper`/`destinations` params → Vector TOML, including
-passthrough snippet validation), Readiness (backs `~/ready`), and — for
-`receives: files` Destinations (ADR-0005) — a durable IntentQueue feeding the Uploader,
+renderer ([ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md)'s
+`shipper`/`destinations` params → Vector TOML, including passthrough snippet
+validation), Readiness (backs `~/ready`), and — for `receives: files` Destinations
+([ADR-0005](./adr/0005-file-uploads-are-bridge-responsibility.md)) — a durable
+IntentQueue feeding the Uploader,
 which verifies File uploads against an S3-compatible ObjectStore and reports status
 Records back through the same Forwarder under the `dc.files` Tag.
 
@@ -120,7 +124,8 @@ it receives. Nothing on the producing side selects a Destination.
 
 ## Deterministic startup ordering
 
-`dc_bringup.launch.py` brings the pipeline up in a fixed order (ADR-0006), so no Record
+`dc_bringup.launch.py` brings the pipeline up in a fixed order
+([ADR-0006](./adr/0006-bridge-outside-lifecycle-manager.md)), so no Record
 can be emitted before the pipeline is able to accept it:
 
 1. **Bridge first.** `dc_bridge` starts as a plain node (outside the lifecycle manager)

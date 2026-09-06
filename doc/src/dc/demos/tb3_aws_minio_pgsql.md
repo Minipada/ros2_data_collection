@@ -299,7 +299,7 @@ dc_bridge:
 
 `pgsql` carries almost every measurement and the two infrastructure health checks as plain Records. Note that not all data needs to go to PostgreSQL — only topics listed in a Destination's `inputs` reach it.
 
-`pgsql_files` is a second, dedicated `postgres` Destination for the Bridge's Uploader status Records — it has no `inputs` of its own; it only receives data because `files.metadata_destination` names it. See [Destinations](../destinations.md) and [ADR-0005](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0005-file-uploads-are-bridge-responsibility.md) for the full split, and the [QR codes demo](./qrcodes_minio_pgsql.md) for a worked example of the same pattern.
+`pgsql_files` is a second, dedicated `postgres` Destination for the Bridge's Uploader status Records — it has no `inputs` of its own; it only receives data because `files.metadata_destination` names it. See [Destinations](../destinations.md) and [ADR-0005](../adr/0005-file-uploads-are-bridge-responsibility.md) for the full split, and the [QR codes demo](./qrcodes_minio_pgsql.md) for a worked example of the same pattern.
 
 #### RustFS Destination
 

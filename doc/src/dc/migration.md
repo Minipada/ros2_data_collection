@@ -6,11 +6,16 @@ DC 2.0 (the `jazzy` line) retires that layer: an external **Shipper** process
 ([Vector](https://vector.dev/)) does the buffering and delivery, and the **Bridge**
 (`dc_bridge`) renders the Shipper's whole configuration from plain ROS parameters.
 
-The reasoning is recorded in [`docs/adr/`](https://github.com/minipada/ros2_data_collection/tree/jazzy/docs/adr):
-ADR-0001 (external shipper replaces embedded Fluent Bit), ADR-0002 (Vector as the
-default shipper), ADR-0003 (blessed Destinations + passthrough), ADR-0005 (file uploads
-are a Bridge responsibility), ADR-0006 (the Bridge lives outside the lifecycle manager)
-and ADR-0007 (the Bridge is C++).
+The reasoning is recorded in the [Architecture Decision Records](./adr.md):
+[ADR-0001](./adr/0001-external-shipper-replaces-embedded-fluent-bit.md) (external shipper
+replaces embedded Fluent Bit),
+[ADR-0002](./adr/0002-vector-as-default-shipper.md) (Vector as the default shipper),
+[ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md) (blessed Destinations +
+passthrough), [ADR-0005](./adr/0005-file-uploads-are-bridge-responsibility.md) (file
+uploads are a Bridge responsibility),
+[ADR-0006](./adr/0006-bridge-outside-lifecycle-manager.md) (the Bridge lives outside the
+lifecycle manager) and [ADR-0007](./adr/0007-bridge-returns-to-cpp.md) (the Bridge is
+C++).
 
 ```admonish info
 Nothing in the **collection** half of DC changed. Measurement plugins, Conditions,

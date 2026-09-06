@@ -1,8 +1,7 @@
 # Destinations
 
 A **Destination** is an external system that receives Records or Files. In the DC 2.0
-architecture (ADR-0003,
-[`docs/adr/`](https://github.com/minipada/ros2_data_collection/tree/jazzy/docs/adr)), the
+architecture ([ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md)), the
 pluginlib destination-plugin layer is retired. The Bridge (`dc_bridge`) renders the
 external Vector **Shipper's** configuration from plain ROS parameters for a **blessed
 set** of Destination types — `postgres`, `s3`, `file`, `console`, `vector` — and every
@@ -292,15 +291,16 @@ Destination is the cheapest way to satisfy that). Two consequences follow from t
 passthrough being outside the rendered config: the snippet's sink gets Vector's **default
 in-memory buffer**, not the disk buffer `dc_bridge` gives every blessed sink, and it is
 the snippet's job to make re-delivery idempotent if the store cares — the Shipper is
-at-least-once (ADR-0002) either way.
+at-least-once ([ADR-0002](./adr/0002-vector-as-default-shipper.md)) either way.
 
 The [Elasticsearch tutorial](./demos/elasticsearch.md) is the worked example for all of
 this, end to end; the [InfluxDB demo](./demos/tb3_aws_influxdb.md) is the same mechanism
-against a simulated robot. [MCAP recording](./demos/mcap_recording.md) (ADR-0009,
-issue #210) is the same passthrough consumed by a standalone process instead of a
-Vector-native sink — the shape to follow for any store Vector has no sink for at all.
+against a simulated robot. [MCAP recording](./demos/mcap_recording.md)
+([ADR-0009](./adr/0009-mcap-as-a-passthrough-destination.md), issue #210) is the same
+passthrough consumed by a standalone process instead of a Vector-native sink — the shape
+to follow for any store Vector has no sink for at all.
 
-## File uploads: `receives: files` (the Uploader, ADR-0005)
+## File uploads: `receives: files` (the Uploader, [ADR-0005](./adr/0005-file-uploads-are-bridge-responsibility.md))
 
 A Destination with `receives: files` (only `type: s3` qualifies) is served by the
 Bridge's **Uploader**, not by a Vector sink: Records arriving on its `inputs` topics

@@ -48,7 +48,8 @@ ros2 launch dc_demos tb3_simulation_stdout.launch.py
 ```
 
 At the end, the data is displayed. Every Destination — `console` included — goes
-through the external Vector Shipper (ADR-0002, [Destinations](../destinations.md)), so
+through the external Vector Shipper ([ADR-0002](../adr/0002-vector-as-default-shipper.md),
+[Destinations](../destinations.md)), so
 each line below is Vector's own event object, one bare JSON object per line (not an
 array):
 
@@ -298,7 +299,7 @@ Now that the node started, let us see what's displayed in the console. Measureme
 [component_container_isolated-1] [INFO] [1788479023.671095239] [measurement_server]: All Base path expanded to C3PO/%Y/%m/%d/%H
 ```
 
-Once `dc_bridge` reports ready (per [ADR-0006](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0006-bridge-outside-lifecycle-manager.md)'s `bridge_ready_gate`), the measurement plugins and the "robot" group start publishing, and we see the data on Vector's `console` sink:
+Once `dc_bridge` reports ready (per [ADR-0006](../adr/0006-bridge-outside-lifecycle-manager.md)'s `bridge_ready_gate`), the measurement plugins and the "robot" group start publishing, and we see the data on Vector's `console` sink:
 ```
 [dc_bridge-3] {"custom_keys":["robot_name","id"],"date":1788479117.6297202,"flattened":false,"height":384,"host":"127.0.0.1","id":"e110a88ba1c24602bd2c116daf5b8287","local_paths":{"pgm":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.pgm","png":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.png","yaml":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.yaml"},"name":"map","nested":false,"origin":{"x":-10,"y":-10},"resolution":0.05000000074505806,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.map","timestamp":"2026-09-03T23:45:17.629720410Z","width":384}
 [dc_bridge-3] {"cmd_vel":{"angular":{"x":0,"y":0,"z":0.0131854},"computed":0.17549346387386322,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0.175493,"y":0,"z":0},"name":"cmd_vel","nested":false,"robot_name":"C3PO","run_id":"170"},"date":1788479126.1020856,"host":"127.0.0.1","name":"robot","position":{"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","name":"position","nested":false,"robot_name":"C3PO","run_id":"170","x":-1.1893664880015578,"y":0.5148037648787771,"yaw":-0.02119602699838526},"source_type":"fluent","speed":{"angular":{"x":0,"y":0,"z":0},"computed":0,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0,"y":0,"z":0},"name":"speed","nested":false,"robot_name":"C3PO","run_id":"170"},"tag":"dc.group.robot","tags":[""],"timestamp":"2026-09-03T23:45:26.102085677Z"}

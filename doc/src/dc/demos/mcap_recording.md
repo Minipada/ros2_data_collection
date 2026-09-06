@@ -3,8 +3,9 @@
 `dc_bridge` blesses exactly five Destination types — `postgres`, `s3`, `file`, `console`,
 `vector` (see [Destinations](../destinations.md)) — and MCAP is not one of them; Vector, the
 Shipper, has no MCAP sink at all. This tutorial is the worked example for #210: the
-ADR-0003 **passthrough** plus a small standalone process, `dc_mcap_writer`
-(ADR-0009, [`docs/adr/`](https://github.com/minipada/ros2_data_collection/tree/jazzy/docs/adr)),
+[ADR-0003](../adr/0003-blessed-destinations-plus-passthrough.md) **passthrough** plus a
+small standalone process, `dc_mcap_writer`
+([ADR-0009](../adr/0009-mcap-as-a-passthrough-destination.md)),
 that consumes the same public `dc.<tag>` routes a blessed Destination consumes and
 writes them as rotated `.mcap` files, ready to open with `ros2 bag info` or
 [Foxglove](https://foxglove.dev/).
@@ -91,9 +92,11 @@ topic.
 
 `dc_mcap_writer` rotates to a new `.mcap` file once the current one hits `max_bytes`
 (default 128 MiB) or has been open `max_duration_secs` (default 300s), whichever comes
-first — the same "whichever limit first" shape used for `files.retention` (ADR-0005),
+first — the same "whichever limit first" shape used for `files.retention`
+([ADR-0005](../adr/0005-file-uploads-are-bridge-responsibility.md)),
 applied here to `dc_mcap_writer`'s own output rather than the Bridge's Uploader queue
-(ADR-0009 explains why this stays outside `dc_bridge`). Filenames are
+([ADR-0009](../adr/0009-mcap-as-a-passthrough-destination.md) explains why this stays
+outside `dc_bridge`). Filenames are
 `<prefix>_<UTC timestamp>_<pid>_<rotation index>.mcap`; the PID and counter together
 guarantee a unique name even across a process restart landing in the same wall-clock
 second as the previous process's last rotation — without both, the new process could
@@ -115,7 +118,8 @@ loss window.
 ## Understanding the configuration
 
 ```admonish info
-See the [Elasticsearch tutorial](./elasticsearch.md) for the full ADR-0003 passthrough
+See the [Elasticsearch tutorial](./elasticsearch.md) for the full
+[ADR-0003](../adr/0003-blessed-destinations-plus-passthrough.md) passthrough
 mechanics — routing, buffering, the `dc.<tag>` contract. This section only covers
 what's specific to how MCAP recording is wired up.
 ```
@@ -125,7 +129,8 @@ inside `dc_bridge`'s `destinations` list, and can't be made to look exactly like
 `postgres`/`s3`/`file`/`console`/`vector` there: `destinations` is parsed and validated by
 `dc_bridge` itself, in C++, and an unrecognized `type` is a hard startup error by
 design (see [Destinations](../destinations.md)) — teaching it a sixth type would mean
-changing `dc_bridge`, which ADR-0009 explicitly decided against (Vector's own
+changing `dc_bridge`, which [ADR-0009](../adr/0009-mcap-as-a-passthrough-destination.md)
+explicitly decided against (Vector's own
 at-least-once/disk-buffered guarantees already cover what would have justified that).
 So it's a sibling top-level block instead, structurally shaped like a Destination
 (`inputs`, a handful of scalar settings) without literally being one.
