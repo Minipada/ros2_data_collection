@@ -397,10 +397,10 @@ jobs:
   sim:
     needs: build-workspace
     runs-on: ubuntu-latest
-    # The world already runs well under real time without a GPU, and `detect` puts two
-    # 1280x720 RGBD streams and a barcode decoder on top of the same three waypoints, so
-    # this is generous on purpose: better a slow green than a job that fails on the clock
-    # and says nothing about the demo.
+    # Runs against the small world (DC_SIM_WORLD=small below), which activates and
+    # navigates in well under a minute per stage -- this ceiling is a generous safety
+    # margin, not a measured requirement, kept high on purpose: better a slow green than
+    # a job that fails on the clock and says nothing about the demo.
     timeout-minutes: 120
     permissions:
       contents: read
@@ -421,16 +421,22 @@ jobs:
       - name: Simulation smoke check
         env:
           DC_SIM_IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
-          # Three waypoints is enough to prove planning, control, localization, the goal
-          # checker and QR-code detection all work end to end. The daily job covers the
-          # full 60-station pass; this one only has to catch a demo that broke.
+          # dc_simulation/worlds/qrcodes_small.world (tools/sim/scripts/run.sh's own
+          # header), not the real 239-model warehouse: the same real-time-factor
+          # measurements that justify the timeouts below (dc_simulation/README.md) left
+          # Nav2's `nav` stage activation right at the edge of its own timeout on the real
+          # world often enough to be a known source of PR-gating flakiness. The daily
+          # full-pass job (sim.yaml) exercises the real demo; this one only has to catch a
+          # pipeline that broke.
+          DC_SIM_WORLD: small
+          # Three of the small world's four stations is enough to prove planning,
+          # control, localization, the goal checker and QR-code detection all work end to
+          # end.
           DC_SIM_WAYPOINTS: "3"
-          # run.sh's default is 2700 s, sized for the stages before `detect` existed.
-          # Driving the same waypoints with the DC pipeline up is appreciably slower --
-          # the controller runs on sim time and gz-sim advances it whether or not a
-          # CPU-starved ROS graph keeps up, so the robot really does move more slowly in
-          # *simulated* time. Give it the job's headroom rather than have it give up.
-          DC_SIM_WAYPOINT_TIMEOUT: "4200"
+          # A tiny, prop-light room reaches these goals in well under a minute each;
+          # generous headroom for a contended runner costs nothing here the way it would
+          # against the real warehouse.
+          DC_SIM_WAYPOINT_TIMEOUT: "900"
         run: ./tools/sim/scripts/run.sh
 
       - name: Upload simulation logs (on failure)

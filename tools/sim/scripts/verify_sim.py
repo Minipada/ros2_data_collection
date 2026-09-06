@@ -269,7 +269,8 @@ def ground_truth_codes(path=None):
     TinyXML2 accepts the file but every strict parser rejects it outright.
 
     Args:
-        path: the installed qrcodes.world; found via the ament index when omitted.
+        path: the installed qrcodes.world; found via the ament index when omitted, unless
+            DC_SIM_WORLD_FILE is set (tools/sim/scripts/run.sh's DC_SIM_WORLD=small).
 
     Returns:
         A list of (x, y) in the map frame.
@@ -279,12 +280,21 @@ def ground_truth_codes(path=None):
 
     from ament_index_python.packages import get_package_share_directory
 
-    # WORLD_TO_MAP is measured off qrcodes.pgm; shared rather than copied so the two
-    # readers of this world cannot drift apart.
-    from lint_launch_files import WORLD_TO_MAP
-
     if path is None:
-        path = os.path.join(get_package_share_directory("dc_simulation"), "worlds", "qrcodes.world")
+        path = os.environ.get("DC_SIM_WORLD_FILE") or os.path.join(
+            get_package_share_directory("dc_simulation"), "worlds", "qrcodes.world"
+        )
+
+    # WORLD_TO_MAP is measured off qrcodes.pgm; shared rather than copied so the two
+    # readers of that world cannot drift apart. DC_SIM_WORLD_TO_MAP overrides it for
+    # other worlds (qrcodes_small.world's map is generated in the world frame directly,
+    # so its offset is 0,0 -- see dc_simulation/tools/gen_small_world.py).
+    world_to_map_env = os.environ.get("DC_SIM_WORLD_TO_MAP")
+    if world_to_map_env:
+        world_to_map = tuple(float(v) for v in world_to_map_env.split(","))
+    else:
+        from lint_launch_files import WORLD_TO_MAP as world_to_map
+
     world = re.sub(r"<!--.*?-->", "", pathlib.Path(path).read_text(), flags=re.S)
 
     codes = []
@@ -295,7 +305,7 @@ def ground_truth_codes(path=None):
         if not pose:
             continue
         values = [float(v) for v in pose.group(1).split()]
-        codes.append((values[0] + WORLD_TO_MAP[0], values[1] + WORLD_TO_MAP[1]))
+        codes.append((values[0] + world_to_map[0], values[1] + world_to_map[1]))
     return codes
 
 

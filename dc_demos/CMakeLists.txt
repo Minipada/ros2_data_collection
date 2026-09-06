@@ -41,6 +41,13 @@ install(PROGRAMS
   RENAME qrcodes_waypoint_follower
 )
 
+# tools/sim/scripts/run.sh's DC_SIM_WORLD=small fixture -- see its own module docstring.
+install(PROGRAMS
+  ${PROJECT_NAME}/qrcodes_small_waypoint_follower.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME qrcodes_small_waypoint_follower
+)
+
 include_directories(
   include
 )
