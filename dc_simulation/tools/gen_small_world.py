@@ -255,8 +255,8 @@ def build_map():
     origin_x = -MAP_HALF_X
     origin_y = -MAP_HALF_Y
 
-    UNKNOWN, FREE, OCCUPIED = 205, 254, 0
-    grid = [[UNKNOWN] * width for _ in range(height)]
+    unknown, free, occupied = 205, 254, 0
+    grid = [[unknown] * width for _ in range(height)]
 
     def to_px(x, y):
         return (round((x - origin_x) / RESOLUTION), round((y - origin_y) / RESOLUTION))
@@ -270,17 +270,17 @@ def build_map():
 
     outer_x = HALF_X + WALL_T
     outer_y = HALF_Y + WALL_T
-    fill_rect(-outer_x, -outer_y, outer_x, outer_y, FREE)
-    fill_rect(-outer_x, -outer_y, -HALF_X, outer_y, OCCUPIED)  # west wall
-    fill_rect(HALF_X, -outer_y, outer_x, outer_y, OCCUPIED)  # east wall
-    fill_rect(-outer_x, -outer_y, outer_x, -HALF_Y, OCCUPIED)  # south wall
-    fill_rect(-outer_x, HALF_Y, outer_x, outer_y, OCCUPIED)  # north wall
+    fill_rect(-outer_x, -outer_y, outer_x, outer_y, free)
+    fill_rect(-outer_x, -outer_y, -HALF_X, outer_y, occupied)  # west wall
+    fill_rect(HALF_X, -outer_y, outer_x, outer_y, occupied)  # east wall
+    fill_rect(-outer_x, -outer_y, outer_x, -HALF_Y, occupied)  # south wall
+    fill_rect(-outer_x, HALF_Y, outer_x, outer_y, occupied)  # north wall
 
     # Each pallet+bag stack, approximated as a 1.0 x 1.3 m footprint around its own
     # origin (europallet_bag's model origin, QR_DX behind the QR face).
     for qr_face_x, y, _ in STATIONS:
         pallet_x = qr_face_x - QR_DX
-        fill_rect(pallet_x - 0.6, y - 0.65, pallet_x + 0.4, y + 0.65, OCCUPIED)
+        fill_rect(pallet_x - 0.6, y - 0.65, pallet_x + 0.4, y + 0.65, occupied)
 
     # PGM rows run top-to-bottom, i.e. decreasing y (map_server convention, matching
     # qrcodes.pgm) -- row 0 of the image is the map's northmost row.
