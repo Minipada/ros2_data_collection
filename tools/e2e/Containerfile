@@ -205,6 +205,14 @@ WORKDIR /root/ws
 # system packages — no compilers, no -dev headers, no build-essential. Relies on
 # dc_* package.xml files tagging deps correctly rather than the catch-all <depend>
 # for anything build-only.
+#
+# --skip-keys for aws_sdk_vendor/vector_vendor: dc_bridge/package.xml depends on both,
+# but unlike the toolchain stage above, this stage never `vcs import`s them (it starts
+# fresh FROM ros-base, deliberately skipping toolchain's git/ccache/build-essential
+# layers), so cacher's manifest-only copy has no package.xml for either — rosdep sees
+# an unresolvable name instead of a local package satisfied via --ignore-src. Both are
+# already fully linked into the install/ tree COPYed in below; nothing here needs to
+# resolve their own transitive deps as apt packages.
 COPY --from=cacher /tmp/manifests/src ./src
 COPY rosdep src/ros2_data_collection/rosdep
 RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
@@ -213,7 +221,8 @@ RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
     rosdep update --include-eol-distros && \
     DEBIAN_FRONTEND=noninteractive \
     rosdep install -y --from-paths src --ignore-src --rosdistro jazzy \
-      --as-root=apt:false --dependency-types=exec && \
+      --as-root=apt:false --dependency-types=exec \
+      --skip-keys="aws_sdk_vendor vector_vendor" && \
     rm -rf /var/lib/apt/lists/* src
 
 COPY --from=workspace /root/ws/install install
