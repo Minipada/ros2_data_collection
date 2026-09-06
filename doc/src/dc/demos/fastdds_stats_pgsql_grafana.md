@@ -66,11 +66,10 @@ A Record captured from a real run, echoed straight off `/dc/measurement/fastdds_
 }
 ```
 
-`latency_ns_mean` and the throughput/RTPS fields are absent in this particular sample —
-genuinely, not a capture gap: nothing exchanged data on a matched DataWriter/DataReader
-pair within that 5-second poll window. See [the Measurement's own
-page](../measurements/fastdds_stats.md) for why absence, not zero, is what "nothing to
-report" looks like here.
+`latency_ns_mean` and the throughput/RTPS fields are absent in this particular sample:
+nothing exchanged data on a matched DataWriter/DataReader pair within that 5-second poll
+window. See [the Measurement's own page](../measurements/fastdds_stats.md) for why
+absence is what "nothing to report" looks like here.
 
 ## Visualize the data
 

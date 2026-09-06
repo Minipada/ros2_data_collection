@@ -5,7 +5,7 @@
 A **Trigger** fires a one-shot signal — a `dc_interfaces/msg/FlushEvent` — when a composition
 of [Conditions](./conditions.md) goes from false to true. Measurements listening for that
 event release the window of recent data they have been holding back, so the seconds *leading
-up to* an event are collected, not just the seconds after it.
+up to* an event are collected too, alongside the seconds after it.
 
 The motivating case is incident review: when an autonomous robot emergency-brakes, what
 matters is what happened before the brake. A Condition cannot express that — it gates

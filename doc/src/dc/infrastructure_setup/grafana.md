@@ -3,7 +3,7 @@
 ## Description
 [Grafana](https://grafana.com/) is a multi-platform open source analytics and interactive visualization web application. It provides charts, graphs, and alerts for the web when connected to supported data sources.
 
-## Start with docker compose
+## Start in a container
 Execute:
 
 ```bash

@@ -23,10 +23,10 @@ Open-RMF task -- it only watches the state stream.
 
 ## Status mapping
 
-Open-RMF's task model is not a flat start/end pair: `TaskState.status` is a continuously-updated
-12-value enum (`uninitialized`, `blocked`, `error`, `failed`, `queued`, `standby`, `underway`,
-`delayed`, `skipped`, `canceled`, `killed`, `completed`), not a single terminal signal. Two Records
-per mission are still produced:
+Open-RMF's task model is richer than a flat start/end pair: `TaskState.status` is a
+continuously-updated 12-value enum (`uninitialized`, `blocked`, `error`, `failed`, `queued`,
+`standby`, `underway`, `delayed`, `skipped`, `canceled`, `killed`, `completed`). This
+Measurement still boils it down to two Records per mission:
 
 - a **`mission_start`** Record, the first time a `booking.id` is observed leaving
   `queued`/`standby` into an active state -- `underway`, `delayed`, or (once already active)
@@ -39,17 +39,18 @@ per mission are still produced:
 
 Two cases the acceptance criteria asked to be resolved explicitly, not silently defaulted:
 
-- **`skipped` is treated as task-terminal**, and maps to outcome **`cancelled`**. It is defined in
-  the same `status` enum `task_state.json` uses for the task's own top-level `status` field (not a
-  separate phase-only enum), so a task can legitimately end its life with `status: "skipped"`.
-  Open-RMF's `skipped` means the task's work was bypassed rather than performed -- closer to DC's
-  `cancelled` (closed without completing the work, not an error) than to `succeeded` (implies the
-  work was done) or a failure outcome. DC's outcome contract (#305/#387) has four values, not
-  five; this Measurement does not add a fifth `skipped` outcome to it.
-- **`blocked` and `error` are treated as transient, not terminal.** Both describe a task Open-RMF
-  is still actively trying to resolve or recover (a blocked path, a recoverable fault), not a
-  status its task manager ever settles on as the end of the task's life -- they are absent from
-  `task_state.json`'s terminal set. A task observed as `blocked`/`error` stays open; only a later
+- **`skipped` is treated as task-terminal**, and maps to outcome **`cancelled`**. It is defined
+  in the same `status` enum `task_state.json` uses for the task's own top-level `status` field,
+  the same enum that also carries in-progress phases, so a task can legitimately end its life
+  with `status: "skipped"`. Open-RMF's `skipped` means the task's work was bypassed rather than
+  performed, which is closer to DC's `cancelled` (the work simply didn't complete) than to
+  `succeeded` (the work was done) or a failure outcome. DC's outcome contract (#305/#387) has
+  exactly four values; this Measurement maps into those four rather than adding a fifth
+  `skipped` outcome.
+- **`blocked` and `error` are treated as transient.** Both describe a task Open-RMF
+  is still actively trying to resolve or recover (a blocked path, a recoverable fault) --
+  they are absent from `task_state.json`'s terminal set, so its task manager never settles
+  on either as the end of the task's life. A task observed as `blocked`/`error` stays open; only a later
   terminal status closes it, and it may still resolve back to `underway`.
 
 `reason` is populated on a best-effort basis, carried verbatim from whichever part of `TaskState`

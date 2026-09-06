@@ -6,7 +6,7 @@ metrics and events. DC has no blessed `influxdb` Destination — Vector's `influ
 sink is reached through the [passthrough Destination](../destinations.md#passthrough-custom_config_files),
 the same mechanism the [InfluxDB demo](../demos/tb3_aws_influxdb.md) uses.
 
-## Start with docker compose
+## Start in a container
 Execute:
 
 ```bash

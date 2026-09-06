@@ -209,7 +209,7 @@ measurement_server:
       flatten: true
 ```
 
-An example `camera` Record, now without a `tags` field (that mechanism no longer exists — a Destination's `inputs` decides routing, not a per-measurement list). `nested: true` + `flatten: true` together produce `/`-prefixed dotted-path keys — `/camera/camera_name`, not a bare `camera_name` — which is also exactly what lands as the InfluxDB column name, since nothing downstream renames them:
+An example `camera` Record, now without a `tags` field (that mechanism no longer exists — a Destination's `inputs` list decides routing instead). `nested: true` + `flatten: true` together produce `/`-prefixed dotted-path keys such as `/camera/camera_name`, which is also exactly what lands as the InfluxDB column name, since nothing downstream renames them:
 
 ```json
 {

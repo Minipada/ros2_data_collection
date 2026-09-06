@@ -43,8 +43,9 @@ Collect UID, GID, if a file or directory exists and its permissions (in rwx or i
 ```admonish info
 `permissions.cpp`'s `collect()` also adds `user` and `group` (the owning username/group
 name from `getpwuid`/`getgrgid`) whenever the uid/gid resolves on the local system —
-neither is in the schema above. They're absent, not empty, when the file is owned by an
-id the container doesn't recognize (e.g. owned by the host, not the container).
+neither is in the schema above. Both fields are simply left out of the Record when the
+file is owned by an id the container doesn't recognize (e.g. owned by the host rather than
+the container).
 ```
 
 ## Configuration

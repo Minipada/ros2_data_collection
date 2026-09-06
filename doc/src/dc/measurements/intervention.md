@@ -3,13 +3,14 @@
 ## Description
 Reports human takeovers: how often somebody had to step in, how long the robot had been running
 itself beforehand, and how long the takeover lasted. It is a **projection of driving-mode
-transitions, not a second detector** -- it reads the same mode signal
+transitions** -- it reads the same mode signal
 [Driving type](./driving_type.md) reads (the shared `DrivingModeSource`, so both Measurements are
-configured with the same parameters) and hands it to `dc_common::StateTransitionDetector` (#360).
-The two therefore cannot disagree about when the robot was autonomous.
+configured with the same parameters) and hands it to `dc_common::StateTransitionDetector` (#360),
+rather than running its own separate detection. The two therefore cannot disagree about when the
+robot was autonomous.
 
 A takeover is a transition between `autonomous` and one of the two human-driven modes, `manual` or
-`teleop` -- fixed, not configurable, because `dc_kpi_intervention_events`
+`teleop` -- this set is fixed and has no configuration knob, because `dc_kpi_intervention_events`
 (`tools/infrastructure/sql/kpi_views.sql`, #369) already matches these values literally; a custom
 mode name would silently never count downstream.
 

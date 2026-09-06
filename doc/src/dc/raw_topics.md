@@ -114,11 +114,11 @@ Two things about numbers are worth knowing before you point a query at the resul
   battery has no temperature sensor), so expect nulls in fields whose message definition
   documents one.
 - **`float32` is widened to double**, so a value written as `4.05` reads back as
-  `4.050000190734863` — the exact binary32 value, not a rounding error introduced here.
-  Round at the query, not in the pipeline, if the extra digits bother a dashboard.
+  `4.050000190734863`: the exact binary32 value. If the extra digits bother a dashboard,
+  round at the query layer.
 
-A `uint8[]` is an array of numbers, not base64 — DC does not compress raw payloads on the
-way out. That is one more reason the size and type limits below exist: the answer to a
+A `uint8[]` serializes as an array of plain numbers — DC does not compress raw payloads on
+the way out. That is one more reason the size and type limits below exist: the answer to a
 megabyte of image bytes is to not collect it, rather than to encode it more cleverly.
 
 ## Choosing what to collect
@@ -179,14 +179,14 @@ message meets them:
    ever sees them.
 2. **`max_message_size_bytes`** (default 1 MiB, 0 = unlimited) — a serialized message
    above this is dropped whole, *before* deserialization, so an unexpected point cloud
-   costs nothing but a throttled warning. Treat this as a **circuit breaker, not a volume
-   knob** — see the warning below.
+   costs nothing but a throttled warning. This is a **per-message circuit breaker** — see
+   the warning below.
 3. **`max_rate_hz`** (default 10, per topic, 0 = unlimited) — at most one Record per
    `1/rate` seconds per topic: a message passes once that long has elapsed since the last
    one that passed, so each Record is the newest message at the moment it is emitted and
    nothing is held back. A 200 Hz topic at the default becomes 10 Hz of Records. This is
-   deliberately decimation, not a token bucket: a bucket lets a burst through all at once,
-   which is the exact traffic shape this exists to flatten.
+   decimation: it flattens exactly the bursty traffic shape a token bucket would let
+   through all at once.
 4. **The Shipper refusing the Record** — if Vector is unreachable or its socket is blocked
    past the Forwarder's write timeout, the raw Record is dropped and counted. Measurement
    Records are kept in the Forwarder's unacked window for resend; raw Records are not,
@@ -198,12 +198,12 @@ acknowledged (see [Destinations](./destinations.md#delivery-guarantees)).
 
 ### How much data is this?
 
-These figures come off a **simulated robot**, not a spreadsheet:
+These figures were measured on a simulated robot:
 `tools/sim/scripts/measure_raw_volume.sh` boots `dc_simulation`'s warehouse world, drives
 the TurtleBot3-Waffle in a slow circle, points a Bridge in raw mode at its live topics,
 and reports what a `file` Destination stored, per Tag. Everything below is one run of it —
-re-run it after anything that changes what a Record costs. It is a local tool, not a CI
-gate; its header explains the three configurations and why its rates are counted in
+re-run it after anything that changes what a Record costs. It's meant for manual local
+runs; its header explains the three configurations and why its rates are counted in
 *simulated* seconds.
 
 Rates are that world's Waffle's: IMU 200 Hz, odometry and TF 30 Hz (the `DiffDrive`
@@ -232,7 +232,7 @@ Per-Record cost, which is what to multiply by your own topics' rates:
 † the simulator's `JointStatePublisher` runs every physics step; a real driver is far
 slower. It makes no difference to the total, which is the point of the next paragraph.
 
-**The rate cap is what makes the first row affordable, not the topic list.** A topic
+**The rate cap is what makes the first row affordable.** A topic
 publishing faster than `max_rate_hz` contributes `bytes_per_record × 10` per second no
 matter how fast it actually runs, so `joint_states` at 1 000 Hz and `imu` at 200 Hz cost
 3.6 kB/s and 7.7 kB/s respectively. Only the topics *below* the cap — the 5 Hz sensors —

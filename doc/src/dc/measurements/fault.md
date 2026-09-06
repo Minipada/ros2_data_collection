@@ -32,7 +32,7 @@ A fault still open when collection stops keeps its last Record's `"state": "open
 Record carries a `seq` that increments by one across every watched component, so a dropped Record
 is a detectable gap rather than a silently shortened outage. A component observed already faulted
 on its very first sample has no `fault_started_at` on that Record -- the detector treats the first
-sample as a baseline, not a transition, since no start was ever seen.
+sample as a baseline rather than a transition, since it never saw the fault actually start.
 
 ## Parameters
 

@@ -4,12 +4,12 @@
 
 Reports one MoveIt [`MoveGroup`](https://github.com/moveit/moveit_msgs/blob/master/action/MoveGroup.action)
 goal's lifecycle: a `manipulation_start` Record when the goal is accepted, a `manipulation_end`
-Record when it reaches a terminal state. This is a **manipulation goal, not a Mission** -- it
-moves a robot arm for one planning group, not a fleet task, and MoveIt's outcome vocabulary is its
-own: one flat signed `MoveItErrorCodes` space, not nav2's succeeded/failed/cancelled/aborted
-split.
+Record when it reaches a terminal state. This is a **manipulation goal** — it moves a robot
+arm for one planning group. MoveIt has its own outcome vocabulary here: one flat signed
+`MoveItErrorCodes` space, distinct from nav2's succeeded/failed/cancelled/aborted split used
+by the Mission Measurements.
 
-The Measurement is a **passive observer**, not the client that sends the goal. It reads the
+The Measurement is a **passive observer**: it never sends the goal itself. It reads the
 action's status topic (`<action_name>/_action/status`, published for every goal the server knows
 about, regardless of which client sent it) to see a goal appear and reach a terminal state, then
 calls the action's `get_result` service -- a plain service any client may call given the goal's

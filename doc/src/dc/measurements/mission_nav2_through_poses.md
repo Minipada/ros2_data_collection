@@ -9,8 +9,8 @@ in one call, rather than a chain of separate `NavigateToPose` goals (that siblin
 `mission_end` Record once it reaches a terminal state, in the same Record schema #387 defines,
 with `mission_type: "navigate_through_poses"`.
 
-This Measurement is a **passive observer, not a second client competing for the action server's
-single active goal**. It never sends a goal itself. Instead it subscribes to the action's own
+This Measurement is a **passive observer** of the action server's single active goal. It
+never sends a goal itself. Instead it subscribes to the action's own
 `_action/status` and `_action/feedback` topics and calls its `_action/get_result` service
 directly for whichever goal_id just reached a terminal status -- the same standard per-action
 topics/services every `rclcpp_action::Server` (nav2's `bt_navigator` included) exposes. Whatever

@@ -163,7 +163,7 @@ Record the same way it does `tags`, so grouping does not bury it.
 ```
 
 ```admonish info title="gate_condition vs. if_all/if_any/if_none_conditions"
-`gate_condition` is a one-shot arming latch, not a per-collection gate: it names a single
+`gate_condition` is a one-shot arming latch: it names a single
 Condition plugin (any type under `dc_measurements/plugins/conditions/`) that suppresses
 **every** collection — including the `init_collect` Record normally published on
 activation — until that Condition becomes true for the first time. Once armed, the
