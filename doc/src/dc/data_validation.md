@@ -24,9 +24,9 @@ Schemas follow the JSON 7 model:
 }
 ```
 
-It is possible to enforce the validation. By default, it is disabled since some fields can be filtered out, and some are added dynamically (e.g remote paths).
-
-Currently it is not possible to select another schema but it is planned to be able to pass a custom path later on.
+Validation is **enabled by default** (`enable_validator: true`); disable it per plugin
+with `enable_validator: false` when fields are filtered out or added dynamically (e.g.
+remote paths) in a way the shipped schema doesn't account for.
 
 ## Failed validation callback
 

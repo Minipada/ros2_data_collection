@@ -73,7 +73,6 @@ Delimiter split, e.g. a board emitting `23.5,60\n` (temperature, humidity):
 serial_sensor:
   plugin: "dc_measurements/SerialInterface"
   topic_output: "/dc/measurement/serial_sensor"
-  tags: ["console"]
   port: "/dev/ttyUSB0"
   baud_rate: 9600
   parsing_type: "delimiter"
@@ -88,7 +87,6 @@ Regex capture groups, e.g. a board emitting `T:23.5 H:60\n`:
 serial_sensor:
   plugin: "dc_measurements/SerialInterface"
   topic_output: "/dc/measurement/serial_sensor"
-  tags: ["console"]
   port: "/dev/ttyUSB0"
   baud_rate: 9600
   parsing_type: "regex"

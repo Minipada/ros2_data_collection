@@ -178,11 +178,14 @@ What it deliberately does not claim:
 ## Mission success rate is not here yet
 
 The fourth starter metric — completed, failed, cancelled and aborted missions as a share of
-missions started — has no source and no agreed contract. ROS has no standard mission
-lifecycle interface, so what a Mission Measurement consumes is a design decision still open
-in [#305]: how far a nav2 adapter infers, what the escape-hatch message in `dc_interfaces`
-looks like, and how a mission still running at shutdown is represented. A view written
-before that decision would pin the contract from the reporting end, which is the wrong end.
+missions started — has no KPI view yet, but the design decision that used to block it
+([#305]) is resolved: [Mission (Nav2 NavigateToPose)](./measurements/mission_nav2.md),
+[Mission (Nav2 FollowWaypoints)](./measurements/mission_nav2_follow_waypoints.md), [Mission
+(Nav2 NavigateThroughPoses)](./measurements/mission_nav2_through_poses.md) and [Mission
+(Open-RMF)](./measurements/mission_open_rmf.md) are all implemented Measurements today,
+emitting outcome Records DC already collects. Writing the `dc_kpi_mission_*` view/function
+pair on top of that data — the same shape as every other metric on this page — is what's
+still open, not the source it would read from.
 
 ## What the data has to look like
 
@@ -204,9 +207,11 @@ them:
 | MTBF / MTTR         | `fault` ([#365])                                          |
 | Loop closure rate   | `slam_toolbox_quality` ([#394])                            |
 
-`dc_demos/params/tb3_simulation_pgsql_minio.yaml` is a working example of everything that
-exists today. The `intervention` and `fault` Measurements do not, so their views return no
-rows until they land — the columns they write into are already in
+`dc_demos/params/tb3_simulation_pgsql_minio.yaml` is a working example of the
+`uptime`/`driving_type`/`speed`/`distance_traveled` set. `intervention` and `fault`
+([#362], [#365]) are implemented Measurements too, but no shipped demo params file
+configures either yet — their views return no rows until a deployment enables them. The
+columns they write into are already in
 `tools/infrastructure/docker/config/postgresql/init.sql`, since Vector's `postgres` sink
 maps a Record's keys onto existing columns and silently drops the rest.
 

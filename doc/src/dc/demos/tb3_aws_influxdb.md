@@ -17,17 +17,6 @@ You will also need 3 terminal windows, to:
 
 Using a different terminal window for DC helps reading its information.
 
-## Packages in the workspace
-
-In addition to the ros2_data_collection repo in your workspace, you will need to download the [aws warehouse package](https://github.com/aws-robotics/aws-robomaker-small-warehouse-world/tree/ros2):
-
-```bash
-cd src
-git clone https://github.com/aws-robotics/aws-robomaker-small-warehouse-world.git -b ros2
-cd ..
-colcon build
-```
-
 ## Setup the environment
 
 ### Python dependencies
@@ -110,10 +99,31 @@ colcon build
 Now, start the demo:
 
 ```bash
-ros2 launch dc_demos tb3_simulation_influxdb.launch.py
+ros2 launch dc_demos tb3_simulation_influxdb.launch.py use_sim_time:=True
+```
+
+```admonish warning
+`use_sim_time` defaults to `False` — without the override above, DC's Position
+measurement looks up TF transforms on the wall clock while the simulation publishes
+them on Gazebo's sim clock, which throws "extrapolation into the past"/"transform does
+not exist" errors and can crash `measurement_server` outright once the two clocks
+drift far enough apart.
 ```
 
 The robot will start collecting data.
+
+```admonish warning title="Known issue: a field can silently stop landing"
+InfluxDB 1.x's line protocol locks a field's type from its *first* write for the life
+of the database. `cpu.average` is `0` (a bare JSON integer, not `0.0`) on its very
+first sample — before the plugin has two polls to compute a delta from — so Vector's
+`influxdb_logs` sink writes it as an integer; every later float sample then fails with
+`field type conflict: ... is type float, already exists as type integer` and is
+silently dropped, forever, for that field in that database. Verified: after a full
+demo run, `SELECT count("/cpu/average") FROM dc` returns nothing at all. This isn't
+DC-specific — it's InfluxDB 1.x line protocol meeting JSON's `0`/`0.0` ambiguity — and
+the only fix is dropping and recreating the `dc` database (`influx -execute "DROP
+DATABASE dc; CREATE DATABASE dc"`) before a run where you need that field.
+```
 
 ## Terminal 3: Start autonomous navigation
 
@@ -129,7 +139,7 @@ The robot will start moving and you will be able to see all visualizations activ
 
 ## Visualize the data
 
-Grafana's own datasource is PostgreSQL now (see [PostgreSQL/RustFS demo](./tb3_aws_minio_pgsql.md)), and only the **Home** and **Robot** dashboards ship with the DC 2.0 infrastructure — there is no Grafana dashboard for this demo's data, since it never touches PostgreSQL. To look at what landed in InfluxDB, use InfluxDB's own tooling instead:
+Grafana's own datasource is PostgreSQL now (see [PostgreSQL/RustFS demo](./tb3_aws_minio_pgsql.md)), and every dashboard shipped with the DC 2.0 infrastructure — **Home**, **Robot**, **KPI** and **Fast DDS statistics** — is backed by it: there is no Grafana dashboard for this demo's data, since it never touches PostgreSQL. To look at what landed in InfluxDB, use InfluxDB's own tooling instead:
 
 ```bash
 influx -database dc -execute "SELECT * FROM dc ORDER BY time DESC LIMIT 20"
@@ -198,16 +208,22 @@ measurement_server:
       flatten: true
 ```
 
-An example `camera` Record, now without a `tags` field (that mechanism no longer exists — a Destination's `inputs` decides routing, not a per-measurement list):
+An example `camera` Record, now without a `tags` field (that mechanism no longer exists — a Destination's `inputs` decides routing, not a per-measurement list). `nested: true` + `flatten: true` together produce `/`-prefixed dotted-path keys — `/camera/camera_name`, not a bare `camera_name` — which is also exactly what lands as the InfluxDB column name, since nothing downstream renames them:
 
 ```json
 {
+  "/camera/base64/raw": "/9j/4AAQSkZJRgABAQAA...",
+  "/camera/camera_name": "Intel Realsense",
+  "custom_keys": ["robot_name", "id"],
   "date": 1677668926.700422,
+  "host": "127.0.0.1",
   "id": "be781e5ffb1e7ee4f817fe7b63e92c32",
+  "name": "camera",
   "robot_name": "Turtlebot",
   "run_id": "218",
-  "camera_name": "Intel Realsense",
-  "base64.raw": "iVBORw0KGgoAAAANSUhEUgAA..."
+  "source_type": "fluent",
+  "tag": "dc.measurement.camera",
+  "timestamp": "2026-09-04T00:00:40.252Z"
 }
 ```
 

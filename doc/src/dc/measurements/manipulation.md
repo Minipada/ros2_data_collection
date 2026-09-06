@@ -87,6 +87,9 @@ is no `end` Record to average.
 }
 ```
 
+The full file (`plugins/measurements/json/manipulation.json`) also requires `outcome`,
+`error_code`, `planning_time` and `duration_sec` on a `manipulation_end` Record.
+
 ## Measurement configuration
 
 ```yaml

@@ -52,7 +52,6 @@ above absolute zero as value.
 thermal:
   plugin: "dc_measurements/Thermal"
   topic_output: "/dc/measurement/thermal"
-  tags: ["console"]
 ```
 
 Example Record data, on a host exposing a CPU package zone and a GPU zone:

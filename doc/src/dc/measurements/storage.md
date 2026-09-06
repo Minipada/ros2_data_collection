@@ -45,6 +45,5 @@ Collect storage information on a directory.
 storage_home:
   plugin: "dc_measurements/Storage"
   topic_output: "/dc/measurement/storage_home"
-  tags: ["console"]
   path: "$HOME"
 ```

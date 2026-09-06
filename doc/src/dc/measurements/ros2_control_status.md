@@ -61,7 +61,6 @@ ros2_control_status:
   plugin: "dc_measurements/Ros2ControlStatus"
   topic_output: "/dc/measurement/ros2_control_status"
   group_key: "ros2_control_status"
-  tags: ["console"]
   topic: "/controller_manager/activity"
 ```
 

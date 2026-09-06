@@ -5,6 +5,7 @@ the ones the demos and examples assume:
 
 | Page                                    | Used as                                                        |
 | --------------------------------------- | -------------------------------------------------------------- |
+| [Adminer](./infrastructure_setup/adminer.md)        | A database GUI for browsing the PostgreSQL Records and File status log |
 | [PostgreSQL](./infrastructure_setup/postgresql.md) | A `postgres` Destination, and the File status log   |
 | [RustFS](./infrastructure_setup/rustfs.md)         | An `s3` Destination, for Records and for File uploads |
 | [Grafana](./infrastructure_setup/grafana.md)        | Dashboards over the PostgreSQL Records and the [KPI views](./kpi_views.md) |

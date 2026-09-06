@@ -9,14 +9,12 @@ ros2 launch dc_demos group_memory_uptime_stdout.launch.py
 ```
 
 ```
-[component_container_isolated-1] [{"memory":{"used":71.67569732666016},"date":1677673405.921659,"uptime":{"time":96894},"run_id":"221"}]
-[component_container_isolated-1] [{"memory":{"used":71.70790100097656},"date":1677673408.868847,"uptime":{"time":96897},"run_id":"221"}]
-[component_container_isolated-1] [{"memory":{"used":71.72582244873047},"date":1677673411.869299,"uptime":{"time":96900},"run_id":"221"}]
-[component_container_isolated-1] [{"memory":{"used":71.86643218994141},"date":1677673414.869292,"uptime":{"time":96903},"run_id":"221"}]
-[component_container_isolated-1] [{"memory":{"used":71.82553863525391},"date":1677673417.869207,"uptime":{"time":96906},"run_id":"221"}]
+[dc_bridge-3] {"date":1788476662.509069,"host":"127.0.0.1","memory":{"flattened":false,"name":"memory","nested":false,"run_id":"169","used":95.77983856201172},"name":"memory_uptime","source_type":"fluent","tag":"dc.group.memory_uptime","tags":[""],"timestamp":"2026-09-03T23:04:22.509068935Z","uptime":{"flattened":false,"name":"uptime","nested":false,"run_id":"169","time":1609047}}
+[dc_bridge-3] {"date":1788476665.5074596,"host":"127.0.0.1","memory":{"flattened":false,"name":"memory","nested":false,"run_id":"169","used":95.87796020507812},"name":"memory_uptime","source_type":"fluent","tag":"dc.group.memory_uptime","tags":[""],"timestamp":"2026-09-03T23:04:25.507459531Z","uptime":{"flattened":false,"name":"uptime","nested":false,"run_id":"169","time":1609050}}
+[dc_bridge-3] {"date":1788476668.5055394,"host":"127.0.0.1","memory":{"flattened":false,"name":"memory","nested":false,"run_id":"169","used":96.04102325439453},"name":"memory_uptime","source_type":"fluent","tag":"dc.group.memory_uptime","tags":[""],"timestamp":"2026-09-03T23:04:28.505539347Z","uptime":{"flattened":false,"name":"uptime","nested":false,"run_id":"169","time":1609053}}
 ```
 
-This launchfile is a wrapper of [dc_bringup/launch/bringup.launch.py](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_bringup/launch/dc_bringup.launch.py) which loads a [custom yaml configuration](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/group_memory_uptime_stdout.yaml)
+This launchfile is a wrapper of [dc_bringup/launch/dc_bringup.launch.py](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_bringup/launch/dc_bringup.launch.py) which loads a [custom yaml configuration](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/group_memory_uptime_stdout.yaml)
 
 ```admonish info
 Note that here the group node is started. It is one parameter in the launchfile to enable it. In the [uptime demo](./uptime_stdout.md), it is disabled by default because it is not used.
@@ -94,9 +92,7 @@ In the terminal, you can see the result, published every 3 seconds (see the date
 Finally, note the new dictionary uses the key defined in the `group_key` measurement_server plugin configuration. They are transferred through the ROS message.
 
 ```
-[component_container_isolated-1] [{"memory":{"used":71.67569732666016},"date":1677673405.921659,"uptime":{"time":96894},"run_id":"221"}]
-[component_container_isolated-1] [{"memory":{"used":71.70790100097656},"date":1677673408.868847,"uptime":{"time":96897},"run_id":"221"}]
-[component_container_isolated-1] [{"memory":{"used":71.72582244873047},"date":1677673411.869299,"uptime":{"time":96900},"run_id":"221"}]
-[component_container_isolated-1] [{"memory":{"used":71.86643218994141},"date":1677673414.869292,"uptime":{"time":96903},"run_id":"221"}]
-[component_container_isolated-1] [{"memory":{"used":71.82553863525391},"date":1677673417.869207,"uptime":{"time":96906},"run_id":"221"}]
+[dc_bridge-3] {"date":1788476662.509069,"host":"127.0.0.1","memory":{"flattened":false,"name":"memory","nested":false,"run_id":"169","used":95.77983856201172},"name":"memory_uptime","source_type":"fluent","tag":"dc.group.memory_uptime","tags":[""],"timestamp":"2026-09-03T23:04:22.509068935Z","uptime":{"flattened":false,"name":"uptime","nested":false,"run_id":"169","time":1609047}}
+[dc_bridge-3] {"date":1788476665.5074596,"host":"127.0.0.1","memory":{"flattened":false,"name":"memory","nested":false,"run_id":"169","used":95.87796020507812},"name":"memory_uptime","source_type":"fluent","tag":"dc.group.memory_uptime","tags":[""],"timestamp":"2026-09-03T23:04:25.507459531Z","uptime":{"flattened":false,"name":"uptime","nested":false,"run_id":"169","time":1609050}}
+[dc_bridge-3] {"date":1788476668.5055394,"host":"127.0.0.1","memory":{"flattened":false,"name":"memory","nested":false,"run_id":"169","used":96.04102325439453},"name":"memory_uptime","source_type":"fluent","tag":"dc.group.memory_uptime","tags":[""],"timestamp":"2026-09-03T23:04:28.505539347Z","uptime":{"flattened":false,"name":"uptime","nested":false,"run_id":"169","time":1609053}}
 ```

@@ -10,17 +10,6 @@ You will also need 3 terminal windows, to:
 
 Using a different terminal window for DC helps reading its information.
 
-## Packages in the workspace
-
-In addition to the ros2_data_collection repo in your workspace, you will need to download the [aws warehouse package](https://github.com/aws-robotics/aws-robomaker-small-warehouse-world/tree/ros2):
-
-```bash
-cd src
-git clone https://github.com/aws-robotics/aws-robomaker-small-warehouse-world.git -b ros2
-cd ..
-colcon build
-```
-
 ## Setup the environment
 
 ### Python dependencies
@@ -99,7 +88,15 @@ colcon build
 Now, start the demo:
 
 ```bash
-ros2 launch dc_demos tb3_simulation_pgsql_minio.launch.py
+ros2 launch dc_demos tb3_simulation_pgsql_minio.launch.py use_sim_time:=True
+```
+
+```admonish warning
+`use_sim_time` defaults to `False` — without the override above, DC's Position
+measurement looks up TF transforms on the wall clock while the simulation publishes
+them on Gazebo's sim clock, which throws "extrapolation into the past"/"transform does
+not exist" errors and can crash `measurement_server` outright (`std::overflow_error` in
+`tf2::Duration`) once the two clocks drift far enough apart.
 ```
 
 The robot will start collecting data.
@@ -131,7 +128,7 @@ You will see rows filling the database. You can click on one to see its content:
 
 ### With Grafana
 
-Only two Grafana dashboards ship with the DC 2.0 infrastructure now — **Home** and **Robot** (the System/Environment/Infrastructure dashboards were dropped as out of scope for this minimal rework). Open [http://localhost:3000](http://localhost:3000) (admin/admin) and pick the **Robot** dashboard: its panels are backed by SQL queries against the `dc`/`dc_files` PostgreSQL tables — the Grafana datasource is PostgreSQL (uid `dc_postgres`) now, not InfluxDB. It shows, among other things, speed/command velocity over time and a table of uploaded inspection files with their RustFS + PostgreSQL upload status:
+Four Grafana dashboards ship with the DC 2.0 infrastructure now — **Home**, **Robot**, **KPI** and **Fast DDS statistics** (the System/Environment/Infrastructure dashboards were dropped as out of scope for this minimal rework). Open [http://localhost:3000](http://localhost:3000) (admin/admin) and pick the **Robot** dashboard: its panels are backed by SQL queries against the `dc`/`dc_files` PostgreSQL tables — the Grafana datasource is PostgreSQL (uid `dc_postgres`) now, not InfluxDB. It shows, among other things, speed/command velocity over time and a table of uploaded inspection files with their RustFS + PostgreSQL upload status:
 
 ```sql
 SELECT to_timestamp(updated_at) AS "time", group_name, robot_name, storage_type, remote_path, content_type, size, uploaded

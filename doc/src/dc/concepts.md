@@ -55,11 +55,17 @@ Measurement:
 ```json
 {
     "date": "2022-12-04T14:16:06.810999008",
+    "flattened": false,
     "memory": {
         "used": 76.007431
-    }
+    },
+    "nested": true
 }
 ```
+
+`flattened` and `nested` are added to every Record unconditionally by the base
+Measurement class — they report whether `nested`/`flatten` were configured for this
+plugin, not something you opt out of showing.
 
 The `StringStamped` message carries:
 

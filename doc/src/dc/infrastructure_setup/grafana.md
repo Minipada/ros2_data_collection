@@ -23,9 +23,9 @@ Execute:
 
 Datasource and dashboards are provisioned from
 `tools/infrastructure/docker/config/grafana/` — no manual import. The PostgreSQL datasource
-(uid `dc_postgres`) points at the [PostgreSQL](./postgresql.md) container, and three
-dashboards ship: **Home**, **Robot**, and **KPI** (availability and uptime, backed by the
-[KPI views](../kpi_views.md)).
+(uid `dc_postgres`) points at the [PostgreSQL](./postgresql.md) container, and four
+dashboards ship: **Home**, **Robot**, **KPI** (availability and uptime, backed by the
+[KPI views](../kpi_views.md)), and **Fast DDS statistics**.
 
 ## Credentials
 

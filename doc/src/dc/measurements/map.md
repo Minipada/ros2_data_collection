@@ -9,6 +9,7 @@ Save map using nav2_map_server and collect the map of the local map saved. The m
 | Parameter            | Description                                                                     | Type  | Default                 |
 | -------------------- | ------------------------------------------------------------------------------- | ----- | ----------------------- |
 | **quiet**            | Disable stdout for nav2 map saver                                               | bool  | true                    |
+| **save_base64**      | Also save the PNG image as a base64 string, under `base64.png`                  | bool  | false                   |
 | **save_path**        | Path to save the map to. Environment variables and datetime format are expanded | str   | "map/%Y-%m-%dT%H:%M:%S" |
 | **save_map_timeout** | Time to wait to save the map                                                    | float | 3.0                     |
 | **topic**            | Topic to subscribe to to get the map                                            | str   | "/map"                  |
@@ -31,6 +32,16 @@ Save map using nav2_map_server and collect the map of the local map saved. The m
             "type": "object",
             "items": {
                 "$ref": "#/$defs/paths"
+            }
+        },
+        "remote_paths": {
+            "description": "Dictionary of paths where metadata and image will be remotely stored",
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "items": {
+                    "$ref": "#/$defs/paths"
+                }
             }
         },
         "origin": {
@@ -95,9 +106,8 @@ Save map using nav2_map_server and collect the map of the local map saved. The m
 map:
   plugin: "dc_measurements/Map"
   topic_output: "/dc/measurement/map"
-  tags: ["console"]
   topic: "/map"
-  save_map: "map/%Y-%m-%dT%H:%M:%S"
+  save_path: "map/%Y-%m-%dT%H:%M:%S"
   save_map_timeout: 0.2
   quiet: true
   remote_keys: ["s3"]

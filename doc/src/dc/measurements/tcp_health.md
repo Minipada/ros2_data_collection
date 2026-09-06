@@ -30,12 +30,24 @@ Collects status of a TCP server.
             "maximum": 65536
         },
         "server_name": {
-            "description": "Time the system has been up",
+            "description": "Server alias, from the 'name' parameter",
             "type": "string"
+        },
+        "active": {
+            "description": "Whether the TCP connection check succeeded",
+            "type": "boolean"
         }
     },
     "type": "object"
 }
+```
+
+```admonish warning
+`tcp_health.json` (the schema file this block is copied from) is wrong twice: `active`
+— the boolean connection-health result `collect()` actually writes — isn't declared as
+a property at all, and `server_name`'s own description says "Time the system has been
+up", copy-pasted from `uptime.json`. Corrected above; the schema file itself still has
+both bugs.
 ```
 
 ## Measurement configuration
@@ -46,7 +58,6 @@ tcp_health:
   plugin: "dc_measurements/TCPHealth"
   topic_output: "/dc/measurement/rustfs_health"
   group_key: "rustfs_health"
-  tags: ["console"]
   host: "127.0.0.1"
   port: 9000
   name: "rustfs_api"

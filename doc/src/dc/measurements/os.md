@@ -34,6 +34,13 @@ Collects the Operating System information: cpus, operating system name and kerne
 }
 ```
 
+```admonish warning
+The Record's own field is `cpus` (plural) — `os.cpp`'s `collect()` writes
+`data_json["cpus"]`, not `data_json["cpu"]` as the schema above declares. The
+mismatch doesn't fail validation (an extra, unvalidated field isn't rejected without
+`additionalProperties: false`), but don't rely on `cpu` showing up in a query.
+```
+
 ## Measurement configuration
 
 ```yaml
@@ -41,5 +48,4 @@ Collects the Operating System information: cpus, operating system name and kerne
 os:
   plugin: "dc_measurements/OS"
   topic_output: "/dc/measurement/os"
-  tags: ["console"]
 ```

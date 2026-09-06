@@ -23,7 +23,6 @@ Given that the data is customized here, there is no default schema.
 my_data:
   plugin: "dc_measurements/StringStamped"
   topic_output: "/dc/measurement/my_data"
-  tags: ["console"]
   topic: "/hello-world"
   timer_based: true
 ```

@@ -3,9 +3,14 @@
 ```admonish warning title="Fast DDS-specific"
 This demo only produces data when Fast DDS is the RMW in use **and** it was built with its
 Statistics Module enabled (`-DFASTDDS_STATISTICS=ON`), plus `fastdds_statistics_backend`
-installed. See [the Fast DDS statistics Measurement doc](../measurements/fastdds_stats.md) for
-both prerequisites. Without them, `dc_measurements` still builds and every other demo still runs
-— `dc_measurements/CMakeLists.txt` finds `fastdds_statistics_backend` optionally and skips only
+installed against it — pin the `v1.1.0` tag; `v2.0.0` onward requires Fast-DDS 3.0.0, which
+ROS 2 Jazzy's 2.14.x doesn't satisfy. A third, runtime-only prerequisite is easy to miss: the
+`FASTDDS_STATISTICS` environment variable must be set on every process *before* it creates its
+first DomainParticipant, or `latency_ns_mean` and every throughput/RTPS field stay permanently
+absent even though the plugin itself runs fine. See [the Fast DDS statistics Measurement
+doc](../measurements/fastdds_stats.md) for the full build recipe and all three prerequisites.
+Without the first two, `dc_measurements` still builds and every other demo still runs —
+`dc_measurements/CMakeLists.txt` finds `fastdds_statistics_backend` optionally and skips only
 this one plugin — but launching *this* demo fails: `measurement_server` can't load a
 `dc_measurements/FastddsStats` plugin that was never built.
 ```
@@ -30,8 +35,42 @@ configuration file does not need change.
 
 ```bash
 colcon build
+export FASTDDS_STATISTICS="HISTORY_LATENCY_TOPIC;PUBLICATION_THROUGHPUT_TOPIC;SUBSCRIPTION_THROUGHPUT_TOPIC;RTPS_SENT_TOPIC;RTPS_LOST_TOPIC"
 ros2 launch dc_demos fastdds_stats_pgsql_grafana.launch.py
 ```
+
+A Record captured from a real run, echoed straight off `/dc/measurement/fastdds_stats`
+(no PostgreSQL needed to see this — it's what `dc_bridge` forwards on):
+
+```json
+{
+  "custom_keys": ["robot_name"],
+  "datareader_count": 1,
+  "datawriter_count": 11,
+  "domain_id": 0,
+  "event": "sample",
+  "flattened": false,
+  "hosts": ["d:14058711922191368192"],
+  "name": "fastdds_stats",
+  "nested": false,
+  "participant_count": 3,
+  "participants": [
+    { "guid": "01.0f.4d.26.9c.1d.72.46.00.00.00.00|0.0.1.c1", "name": "/" },
+    { "guid": "01.0f.4d.26.13.27.ae.cb.00.00.00.00|0.0.1.c1", "name": "/" },
+    { "guid": "01.0f.4d.26.25.27.c4.fd.00.00.00.00|0.0.1.c1", "name": "/" }
+  ],
+  "process_names": ["7580", "10003", "10021"],
+  "robot_name": "C3PO",
+  "run_id": "172",
+  "users": ["root"]
+}
+```
+
+`latency_ns_mean` and the throughput/RTPS fields are absent in this particular sample —
+genuinely, not a capture gap: nothing exchanged data on a matched DataWriter/DataReader
+pair within that 5-second poll window. See [the Measurement's own
+page](../measurements/fastdds_stats.md) for why absence, not zero, is what "nothing to
+report" looks like here.
 
 ## Visualize the data
 
