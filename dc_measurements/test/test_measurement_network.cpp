@@ -59,10 +59,11 @@ public:
   bool callback_active_{ false };
 };
 
-// Whether the ICMP ping itself succeeds depends on raw-socket (CAP_NET_RAW/root) privileges and
-// real network access, both of which vary by CI/sandbox environment -- so this only asserts on
-// the parts of the Record that are deterministic on any host: the network interface list (every
-// Linux host has at least loopback) and the shape/types of the ping fields, not their values.
+// The ICMP ping socket (SOCK_DGRAM + IPPROTO_ICMP) needs no root/CAP_NET_RAW, only a
+// permissive net.ipv4.ping_group_range -- true by default for the root group this runs as
+// in CI/containers, but not guaranteed on every host. Assert on the parts of the Record
+// that are deterministic everywhere: the network interface list (every Linux host has at
+// least loopback) and the shape/types of the ping fields, not their values.
 TEST_F(MeasurementNetworkTest, ReportsLocalInterfacesAndPingShape)
 {
   ms_node_->declare_parameter("network.plugin", std::string("dc_measurements/Network"));

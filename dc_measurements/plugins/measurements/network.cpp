@@ -45,9 +45,14 @@ void Network::onConfigure()
   else {}
   id_ = getpid() & 0xFFFF;
 
-  if ((skt_ = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) < 0)
+  // SOCK_DGRAM + IPPROTO_ICMP is the unprivileged "ping socket" (Linux >=3.0): the kernel
+  // handles the IP layer itself, gated only by net.ipv4.ping_group_range rather than
+  // CAP_NET_RAW/root. SOCK_RAW needed real root -- which rootless container runtimes
+  // (Podman, Docker) can never grant regardless of --cap-add/--privileged, since the
+  // process is still an unprivileged UID from the kernel's point of view.
+  if ((skt_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)) < 0)
   {
-    RCLCPP_ERROR(logger_, "ping: [ICMP] unknown protocol or Permission denied, try again with root permissions");
+    RCLCPP_ERROR(logger_, "ping: [ICMP] permission denied -- check net.ipv4.ping_group_range");
   }
   setsockopt(skt_, IPPROTO_IP, IP_TTL, (char*)&ttl_, sizeof(ttl_));
 }
@@ -129,8 +134,7 @@ uint16_t Network::inCksum(unsigned short* addr, unsigned int len)
 
 int Network::unpack()
 {
-  int cc, fromlen, hlen, triptime;
-  struct ip* ip;
+  int cc, fromlen, triptime;
   struct timeval timeout_str, *ep;
   fd_set rfds;
 
@@ -157,24 +161,26 @@ int Network::unpack()
       }
       gettimeofday(&tv, &tz_);
 
-      ip = (struct ip*)((char*)packet_);
-      hlen = ip->ip_hl << 2;
-      if (cc < (hlen + ICMP_MINLEN))
+      // A SOCK_DGRAM ping socket delivers just the ICMP message -- no IP header in front
+      // of it to skip, unlike SOCK_RAW.
+      if (cc < ICMP_MINLEN)
       {
         RCLCPP_ERROR(logger_, "ping: Packet too short (%d bytes) from_ %s", cc, hostname_.c_str());
         return -1;
       }
 
-      cc -= hlen;
-      icp = (struct icmp*)(packet_ + hlen);
+      icp = (struct icmp*)packet_;
       if (icp->icmp_type != ICMP_ECHOREPLY)
       {
         RCLCPP_DEBUG(logger_, "%d bytes from_ %s, icmp_type=%d, icmp_code=%d", cc, inet_ntoa(from_.sin_addr),
                      icp->icmp_type, icp->icmp_code);
         return -1;
       }
-      if (icp->icmp_id != id_)
-        return -1;
+      // No icmp_id cross-check here: a ping socket is already demultiplexed by the kernel
+      // to only deliver replies matching what this socket itself sent, and the kernel
+      // rewrites icmp_id on the wire to its own per-socket value on both send and receive
+      // -- verified directly (sent id_=1956, delivered reply's icmp_id=2561) -- so
+      // comparing against our own id_ here would reject every real reply.
 
       ep = (struct timeval*)&icp->icmp_data[0];
       if ((tv.tv_usec -= ep->tv_usec) < 0)
@@ -215,7 +221,9 @@ dc_interfaces::msg::StringStamped Network::collect()
   {
     int ping_value = unpack();
     data_json["ping"] = ping_value;
-    data_json["online"] = (bool)ping_value;
+    // Not (bool)ping_value: a 0ms reply (bool false) would wrongly read as offline, and
+    // unpack()'s -1 failure sentinel (bool true) would wrongly read as online.
+    data_json["online"] = (ping_value >= 0);
   }
   else
   {
