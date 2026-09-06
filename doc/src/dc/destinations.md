@@ -298,6 +298,101 @@ against a simulated robot. [MCAP recording](./demos/mcap_recording.md)
 passthrough consumed by a standalone process instead of a Vector-native sink — the shape
 to follow for any store Vector has no sink for at all.
 
+### Recipes: `postgres`, `s3`, `console` via passthrough
+
+Per ADR-0003, `postgres`, `s3` and `console` are pure Vector-sink wrappers with no
+DC-specific logic layered on top — Vector's own `vector validate` already gives clear,
+field-level errors for these three sinks, so passthrough loses nothing on the validation
+front for this subset. Anyone using the blessed form today can move to passthrough now,
+before the blessed code path for these three types is removed
+([#471](https://github.com/minipada/ros2_data_collection/issues/471),
+[#472](https://github.com/minipada/ros2_data_collection/issues/472)). Each recipe below
+reproduces exactly what `dc_bridge` itself renders for the equivalent blessed
+configuration in [Configuration contract](#configuration-contract) above — confirmed by
+running Vector 0.57.0 against a live PostgreSQL and RustFS instance, not just written by
+inspection.
+
+As with any passthrough, at least one blessed Destination is still needed to create the
+`dc.<tag>` route the snippet consumes — `console` is the cheapest (see
+[above](#passthrough-custom_config_files)). If you're migrating the `console` Destination
+itself, keep a `file` Destination (or another cheap blessed type) as the route anchor
+instead.
+
+**`postgres`** — the blessed form's `host`/`port`/`user`/`password`/`database` collapse
+into a single connection-string `endpoint`; `table` is unchanged:
+
+```toml
+# ~/.dc/postgres_sink.toml — passthrough equivalent of the blessed `pgsql` Destination
+[sinks.pgsql]
+type = "postgres"
+inputs = ["dc.dc.measurement.uptime"]   # the public dc.<tag> route
+endpoint = "postgres://dc:${DC_PG_PASSWORD}@127.0.0.1:5432/dc"  # user:password@host:port/database
+table = "dc"
+
+[sinks.pgsql.buffer]
+type = "disk"
+max_size = 268435488   # Vector's disk-buffer minimum; a passthrough sink gets none by default
+```
+
+If `user` or `password` contain characters reserved in a URI (`:`, `@`, `/`, `%`),
+percent-encode them yourself — `dc_bridge` does this automatically when rendering the
+blessed form, but a passthrough `endpoint` is handed to Vector verbatim.
+
+**`s3`** — Vector's own sink id is `aws_s3`, not `s3`; credentials move under
+`[sinks.<name>.auth]` and `batch_timeout_secs` becomes `[sinks.<name>.batch] timeout_secs`:
+
+```toml
+# ~/.dc/s3_sink.toml — passthrough equivalent of the blessed `rustfs` Destination
+[sinks.rustfs]
+type = "aws_s3"                          # Vector's sink id — not "s3"
+inputs = ["dc.dc.measurement.uptime"]
+bucket = "dc-records"
+endpoint = "http://127.0.0.1:9000"       # omit for AWS S3
+region = "us-east-1"
+key_prefix = "robot1/"
+force_path_style = true                  # path-style addressing for self-hosted stores
+
+[sinks.rustfs.auth]
+access_key_id = "rustfsadmin"
+secret_access_key = "${DC_S3_SECRET}"
+
+[sinks.rustfs.batch]
+timeout_secs = 60                        # object write interval; Vector default 300
+
+[sinks.rustfs.buffer]
+type = "disk"
+max_size = 268435488
+
+[sinks.rustfs.encoding]
+codec = "json"
+```
+
+**`console`** — has no required fields either way, so this recipe mostly matters for
+consistency with the other two once the blessed path is gone:
+
+```toml
+# ~/.dc/console_sink.toml — passthrough equivalent of the blessed `console` Destination
+[sinks.debug_console]
+type = "console"
+inputs = ["dc.dc.measurement.uptime"]
+target = "stdout"                        # or "stderr"
+
+[sinks.debug_console.encoding]
+codec = "json"
+```
+
+```admonish warning
+Unlike the blessed form's `password`/`secret_access_key` (expanded by `dc_bridge` itself
+before it ever writes a config file), the `${VAR}` references above are Vector's *own*
+interpolation and are otherwise off in the vendored Vector 0.57.0 binary `dc_bridge`
+spawns — a snippet's `${VAR}` is left as a literal string, silently sent as the password
+verbatim (or rejected outright, if it contains a reserved URI character like the braces
+here). Set `VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION=true` in the environment that
+launches the Bridge process itself (the vendored Vector inherits it) to make Vector honor
+`${VAR}` inside passthrough snippet content. Without it, put the literal secret in the
+file and rely on filesystem permissions instead.
+```
+
 ## File uploads: `receives: files` (the Uploader, [ADR-0005](./adr/0005-file-uploads-are-bridge-responsibility.md), [ADR-0014](./adr/0014-uploader-runs-as-its-own-process.md))
 
 A Destination with `receives: files` (only `type: s3` qualifies) is served by the
