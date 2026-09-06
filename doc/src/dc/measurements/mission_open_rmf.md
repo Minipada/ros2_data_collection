@@ -110,7 +110,7 @@ consequently no `mission_end` Record either.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -121,7 +121,9 @@ mission_open_rmf:
   websocket_url: "ws://rmf-task-state-bridge:8080/task_states"
 ```
 
-Example Record data, start:
+## Example output
+
+Start:
 
 ```json
 {

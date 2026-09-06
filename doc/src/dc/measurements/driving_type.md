@@ -53,7 +53,7 @@ stopped, not "mode currently unknown".
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 Dedicated mode topic:
 
@@ -81,7 +81,7 @@ driving_type:
   velocity_timeout_s: 1.0
 ```
 
-Example Record data:
+## Example output
 
 ```json
 {

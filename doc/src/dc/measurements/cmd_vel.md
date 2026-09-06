@@ -60,7 +60,7 @@ Collect command velocity sent to the robot by subscribing to cmd_vel topic.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -68,4 +68,26 @@ cmd_vel:
   plugin: "dc_measurements/CmdVel"
   group_key: "cmd_vel"
   topic_output: "/dc/measurement/cmd_vel"
+```
+
+## Example output
+
+```json
+{
+  "angular": {
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.1
+  },
+  "computed": 0.3,
+  "flattened": false,
+  "linear": {
+    "x": 0.3,
+    "y": 0.0,
+    "z": 0.0
+  },
+  "name": "cmd_vel",
+  "nested": false,
+  "run_id": "169"
+}
 ```

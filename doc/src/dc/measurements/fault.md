@@ -64,7 +64,7 @@ sample as a baseline, not a transition, since no start was ever seen.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -77,7 +77,9 @@ fault:
   names: ["motor_driver", "battery"]
 ```
 
-Example Record data, a raise:
+## Example output
+
+A raise:
 
 ```json
 {

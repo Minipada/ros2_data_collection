@@ -3,6 +3,10 @@
 ## Description
 Time since when the robot PC has been on.
 
+## Parameters
+
+This Measurement has no parameters beyond the [common Plugin parameters](../measurements.md#plugin-parameters).
+
 ## Schema
 
 ```json
@@ -21,11 +25,23 @@ Time since when the robot PC has been on.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
 uptime:
   plugin: "dc_measurements/Uptime"
   topic_output: "/dc/measurement/uptime"
+```
+
+## Example output
+
+```json
+{
+  "flattened": false,
+  "name": "uptime",
+  "nested": false,
+  "run_id": "169",
+  "time": 1783191
+}
 ```

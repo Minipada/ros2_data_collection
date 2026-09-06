@@ -53,7 +53,7 @@ is a detectable gap.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -64,7 +64,9 @@ ros2_control_status:
   topic: "/controller_manager/activity"
 ```
 
-Example Record data, a start:
+## Example output
+
+A start:
 
 ```json
 {

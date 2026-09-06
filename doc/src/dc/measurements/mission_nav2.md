@@ -74,7 +74,7 @@ denominator.
 `outcome` and `duration_sec` are required on `mission_end` only. `reason` and `error_code` are
 required on `mission_end` when `outcome` is `failed` or `aborted`.
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -85,7 +85,9 @@ mission:
   action_name: "navigate_to_pose"
 ```
 
-Example Record data, start:
+## Example output
+
+Start:
 
 ```json
 {

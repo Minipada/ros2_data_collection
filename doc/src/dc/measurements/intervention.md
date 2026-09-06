@@ -64,7 +64,7 @@ configuration error.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -78,7 +78,9 @@ intervention:
   velocity_timeout_s: 1.0
 ```
 
-Example Record data, start:
+## Example output
+
+Start:
 
 ```json
 {

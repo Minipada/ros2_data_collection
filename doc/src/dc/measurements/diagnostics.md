@@ -67,7 +67,7 @@ previous collection.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -83,4 +83,26 @@ diagnostics_unchanged:
   plugin: "dc_conditions/SameAsPrevious"
   keys: []
   exclude: []
+```
+
+## Example output
+
+```json
+{
+  "flattened": false,
+  "name": "diagnostics",
+  "nested": false,
+  "run_id": "169",
+  "statuses": [
+    {
+      "hardware_id": "motor_driver_01",
+      "level": 2,
+      "message": "Overcurrent detected",
+      "name": "motor_driver",
+      "values": {
+        "current_amps": "8.4"
+      }
+    }
+  ]
+}
 ```

@@ -45,7 +45,7 @@ above absolute zero as value.
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -54,7 +54,9 @@ thermal:
   topic_output: "/dc/measurement/thermal"
 ```
 
-Example Record data, on a host exposing a CPU package zone and a GPU zone:
+## Example output
+
+On a host exposing a CPU package zone and a GPU zone:
 
 ```json
 {

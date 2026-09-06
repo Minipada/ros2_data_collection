@@ -64,7 +64,7 @@ whatever fields do line up are still published — a malformed line degrades rat
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 Delimiter split, e.g. a board emitting `23.5,60\n` (temperature, humidity):
 
@@ -92,6 +92,21 @@ serial_sensor:
   parsing_type: "regex"
   regex: "^T:(\\d+\\.\\d+) H:(\\d+)$"
   fields: ["temperature", "humidity"]
+```
+
+## Example output
+
+Derived from the delimiter example above (`23.5,60` split on `,` into `fields: ["temperature",
+"humidity"]`):
+
+```json
+{
+  "raw": "23.5,60",
+  "fields": {
+    "temperature": "23.5",
+    "humidity": "60"
+  }
+}
 ```
 
 ## Testing without hardware

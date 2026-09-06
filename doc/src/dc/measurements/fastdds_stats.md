@@ -117,7 +117,7 @@ plugin — and its test — are skipped from the build entirely.
 The full file (`plugins/measurements/json/fastdds_stats.json`) also spells out each
 `participants[]` entry's `name`/`guid` properties.
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -128,7 +128,9 @@ fastdds_stats:
   domain_id: 0
 ```
 
-Example Record data, captured from a real run (all three prerequisites above met):
+## Example output
+
+Captured from a real run (all three prerequisites above met):
 
 ```json
 {

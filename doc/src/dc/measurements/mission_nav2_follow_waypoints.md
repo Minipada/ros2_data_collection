@@ -78,7 +78,7 @@ goal that reached nav2's `GoalStatus.SUCCEEDED` but whose `FollowWaypoints::Resu
 still non-zero -- nav2's `WaypointFollower` can finish a route having missed a waypoint without the
 action itself aborting.
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -89,7 +89,9 @@ mission:
   action_name: "follow_waypoints"
 ```
 
-Example Record data, start:
+## Example output
+
+Start:
 
 ```json
 {

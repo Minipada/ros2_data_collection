@@ -99,7 +99,7 @@ Save map using nav2_map_server and collect the map of the local map saved. The m
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -111,4 +111,29 @@ map:
   save_map_timeout: 0.2
   quiet: true
   remote_keys: ["s3"]
+```
+
+## Example output
+
+A 4x4 test grid, captured without `remote_keys` configured (so no `remote_paths`):
+
+```json
+{
+  "flattened": false,
+  "height": 4,
+  "local_paths": {
+    "pgm": "/tmp/dc_capture/map_out/2026-09-05T23:46:20.pgm",
+    "png": "/tmp/dc_capture/map_out/2026-09-05T23:46:20.png",
+    "yaml": "/tmp/dc_capture/map_out/2026-09-05T23:46:20.yaml"
+  },
+  "name": "map",
+  "nested": false,
+  "origin": {
+    "x": 0.0,
+    "y": 0.0
+  },
+  "resolution": 0.05000000074505806,
+  "run_id": "169",
+  "width": 4
+}
 ```

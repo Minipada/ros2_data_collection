@@ -93,7 +93,7 @@ The full file (`plugins/measurements/json/battery.json`) also requires `power_su
 `duration_sec` on a session end — the fields the views depend on. Everything else is hardware
 dependent and therefore optional.
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -118,7 +118,9 @@ battery_right:
   topic: "/right/battery_state"
 ```
 
-Example Record data, one sample:
+## Example output
+
+One sample:
 
 ```json
 {

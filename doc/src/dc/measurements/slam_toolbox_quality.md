@@ -79,7 +79,7 @@ The full file (`plugins/measurements/json/slam_toolbox_quality.json`) also requi
 `yaw` and all three covariance terms on a `sample` — `loop_closure` requires nothing beyond
 `event`.
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -91,7 +91,9 @@ slam_quality:
   loop_closure_topic: "/slam_toolbox/loop_closure_event"
 ```
 
-Example Record data, one sample:
+## Example output
+
+One sample:
 
 ```json
 {

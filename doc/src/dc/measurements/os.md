@@ -3,6 +3,10 @@
 ## Description
 Collects the Operating System information: cpus, operating system name and kernel information
 
+## Parameters
+
+This Measurement has no parameters beyond the [common Plugin parameters](../measurements.md#plugin-parameters).
+
 ## Schema
 
 ```json
@@ -41,11 +45,26 @@ mismatch doesn't fail validation (an extra, unvalidated field isn't rejected wit
 `additionalProperties: false`), but don't rely on `cpu` showing up in a query.
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
 os:
   plugin: "dc_measurements/OS"
   topic_output: "/dc/measurement/os"
+```
+
+## Example output
+
+```json
+{
+  "cpus": 8,
+  "flattened": false,
+  "kernel": "6.12.101+deb13-amd64",
+  "memory": 23.23,
+  "name": "os",
+  "nested": false,
+  "os": "Ubuntu 24.04.4 LTS",
+  "run_id": "169"
+}
 ```

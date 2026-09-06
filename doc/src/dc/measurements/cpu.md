@@ -73,7 +73,7 @@ Collect cpu usage: average cpu, number of processes running and processes sorted
 }
 ```
 
-## Measurement configuration
+## Configuration
 
 ```yaml
 ...
@@ -84,3 +84,19 @@ cpu:
   max_processes: 10
   cpu_min: 10.0
 ```
+
+## Example output
+
+```json
+{
+  "average": 20.487500071525574,
+  "flattened": false,
+  "name": "cpu",
+  "nested": false,
+  "processes": 8,
+  "run_id": "169",
+  "sorted": []
+}
+```
+
+`sorted` is empty here because no process crossed `cpu_min` (10%) in this poll window.
