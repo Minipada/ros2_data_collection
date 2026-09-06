@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `postgres` Destination, for the
+# fastdds_stats_pgsql_grafana demo -- see
+# doc/src/dc/destinations.md#recipes-postgres-s3-console-via-passthrough.
+#
+# Copied into place before launching:
+#   mkdir -p ~/.dc && cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/fastdds_stats_pgsql_grafana_sink.toml" ~/.dc/
+
+[sinks.pgsql]
+type = "postgres"
+inputs = ["dc.dc.measurement.fastdds_stats"]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"  # user:password@host:port/database
+table = "dc"
+
+[sinks.pgsql.buffer]
+type = "disk"
+max_size = 268435488   # Vector's disk-buffer minimum; a passthrough sink gets none by default

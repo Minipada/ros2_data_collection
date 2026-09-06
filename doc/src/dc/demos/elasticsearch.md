@@ -52,13 +52,13 @@ colcon build
 ros2 launch dc_demos elasticsearch.launch.py
 ```
 
-The `console` Destination prints every Record as it is shipped, so the terminal doubles as
-a local view of what Elasticsearch is receiving:
+The `file` Destination writes every Record as it is shipped to `/tmp/dc/elasticsearch_records.ndjson`,
+so `tail -f` on that path doubles as a local view of what Elasticsearch is receiving:
 
 ```
-[dc_bridge-2] {"cpu":{"average":0,"processes":9,"sorted":[]},"custom_keys":["robot_name"],"date":1788504548.4015868,"flattened":false,"host":"127.0.0.1","name":"cpu","nested":true,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.cpu","timestamp":"2026-09-04T06:49:08.401586806Z"}
-[dc_bridge-2] {"custom_keys":["robot_name"],"date":1788504548.404685,"flattened":false,"host":"127.0.0.1","memory":{"used":96.89765167236328},"name":"memory","nested":true,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.memory","timestamp":"2026-09-04T06:49:08.404685157Z"}
-[dc_bridge-2] {"custom_keys":["robot_name"],"date":1788504548.4057963,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":true,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.uptime","timestamp":"2026-09-04T06:49:08.405796359Z","uptime":{"time":1636933}}
+{"cpu":{"average":0,"processes":9,"sorted":[]},"custom_keys":["robot_name"],"date":1788504548.4015868,"flattened":false,"host":"127.0.0.1","name":"cpu","nested":true,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.cpu","timestamp":"2026-09-04T06:49:08.401586806Z"}
+{"custom_keys":["robot_name"],"date":1788504548.404685,"flattened":false,"host":"127.0.0.1","memory":{"used":96.89765167236328},"name":"memory","nested":true,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.memory","timestamp":"2026-09-04T06:49:08.404685157Z"}
+{"custom_keys":["robot_name"],"date":1788504548.4057963,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":true,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.uptime","timestamp":"2026-09-04T06:49:08.405796359Z","uptime":{"time":1636933}}
 ```
 
 ## Visualize the data
@@ -191,9 +191,9 @@ dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"
-    destinations: ["console"]
-    console:
-      type: console
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs:
         [
@@ -202,6 +202,7 @@ dc_bridge:
           "/dc/measurement/os",
           "/dc/measurement/uptime",
         ]
+      path: "/tmp/dc/elasticsearch_records.ndjson"
       time_key: "date"
       time_format: "double"
     custom_config_files: ["$HOME/.dc/elasticsearch_sink.toml"]
@@ -220,9 +221,14 @@ snippet is a topic the Bridge never subscribes to and never routes — the snipp
 `inputs` would resolve to routes that don't exist. Every topic you want in Elasticsearch
 must therefore appear in some blessed Destination's `inputs` too.
 
-`console` is the cheapest thing to put there — it needs no infrastructure and no
-credentials — and it earns its place by giving you the local view shown above. A `file`
-Destination works equally well if you'd rather not have the output in your terminal.
+`file` is the anchor here — it needs no infrastructure and no credentials, and writes
+`path` to disk rather than your terminal. An earlier version of this demo used a
+blessed `console` Destination for the same job (`console` also gave you a local view of
+what was landing in Elasticsearch), but per [ADR-0003](../adr/0003-blessed-destinations-plus-passthrough.md)
+`console` — along with `postgres` and `s3` — has since moved to the passthrough recipe
+itself, being a pure Vector-sink wrapper with no DC-specific logic; see
+[Destinations: Recipes](../destinations.md#recipes-postgres-s3-console-via-passthrough)
+for that recipe if you still want a terminal echo alongside Elasticsearch.
 
 ```admonish warning
 `destinations: []` does not work. rclcpp cannot load an empty YAML sequence (it has no

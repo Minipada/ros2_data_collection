@@ -5,13 +5,21 @@ dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"
-    destinations: ["console"]
-    console:
-      type: console
+    # blessed `console` is retired in favor of the ADR-0003 passthrough recipe (#471,
+    # see doc/src/dc/destinations.md#recipes-postgres-s3-console-via-passthrough); `file`
+    # is the anchor Destination `destinations` still needs -- dc_bridge derives its ROS
+    # subscriptions and `dc.<tag>` routes from `destinations` alone, never from a
+    # passthrough snippet's `inputs`. Copy the passthrough sink into place first:
+    #   mkdir -p ~/.dc && cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/group_memory_uptime_stdout_sink.toml" ~/.dc/
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs: ["/dc/group/memory_uptime"]
+      path: "/tmp/dc/group_memory_uptime_stdout_records.ndjson"
       time_key: "date"
       time_format: "double"
+    custom_config_files: ["$HOME/.dc/group_memory_uptime_stdout_sink.toml"]
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224
 

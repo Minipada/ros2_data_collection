@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `postgres` Destination, for the
+# all-in-one isolated-network robot deployment (aio_params_local.yaml) -- see
+# doc/src/dc/destinations.md#recipes-postgres-s3-console-via-passthrough.
+#
+# Bind-mounted into the dc-ros container at /root/.dc/aio_pgsql_sink.toml by
+# compose.isolated-network.yaml.
+
+[sinks.pgsql]
+type = "postgres"
+inputs = ["dc.dc.measurement.uptime"]
+endpoint = "postgres://dc:password@postgres:5432/dc"  # user:password@host:port/database
+table = "dc"
+
+[sinks.pgsql.buffer]
+type = "disk"
+max_size = 268435488   # Vector's disk-buffer minimum; a passthrough sink gets none by default

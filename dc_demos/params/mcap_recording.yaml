@@ -8,11 +8,14 @@ dc_bridge:
     # `destinations` still has to name at least one blessed Destination — dc_bridge
     # derives both its ROS subscriptions and its `dc.<tag>` route branches from
     # `destinations` alone, and dc_mcap_writer's own `inputs` below never adds a route
-    # dc_bridge doesn't already have. `console` is the cheapest thing to put here, and
-    # doubles as a local view of the same Records dc_mcap_writer is recording.
-    destinations: ["console"]
-    console:
-      type: console
+    # dc_bridge doesn't already have. `console` used to be the cheapest thing to put
+    # here, doubling as a local view of the same Records dc_mcap_writer is recording;
+    # blessed `console` is retired in favor of the ADR-0003 passthrough recipe (#471,
+    # see doc/src/dc/destinations.md#recipes-postgres-s3-console-via-passthrough), so
+    # `file` is the anchor now instead -- tail the ndjson path below for the same view.
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs:
         [
@@ -21,6 +24,7 @@ dc_bridge:
           "/dc/measurement/os",
           "/dc/measurement/uptime",
         ]
+      path: "/tmp/dc/mcap_recording_records.ndjson"
       time_key: "date"
       time_format: "epoch_nanos"
     vector_forward_host: "127.0.0.1"

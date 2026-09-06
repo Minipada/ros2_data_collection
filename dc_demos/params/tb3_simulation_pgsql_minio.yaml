@@ -5,9 +5,27 @@ dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"
-    destinations: ["pgsql", "pgsql_files", "rustfs"]
-    pgsql:
-      type: postgres
+    # blessed `postgres` is retired in favor of the ADR-0003 passthrough recipe (#471,
+    # see doc/src/dc/destinations.md#recipes-postgres-s3-console-via-passthrough); `file`
+    # is the anchor Destination `destinations` still needs -- dc_bridge derives its ROS
+    # subscriptions and `dc.<tag>` routes from `destinations` alone, never from a
+    # passthrough snippet's `inputs`. `records_log` also stands in for the old
+    # `pgsql_files` Destination as `files.metadata_destination` below: that parameter
+    # must name a configured `receives: records` Destination (dc_bridge rejects
+    # anything else at startup), so it cannot point at a passthrough-only sink id --
+    # the passthrough `pgsql_files` sink in the snippet instead consumes the
+    # `dc.dc.files` route this anchor gains from being named there.
+    #
+    # `rustfs` (`type: s3`, `receives: files`) is unchanged and stays blessed: it is
+    # served by the Uploader (`dc_uploader`, ADR-0005), a separate process configured
+    # entirely from these ROS params and never from Vector sink config, so there is no
+    # passthrough equivalent for `receives: files` to migrate to.
+    #
+    # Copy the passthrough sink into place first:
+    #   mkdir -p ~/.dc && cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/tb3_simulation_pgsql_minio_sink.toml" ~/.dc/
+    destinations: ["records_log", "rustfs"]
+    records_log:
+      type: file
       receives: records
       inputs: [
           # System
@@ -28,22 +46,7 @@ dc_bridge:
           "/dc/measurement/rustfs_health",
           "/dc/measurement/pgsql_health",
         ]
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc"
-      time_key: "date"
-    pgsql_files:
-      type: postgres
-      receives: records
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc_files"
+      path: "/tmp/dc/tb3_simulation_pgsql_minio_records.ndjson"
       time_key: "date"
     rustfs:
       type: s3
@@ -57,12 +60,13 @@ dc_bridge:
       force_path_style: true
     files:
       delete_when_sent: true
-      metadata_destination: "pgsql_files"
+      metadata_destination: "records_log"
       # Previews for the dashboard's camera gallery and map view (#256); best-effort,
       # so the demo is unaffected if ffmpeg isn't installed.
       thumbnails:
         enabled: true
         max_dimension: 320
+    custom_config_files: ["$HOME/.dc/tb3_simulation_pgsql_minio_sink.toml"]
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224
 

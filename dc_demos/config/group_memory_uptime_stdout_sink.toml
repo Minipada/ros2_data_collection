@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `console` Destination, for the
+# group_memory_uptime_stdout demo -- see
+# doc/src/dc/destinations.md#recipes-postgres-s3-console-via-passthrough.
+#
+# Copied into place before launching:
+#   mkdir -p ~/.dc && cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/group_memory_uptime_stdout_sink.toml" ~/.dc/
+
+[sinks.debug_console]
+type = "console"
+inputs = ["dc.dc.group.memory_uptime"]
+target = "stdout"
+
+[sinks.debug_console.encoding]
+codec = "json"

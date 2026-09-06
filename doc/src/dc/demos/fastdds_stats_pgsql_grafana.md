@@ -16,8 +16,9 @@ this one plugin — but launching *this* demo fails: `measurement_server` can't 
 ```
 
 This is the smallest hardware-free way to see Fast DDS's own Statistics Module land in DC: one
-Measurement ([Fast DDS statistics](../measurements/fastdds_stats.md)), a `postgres` Destination,
-and a Grafana dashboard provisioned automatically — the same convention #304 established for the
+Measurement ([Fast DDS statistics](../measurements/fastdds_stats.md)), a passthrough `postgres`
+sink ([ADR-0003](../adr/0003-blessed-destinations-plus-passthrough.md)), and a Grafana dashboard
+provisioned automatically — the same convention #304 established for the
 [KPI dashboard](../kpi_views.md).
 
 ## Setup Infrastructure
@@ -35,6 +36,7 @@ configuration file does not need change.
 
 ```bash
 colcon build
+mkdir -p ~/.dc && cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/fastdds_stats_pgsql_grafana_sink.toml" ~/.dc/
 export FASTDDS_STATISTICS="HISTORY_LATENCY_TOPIC;PUBLICATION_THROUGHPUT_TOPIC;SUBSCRIPTION_THROUGHPUT_TOPIC;RTPS_SENT_TOPIC;RTPS_LOST_TOPIC"
 ros2 launch dc_demos fastdds_stats_pgsql_grafana.launch.py
 ```
@@ -108,22 +110,37 @@ measurement_server:
 
 dc_bridge:
   ros__parameters:
-    destinations: ["pgsql"]
-    pgsql:
-      type: postgres
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs: ["/dc/measurement/fastdds_stats"]
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc"
+      path: "/tmp/dc/fastdds_stats_pgsql_grafana_records.ndjson"
       time_key: "date"
       time_format: "double"
+    custom_config_files: ["$HOME/.dc/fastdds_stats_pgsql_grafana_sink.toml"]
 ```
 
-`domain_id` is the DDS domain to monitor — the same value `ROS_DOMAIN_ID` would use for every
-other node in the deployment. `include_measurement_name: true` writes `"name": "fastdds_stats"`
-onto every Record, which every panel's `WHERE name = 'fastdds_stats'` clause relies on to tell
-this Measurement's rows apart from any other demo sharing the same `dc` table.
+```toml
+# ~/.dc/fastdds_stats_pgsql_grafana_sink.toml
+[sinks.pgsql]
+type = "postgres"
+inputs = ["dc.dc.measurement.fastdds_stats"]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc"
+
+[sinks.pgsql.buffer]
+type = "disk"
+max_size = 268435488
+```
+
+`postgres` — along with `s3` and `console` — moved from the blessed ROS-param form to this
+passthrough recipe ([ADR-0003](../adr/0003-blessed-destinations-plus-passthrough.md)); `records_log`
+is the cheap `file` anchor the passthrough still needs, since `dc_bridge` derives its ROS
+subscriptions and `dc.<tag>` routes from `destinations` alone. See
+[Destinations: Recipes](../destinations.md#recipes-postgres-s3-console-via-passthrough) for the
+full recipe. `domain_id` is the DDS domain to monitor — the same value `ROS_DOMAIN_ID` would use
+for every other node in the deployment. `include_measurement_name: true` writes
+`"name": "fastdds_stats"` onto every Record, which every panel's `WHERE name = 'fastdds_stats'`
+clause relies on to tell this Measurement's rows apart from any other demo sharing the same `dc`
+table.

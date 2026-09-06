@@ -264,10 +264,14 @@ dc_bridge:
 
 `dc_bridge` derives both its ROS subscriptions and its `dc.<tag>` route branches from
 `destinations`, and never reads a passthrough snippet's `inputs` — so a passthrough always
-accompanies at least one blessed Destination covering the same topics. `file` is used here
-rather than `console` only because this demo collects base64 camera and map images, which
-make for unreadable terminal output; the [Elasticsearch tutorial](./elasticsearch.md) uses
-`console` for the same job and explains the rule in more detail.
+accompanies at least one blessed Destination covering the same topics. `file` is the
+anchor in every passthrough demo in this repo now, including this one — blessed `console`
+moved to a passthrough recipe of its own ([ADR-0003](../adr/0003-blessed-destinations-plus-passthrough.md),
+[Destinations: Recipes](../destinations.md#recipes-postgres-s3-console-via-passthrough)) —
+but it would have been the wrong anchor for this demo regardless, even back when it was
+still blessed: this demo collects base64 camera and map images, which make for unreadable
+terminal output. The [Elasticsearch tutorial](./elasticsearch.md) explains the `file`
+anchor mechanics in more detail.
 
 ```admonish warning
 `destinations: []` does not work as a way to say "passthrough only". rclcpp cannot load an

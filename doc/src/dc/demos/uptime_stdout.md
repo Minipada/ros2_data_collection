@@ -2,16 +2,17 @@
 
 This is the most minimal example to run DC, it collects the system uptime every 5 seconds and sends it to Stdout.
 
-Let's run it:
+Copy the passthrough sink into place, then run it:
 
 ```bash
+mkdir -p ~/.dc && cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/uptime_stdout_sink.toml" ~/.dc/
 ros2 launch dc_demos uptime_stdout.launch.py
 ```
 
-At the end, the data is displayed. Every Destination — `console` included — goes
-through the external Vector Shipper ([ADR-0002](../adr/0002-vector-as-default-shipper.md),
-[Destinations](../destinations.md)), so
-this is Vector's own event object after ingesting the Record over the Fluent-forward
+At the end, the data is displayed. Every Destination — the passthrough `console` sink
+below included — goes through the external Vector Shipper
+([ADR-0002](../adr/0002-vector-as-default-shipper.md), [Destinations](../destinations.md)),
+so this is Vector's own event object after ingesting the Record over the Fluent-forward
 protocol: `source_type`, `tag`, `host` and `timestamp` are Vector's, not the Bridge's:
 ```
 [dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476609.152106,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1608993,"timestamp":"2026-09-03T23:03:29.152105868Z"}
@@ -70,7 +71,7 @@ measurement_server:
 
 **run_id.uuid (Optional)**: Generate a new run ID by using a random UUID
 
-This will collect the uptime every 5 seconds (including when the node starts), will forward it to the *console* destination.
+This will collect the uptime every 5 seconds (including when the node starts), will forward it to the *console* passthrough sink below.
 
 #### Inject custom data for each record
 
@@ -103,15 +104,28 @@ dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"
-    destinations: ["console"]
-    console:
-      type: console
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs: ["/dc/measurement/uptime"]
+      path: "/tmp/dc/uptime_stdout_records.ndjson"
       time_key: "date"
       time_format: "double"
+    custom_config_files: ["$HOME/.dc/uptime_stdout_sink.toml"]
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224
+```
+
+```toml
+# ~/.dc/uptime_stdout_sink.toml
+[sinks.debug_console]
+type = "console"
+inputs = ["dc.dc.measurement.uptime"]
+target = "stdout"
+
+[sinks.debug_console.encoding]
+codec = "json"
 ```
 
 #### Destinations
@@ -120,15 +134,19 @@ Let's analyze piece by piece. `dc_bridge` is the single C++ node that owns every
 
 **destinations (Mandatory)**: List all the Destinations to enable. Each name must have a matching section at the same level.
 
-**console.type (Mandatory)**: One of the blessed Destination types (`postgres`, `s3`, `file`, `console`, `vector`). `console` prints JSON to `dc_bridge`'s own stdout — handy for demos and debugging.
+**records_log.type (Mandatory)**: One of the blessed Destination types (`postgres`, `s3`, `file`, `console`, `vector`). `file` writes each Record as a JSON line to `path`, and is the cheapest anchor to give `destinations` when the actual output you want comes from a `custom_config_files` passthrough sink below — dc_bridge derives its ROS subscriptions and `dc.<tag>` routes from `destinations` alone, never from a passthrough snippet's `inputs`. (Printing straight to stdout used a blessed `console` Destination in earlier versions of this demo; per [ADR-0003](../adr/0003-blessed-destinations-plus-passthrough.md), `console` — along with `postgres` and `s3` — has moved to the passthrough recipe below, since it's a pure Vector-sink wrapper with no DC-specific logic. See [Destinations: Recipes](../destinations.md#recipes-postgres-s3-console-via-passthrough).)
 
-**console.receives (Optional)**: `records` (default) or `files`.
+**records_log.receives (Optional)**: `records` (default) or `files`.
 
-**console.inputs (Mandatory)**: Topics to which to listen to get the data.
+**records_log.inputs (Mandatory)**: Topics to which to listen to get the data.
 
-**console.time_format (Optional)**: Format the data's timestamp will be printed as (`epoch_nanos` (default), `iso8601` or `double`).
+**records_log.path (Mandatory for `file`)**: Absolute path Vector writes each JSON line to (Vector, not the Bridge, expands this — no `$HOME`).
 
-**console.time_key (Optional)**: Dictionary key the timestamp is written under.
+**records_log.time_format (Optional)**: Format the data's timestamp will be printed as (`epoch_nanos` (default), `iso8601` or `double`).
+
+**records_log.time_key (Optional)**: Dictionary key the timestamp is written under.
+
+**custom_config_files (Optional)**: Raw Vector config snippets, merged as-is alongside what `dc_bridge` itself renders. The `uptime_stdout_sink.toml` above defines a plain Vector `console` sink consuming the public `dc.dc.measurement.uptime` route that `records_log`'s `inputs` created — this is what actually prints to stdout; `records_log` itself just writes the same Records to disk as the passthrough's required anchor. See [Destinations: Passthrough](../destinations.md#passthrough-custom_config_files).
 
 `dc_bridge` itself needs no engine tuning of the kind the old embedded Fluent Bit shipper required (buffering, scheduler backoff, HTTP stats server, …) — Vector, the external shipper process it forwards to, owns its own on-disk buffering and is configured from the `dc_bridge`/`destinations` block above; see [ADR-0002](../adr/0002-vector-as-default-shipper.md) for why that split exists.
 
@@ -154,7 +172,7 @@ Measurement server and `dc_bridge` are started in the Lifecycle, you can read mo
 
 `dc_bridge` renders the `destinations` block above into a Vector config and launches (or reloads) the external Vector process pointed at it; `bridge_ready_gate` only lets the launch continue once Vector is actually accepting connections — see [ADR-0002](../adr/0002-vector-as-default-shipper.md) for why Vector runs as its own process rather than embedded in the Bridge.
 
-Finally, we see the data, now printed by Vector's own `console` sink rather than by the Bridge itself:
+Finally, we see the data, now printed by the passthrough `console` sink rather than by the Bridge itself:
 ```
 [dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476609.152106,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1608993,"timestamp":"2026-09-03T23:03:29.152105868Z"}
 [dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476614.1494331,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1608998,"timestamp":"2026-09-03T23:03:34.149433151Z"}
@@ -166,5 +184,5 @@ So...what happened?
 1. The measurement plugin starts publishing data to /dc/measurement/uptime, which contains the JSON and timestamp of the message
 2. Run ID and robot_name is appended in the JSON
 3. `dc_bridge`, which subscribes to this topic directly, receives the data and forwards it to Vector over the shipper ingest protocol
-4. Vector's generated config applies a `remap` transform that writes the configured `time_key` in the requested `time_format`
-5. Vector's `console` sink, the only one matching the `console` Destination we configured, prints the JSON to stdout
+4. Vector's generated config applies a `remap` transform that writes the configured `time_key` in the requested `time_format`, and routes the Record onto its public `dc.dc.measurement.uptime` route
+5. The passthrough `console` sink from `uptime_stdout_sink.toml`, consuming that route, prints the JSON to stdout — `records_log`'s own `file` sink writes the same Record to disk in parallel

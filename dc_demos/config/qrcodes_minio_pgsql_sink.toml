@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `postgres` Destinations, for the
+# qrcodes_minio_pgsql demo -- see
+# doc/src/dc/destinations.md#recipes-postgres-s3-console-via-passthrough.
+#
+# Copied into place before launching:
+#   mkdir -p ~/.dc && cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/qrcodes_minio_pgsql_sink.toml" ~/.dc/
+
+[sinks.pgsql]
+type = "postgres"
+inputs = [
+  "dc.dc.measurement.map",
+  "dc.dc.measurement.right_camera",
+  "dc.dc.measurement.left_camera",
+  "dc.dc.group.robot",
+]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"  # user:password@host:port/database
+table = "dc"
+
+[sinks.pgsql.buffer]
+type = "disk"
+max_size = 268435488   # Vector's disk-buffer minimum; a passthrough sink gets none by default
+
+# File status Records (ADR-0005): `records_log`'s params/qrcodes_minio_pgsql.yaml block
+# names it as `files.metadata_destination`, which appends the `dc.files` Tag to its
+# routed set -- consumed here exactly like any other `dc.<tag>` route.
+[sinks.pgsql_files]
+type = "postgres"
+inputs = ["dc.dc.files"]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc_files"
+
+[sinks.pgsql_files.buffer]
+type = "disk"
+max_size = 268435488
