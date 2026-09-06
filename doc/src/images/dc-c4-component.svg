@@ -1,15 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="1600" height="1200" font-family="'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2200 1200" width="2200" height="1200" font-family="'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif">
         <defs>
           <marker id="d3ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0.5,1 L9,5 L0.5,9 Z" fill="#94A0B0"></path></marker>
           <marker id="d3ahf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0.5,1 L9,5 L0.5,9 Z" fill="#B0714E"></path></marker>
         </defs>
-        <rect x="0" y="0" width="1600" height="1200" fill="#F7F8FA"></rect>
+        <rect x="0" y="0" width="2200" height="1200" fill="#F7F8FA"></rect>
 
         <text x="56" y="84" font-size="38" font-weight="600" fill="#1B2430" letter-spacing="-0.5">Component</text>
-        <text x="56" y="120" font-size="21" fill="#6B7688">Inside the bridge container</text>
+        <text x="56" y="120" font-size="21" fill="#6B7688">Inside dc_bridge and dc_uploader</text>
 
         <rect x="300" y="170" width="1000" height="950" rx="22" fill="#EDF1F6" fill-opacity="0.55" stroke="#A8BFD0" stroke-width="2" stroke-dasharray="9 7"></rect>
-        <text x="326" y="208" font-size="15" font-weight="600" fill="#8A94A3" letter-spacing="1.8">BRIDGE</text>
+        <text x="326" y="208" font-size="15" font-weight="600" fill="#8A94A3" letter-spacing="1.8">BRIDGE (dc_bridge)</text>
 
         <rect x="56" y="250" width="170" height="120" rx="7" fill="#FFFFFF" stroke="#C3C9D4" stroke-width="1.75"></rect>
         <text x="141" y="296" font-size="15" font-weight="600" fill="#3D4756" text-anchor="middle" font-family="'IBM Plex Mono', monospace">measurement_server</text>
@@ -61,60 +61,70 @@
         <text x="1184" y="524" font-size="19" font-weight="600" fill="#FFFFFF" text-anchor="middle">Readiness</text>
         <text x="1184" y="550" font-size="15" fill="#D3E5F0" text-anchor="middle">[Component]</text>
 
-        <rect x="330" y="770" width="172" height="110" rx="7" fill="#4585B0"></rect>
-        <text x="416" y="824" font-size="19" font-weight="600" fill="#FFFFFF" text-anchor="middle">Uploader</text>
-        <text x="416" y="850" font-size="15" fill="#D3E5F0" text-anchor="middle">[Component]</text>
-
         <rect x="714" y="770" width="172" height="110" rx="7" fill="#4585B0"></rect>
         <text x="800" y="814" font-size="19" font-weight="600" fill="#FFFFFF" text-anchor="middle">Topic</text>
         <text x="800" y="838" font-size="19" font-weight="600" fill="#FFFFFF" text-anchor="middle">mapper</text>
         <text x="800" y="864" font-size="15" fill="#D3E5F0" text-anchor="middle">[Component]</text>
 
-        <rect x="522" y="970" width="172" height="110" rx="7" fill="#4585B0"></rect>
-        <text x="608" y="1014" font-size="19" font-weight="600" fill="#FFFFFF" text-anchor="middle">Object store</text>
-        <text x="608" y="1038" font-size="19" font-weight="600" fill="#FFFFFF" text-anchor="middle">client</text>
-        <text x="608" y="1064" font-size="15" fill="#D3E5F0" text-anchor="middle">[Component]</text>
+        <rect x="1360" y="505" width="480" height="540" rx="22" fill="#EDF1F6" fill-opacity="0.55" stroke="#A8BFD0" stroke-width="2" stroke-dasharray="9 7"></rect>
+        <text x="1386" y="543" font-size="15" font-weight="600" fill="#8A94A3" letter-spacing="1.8">UPLOADER (dc_uploader)</text>
 
-        <rect x="522" y="770" width="172" height="110" rx="7" fill="#4585B0"></rect>
-        <text x="608" y="824" font-size="19" font-weight="600" fill="#FFFFFF" text-anchor="middle">Retention</text>
-        <text x="608" y="850" font-size="15" fill="#D3E5F0" text-anchor="middle">[Component]</text>
+        <rect x="1400" y="595" width="172" height="110" rx="7" fill="#4585B0"></rect>
+        <text x="1486" y="644" font-size="19" font-weight="600" fill="#FFFFFF" text-anchor="middle">Uploader</text>
+        <text x="1486" y="670" font-size="15" fill="#D3E5F0" text-anchor="middle">[Component]</text>
 
-        <rect x="1350" y="620" width="194" height="280" rx="7" fill="#FFFFFF" stroke="#2B5A82" stroke-width="2" stroke-dasharray="7 5"></rect>
-        <text x="1447" y="700" font-size="22" font-weight="600" fill="#2B5A82" text-anchor="middle" font-family="'IBM Plex Mono', monospace">shipper</text>
-        <text x="1447" y="726" font-size="16" fill="#8A94A3" text-anchor="middle">[Container]</text>
-        <text x="1447" y="762" font-size="15" fill="#5C6779" text-anchor="middle">Vector — routes,</text>
-        <text x="1447" y="784" font-size="15" fill="#5C6779" text-anchor="middle">buffers, delivers</text>
-        <text x="1447" y="806" font-size="15" fill="#5C6779" text-anchor="middle">records</text>
+        <rect x="1620" y="595" width="172" height="110" rx="7" fill="#4585B0"></rect>
+        <text x="1706" y="644" font-size="19" font-weight="600" fill="#FFFFFF" text-anchor="middle">Forwarder</text>
+        <text x="1706" y="664" font-size="14" fill="#D3E5F0" text-anchor="middle">(own connection)</text>
+        <text x="1706" y="688" font-size="15" fill="#D3E5F0" text-anchor="middle">[Component]</text>
 
-        <rect x="56" y="970" width="200" height="110" rx="7" fill="#FFFFFF" stroke="#C3C9D4" stroke-width="1.75"></rect>
-        <text x="156" y="1008" font-size="18" font-weight="600" fill="#3D4756" text-anchor="middle">S3-compatible</text>
-        <text x="156" y="1030" font-size="18" font-weight="600" fill="#3D4756" text-anchor="middle">storage</text>
-        <text x="156" y="1056" font-size="14" fill="#8A94A3" text-anchor="middle">[Software System]</text>
+        <rect x="1400" y="895" width="172" height="110" rx="7" fill="#4585B0"></rect>
+        <text x="1486" y="944" font-size="19" font-weight="600" fill="#FFFFFF" text-anchor="middle">Retention</text>
+        <text x="1486" y="970" font-size="15" fill="#D3E5F0" text-anchor="middle">[Component]</text>
 
-        <polyline points="1270,525 1320,525 1320,650 1344,650" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#d3ah)"></polyline>
-        <text x="1210" y="612" font-size="18" fill="#5C6779" text-anchor="middle" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">checks if accepting</text>
+        <rect x="1620" y="895" width="172" height="110" rx="7" fill="#4585B0"></rect>
+        <text x="1706" y="934" font-size="19" font-weight="600" fill="#FFFFFF" text-anchor="middle">Object store</text>
+        <text x="1706" y="958" font-size="19" font-weight="600" fill="#FFFFFF" text-anchor="middle">client</text>
+        <text x="1706" y="984" font-size="15" fill="#D3E5F0" text-anchor="middle">[Component]</text>
 
-        <polyline points="992,580 992,720 1344,720" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#d3ah)"></polyline>
-        <text x="1171" y="700" font-size="18" fill="#5C6779" text-anchor="middle" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">spawn / restart</text>
+        <rect x="1900" y="560" width="210" height="440" rx="7" fill="#FFFFFF" stroke="#2B5A82" stroke-width="2" stroke-dasharray="7 5"></rect>
+        <text x="2005" y="640" font-size="22" font-weight="600" fill="#2B5A82" text-anchor="middle" font-family="'IBM Plex Mono', monospace">shipper</text>
+        <text x="2005" y="666" font-size="16" fill="#8A94A3" text-anchor="middle">[Container]</text>
+        <text x="2005" y="702" font-size="15" fill="#5C6779" text-anchor="middle">Vector — routes,</text>
+        <text x="2005" y="724" font-size="15" fill="#5C6779" text-anchor="middle">buffers, delivers</text>
+        <text x="2005" y="746" font-size="15" fill="#5C6779" text-anchor="middle">records</text>
 
-        <polyline points="860,580 860,628 940,628 940,850 1344,850" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#d3ah)"></polyline>
-        <text x="1120" y="830" font-size="18" fill="#5C6779" text-anchor="middle" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">sends records</text>
+        <rect x="1596" y="1060" width="220" height="110" rx="7" fill="#FFFFFF" stroke="#C3C9D4" stroke-width="1.75"></rect>
+        <text x="1706" y="1098" font-size="18" font-weight="600" fill="#3D4756" text-anchor="middle">S3-compatible</text>
+        <text x="1706" y="1120" font-size="18" font-weight="600" fill="#3D4756" text-anchor="middle">storage</text>
+        <text x="1706" y="1146" font-size="14" fill="#8A94A3" text-anchor="middle">[Software System]</text>
+
+        <polyline points="1270,525 1270,410 1894,410 1894,600" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#d3ah)"></polyline>
+        <text x="1582" y="394" font-size="18" fill="#5C6779" text-anchor="middle" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">checks if accepting</text>
+
+        <polyline points="992,580 992,730 1894,730" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#d3ah)"></polyline>
+        <text x="1300" y="750" font-size="18" fill="#5C6779" text-anchor="middle" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">spawn / restart</text>
+
+        <polyline points="860,580 860,830 1894,830" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#d3ah)"></polyline>
+        <text x="1120" y="850" font-size="18" fill="#5C6779" text-anchor="middle" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">sends records</text>
+
+        <polyline points="1792,650 1894,650" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" marker-end="url(#d3ah)"></polyline>
+        <text x="1800" y="580" font-size="18" fill="#5C6779" text-anchor="start" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">sends status records</text>
 
         <polyline points="800,580 800,764" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" marker-end="url(#d3ah)"></polyline>
         <text x="818" y="700" font-size="18" fill="#5C6779" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">looks up tag</text>
 
-        <polyline points="416,580 416,764" fill="none" stroke="#B0714E" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="8 6" marker-end="url(#d3ahf)"></polyline>
-        <text x="434" y="638" font-size="18" fill="#A0663F" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">oldest pending</text>
+        <polyline points="416,580 416,650 1394,650" fill="none" stroke="#B0714E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 6" marker-end="url(#d3ahf)"></polyline>
+        <text x="900" y="634" font-size="18" fill="#A0663F" text-anchor="middle" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">oldest pending (rescan)</text>
 
-        <polyline points="460,880 460,920 630,920 630,964" fill="none" stroke="#B0714E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 6" marker-end="url(#d3ahf)"></polyline>
-        <text x="614" y="948" font-size="18" fill="#A0663F" text-anchor="end" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">upload / verify</text>
+        <polyline points="1572,650 1614,650" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" marker-end="url(#d3ah)"></polyline>
 
-        <polyline points="516,1025 262,1025" fill="none" stroke="#B0714E" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="8 6" marker-end="url(#d3ahf)"></polyline>
-        <text x="392" y="1001" font-size="18" fill="#A0663F" text-anchor="middle" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">stores files</text>
+        <polyline points="1486,705 1486,750 1706,750 1706,889" fill="none" stroke="#B0714E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 6" marker-end="url(#d3ahf)"></polyline>
+        <text x="1706" y="738" font-size="18" fill="#A0663F" text-anchor="middle" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">upload / verify</text>
 
-        <polyline points="460,770 460,656 770,656 770,586" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#d3ah)"></polyline>
-        <text x="594" y="700" font-size="18" fill="#5C6779" text-anchor="end" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">reports status</text>
+        <polyline points="1706,1005 1706,1054" fill="none" stroke="#B0714E" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="8 6" marker-end="url(#d3ahf)"></polyline>
+        <text x="1724" y="1032" font-size="18" fill="#A0663F" text-anchor="start" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">stores files</text>
 
-        <polyline points="608,770 608,600 470,600 470,586" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#d3ah)"></polyline>
-        <text x="626" y="700" font-size="18" fill="#5C6779" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">clears old entries</text>
+        <polyline points="1400,950 416,950 416,586" fill="none" stroke="#B0714E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 6" marker-end="url(#d3ahf)"></polyline>
+        <text x="900" y="934" font-size="18" fill="#A0663F" text-anchor="middle" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">clears old entries</text>
       </svg>
