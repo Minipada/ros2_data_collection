@@ -191,6 +191,7 @@ jobs:
           CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
           BUILDAH_TMPDIR: ${{ runner.temp }}/buildah-tmp
           CCOV: "false"
+          TARGET: workspace
         run: ./tools/e2e/scripts/build.sh
 
       - name: Stop the test-dependency stores
@@ -326,6 +327,7 @@ jobs:
           CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
           BUILDAH_TMPDIR: ${{ runner.temp }}/buildah-tmp-coverage
           CCOV: "true"
+          TARGET: workspace
         run: ./tools/e2e/scripts/build.sh
 
       - name: Stop the test-dependency stores

@@ -18,8 +18,11 @@
 # Env vars (all optional):
 #   IMAGE_TAG      image tag to build (default dc-workspace:latest)
 #   CCOV           "true" to build with C++ coverage instrumentation (default false)
-#   TARGET         stage to build, e.g. `toolchain` — omit to build the full
-#                  `workspace` stage as today
+#   TARGET         stage to build, e.g. `workspace` or `runtime` — omit to build the
+#                  whole file, which lands on `runtime` (the last stage). Callers
+#                  that need `workspace`'s TEST_RESULT/coverage output (e.g. the
+#                  colcon-test extraction step in ci.yaml) must pass TARGET=workspace
+#                  explicitly rather than relying on the default.
 #   CACHE_REF      a registry ref (e.g. ghcr.io/<repo>/dc-e2e-cache) to use as a
 #                  podman --cache-from/--cache-to target for LAYER caching (the
 #                  rarely-changing apt/toolchain/aws_sdk_vendor layers). podman's
