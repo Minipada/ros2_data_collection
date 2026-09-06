@@ -211,7 +211,7 @@ WORKDIR /root/ws
 # fresh FROM ros-base, deliberately skipping toolchain's git/ccache/build-essential
 # layers), so cacher's manifest-only copy has no package.xml for either — rosdep sees
 # an unresolvable name instead of a local package satisfied via --ignore-src. Both are
-# already fully linked into the install/ tree COPYed in below; nothing here needs to
+# already fully linked into the install/ tree copied in below; nothing here needs to
 # resolve their own transitive deps as apt packages.
 COPY --from=cacher /tmp/manifests/src ./src
 COPY rosdep src/ros2_data_collection/rosdep
