@@ -293,7 +293,9 @@ def ground_truth_codes(path=None):
     if world_to_map_env:
         world_to_map = tuple(float(v) for v in world_to_map_env.split(","))
     else:
-        from lint_launch_files import WORLD_TO_MAP as world_to_map
+        from lint_launch_files import WORLD_TO_MAP
+
+        world_to_map = WORLD_TO_MAP
 
     world = re.sub(r"<!--.*?-->", "", pathlib.Path(path).read_text(), flags=re.S)
 
