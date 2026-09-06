@@ -77,6 +77,7 @@
 - [Destinations](./dc/destinations.md)
 - [KPI views](./dc/kpi_views.md)
 - [Configuration examples](./dc/configuration_examples.md)
+- [Migration](./dc/migration.md)
 - [Infrastructure setup](./dc/infrastructure_setup.md)
   - [Adminer](./dc/infrastructure_setup/adminer.md)
   - [Elasticsearch](./dc/infrastructure_setup/elasticsearch.md)
