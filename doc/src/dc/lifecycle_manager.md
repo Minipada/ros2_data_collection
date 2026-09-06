@@ -9,7 +9,8 @@ it has activated, and can bring the whole managed set up automatically at launch
 `LifecycleNode` background this page builds on.
 
 ```admonish info
-The Bridge (`dc_bridge`) is deliberately **not** one of the managed nodes (ADR-0006): it
+The Bridge (`dc_bridge`) is deliberately **not** one of the managed nodes
+([ADR-0006](./adr/0006-bridge-outside-lifecycle-manager.md)): it
 has no meaningful deactivated state, so its readiness is a launch-ordering problem
 instead — see [the boundary and autostart flow](#the-boundary-and-the-autostart-flow)
 below.
@@ -38,7 +39,8 @@ for exactly that reason.
 
 ## The boundary and the autostart flow
 
-`dc_bringup.launch.py` brings the pipeline up in a fixed order (ADR-0006) so that no
+`dc_bringup.launch.py` brings the pipeline up in a fixed order
+([ADR-0006](./adr/0006-bridge-outside-lifecycle-manager.md)) so that no
 Record can be emitted before the Bridge can accept it. The Bridge, its Vector Shipper
 child, and the `bridge_ready_gate` process that polls the Bridge's `~/ready`
 (`std_srvs/Trigger`) service all run **outside** `lifecycle_manager_dc` — only once the

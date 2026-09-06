@@ -3,8 +3,9 @@
 `dc_bridge` blesses exactly five Destination types — `postgres`, `s3`, `file`, `console`,
 `vector` (see [Destinations](../destinations.md)) — and InfluxDB is not one of them. This demo is
 not a peer of the [PostgreSQL/RustFS demos](./tb3_aws_minio_pgsql.md): it exists to show
-how to reach a destination `dc_bridge` doesn't bless directly, via the ADR-0003
-**passthrough** escape hatch — a raw [Vector](https://vector.dev) sink config loaded
+how to reach a destination `dc_bridge` doesn't bless directly, via the
+[ADR-0003](../adr/0003-blessed-destinations-plus-passthrough.md) **passthrough** escape
+hatch — a raw [Vector](https://vector.dev) sink config loaded
 through `custom_config_files`, consuming the same public `dc.<tag>` routes a blessed
 Destination would. Read [Destinations](../destinations.md)'s "Passthrough" section first
 if you haven't already; this page only covers what's specific to InfluxDB.

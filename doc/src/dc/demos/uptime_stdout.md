@@ -9,7 +9,8 @@ ros2 launch dc_demos uptime_stdout.launch.py
 ```
 
 At the end, the data is displayed. Every Destination — `console` included — goes
-through the external Vector Shipper (ADR-0002, [Destinations](../destinations.md)), so
+through the external Vector Shipper ([ADR-0002](../adr/0002-vector-as-default-shipper.md),
+[Destinations](../destinations.md)), so
 this is Vector's own event object after ingesting the Record over the Fluent-forward
 protocol: `source_type`, `tag`, `host` and `timestamp` are Vector's, not the Bridge's:
 ```
@@ -129,7 +130,7 @@ Let's analyze piece by piece. `dc_bridge` is the single C++ node that owns every
 
 **console.time_key (Optional)**: Dictionary key the timestamp is written under.
 
-`dc_bridge` itself needs no engine tuning of the kind the old embedded Fluent Bit shipper required (buffering, scheduler backoff, HTTP stats server, …) — Vector, the external shipper process it forwards to, owns its own on-disk buffering and is configured from the `dc_bridge`/`destinations` block above; see [ADR-0002](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0002-vector-as-default-shipper.md) for why that split exists.
+`dc_bridge` itself needs no engine tuning of the kind the old embedded Fluent Bit shipper required (buffering, scheduler backoff, HTTP stats server, …) — Vector, the external shipper process it forwards to, owns its own on-disk buffering and is configured from the `dc_bridge`/`destinations` block above; see [ADR-0002](../adr/0002-vector-as-default-shipper.md) for why that split exists.
 
 #### Inject run id at each record
 
@@ -141,7 +142,7 @@ Find the complete destinations documentation [here](../destinations.md)
 
 Now that the node started, let us see what's displayed in the console.
 
-Measurement server and `dc_bridge` are started in the Lifecycle, you can read more about it [here](../concepts.md#lifecycle-nodes-and-bond). Per [ADR-0006](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0006-bridge-outside-lifecycle-manager.md), the lifecycle manager waits on a `bridge_ready_gate` before activating the collection nodes:
+Measurement server and `dc_bridge` are started in the Lifecycle, you can read more about it [here](../concepts.md#lifecycle-nodes-and-bond). Per [ADR-0006](../adr/0006-bridge-outside-lifecycle-manager.md), the lifecycle manager waits on a `bridge_ready_gate` before activating the collection nodes:
 
 ```
 [INFO] [bridge_ready_gate-3]: process started with pid [31]
@@ -151,7 +152,7 @@ Measurement server and `dc_bridge` are started in the Lifecycle, you can read mo
 [INFO] [launch.user]: dc_bridge reports ready; activating collection nodes.
 ```
 
-`dc_bridge` renders the `destinations` block above into a Vector config and launches (or reloads) the external Vector process pointed at it; `bridge_ready_gate` only lets the launch continue once Vector is actually accepting connections — see [ADR-0002](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0002-vector-as-default-shipper.md) for why Vector runs as its own process rather than embedded in the Bridge.
+`dc_bridge` renders the `destinations` block above into a Vector config and launches (or reloads) the external Vector process pointed at it; `bridge_ready_gate` only lets the launch continue once Vector is actually accepting connections — see [ADR-0002](../adr/0002-vector-as-default-shipper.md) for why Vector runs as its own process rather than embedded in the Bridge.
 
 Finally, we see the data, now printed by Vector's own `console` sink rather than by the Bridge itself:
 ```

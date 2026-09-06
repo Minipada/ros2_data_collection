@@ -10,6 +10,7 @@
 ### DOC ###
 doc/book
 doc/src/dc/requirements/html/
+doc/src/dc/adr/
 ### ROS ###
 **devel/
 **logs/
