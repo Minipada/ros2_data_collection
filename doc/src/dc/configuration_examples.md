@@ -237,9 +237,11 @@ columns; it does not create tables or columns. Create the table before starting 
 ### Example 9: Camera images to object storage, with their metadata in PostgreSQL
 
 Files (images, maps, videos) never travel through the Shipper. A `receives: files`
-Destination is served by the Bridge's Uploader, and the per-File status Records it
-produces go to whichever Destination `files.metadata_destination` names. The Uploader's
-durable upload intent queue and multipart-resume state live under `uploader.data_dir`,
+Destination is served by `dc_uploader`, a separate process with its own Shipper
+connection ([ADR-0014](./adr/0014-uploader-runs-as-its-own-process.md)), and the
+per-File status Records it produces go to whichever Destination
+`files.metadata_destination` names. `dc_uploader`'s durable upload intent queue and
+multipart-resume state live under `uploader.data_dir`,
 separate from the Shipper's own disk buffer under `shipper.data_dir` — set both, as below,
 so it's obvious on disk (and later in volume mounts) which files belong to which owner.
 If `uploader.data_dir` is omitted it defaults to `shipper.data_dir`, so existing configs

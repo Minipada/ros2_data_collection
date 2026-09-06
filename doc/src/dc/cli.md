@@ -2,11 +2,12 @@
 
 ```admonish warning title="Known packaging gap: typer isn't declared"
 `dc_cli/package.xml` doesn't declare a dependency on `typer` (the CLI framework this
-tool is built on), and there is no `python3-typer` apt package for `rosdep` to resolve
-either — a plain `rosdep install` + `colcon build` leaves `ros2 run dc_cli list_plugins`
-failing with `ModuleNotFoundError: No module named 'typer'`. `pip install
---break-system-packages typer` (or add it to a `uv`-managed virtualenv) is the
-workaround until the package declares it.
+tool is built on) — a real `python3-typer` rosdep key exists and resolves to a real
+Ubuntu apt package, but nothing in `package.xml` tells `rosdep` to install it. A plain
+`rosdep install` + `colcon build` leaves `ros2 run dc_cli list_plugins` failing with
+`ModuleNotFoundError: No module named 'typer'`. `pip install --break-system-packages
+typer` (or add it to a `uv`-managed virtualenv) is the workaround until the package
+declares it — or `sudo apt install python3-typer` directly.
 ```
 
 ## List plugins

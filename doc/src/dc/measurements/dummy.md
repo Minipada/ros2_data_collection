@@ -34,7 +34,6 @@ The dummy measurement, generates dummy events. It is useful for testing, debuggi
 dummy:
   plugin: "dc_measurements/Dummy"
   topic_output: "/dc/measurement/dummy"
-  tags: ["console"]
 ```
 
 ## Example output

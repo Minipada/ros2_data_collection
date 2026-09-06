@@ -72,7 +72,6 @@ fault:
   plugin: "dc_measurements/Fault"
   topic_output: "/dc/measurement/fault"
   group_key: "fault"
-  tags: ["console"]
   topic: "/diagnostics"
   names: ["motor_driver", "battery"]
 ```

@@ -33,7 +33,6 @@ This Measurement has no parameters beyond the [common Plugin parameters](../meas
 memory:
   plugin: "dc_measurements/Memory"
   topic_output: "/dc/measurement/memory"
-  tags: ["console"]
 ```
 
 ## Example output

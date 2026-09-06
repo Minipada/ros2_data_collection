@@ -74,7 +74,6 @@ previous collection.
 diagnostics:
   plugin: "dc_measurements/Diagnostics"
   topic_output: "/dc/measurement/diagnostics"
-  tags: ["console"]
   level_threshold: "WARN"
   names: ["motor_driver", "battery"]
   if_none_conditions: ["diagnostics_unchanged"]

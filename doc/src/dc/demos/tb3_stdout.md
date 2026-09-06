@@ -230,7 +230,7 @@ measurement_server:
 
 **all_base_path (Optional)**: Used as a common base for some measurements to save files. Is concatenated to *save_local_base_path*. Note the =robot_name, which is later replaced by C3PO (the variable defined in custom_keys_str)
 
-**map.remote_keys**: creates a dictionary inside **remote_paths** which is named by the strings in this field — each name must match a `receives: files` Destination in the `dc_bridge` block below, so the Bridge's Uploader knows where to send the file.
+**map.remote_keys**: creates a dictionary inside **remote_paths** which is named by the strings in this field — each name must match a `receives: files` Destination in the `dc_bridge` block below, so `dc_uploader` (a separate process from the Bridge, see [ADR-0014](../adr/0014-uploader-runs-as-its-own-process.md)) knows where to send the file.
 
 ### Group
 

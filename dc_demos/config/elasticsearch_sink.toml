@@ -4,7 +4,7 @@
 # ADR-0003 passthrough sink for the Elasticsearch tutorial
 # (doc/src/dc/demos/elasticsearch.md).
 #
-# dc_bridge blesses four Destination types — postgres, s3, file, console — and
+# dc_bridge blesses five Destination types — postgres, s3, file, console, vector — and
 # Elasticsearch is not one of them, so there is no `type: elasticsearch` to write in the
 # params file. Instead this is plain Vector configuration, merged as-is with the config
 # dc_bridge renders, consuming the public `dc.<tag>` routes (see

@@ -5,7 +5,7 @@
 | Event                               | What to do                                                                                                                                    |
 | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Want to contribute                  | [Open a PR](https://github.com/Minipada/ros2_data_collection/pulls)                                                                           |
-| Found a bug                         | [File a ticket on Github Issues](https://github.com/Minipada/ros2_data_collection/issues/new?assignees=&labels=bug&template=issues.md&title=) |
+| Found a bug                         | [File a ticket on Github Issues](https://github.com/Minipada/ros2_data_collection/issues/new?assignees=&labels=bug&template=bug_report.md&title=) |
 | Found a vulnerability               | [Report it privately](https://github.com/Minipada/ros2_data_collection/security/advisories/new)                                               |
 | Feature request                     | [Describe what you want on Github Discussions](https://github.com/Minipada/ros2_data_collection/discussions)                                  |
 | Want to start a discussion          | [Start one on Github Discussions](https://github.com/Minipada/ros2_data_collection/discussions)                                               |
@@ -88,28 +88,21 @@ Add a new license there and run `uvx reuse download --all` to fetch its text int
 
 #### Docs
 
-To build the docs, install cargo:
+The doc toolchain (mdbook plus its preprocessors — `mdbook-admonish`, `mdbook-mermaid`,
+`mdbook-open-on-gh` — and `mdbook-linkcheck`, all pinned) runs inside a Podman image built
+from `containers/doc/Containerfile`; mdbook's preprocessor ABI isn't stable across minor
+versions, so an unpinned `cargo install mdbook` can silently pull an incompatible set. The
+same two scripts CI, the `build-doc` pre-commit hook, and a local editing loop all use:
 
 ```bash
-sudo apt-get install cargo
+./tools/ci/pre-commit/build_doc.sh    # one-shot build -> doc/book/html
+./tools/ci/pre-commit/serve_doc.sh    # live-reloading dev server at http://127.0.0.1:3000
 ```
 
-Then install mdbook (the command line tool to create books with Markdown) and its plugins:
-
-```bash
-cargo install mdbook mdbook-admonish mdbook-linkcheck mdbook-mermaid
-```
-
-Start the doc locally with auto-refresh on edit:
-
-```bash
-export PATH=$PATH:$HOME/.cargo/bin
-mdbook serve -p 8000 -n 0.0.0.0
-```
-
-And open [localhost:8000](http://localhost:8000)
-
-Now that you open see the documentation locally, open the doc folder of the repository and edit the Markdown files you need. More about mdbook can be found [here](https://rust-lang.github.io/mdBook/guide/installation.html)
+Open the doc folder of the repository and edit the Markdown files you need — `serve_doc.sh`
+reloads the browser on every save. Editing an ADR under `docs/adr/` needs one re-run of
+`tools/ci/pre-commit/generate_adr_pages.py` first, since that's what mirrors it into
+`doc/src/dc/adr/`.
 
 
 ### Declaring plugin parameters

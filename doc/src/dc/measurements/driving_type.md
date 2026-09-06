@@ -62,7 +62,6 @@ Dedicated mode topic:
 driving_type:
   plugin: "dc_measurements/DrivingType"
   topic_output: "/dc/measurement/driving_type"
-  tags: ["console"]
   mode_topic: "/driving_mode_raw"
   value_mapping_from: ["0", "1", "2"]
   value_mapping_to: ["manual", "autonomous", "teleop"]
@@ -75,7 +74,6 @@ Velocity source inference:
 driving_type:
   plugin: "dc_measurements/DrivingType"
   topic_output: "/dc/measurement/driving_type"
-  tags: ["console"]
   velocity_topics: ["/nav2/cmd_vel", "/teleop/cmd_vel"]
   velocity_modes: ["autonomous", "teleop"]
   velocity_timeout_s: 1.0
