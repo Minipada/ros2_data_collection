@@ -10,7 +10,7 @@ was agreed against. Emits a
 terminal state. `NavigateThroughPoses` and `FollowWaypoints` are its siblings (#388/#389): same
 Record schema, same `mission_id`/`sequence` conventions, each with its own `mission_type`.
 
-This Measurement is a **passive watcher, not a commander**: it never sends a `NavigateToPose` goal
+This Measurement is a **passive watcher**: it never sends a `NavigateToPose` goal
 itself. Whatever already dispatches navigation missions on the robot -- nav2's `bt_navigator`, a
 fleet orchestrator, an operator command -- keeps doing exactly that; this Measurement only
 observes. That is a deliberate match to every other Measurement's read-only relationship to the

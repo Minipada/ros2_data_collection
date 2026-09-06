@@ -83,11 +83,12 @@ What it deliberately does not claim:
 - **Not "useful work".** A robot standing still while it inspects something reads as idle,
   and a robot driving in circles reads as productive. Distinguishing the two needs the
   Mission Measurement, which does not exist yet (see below).
-- **No speed Record in the window means `utilisation` is NULL, not 0 %.** A deployment that
-  collects `driving_type` but not `speed` has unreported movement, not zero movement.
+- **No speed Record in the window means `utilisation` is NULL.** A deployment that
+  collects `driving_type` but not `speed` has unreported movement rather than zero movement.
   `speed_samples` is in the output so a NULL can be told from an empty range.
 - **A speed Record vouches for the grace period after it, no longer.** Movement reported
-  once and then never again buys 30 seconds of productive time, not the rest of the window.
+  once and then never again buys only 30 seconds of productive time, however long the
+  window actually runs.
 - The per-mode seconds add up to `reported_seconds`, so the ratio can always be checked
   against its parts.
 
@@ -111,7 +112,7 @@ picking a winner.
 
 What it deliberately does not claim:
 
-- **A denominator nothing reported gives a NULL rate**, never a rate over zero. A robot with
+- **A denominator nothing reported gives a NULL rate.** A robot with
   no `driving_type` Records has `autonomous_seconds` NULL and `per_autonomous_hour` NULL;
   the same holds for `distance_traveled` and `per_km`.
 - **A takeover still running is counted but never timed.** Only an end Record carries a
@@ -185,7 +186,7 @@ missions started — has no KPI view yet, but the design decision that used to b
 (Open-RMF)](./measurements/mission_open_rmf.md) are all implemented Measurements today,
 emitting outcome Records DC already collects. Writing the `dc_kpi_mission_*` view/function
 pair on top of that data — the same shape as every other metric on this page — is what's
-still open, not the source it would read from.
+still open; the source data it would read from already exists.
 
 ## What the data has to look like
 

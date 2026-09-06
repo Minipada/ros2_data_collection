@@ -129,10 +129,10 @@ Six `kubectl exec ... nc -z` connection attempts from dedicated probe Pods (same
 | robot-a -> `dc-edge-a` | **permitted** |
 | `dc-edge-a` -> hub | **permitted** |
 
-Then the real thing, not a probe: wait for `dc-ros`'s own Records to reach the hub's
+Then the real check: wait for `dc-ros`'s own Records to reach the hub's
 Postgres through the edge aggregator, and check the row count.
 
-## 6. Induced outage: buffering, not loss
+## 6. Induced outage: the backlog buffers through it
 
 ```sh
 sleep 15  # steady state
@@ -152,13 +152,13 @@ echo "records: $COUNT_BEFORE before, $COUNT_AFTER after (+$DELTA over ${WINDOW_E
 
 `networkpolicy-robot-outage.yaml` replaces `dc-robot-a`'s `NetworkPolicy` object (same
 name, same namespace) with a version that drops the egress-to-edge rule and keeps only
-DNS — a real policy-enforced site-link outage, not a stopped container. `dc-ros` and its
+DNS — a real policy-enforced site-link outage rather than a stopped container. `dc-ros` and its
 local Vector Shipper keep running and buffering to disk the whole time
 ([ADR-0002](./adr/0002-vector-as-default-shipper.md)); once
 the policy is restored, the buffered backlog flushes and the hub's row count catches back
 up. CI additionally checks `DELTA` against `WINDOW_ELAPSED` seconds at the `uptime`
 Measurement's 1Hz rate (`tools/kind/params/robot-a-params.yaml`), with a 70% lower bound
-— a real loss would show up as a permanent shortfall there, not a transient dip.
+— a real loss would show up there as a permanent shortfall rather than a brief dip.
 
 ## 7. Tear down
 

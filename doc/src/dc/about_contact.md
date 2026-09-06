@@ -3,9 +3,9 @@
 ## About
 Our team currently includes:
 
-| Name             | GitHub ID                                | Current Role |
-| ---------------- | ---------------------------------------- | ------------ |
-| David Bensoussan | [Minipada](https://github.com/Minipada/) |              |
+| Name             | GitHub ID                                |
+| ---------------- | ----------------------------------------- |
+| David Bensoussan | [Minipada](https://github.com/Minipada/)  |
 
 
 ## Contact

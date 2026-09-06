@@ -18,8 +18,8 @@ Reads eProsima Fast DDS's own Statistics Module — latency, throughput and RTPS
 between the DomainParticipants, DataWriters and DataReaders it discovers on a DDS domain — through
 `Fast-DDS-statistics-backend`, and emits one `sample` Record per polling interval. It follows the
 same periodic-sample convention as [Battery](./battery.md)'s `sample` event and
-[Uptime](./uptime.md): everything reported is a fact for the window since the previous poll, not a
-running average since the Measurement started.
+[Uptime](./uptime.md): everything reported is scoped to the window since the previous poll,
+reset each time rather than accumulated since the Measurement started.
 
 Unlike every other Measurement, `fastdds_stats` has no input topic: it starts a
 `StatisticsBackend` monitor on a DDS domain at `onConfigure()` and queries that domain's own
@@ -42,8 +42,8 @@ Each sample reports:
   useful for spotting which machine or process is actually behind a noisy participant on a
   multi-process robot
 
-A field tied to a DataKind (latency, throughput, packet counts) is **absent**, not zero, when
-nothing reported data in the window — a domain with one lonely participant and no matched
+A field tied to a DataKind (latency, throughput, packet counts) is **absent** when nothing
+reported data in the window — a domain with one lonely participant and no matched
 DataWriter/DataReader pair yet still produces a valid Record, just without a `latency_ns_mean`.
 
 ```admonish info title="What init_monitor(domain_id) does"
@@ -156,10 +156,9 @@ Captured from a real run (all three prerequisites above met):
 }
 ```
 
-`latency_ns_mean` and every throughput/RTPS field are absent here — genuinely, not a
-capture artifact: nothing exchanged data on a matched DataWriter/DataReader pair
-within this particular 5-second poll window, and per the Statistics Backend's own
-contract, absence is how "nothing to report" is signaled, not a zero. A busier DDS
-graph (more topics, higher rate) makes them appear more often, not guaranteed every
-poll.
+`latency_ns_mean` and every throughput/RTPS field are absent here: nothing exchanged data
+on a matched DataWriter/DataReader pair within this particular 5-second poll window, and
+per the Statistics Backend's own contract, absence is how "nothing to report" is signaled.
+A busier DDS graph (more topics, higher rate) makes them appear more often, though never
+guaranteed on every poll.
 ```

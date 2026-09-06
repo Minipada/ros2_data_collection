@@ -30,7 +30,7 @@ plugin subscribes, delegates and serialises.
 `sensor_msgs/BatteryState` leaves most fields optional and signals "unmeasured" with `NaN`. A field
 the hardware doesn't fill is **left out** of the Record rather than written as `null`, so a pack
 that reports only a voltage still produces a valid Record. Until the input topic publishes at all,
-no Record is emitted: a gap means no battery data, not a battery at 0 %.
+no Record is emitted: a gap in the data simply means the battery hasn't reported yet.
 
 Battery health is reported the way the hardware reports it — `power_supply_health` when the pack
 sends one, and `health_percentage` (`capacity` against `design_capacity`) only when it sends both.

@@ -29,10 +29,10 @@ Compared to other plugins, the collect function only moves the files from the te
 (`$HOME/ros2/data/%Y/%M/%D/%H`, see [Measurements](../measurements.md)) contains exactly
 those placeholders. The first `collect()` call throws an uncaught
 `std::filesystem::filesystem_error` ("cannot open directory: No such file or directory")
-and takes down the whole `measurement_server` process — not just this Measurement.
-Known, not yet fixed. Set a `save_local_base_path` with no `%` placeholders (e.g.
-`/var/lib/dc`) to avoid it; `save_path` itself is unaffected, since only its parent
-directory is extracted into `storage_dir_`.
+and takes down the whole `measurement_server` process, along with every other Measurement
+it runs. This is a known issue, still unfixed. Set a `save_local_base_path` with no `%`
+placeholders (e.g. `/var/lib/dc`) to avoid it; `save_path` itself is unaffected, since only
+its parent directory is extracted into `storage_dir_`.
 ```
 
 ## Schema

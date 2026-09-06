@@ -3,17 +3,18 @@
 ## Description
 
 Reports the straight-line distance moved between the robot's current TF pose
-(`robot_base_frame` in `global_frame`) and its pose at the *previous* poll — not a running
-odometer total, despite the field's name. Sum it downstream (e.g. `SUM(distance_traveled)`
-in a SQL view) if a cumulative total since power-on is what you actually want.
+(`robot_base_frame` in `global_frame`) and its pose at the *previous* poll — a per-poll
+delta, despite the field's name. Sum it downstream (e.g. `SUM(distance_traveled)`
+in a SQL view) to get a cumulative total since power-on.
 
-```admonish warning title="distance_traveled is a per-poll delta, not a running total"
+```admonish warning title="distance_traveled is a per-poll delta"
 `collect()` computes `sqrt((x - last_x)^2 + (y - last_y)^2)` against the position recorded
 on the *previous* poll and overwrites `last_x_`/`last_y_` with the current one — it never
 accumulates into a sum. A stationary robot reports `0.0` every poll; a robot that moved 3 m
 since the last poll reports `3.0` once, then `0.0` again once it stops. The Measurement's own
 name and its schema's `"description": "Total distance traveled in meters"` both suggest a
-running total; neither matches what the code does. Known, not yet fixed or renamed.
+running total, but that's misleading given what the code actually does. This is a known
+issue, still unfixed and unrenamed.
 ```
 
 ## Parameters

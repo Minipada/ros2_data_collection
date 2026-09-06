@@ -51,8 +51,8 @@ it runs alongside `dc_bridge`, not in the background) show each file it opens an
 
 Stop the stack (`Ctrl-C`) once a few Records have been collected — `dc_mcap_writer`
 finishes the file it has open on shutdown, so every `.mcap` under the configured
-`output_dir` (`~/dc_mcap_out` in the demo params) is independently valid, not just the
-most recent rotation:
+`output_dir` (`~/dc_mcap_out` in the demo params) is independently valid, including every
+earlier rotation:
 
 ```bash
 ros2 bag info ~/dc_mcap_out/records_<timestamp>_<pid>_0001.mcap

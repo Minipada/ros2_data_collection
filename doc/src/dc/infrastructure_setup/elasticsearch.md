@@ -13,7 +13,7 @@ Destination](../destinations.md#passthrough-custom_config_files): `dc_bridge` ha
 is what the [Elasticsearch tutorial](../demos/elasticsearch.md) uses to look at what
 landed.
 
-## Start with docker compose
+## Start in a container
 
 Execute:
 

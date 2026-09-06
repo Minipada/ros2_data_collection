@@ -8,7 +8,7 @@ accepted and one `mission_end` Record when it reaches a terminal state. It is th
 sibling of the `NavigateToPose` Mission Measurement (#387): same Record schema, same
 `mission_id`/`sequence` conventions, its own `mission_type`.
 
-This Measurement is a **passive watcher, not a commander**: it never sends a `FollowWaypoints` goal
+This Measurement is a **passive watcher**: it never sends a `FollowWaypoints` goal
 itself. Whatever already dispatches waypoint-following missions on the robot --
 [`nav2_simple_commander`](https://docs.nav2.org/commander_api/index.html), a WMS integration, a
 teleop panel -- keeps doing exactly that; this Measurement only observes. That is a deliberate

@@ -6,7 +6,7 @@
 | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Want to contribute                  | [Open a PR](https://github.com/Minipada/ros2_data_collection/pulls)                                                                           |
 | Found a bug                         | [File a ticket on Github Issues](https://github.com/Minipada/ros2_data_collection/issues/new?assignees=&labels=bug&template=issues.md&title=) |
-| Found a vulnerability               | [Report it privately](https://github.com/Minipada/ros2_data_collection/security/advisories/new), never as a public issue                      |
+| Found a vulnerability               | [Report it privately](https://github.com/Minipada/ros2_data_collection/security/advisories/new)                                               |
 | Feature request                     | [Describe what you want on Github Discussions](https://github.com/Minipada/ros2_data_collection/discussions)                                  |
 | Want to start a discussion          | [Start one on Github Discussions](https://github.com/Minipada/ros2_data_collection/discussions)                                               |
 | Be aware of the ongoing development | Take a look at the [Github Project](https://github.com/users/Minipada/projects/1) and what is being worked on                                 |
@@ -136,7 +136,7 @@ declares and reads `"<plugin_name>.<param_name>"`. Available types: `str`, `str_
 parameters that have no plugin namespace use the equivalent `dc_util::get_str_param()` /
 `get_str_array_param()` (no `plugin_name` argument).
 
-This is a single-source-of-truth convention deliberately, not just a style preference: see
+This single-source-of-truth convention is deliberate: see
 [ADR-0008](./adr/0008-dc-util-owns-parameter-declaration.md)
 for why `nav2_util` stays a dependency and `dc_util` wraps it rather than replacing it.
 

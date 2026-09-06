@@ -103,8 +103,8 @@ ros2 run dc_demos qrcodes_waypoint_follower
 ```
 
 ```admonish info
-The waypoints are camera stations, not just places to be, and the aisles are narrow
-enough that the difference matters: a code is only readable while
+The waypoints are camera stations, and the aisles are narrow enough that positioning
+accuracy matters: a code is only readable while
 
     |lateral error| + standoff * tan(|yaw error|) + 0.181 <= standoff * tan(30°)
 

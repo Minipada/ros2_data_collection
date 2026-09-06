@@ -198,8 +198,7 @@ The destination's own column type can truncate independently of `time_format`. A
 A Measurement configured for [incident capture](./measurements.md) tags every Record it
 releases with the `incident_id` of the `FlushEvent` that released it. That field is part of
 the Record envelope, so a `postgres` Destination writes it to its own **`incident_id`
-column** — "everything from this one event" is `WHERE incident_id = '…'`, not a substring
-search through a JSON payload:
+column** — "everything from this one event" is a plain `WHERE incident_id = '…'` query:
 
 ```sql
 ALTER TABLE dc ADD COLUMN incident_id text;

@@ -34,11 +34,11 @@ Relationships between them:
   buffered window as one **Incident**
 
 ```admonish example title="Words that mean something specific here"
-"Sink" is the Shipper's internal configuration unit, not the DC concept — the DC concept
-is **Destination**. "Route" is the Shipper-side path a **Tag** selects. A camera image is
-a **File**, not a Record; the Record is the JSON document describing where that File went.
-"Trigger" is not a synonym for a **Condition** turning on: a Condition is a level that gates
-collection while true, a **Trigger** is an edge that fires once.
+"Sink" is Vector's own term for an output configuration unit; DC's term for the same idea
+is **Destination**. "Route" is the Shipper-side path a **Tag** selects. A camera image is a
+**File**; the Record is the separate JSON document describing where that File went. A
+**Condition** is a level that gates collection while true; a **Trigger** is an edge that
+fires once, when a Condition composition flips from false to true.
 ```
 
 ## ROS 2
