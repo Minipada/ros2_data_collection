@@ -27,17 +27,46 @@ and the topic each one publishes on. Routing is the overlap between the two list
 nothing on the Measurement side names a Destination.
 ```
 
+```admonish info title="Why `file` + a passthrough snippet, not a blessed `console` Destination"
+Every "to the console" example below prints through a passthrough `console` sink loaded
+via `custom_config_files`, not a blessed `console` Destination — per
+[ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md), `console` (along with
+`postgres` and `s3`) moved from the blessed ROS-param form to a passthrough recipe (#471),
+being a pure Vector-sink wrapper with no DC-specific logic. `destinations` still names a
+`file` Destination in each example: `dc_bridge` derives its ROS subscriptions and
+`dc.<tag>` routes from `destinations` alone, never from a passthrough snippet's `inputs`,
+so a cheap `file` anchor is what actually creates the route the snippet consumes. See
+[Destinations: Recipes](./destinations.md#recipes-postgres-s3-console-via-passthrough) for
+the recipe this reuses throughout, and [Passthrough](./destinations.md#passthrough-custom_config_files)
+for the underlying mechanism.
+
+Save this once as `~/.dc/console_sink.toml`, and update its `inputs` to match whichever
+example you're running (each example below says what to set it to):
+
+    [sinks.debug_console]
+    type = "console"
+    inputs = ["dc.dc.measurement.uptime"]   # <- change this to match the example
+    target = "stdout"
+
+    [sinks.debug_console.encoding]
+    codec = "json"
+```
+
 ## Running the examples
 ### Example 1: Uptime to the console every second
+
+`console_sink.toml`'s `inputs`: `["dc.dc.measurement.uptime"]` (the default above).
 
 ```yaml
 dc_bridge:                                    # Bridge (Shipper) node configuration
   ros__parameters:
-    destinations: ["console"]                 # List of Destination names to enable
-    console:                                  # Destination name, you choose
-      type: console                           # Blessed Destination type, fixed
+    destinations: ["records_log"]             # List of Destination names to enable
+    records_log:                              # Destination name, you choose
+      type: file                              # Blessed Destination type -- the passthrough's anchor
       receives: records
       inputs: ["/dc/measurement/uptime"]      # Same as topic_output in the uptime measurement in measurement_server
+      path: "/tmp/dc/example1_records.ndjson"
+    custom_config_files: ["$HOME/.dc/console_sink.toml"]
 
 measurement_server:                           # Measurement node configuration
   ros__parameters:
@@ -49,16 +78,20 @@ measurement_server:                           # Measurement node configuration
 
 ### Example 2: Uptime to the console with ISO 8601 timestamps
 
+`console_sink.toml`'s `inputs`: `["dc.dc.measurement.uptime"]` (unchanged from Example 1).
+
 ```yaml
 dc_bridge:
   ros__parameters:
-    destinations: ["console"]
-    console:
-      type: console
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs: ["/dc/measurement/uptime"]
+      path: "/tmp/dc/example2_records.ndjson"
       time_key: "date"                       # Field the normalized timestamp is written to
       time_format: "iso8601"                 # "epoch_nanos" (default) | "iso8601" | "double"
+    custom_config_files: ["$HOME/.dc/console_sink.toml"]
 
 measurement_server:
   ros__parameters:
@@ -70,14 +103,18 @@ measurement_server:
 
 ### Example 3: Uptime to the console only at start and 3 times
 
+`console_sink.toml`'s `inputs`: `["dc.dc.measurement.uptime"]` (unchanged from Example 1).
+
 ```yaml
 dc_bridge:
   ros__parameters:
-    destinations: ["console"]
-    console:
-      type: console
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs: ["/dc/measurement/uptime"]
+      path: "/tmp/dc/example3_records.ndjson"
+    custom_config_files: ["$HOME/.dc/console_sink.toml"]
 
 measurement_server:
   ros__parameters:
@@ -90,14 +127,18 @@ measurement_server:
 
 ### Example 4: CPU and Memory to the console every 5 seconds forever
 
+`console_sink.toml`'s `inputs`: `["dc.dc.measurement.cpu", "dc.dc.measurement.memory"]`.
+
 ```yaml
 dc_bridge:
   ros__parameters:
-    destinations: ["console"]
-    console:
-      type: console
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs: ["/dc/measurement/cpu", "/dc/measurement/memory"]
+      path: "/tmp/dc/example4_records.ndjson"
+    custom_config_files: ["$HOME/.dc/console_sink.toml"]
 
 measurement_server:
   ros__parameters:
@@ -114,14 +155,18 @@ measurement_server:
 
 ### Example 5: CPU and Memory as a group to the console every 5 seconds forever
 
+`console_sink.toml`'s `inputs`: `["dc.dc.group.cpu_memory"]`.
+
 ```yaml
 dc_bridge:
   ros__parameters:
-    destinations: ["console"]
-    console:
-      type: console
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs: ["/dc/group/cpu_memory"]        # Group to create
+      path: "/tmp/dc/example5_records.ndjson"
+    custom_config_files: ["$HOME/.dc/console_sink.toml"]
 
 group_server:                                 # Group server configuration
   ros__parameters:
@@ -147,14 +192,18 @@ measurement_server:
 
 ### Example 6: Custom ROS message to the console every 2 seconds forever
 
+`console_sink.toml`'s `inputs`: `["dc.dc.measurement.my_string_stamped"]`.
+
 ```yaml
 dc_bridge:
   ros__parameters:
-    destinations: ["console"]
-    console:
-      type: console
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs: ["/dc/measurement/my_string_stamped"]
+      path: "/tmp/dc/example6_records.ndjson"
+    custom_config_files: ["$HOME/.dc/console_sink.toml"]
 
 measurement_server:
   ros__parameters:
@@ -175,14 +224,18 @@ ros2 topic pub -r 1 /hello-world dc_interfaces/msg/StringStamped  "{data: '{\"he
 
 ### Example 7: Custom ROS message to the console every time it is published
 
+`console_sink.toml`'s `inputs`: `["dc.dc.measurement.my_string_stamped"]` (unchanged from Example 6).
+
 ```yaml
 dc_bridge:
   ros__parameters:
-    destinations: ["console"]
-    console:
-      type: console
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs: ["/dc/measurement/my_string_stamped"]
+      path: "/tmp/dc/example7_records.ndjson"
+    custom_config_files: ["$HOME/.dc/console_sink.toml"]
 
 measurement_server:
   ros__parameters:
@@ -197,29 +250,25 @@ measurement_server:
 
 ### Example 8: Uptime to PostgreSQL, and to the console at the same time
 
-A Record is delivered to every Destination that lists its topic — listing the same topic
-twice is how you fan out.
+A Record is delivered to every Vector sink that consumes its route — listing the same
+`dc.<tag>` route in two sinks' `inputs` is how you fan out. Both PostgreSQL and console are
+reached through the passthrough here (per [ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md),
+neither is a blessed Destination any more — see
+[Destinations: Recipes](./destinations.md#recipes-postgres-s3-console-via-passthrough)); a
+single `file` anchor creates the one route both passthrough sinks consume.
 
 ```yaml
 dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"            # Where the Shipper keeps its disk buffer
-    destinations: ["pgsql", "console"]
-    pgsql:
-      type: postgres
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs: ["/dc/measurement/uptime"]
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "$DC_PG_PASSWORD"             # $VAR / ${VAR} are read from the environment
-      database: "dc"
-      table: "dc"
-    console:
-      type: console
-      receives: records
-      inputs: ["/dc/measurement/uptime"]
+      path: "/tmp/dc/example8_records.ndjson"
+    custom_config_files: ["$HOME/.dc/example8_sink.toml"]
 
 measurement_server:
   ros__parameters:
@@ -229,9 +278,33 @@ measurement_server:
       topic_output: "/dc/measurement/uptime"
 ```
 
+```toml
+# ~/.dc/example8_sink.toml
+[sinks.pgsql]
+type = "postgres"
+inputs = ["dc.dc.measurement.uptime"]
+endpoint = "postgres://dc:$DC_PG_PASSWORD@127.0.0.1:5432/dc"  # user:password@host:port/database
+table = "dc"
+
+[sinks.pgsql.buffer]
+type = "disk"
+max_size = 268435488
+
+[sinks.debug_console]
+type = "console"
+inputs = ["dc.dc.measurement.uptime"]
+target = "stdout"
+
+[sinks.debug_console.encoding]
+codec = "json"
+```
+
 ```admonish warning
-The Shipper's `postgres` Destination maps a Record's top-level JSON keys onto **existing**
+Vector's `postgres` sink maps a Record's top-level JSON keys onto **existing**
 columns; it does not create tables or columns. Create the table before starting DC.
+Unlike the blessed form's `password`, the `$DC_PG_PASSWORD` above is Vector's *own*
+`${VAR}` interpolation, off by default in the vendored Vector binary `dc_bridge` spawns
+— see the warning in [Destinations: Recipes](./destinations.md#recipes-postgres-s3-console-via-passthrough).
 ```
 
 ### Example 9: Camera images to object storage, with their metadata in PostgreSQL
@@ -254,17 +327,12 @@ dc_bridge:
       data_dir: "$HOME/.dc/shipper"
     uploader:
       data_dir: "$HOME/.dc/uploader"
-    destinations: ["pgsql", "rustfs"]
-    pgsql:                                    # the Records, and the File status log
-      type: postgres
+    destinations: ["records_log", "rustfs"]
+    records_log:                              # anchor for the Records, and for the File status log
+      type: file
       receives: records
       inputs: ["/dc/measurement/camera"]
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "$DC_PG_PASSWORD"
-      database: "dc"
-      table: "dc"
+      path: "/tmp/dc/example9_records.ndjson"
     rustfs:                                   # the File bytes
       type: s3
       receives: files
@@ -277,7 +345,8 @@ dc_bridge:
       force_path_style: true                  # path-style addressing for self-hosted stores
     files:
       delete_when_sent: true                  # delete locally once verified remotely
-      metadata_destination: "pgsql"
+      metadata_destination: "records_log"     # must name a `receives: records` Destination -- a passthrough sink id isn't eligible
+    custom_config_files: ["$HOME/.dc/example9_sink.toml"]
 
 measurement_server:
   ros__parameters:
@@ -294,6 +363,26 @@ measurement_server:
       remote_prefixes: [""]
 ```
 
+```toml
+# ~/.dc/example9_sink.toml -- consumes both routes records_log creates: the camera
+# measurement's own topic, and the dc.files Tag it gains from being named as
+# files.metadata_destination.
+[sinks.pgsql]
+type = "postgres"
+inputs = ["dc.dc.measurement.camera", "dc.dc.files"]
+endpoint = "postgres://dc:$DC_PG_PASSWORD@127.0.0.1:5432/dc"
+table = "dc"
+
+[sinks.pgsql.buffer]
+type = "disk"
+max_size = 268435488
+```
+
+`rustfs` stays a blessed Destination: `receives: files` is served entirely by
+`dc_uploader` reading these same ROS params, never by a Vector sink, so there is no
+passthrough equivalent for it to migrate to (see
+[Destinations: Recipes](./destinations.md#recipes-postgres-s3-console-via-passthrough)).
+
 ### Example 10: A Destination DC does not bless, via the passthrough
 
 Any sink in [Vector's catalog](https://vector.dev/docs/reference/configuration/sinks/) is
@@ -305,11 +394,12 @@ dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"
-    destinations: ["console"]
-    console:
-      type: console
+    destinations: ["records_log"]
+    records_log:
+      type: file
       receives: records
       inputs: ["/dc/measurement/uptime"]
+      path: "/tmp/dc/example10_records.ndjson"
     custom_config_files: ["$HOME/.dc/http_sink.toml"]
 
 measurement_server:

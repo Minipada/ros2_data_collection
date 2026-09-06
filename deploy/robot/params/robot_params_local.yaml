@@ -28,6 +28,17 @@ dc_bridge:
       bind_host: "0.0.0.0"
     uploader:
       data_dir: "$HOME/.dc/robot/uploader"
+    # NOT migrated to the ADR-0003 passthrough recipe (#471) -- unlike aio_params_local.yaml,
+    # this scenario runs `shipper.managed: false` (the three-container split, ADR-0015):
+    # `custom_config_files` snippets are validated against the render but, in unmanaged
+    # mode, dc_bridge writes only the single rendered `shipper.config_path` file for the
+    # separate `vector` container to read -- the snippet's own path is never copied
+    # anywhere that container can see, so a passthrough sink here would silently never
+    # run. Confirmed empirically: rendering this scenario with `custom_config_files`
+    # pointed at a passthrough postgres sink produced a `vector.toml` with no `pgsql`
+    # sink in it at all. Filed as a gap in dc_bridge/the split-deployment topology
+    # (custom_config_files needs a way to reach the unmanaged Shipper too) rather than
+    # worked around here; `pgsql` stays blessed until that's fixed.
     destinations: ["pgsql"]
     pgsql:
       type: postgres

@@ -137,19 +137,22 @@ passthrough Destinations consume. A Destination selects what it receives through
 
 ## Destinations
 
-A Destination is where data ends up: PostgreSQL, S3-compatible storage, a file, or the
-console are **blessed** (rendered from plain ROS parameters); any other Vector sink is
-reachable through the **passthrough**. See [Destinations](./destinations.md) for the full
-contract.
+A Destination is where data ends up: a file is **blessed** (rendered from plain ROS
+parameters), and so are PostgreSQL, S3-compatible storage, another Shipper, and (through a
+[passthrough recipe](./destinations.md#recipes-postgres-s3-console-via-passthrough) rather
+than the ROS-param form, per [ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md))
+the console; any other Vector sink is reachable through the **passthrough** too. See
+[Destinations](./destinations.md) for the full contract.
 
 ```yaml
 dc_bridge:
   ros__parameters:
-    destinations: ["console"]                 # Destination names to enable
-    console:                                  # a name you choose
-      type: console                           # a blessed type
+    destinations: ["records_log"]             # Destination names to enable
+    records_log:                              # a name you choose
+      type: file                              # a blessed type
       receives: records
       inputs: ["/dc/measurement/uptime"]      # the topics this Destination receives
+      path: "/tmp/dc/records.ndjson"
 
 measurement_server:
   ros__parameters:

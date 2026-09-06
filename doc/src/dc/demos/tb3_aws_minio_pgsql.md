@@ -231,16 +231,16 @@ They are used in the distance traveled measurement to only take values in a cert
 
 ### Destination server
 
-Here we enable the `pgsql`, `pgsql_files` and `rustfs` Destinations:
+Here we enable the `records_log` and `rustfs` Destinations, plus a passthrough for PostgreSQL:
 
 ```yaml
 dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"
-    destinations: ["pgsql", "pgsql_files", "rustfs"]
-    pgsql:
-      type: postgres
+    destinations: ["records_log", "rustfs"]
+    records_log:
+      type: file
       receives: records
       inputs: [
           # System
@@ -261,25 +261,8 @@ dc_bridge:
           "/dc/measurement/rustfs_health",
           "/dc/measurement/pgsql_health",
         ]
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc"
+      path: "/tmp/dc/tb3_simulation_pgsql_minio_records.ndjson"
       time_key: "date"
-      time_format: "double"
-    pgsql_files:
-      type: postgres
-      receives: records
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc_files"
-      time_key: "date"
-      time_format: "double"
     rustfs:
       type: s3
       receives: files
@@ -292,15 +275,63 @@ dc_bridge:
       force_path_style: true
     files:
       delete_when_sent: true
-      metadata_destination: "pgsql_files"
+      metadata_destination: "records_log"
+    custom_config_files: ["$HOME/.dc/tb3_simulation_pgsql_minio_sink.toml"]
+```
+
+```toml
+# ~/.dc/tb3_simulation_pgsql_minio_sink.toml
+[sinks.pgsql]
+type = "postgres"
+inputs = [
+  "dc.dc.measurement.cpu", "dc.dc.measurement.memory", "dc.dc.measurement.os",
+  "dc.dc.measurement.uptime", "dc.dc.measurement.camera", "dc.dc.measurement.cmd_vel",
+  "dc.dc.measurement.distance_traveled", "dc.dc.measurement.driving_type",
+  "dc.dc.measurement.position", "dc.dc.measurement.speed", "dc.dc.measurement.map",
+  "dc.dc.measurement.rustfs_health", "dc.dc.measurement.pgsql_health",
+]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc"
+
+[sinks.pgsql.buffer]
+type = "disk"
+max_size = 268435488
+
+[sinks.pgsql_files]
+type = "postgres"
+inputs = ["dc.dc.files"]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc_files"
+
+[sinks.pgsql_files.buffer]
+type = "disk"
+max_size = 268435488
+```
+
+Copy the snippet into place before launching:
+
+```bash
+mkdir -p ~/.dc && cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/tb3_simulation_pgsql_minio_sink.toml" ~/.dc/
 ```
 
 #### PostgreSQL Destinations
 
-`pgsql` carries almost every measurement and the two infrastructure health checks as plain Records. Note that not all data needs to go to PostgreSQL — only topics listed in a Destination's `inputs` reach it.
+PostgreSQL is reached through the [ADR-0003](../adr/0003-blessed-destinations-plus-passthrough.md)
+passthrough now, not a blessed `postgres` Destination — see
+[Destinations: Recipes](../destinations.md#recipes-postgres-s3-console-via-passthrough). The
+passthrough `pgsql` sink carries almost every measurement and the two infrastructure health
+checks as plain Records. Note that not all data needs to go to PostgreSQL — only topics whose
+`dc.<tag>` route exists (i.e. listed in `records_log`'s `inputs`) reach it.
 
-`pgsql_files` is a second, dedicated `postgres` Destination for `dc_uploader`'s status Records — it has no `inputs` of its own; it only receives data because `files.metadata_destination` names it. See [Destinations](../destinations.md), [ADR-0005](../adr/0005-file-uploads-are-bridge-responsibility.md) and [ADR-0014](../adr/0014-uploader-runs-as-its-own-process.md) for the full split, and the [QR codes demo](./qrcodes_minio_pgsql.md) for a worked example of the same pattern.
+`pgsql_files` is a second, dedicated `postgres` sink in the same passthrough snippet for
+`dc_uploader`'s status Records — it has no ROS topic `inputs` of its own; it consumes the
+`dc.dc.files` route instead, which `records_log` gains from being named as
+`files.metadata_destination` (that parameter must name a configured `receives: records`
+Destination, so it can't point at a passthrough-only sink id directly). See
+[Destinations](../destinations.md), [ADR-0005](../adr/0005-file-uploads-are-bridge-responsibility.md)
+and [ADR-0014](../adr/0014-uploader-runs-as-its-own-process.md) for the full split, and the
+[QR codes demo](./qrcodes_minio_pgsql.md) for a worked example of the same pattern.
 
 #### RustFS Destination
 
-We list only `map` and `camera` in `rustfs`'s `inputs` since those are the only measurements referencing Files. `rustfs`'s `type: s3` and `receives: files` mark it as owned by `dc_uploader` — a separate process from `dc_bridge` ([ADR-0014](../adr/0014-uploader-runs-as-its-own-process.md)) — rather than a Vector sink target: it uploads whatever File the measurement's `remote_keys: ["rustfs"]` pointed at it, verifies the object landed, and (with `files.delete_when_sent: true`) deletes the local copy only once that's confirmed.
+We list only `map` and `camera` in `rustfs`'s `inputs` since those are the only measurements referencing Files. `rustfs`'s `type: s3` and `receives: files` mark it as owned by `dc_uploader` — a separate process from `dc_bridge` ([ADR-0014](../adr/0014-uploader-runs-as-its-own-process.md)) — rather than a Vector sink target: it uploads whatever File the measurement's `remote_keys: ["rustfs"]` pointed at it, verifies the object landed, and (with `files.delete_when_sent: true`) deletes the local copy only once that's confirmed. Unlike PostgreSQL, `rustfs` stays a blessed Destination: `receives: files` is served entirely by `dc_uploader` reading these same ROS params, never by a Vector sink, so there is no passthrough equivalent for it to migrate to.

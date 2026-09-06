@@ -135,9 +135,9 @@ dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"
-    destinations: ["pgsql", "pgsql_files", "rustfs"]
-    pgsql:
-      type: postgres
+    destinations: ["records_log", "rustfs"]
+    records_log:
+      type: file
       receives: records
       inputs:
         [
@@ -146,14 +146,9 @@ dc_bridge:
           "/dc/measurement/left_camera",
           "/dc/group/robot",
         ]
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc"
+      path: "/tmp/dc/qrcodes_minio_pgsql_records.ndjson"
       time_key: "date"
-      time_format: "double"
+    custom_config_files: ["$HOME/.dc/qrcodes_minio_pgsql_sink.toml"]
 
 group_server:
   ros__parameters:
@@ -217,14 +212,51 @@ In the measurement server, we set 3 measurements: cmd_vel, position and speed be
 
 Note the `include_measurement_name` which include measurement name in the JSON, which is used when grouping. The group collects the data from those 3 measurement and republishes it on the group topic `/dc/group/robot`.
 
-`dc_bridge` owns every Destination this demo uses. `pgsql` is a `postgres` Destination — its `inputs` list already names every topic this demo produces (`/dc/group/robot` for this section, plus `/dc/measurement/map`, `/dc/measurement/right_camera` and `/dc/measurement/left_camera` for the sections below): unlike the retired per-measurement `tags: [...]` mechanism, a Destination's `inputs` is the single place that decides what reaches it, so we declare it once and simply grow the measurements that feed those topics as we go.
+`dc_bridge` owns every Destination this demo uses. `records_log`'s `inputs` list already
+names every topic this demo produces (`/dc/group/robot` for this section, plus
+`/dc/measurement/map`, `/dc/measurement/right_camera` and `/dc/measurement/left_camera` for
+the sections below): unlike the retired per-measurement `tags: [...]` mechanism, a
+Destination's `inputs` is the single place that decides what reaches it, so we declare it
+once and simply grow the measurements that feed those topics as we go.
+
+`records_log` is a `file` Destination, not `postgres` — PostgreSQL is reached through the
+[ADR-0003](../adr/0003-blessed-destinations-plus-passthrough.md) passthrough instead. The
+actual `postgres` sink lives in `qrcodes_minio_pgsql_sink.toml`, a raw Vector config
+snippet loaded via `custom_config_files`:
+
+```toml
+# ~/.dc/qrcodes_minio_pgsql_sink.toml
+[sinks.pgsql]
+type = "postgres"
+inputs = [
+  "dc.dc.measurement.map",
+  "dc.dc.measurement.right_camera",
+  "dc.dc.measurement.left_camera",
+  "dc.dc.group.robot",
+]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc"
+
+[sinks.pgsql.buffer]
+type = "disk"
+max_size = 268435488
+```
+
+`dc_bridge` derives its ROS subscriptions and `dc.<tag>` routes from `destinations` alone,
+never from a passthrough snippet's `inputs` — that's why `records_log` still lists every
+topic even though the snippet above is what actually reaches PostgreSQL. Copy the snippet
+into place before launching:
+
+```bash
+mkdir -p ~/.dc && cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/qrcodes_minio_pgsql_sink.toml" ~/.dc/
+```
 
 ```admonish warning
 
 Be sure to change the login and password to your current infrastructure configuration. Do it in production setup!
 ```
 
-You can find more about the `postgres` Destination type [here](../destinations.md)
+You can find more about the `postgres` sink recipe [here](../destinations.md#recipes-postgres-s3-console-via-passthrough)
 
 To take a look at records, go to Adminer. It is by default started at [http://localhost:8080](http://localhost:8080), it is a database GUI.:
 
@@ -263,18 +295,7 @@ Then, the Destinations that make this work:
 dc_bridge:
   ros__parameters:
     ...
-    destinations: ["pgsql", "pgsql_files", "rustfs"]
-    pgsql_files:
-      type: postgres
-      receives: records
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc_files"
-      time_key: "date"
-      time_format: "double"
+    destinations: ["records_log", "rustfs"]
     rustfs:
       type: s3
       receives: files
@@ -292,14 +313,27 @@ dc_bridge:
       force_path_style: true
     files:
       delete_when_sent: true
-      metadata_destination: "pgsql_files"
+      metadata_destination: "records_log"
+```
+
+```toml
+# ~/.dc/qrcodes_minio_pgsql_sink.toml (continued)
+[sinks.pgsql_files]
+type = "postgres"
+inputs = ["dc.dc.files"]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc_files"
+
+[sinks.pgsql_files.buffer]
+type = "disk"
+max_size = 268435488
 ```
 
 This introduces the two-way PostgreSQL split this demo relies on:
 
-- **`pgsql`** (already declared above) is a plain `receives: records` Destination — it carries the map's own metadata Record (dimensions, resolution, local/remote paths) like any other measurement.
-- **`pgsql_files`** is a *second* `postgres` Destination, dedicated to the Uploader's own bookkeeping. It has no `inputs` of its own — it is never subscribed to directly, and is fed internally whenever `files.metadata_destination` names it, which is how every `receives: files` Destination in this file (here, `rustfs`) reports upload status.
-- **`rustfs`** is the `s3` Destination that actually uploads the pgm/yaml bytes. `receives: files` marks it as owned by **`dc_uploader`** — a separate process from `dc_bridge` ([ADR-0014](../adr/0014-uploader-runs-as-its-own-process.md)) — rather than a Vector sink: `dc_bridge` subscribes to `rustfs`'s `inputs`, and durably enqueues an intent for any Record with `remote_paths` entries whose key matches a Destination name — here `rustfs`, matching the map measurement's `remote_keys` above. `dc_uploader` reads that intent, uploads the referenced Files, verifies they landed, and emits a status Record under `dc.files`, routed to whatever `pgsql_files` names.
+- **`pgsql`** (the passthrough sink declared above) carries the map's own metadata Record (dimensions, resolution, local/remote paths) like any other measurement.
+- **`pgsql_files`** is a *second* `postgres` sink in the same passthrough snippet, dedicated to the Uploader's own bookkeeping. It has no ROS topic `inputs` of its own — it consumes the `dc.dc.files` route instead, which `records_log` gains from being named as `files.metadata_destination` below. `files.metadata_destination` must name a configured `receives: records` Destination (`dc_bridge` rejects anything else at startup), which is why it names `records_log` rather than the passthrough sink directly — a passthrough-only sink id isn't eligible.
+- **`rustfs`** is the `s3` Destination that actually uploads the pgm/yaml bytes. `receives: files` marks it as owned by **`dc_uploader`** — a separate process from `dc_bridge` ([ADR-0014](../adr/0014-uploader-runs-as-its-own-process.md)) — rather than a Vector sink: `dc_bridge` subscribes to `rustfs`'s `inputs`, and durably enqueues an intent for any Record with `remote_paths` entries whose key matches a Destination name — here `rustfs`, matching the map measurement's `remote_keys` above. `dc_uploader` reads that intent, uploads the referenced Files, verifies they landed, and emits a status Record under `dc.files`, routed to `records_log` (and, from there, consumed by the `pgsql_files` passthrough sink). Unlike `pgsql`/`pgsql_files`, `rustfs` stays blessed: `receives: files` is served entirely by `dc_uploader` reading these same ROS params, never by a Vector sink, so there is no passthrough equivalent for it to migrate to.
 
 See [Destinations](../destinations.md) for the full `files:`/Uploader contract, and [ADR-0005](../adr/0005-file-uploads-are-bridge-responsibility.md) / [ADR-0014](../adr/0014-uploader-runs-as-its-own-process.md) for why file uploads are a DC responsibility rather than a Vector sink, and why that logic now runs as its own process.
 
@@ -405,9 +439,9 @@ Taking a look at the cameras, we can understand that:
 
 `include_measurement_name` matters here too: the Uploader relies on it to know which top-level field of the Record holds the `local_paths`/`remote_paths` it should act on.
 
-No new Destination block is needed for the cameras: `pgsql` and `rustfs` already list `/dc/measurement/right_camera` and `/dc/measurement/left_camera` in their `inputs` (see the first section above) — a Destination's `inputs` is a single, global list of topics rather than something declared per measurement, so adding a measurement that feeds an already-configured Destination requires no `dc_bridge` change at all.
+No new Destination block is needed for the cameras: `records_log` and `rustfs` already list `/dc/measurement/right_camera` and `/dc/measurement/left_camera` in their `inputs` (see the first section above), and the passthrough `pgsql` sink already consumes the matching `dc.<tag>` routes those `inputs` create — a Destination's `inputs` is a single, global list of topics rather than something declared per measurement, so adding a measurement that feeds an already-configured Destination requires no `dc_bridge` change at all.
 
-Here, we collect images with the `rustfs` Destination, and their metadata (which record they belong to, remote path once uploaded, image dimensions where relevant) through `pgsql`. `pgsql_files`, fed by the Uploader, tracks when each image is sent to RustFS and — with `files.delete_when_sent: true` — is deleted locally once confirmed. Note that a Record's `remote_paths` can name several Destinations at once; the Uploader sends to every one whose name appears there.
+Here, we collect images with the `rustfs` Destination, and their metadata (which record they belong to, remote path once uploaded, image dimensions where relevant) through the passthrough `pgsql` sink. `pgsql_files`, fed by the Uploader, tracks when each image is sent to RustFS and — with `files.delete_when_sent: true` — is deleted locally once confirmed. Note that a Record's `remote_paths` can name several Destinations at once; the Uploader sends to every one whose name appears there.
 
 An example Record for `right_camera`, once the image is inspected:
 

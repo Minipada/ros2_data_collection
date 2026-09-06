@@ -14,14 +14,16 @@ dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"
-    destinations: ["raw_console"]
-    raw_console:
-      type: console          # any blessed type works: postgres | s3 | file | console | vector
+    destinations: ["raw_log"]
+    raw_log:
+      type: file              # any blessed type works: postgres | s3 | file | vector, or console
+                               # via its passthrough recipe (destinations.md#recipes-postgres-s3-console-via-passthrough)
       receives: records
+      path: "/tmp/dc/raw_records.ndjson"
       time_key: "date"
     raw:
       enabled: true
-      destination: "raw_console"
+      destination: "raw_log"
 ```
 
 ```bash

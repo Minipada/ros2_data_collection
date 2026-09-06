@@ -15,4 +15,7 @@ services:
   dc-ros:
     volumes:
       - ${DC_ROBOT_AIO_PARAMS:-./params/aio_params_local.yaml}:/opt/dc/dc_params.yaml:ro
+      # aio_params_local.yaml's postgres Destination is passthrough (ADR-0003, #471) --
+      # this is the raw Vector sink config its `custom_config_files` parameter loads.
+      - ${DC_ROBOT_AIO_PGSQL_SINK:-./params/aio_pgsql_sink.toml}:/root/.dc/aio_pgsql_sink.toml:ro
     command: ["dc_params_file:=/opt/dc/dc_params.yaml"]

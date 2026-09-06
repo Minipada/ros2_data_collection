@@ -42,10 +42,14 @@ ros2 launch dc_demos mcap_recording.launch.py
 
 `dc_bringup.launch.py` starts `dc_mcap_writer` before the rest of the stack, so its TCP
 listener is up before Vector's generated `socket` sink (re)connects to it — the very
-first Record lands instead of relying on Vector's own retry. The `console` Destination
-prints every Record as it is shipped, so the terminal doubles as a local view of what
-`dc_mcap_writer` is receiving; `dc_mcap_writer`'s own log lines (also on this terminal —
-it runs alongside `dc_bridge`, not in the background) show each file it opens and closes.
+first Record lands instead of relying on Vector's own retry. The `records_log` `file`
+Destination writes every Record as it is shipped to `/tmp/dc/mcap_recording_records.ndjson`,
+so `tail -f` on that path doubles as a local view of what `dc_mcap_writer` is receiving
+(an earlier version of this demo used a blessed `console` Destination for the same job —
+see [Destinations: Recipes](../destinations.md#recipes-postgres-s3-console-via-passthrough)
+for why that moved to a passthrough recipe); `dc_mcap_writer`'s own log lines (on this
+terminal — it runs alongside `dc_bridge`, not in the background) show each file it opens
+and closes.
 
 ## Verify the recording
 
