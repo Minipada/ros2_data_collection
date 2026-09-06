@@ -94,7 +94,7 @@ topic.
 (default 128 MiB) or has been open `max_duration_secs` (default 300s), whichever comes
 first — the same "whichever limit first" shape used for `files.retention`
 ([ADR-0005](../adr/0005-file-uploads-are-bridge-responsibility.md)),
-applied here to `dc_mcap_writer`'s own output rather than the Bridge's Uploader queue
+applied here to `dc_mcap_writer`'s own output rather than `dc_uploader`'s intent queue
 ([ADR-0009](../adr/0009-mcap-as-a-passthrough-destination.md) explains why this stays
 outside `dc_bridge`). Filenames are
 `<prefix>_<UTC timestamp>_<pid>_<rotation index>.mcap`; the PID and counter together

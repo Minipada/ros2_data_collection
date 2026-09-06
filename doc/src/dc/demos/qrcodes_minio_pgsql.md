@@ -299,9 +299,9 @@ This introduces the two-way PostgreSQL split this demo relies on:
 
 - **`pgsql`** (already declared above) is a plain `receives: records` Destination — it carries the map's own metadata Record (dimensions, resolution, local/remote paths) like any other measurement.
 - **`pgsql_files`** is a *second* `postgres` Destination, dedicated to the Uploader's own bookkeeping. It has no `inputs` of its own — it is never subscribed to directly, and is fed internally whenever `files.metadata_destination` names it, which is how every `receives: files` Destination in this file (here, `rustfs`) reports upload status.
-- **`rustfs`** is the `s3` Destination that actually uploads the pgm/yaml bytes. `receives: files` marks it as owned by the Bridge's **Uploader** ([ADR-0005](../adr/0005-file-uploads-are-bridge-responsibility.md)) rather than a Vector sink: the Uploader scans Records arriving on `rustfs`'s `inputs` for `remote_paths` entries whose key matches a Destination name — here `rustfs`, matching the map measurement's `remote_keys` above — uploads the referenced Files, verifies they landed, and emits a status Record under `dc.files`, routed to whatever `pgsql_files` names.
+- **`rustfs`** is the `s3` Destination that actually uploads the pgm/yaml bytes. `receives: files` marks it as owned by **`dc_uploader`** — a separate process from `dc_bridge` ([ADR-0014](../adr/0014-uploader-runs-as-its-own-process.md)) — rather than a Vector sink: `dc_bridge` subscribes to `rustfs`'s `inputs`, and durably enqueues an intent for any Record with `remote_paths` entries whose key matches a Destination name — here `rustfs`, matching the map measurement's `remote_keys` above. `dc_uploader` reads that intent, uploads the referenced Files, verifies they landed, and emits a status Record under `dc.files`, routed to whatever `pgsql_files` names.
 
-See [Destinations](../destinations.md) for the full `files:`/Uploader contract, and [ADR-0005](../adr/0005-file-uploads-are-bridge-responsibility.md) for why file uploads are a Bridge responsibility rather than a Vector sink.
+See [Destinations](../destinations.md) for the full `files:`/Uploader contract, and [ADR-0005](../adr/0005-file-uploads-are-bridge-responsibility.md) / [ADR-0014](../adr/0014-uploader-runs-as-its-own-process.md) for why file uploads are a DC responsibility rather than a Vector sink, and why that logic now runs as its own process.
 
 `files.delete_when_sent: true` means the local pgm/yaml are removed only once RustFS confirms the upload — never before.
 
@@ -415,7 +415,9 @@ An example Record for `right_camera`, once the image is inspected:
 {
   "camera_name": "right_camera",
   "date": 1677668926.700422,
+  "flattened": false,
   "id": "be781e5ffb1e7ee4f817fe7b63e92c32",
+  "nested": false,
   "robot_name": "C3PO",
   "run_id": "218",
   "local_img_paths": {

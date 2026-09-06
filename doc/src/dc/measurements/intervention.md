@@ -73,7 +73,6 @@ intervention:
   plugin: "dc_measurements/Intervention"
   topic_output: "/dc/measurement/intervention"
   group_key: "intervention"
-  tags: ["console"]
   velocity_topics: ["/cmd_vel_smoothed", "/teleop/cmd_vel"]
   velocity_modes: ["autonomous", "teleop"]
   velocity_timeout_s: 1.0

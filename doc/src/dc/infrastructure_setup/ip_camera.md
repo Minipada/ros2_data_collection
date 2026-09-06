@@ -20,7 +20,7 @@ This is optional, and only useful if you want to not use a camera
 You will first need to install some packages:
 
 ```bash
-sudo apt-get install v4l-utils v4l2loopback
+sudo apt-get install v4l-utils v4l2loopback-dkms
 ```
 
 And start a virtual camera device:

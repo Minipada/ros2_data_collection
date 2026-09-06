@@ -7,17 +7,21 @@ documents — on its own ROS topic. For example, a Record from the Memory Measur
 
 ```json
 {
-    "date": "2022-12-04T14:16:06.810999008",
     "flattened": false,
-    "id": "3c70afdcb6f248f28f4c3980734064c5",
     "memory": {
         "used": 76.007431
     },
     "nested": true,
-    "robot_name": "C3PO",
     "run_id": "358"
 }
 ```
+
+`flattened`/`nested`/`run_id` are added unconditionally by this node — see below. Fields
+like `robot_name` only appear once configured as a custom key (see
+[`custom_key_str_list`](#node-parameters) above), and `date`/`host`/`source_type`/`tag`/
+`timestamp` are added later, by Vector once the Bridge forwards the Record — see a
+captured example on any [demo](./demos.md) page for the full shape a Destination
+actually receives.
 
 ## Node parameters
 
@@ -64,13 +68,14 @@ with a missing or blank `robot_name`.
 ### Custom keys on Files
 
 The keys listed in `custom_key_str_list` label a Measurement's **Files** as well as its
-Records: the Bridge's Uploader writes them into the `file_status` and `group_complete`
+Records: `dc_uploader` ([ADR-0014](./adr/0014-uploader-runs-as-its-own-process.md), a
+separate process from the Bridge) writes them into the `file_status` and `group_complete`
 Records it emits for that Measurement's Files, so both sides of a Destination carry the
 same labelling. A Record names its custom keys in a `custom_keys` field for that purpose.
 
 Two limits are worth knowing. A custom key whose name is one the Uploader computes itself
 (`group_name`, `local_path`, `remote_path`, `storage_type`, `uploaded`, `size`, …) is not
-written — the Uploader's own value is kept and the Bridge logs the collision. The keys the
+written — the Uploader's own value is kept and `dc_uploader` logs the collision. The keys the
 rows already carry, `robot_name` and `id` (as `robot_id`), are likewise not repeated, and
 are not reported: those values are in the row either way. And the column still has to exist
 in the Destination: the PostgreSQL sink maps JSON keys onto existing columns 1:1, so a new
@@ -89,11 +94,11 @@ Each measurement is collected through a node and has these configuration paramet
 | **enable_validator**           | Will validate the data against a JSON schema                                                 | bool        | true                                 |
 | **flush_topic**                | Topic to receive the `FlushEvent` (see [Triggers](./triggers.md)) that releases the buffered window, tagging each Record with the event's `incident_id` | str | "/dc/flush" |
 | **gate_condition**             | Name of a Condition that must become true once before any collection is published; then latches open permanently and is never consulted again | str | N/A (optional) |
-| **group_key**                  | Value of the key used when grouped                                                           | str         | N/A (mandatory)                      |
+| **group_key**                  | Value of the key used when grouped                                                           | str         | "" (Optional)                        |
 | **if_all_conditions**          | Collect only if all conditions are activated                                                 | list\[str\] | N/A (optional)                       |
 | **if_any_conditions**          | Collect if any conditions is activated                                                       | list\[str\] | N/A (optional)                       |
 | **if_none_conditions**         | Collect only if all conditions are not activated                                             | list\[str\] | N/A (optional)                       |
-| **include_measurement_name**   | Include measurement name in the JSON data                                                    | bool        | false                                |
+| **include_measurement_name**   | Include measurement name in the JSON data                                                    | bool        | true                                 |
 | **include_measurement_plugin** | Include measurement plugin name in the JSON data                                             | bool        | false                                |
 | **init_collect**               | Collect when the node starts instead of waiting the first tick                               | bool        | true                                 |
 | **init_max_measurements**      | Collect a maximum of n measurements when starting the node (-1 = never, 0 = infinite)        | int         | 0                                    |

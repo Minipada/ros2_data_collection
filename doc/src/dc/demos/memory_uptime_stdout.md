@@ -58,10 +58,9 @@ group_server:
       output: "/dc/group/memory_uptime"
       sync_delay: 5.0
       group_key: "memory_uptime"
-      include_group_name: false
 ```
 
-**include_group_name (Optional)**: Will include the name of the group in the JSON, it makes it easier later on to fetch the data from your API. In this case, we can skip it since we only have one group to show.
+**include_group_name (Optional, default `true`)**: Includes the name of the group in the JSON as a top-level `name` field — visible in the console output below — which makes it easier later on to fetch the data from your API. Left at its default here.
 
 You can also notice that the group also has a "group_key". It means a group can be part of another.
 

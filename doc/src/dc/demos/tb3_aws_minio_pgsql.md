@@ -299,8 +299,8 @@ dc_bridge:
 
 `pgsql` carries almost every measurement and the two infrastructure health checks as plain Records. Note that not all data needs to go to PostgreSQL — only topics listed in a Destination's `inputs` reach it.
 
-`pgsql_files` is a second, dedicated `postgres` Destination for the Bridge's Uploader status Records — it has no `inputs` of its own; it only receives data because `files.metadata_destination` names it. See [Destinations](../destinations.md) and [ADR-0005](../adr/0005-file-uploads-are-bridge-responsibility.md) for the full split, and the [QR codes demo](./qrcodes_minio_pgsql.md) for a worked example of the same pattern.
+`pgsql_files` is a second, dedicated `postgres` Destination for `dc_uploader`'s status Records — it has no `inputs` of its own; it only receives data because `files.metadata_destination` names it. See [Destinations](../destinations.md), [ADR-0005](../adr/0005-file-uploads-are-bridge-responsibility.md) and [ADR-0014](../adr/0014-uploader-runs-as-its-own-process.md) for the full split, and the [QR codes demo](./qrcodes_minio_pgsql.md) for a worked example of the same pattern.
 
 #### RustFS Destination
 
-We list only `map` and `camera` in `rustfs`'s `inputs` since those are the only measurements referencing Files. `rustfs`'s `type: s3` and `receives: files` mark it as Uploader-owned rather than a Vector sink target: it uploads whatever File the measurement's `remote_keys: ["rustfs"]` pointed at it, verifies the object landed, and (with `files.delete_when_sent: true`) deletes the local copy only once that's confirmed.
+We list only `map` and `camera` in `rustfs`'s `inputs` since those are the only measurements referencing Files. `rustfs`'s `type: s3` and `receives: files` mark it as owned by `dc_uploader` — a separate process from `dc_bridge` ([ADR-0014](../adr/0014-uploader-runs-as-its-own-process.md)) — rather than a Vector sink target: it uploads whatever File the measurement's `remote_keys: ["rustfs"]` pointed at it, verifies the object landed, and (with `files.delete_when_sent: true`) deletes the local copy only once that's confirmed.

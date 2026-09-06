@@ -158,8 +158,8 @@ That is the whole install. `colcon build` also runs `vector_vendor`, which fetch
 pinned, checksummed [Vector](https://vector.dev/) release tarball live — the external
 **Shipper** the Bridge supervises at runtime
 ([ADR-0002](./adr/0002-vector-as-default-shipper.md)) — and `aws_sdk_vendor`, which
-fetches and builds the AWS SDK for C++ (`core` + `s3`) the Bridge's Uploader uses
-([ADR-0007](./adr/0007-bridge-returns-to-cpp.md)) live from `github.com/aws/aws-sdk-cpp`
+fetches and builds the AWS SDK for C++ (`core` + `s3`) `dc_uploader` uses
+([ADR-0014](./adr/0014-uploader-runs-as-its-own-process.md)) live from `github.com/aws/aws-sdk-cpp`
 at a pinned tag; both steps need network access
 ([ADR-0002](./adr/0002-vector-as-default-shipper.md),
 [ADR-0012](./adr/0012-aws-sdk-vendor-flattened-source.md)), and `aws_sdk_vendor`'s takes
@@ -203,6 +203,7 @@ copy, and [Destinations](./destinations.md) for the full Bridge configuration co
 | `log_level`   | `info`           | Log level for the DC nodes                                 |
 | `autostart`   | `True`           | Let the lifecycle manager configure and activate the nodes |
 | `use_sim_time` | `False`         | Use simulation (Gazebo) clock — set `True` against a simulator, or TF lookups run on the wall clock while the sim publishes on its own clock and drift into "extrapolation" errors |
+| `run_uploader` | `True`          | Launch `dc_uploader` ([ADR-0014](./adr/0014-uploader-runs-as-its-own-process.md)) from this process. Set `False` when it runs in its own container instead (the three-container split) |
 
 ### What starts, in what order
 

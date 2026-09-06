@@ -98,7 +98,6 @@ manipulation:
   plugin: "dc_measurements/Manipulation"
   topic_output: "/dc/measurement/manipulation"
   group_key: "manipulation"
-  tags: ["console"]
   action_name: "move_action"
   group_name: "arm"
 ```
