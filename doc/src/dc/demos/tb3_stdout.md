@@ -47,89 +47,135 @@ Execute
 ros2 launch dc_demos tb3_simulation_stdout.launch.py
 ```
 
-At the end, the data is displayed:
+At the end, the data is displayed. Every Destination — `console` included — goes
+through the external Vector Shipper (ADR-0002, [Destinations](../destinations.md)), so
+each line below is Vector's own event object, one bare JSON object per line (not an
+array):
 
 ```
-{"date":1677690777.96911,"width":384,"height":384,"remote_paths":{"rustfs":{"pgm":"C3PO/2023/03/01/17/map/2023-03-01T17:12:57.pgm","yaml":"C3PO/2023/03/01/17/map/2023-03-01T17:12:57.yaml"}},"resolution":0.05000000074505806,"origin":{"x":-10,"y":-10},"local_paths":{"pgm":"/root/dc_data/C3PO/2023/03/01/17/map/2023-03-01T17:12:57.pgm","yaml":"/root/dc_data/C3PO/2023/03/01/17/map/2023-03-01T17:12:57.yaml"},"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"234"}
-{"position":{"x":-0.7254206029057992,"yaw":0.134098723062189,"y":-0.5116378019627142},"cmd_vel":{"linear":{"x":0.26,"z":0,"y":0},"angular":{"x":0,"z":-0.157895,"y":0}},"speed":{"linear":{"x":8.720555295508514e-05,"z":0,"y":4.219923511090644e-06},"computed":8.730759543499989e-05,"angular":{"x":-0.0002958005596118955}},"date":1677690787.878526,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"234"}
-{"position":{"x":-0.1931822640325796,"yaw":-0.08553498481283986,"y":-0.5267276846092974},"cmd_vel":{"linear":{"x":0.232632,"z":0,"y":0},"angular":{"x":0,"z":-0.0526316,"y":0}},"speed":{"linear":{"x":0.2466804589428482,"z":0,"y":4.147463233418404e-05},"computed":0.2466804624294339,"angular":{"x":-0.1575310923819759}},"date":1677690789.878385,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"234"}
+[dc_bridge-3] {"custom_keys":["robot_name","id"],"date":1788479117.6297202,"flattened":false,"height":384,"host":"127.0.0.1","id":"e110a88ba1c24602bd2c116daf5b8287","local_paths":{"pgm":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.pgm","png":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.png","yaml":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.yaml"},"name":"map","nested":false,"origin":{"x":-10,"y":-10},"resolution":0.05000000074505806,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.map","timestamp":"2026-09-03T23:45:17.629720410Z","width":384}
+[dc_bridge-3] {"cmd_vel":{"angular":{"x":0,"y":0,"z":0.0299867},"computed":0.42023804783821106,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0.420238,"y":0,"z":0},"name":"cmd_vel","nested":false,"robot_name":"C3PO","run_id":"170"},"date":1788479127.1009243,"host":"127.0.0.1","name":"robot","position":{"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","name":"position","nested":false,"robot_name":"C3PO","run_id":"170","x":-1.0834591164924419,"y":0.5133007443427651,"yaw":-0.008814692701341621},"source_type":"fluent","speed":{"angular":{"x":0,"y":0,"z":0.027356281873875128},"computed":0.33021257209388344,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0.33021257209388344,"y":0,"z":0},"name":"speed","nested":false,"robot_name":"C3PO","run_id":"170"},"tag":"dc.group.robot","tags":[""],"timestamp":"2026-09-03T23:45:27.100924197Z"}
 ```
 
 Given the JSON is quite large, let's analyze 2 different records:
 
-The first one being the data published on the robot group:
+The first one being the data published on the robot group. Note it's deeply nested now —
+each of `cmd_vel`, `position` and `speed` carries its own copy of the custom keys
+(`robot_name`, `id`, `run_id`), since those are applied per-measurement before the
+group node merges them, not once at the top level:
 ```json
-[
-  {
-    "cmd_vel": {
-      "linear": {
-        "x": 0.246316,
-        "y": 0,
-        "z": 0
-      },
-      "angular": {
-        "x": 0,
-        "y": 0,
-        "z": 0.263158
-      }
+{
+  "cmd_vel": {
+    "angular": {
+      "x": 0,
+      "y": 0,
+      "z": 0.0299867
     },
-    "date": 1677694799.685468,
-    "position": {
-      "x": -0.6033772358727438,
-      "yaw": -0.7146495585355921,
-      "y": -1.633862970534114
+    "computed": 0.42023804783821106,
+    "custom_keys": [
+      "robot_name",
+      "id"
+    ],
+    "flattened": false,
+    "id": "e110a88ba1c24602bd2c116daf5b8287",
+    "linear": {
+      "x": 0.420238,
+      "y": 0,
+      "z": 0
     },
-    "speed": {
-      "angular": {
-        "x": -0.0002542699063698451
-      },
-      "computed": 3.279051750818494e-05,
-      "linear": {
-        "x": 3.244397182637543e-05,
-        "y": 4.754653571390878e-06,
-        "z": 0
-      }
-    },
-    "name": "robot",
-    "id": "be781e5ffb1e7ee4f817fe7b63e92c32",
+    "name": "cmd_vel",
+    "nested": false,
     "robot_name": "C3PO",
-    "run_id": "240"
-  }
-]
+    "run_id": "170"
+  },
+  "date": 1788479127.1009243,
+  "host": "127.0.0.1",
+  "name": "robot",
+  "position": {
+    "custom_keys": [
+      "robot_name",
+      "id"
+    ],
+    "flattened": false,
+    "id": "e110a88ba1c24602bd2c116daf5b8287",
+    "name": "position",
+    "nested": false,
+    "robot_name": "C3PO",
+    "run_id": "170",
+    "x": -1.0834591164924419,
+    "y": 0.5133007443427651,
+    "yaw": -0.008814692701341621
+  },
+  "source_type": "fluent",
+  "speed": {
+    "angular": {
+      "x": 0,
+      "y": 0,
+      "z": 0.027356281873875128
+    },
+    "computed": 0.33021257209388344,
+    "custom_keys": [
+      "robot_name",
+      "id"
+    ],
+    "flattened": false,
+    "id": "e110a88ba1c24602bd2c116daf5b8287",
+    "linear": {
+      "x": 0.33021257209388344,
+      "y": 0,
+      "z": 0
+    },
+    "name": "speed",
+    "nested": false,
+    "robot_name": "C3PO",
+    "run_id": "170"
+  },
+  "tag": "dc.group.robot",
+  "tags": [
+    ""
+  ],
+  "timestamp": "2026-09-03T23:45:27.100924197Z"
+}
 ```
 
 This record contains the speed, cmd_vel and position from the group "robot".
 
 ```json
-[
-  {
-    "width": 384,
-    "remote_paths": {
-      "rustfs": {
-        "yaml": "C3PO/2023/03/01/18/map/2023-03-01T18:20:16.yaml",
-        "pgm": "C3PO/2023/03/01/18/map/2023-03-01T18:20:16.pgm"
-      }
-    },
-    "name": "map",
-    "resolution": 0.05000000074505806,
-    "origin": {
-      "x": -10,
-      "y": -10
-    },
-    "local_paths": {
-      "yaml": "/root/dc_data/C3PO/2023/03/01/18/map/2023-03-01T18:20:16.yaml",
-      "pgm": "/root/dc_data/C3PO/2023/03/01/18/map/2023-03-01T18:20:16.pgm"
-    },
-    "date": 1677694816.690489,
-    "height": 384,
-    "id": "be781e5ffb1e7ee4f817fe7b63e92c32",
-    "robot_name": "C3PO",
-    "run_id": "240"
-  }
-]
+{
+  "custom_keys": [
+    "robot_name",
+    "id"
+  ],
+  "date": 1788479117.6297202,
+  "flattened": false,
+  "height": 384,
+  "host": "127.0.0.1",
+  "id": "e110a88ba1c24602bd2c116daf5b8287",
+  "local_paths": {
+    "pgm": "/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.pgm",
+    "png": "/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.png",
+    "yaml": "/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.yaml"
+  },
+  "name": "map",
+  "nested": false,
+  "origin": {
+    "x": -10,
+    "y": -10
+  },
+  "resolution": 0.05000000074505806,
+  "robot_name": "C3PO",
+  "run_id": "170",
+  "source_type": "fluent",
+  "tag": "dc.measurement.map",
+  "timestamp": "2026-09-03T23:45:17.629720410Z",
+  "width": 384
+}
 ```
 
-This record contains the map data from the measurement.
+This record contains the map data from the measurement. There's no `remote_paths` key —
+this demo's `dc_bridge` block only declares the `console` Destination below, not a
+`rustfs` one, so nothing actually matches `map.remote_keys: ["rustfs"]` and the Bridge
+never populates it.
 
 
 ## Configuration
@@ -245,18 +291,18 @@ Nothing new here, we simply edited the `console` Destination's `inputs` to `["/d
 
 Now that the node started, let us see what's displayed in the console. Measurement server and `dc_bridge` are started in the Lifecycle, you can read more about it [here](../concepts.md#lifecycle-nodes-and-bond).
 
-"Base save path" and "All Base path" are also saved and expanded. Note "=robot_name" has been replaced by C3PO:
+"Base save path" and "All Base path" are also saved and expanded. Note "=robot_name" has been replaced by C3PO. `measurement_server` runs composed inside the same process as every other DC node here, so the prefix is the container's, not the node's own name:
 
 ```
-[measurement_server-1] [INFO] [measurement_server]: Base save path expanded to /root/dc_data/
-[measurement_server-1] [INFO] [measurement_server]: All Base path expanded to C3PO/%Y/%m/%d/%H
+[component_container_isolated-1] [INFO] [1788479023.671013064] [measurement_server]: Base save path expanded to /root/dc_data/
+[component_container_isolated-1] [INFO] [1788479023.671095239] [measurement_server]: All Base path expanded to C3PO/%Y/%m/%d/%H
 ```
 
 Once `dc_bridge` reports ready (per [ADR-0006](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0006-bridge-outside-lifecycle-manager.md)'s `bridge_ready_gate`), the measurement plugins and the "robot" group start publishing, and we see the data on Vector's `console` sink:
 ```
-{"remote_paths":{"rustfs":{"pgm":"C3PO/2023/03/01/18/map/2023-03-01T18:19:56.pgm","yaml":"C3PO/2023/03/01/18/map/2023-03-01T18:19:56.yaml"}},"date":1677694796.765904,"height":384,"name":"map","origin":{"x":-10,"y":-10},"local_paths":{"pgm":"/root/dc_data/C3PO/2023/03/01/18/map/2023-03-01T18:19:56.pgm","yaml":"/root/dc_data/C3PO/2023/03/01/18/map/2023-03-01T18:19:56.yaml"},"resolution":0.05000000074505806,"width":384,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"240"}
-{"cmd_vel":{"linear":{"x":0.246316,"y":0,"z":0},"angular":{"x":0,"y":0,"z":0.263158}},"date":1677694799.685468,"position":{"x":-0.6033772358727438,"yaw":-0.7146495585355921,"y":-1.633862970534114},"speed":{"angular":{"x":-0.0002542699063698451},"computed":3.279051750818494e-05,"linear":{"x":3.244397182637543e-05,"y":4.754653571390878e-06,"z":0}},"name":"robot","id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"240"}
-{"cmd_vel":{"linear":{"x":0.246316,"y":0,"z":0},"angular":{"x":0,"y":0,"z":0.263158}},"date":1677694800.685094,"position":{"x":-0.5307920077356227,"yaw":-0.645872441707418,"y":-1.693502983783379},"speed":{"angular":{"x":0.2127361022319145},"computed":0.2459393937023935,"linear":{"x":0.2459393844826374,"y":-6.734242603700924e-05,"z":0}},"name":"robot","id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"240"}
+[dc_bridge-3] {"custom_keys":["robot_name","id"],"date":1788479117.6297202,"flattened":false,"height":384,"host":"127.0.0.1","id":"e110a88ba1c24602bd2c116daf5b8287","local_paths":{"pgm":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.pgm","png":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.png","yaml":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.yaml"},"name":"map","nested":false,"origin":{"x":-10,"y":-10},"resolution":0.05000000074505806,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.map","timestamp":"2026-09-03T23:45:17.629720410Z","width":384}
+[dc_bridge-3] {"cmd_vel":{"angular":{"x":0,"y":0,"z":0.0131854},"computed":0.17549346387386322,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0.175493,"y":0,"z":0},"name":"cmd_vel","nested":false,"robot_name":"C3PO","run_id":"170"},"date":1788479126.1020856,"host":"127.0.0.1","name":"robot","position":{"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","name":"position","nested":false,"robot_name":"C3PO","run_id":"170","x":-1.1893664880015578,"y":0.5148037648787771,"yaw":-0.02119602699838526},"source_type":"fluent","speed":{"angular":{"x":0,"y":0,"z":0},"computed":0,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0,"y":0,"z":0},"name":"speed","nested":false,"robot_name":"C3PO","run_id":"170"},"tag":"dc.group.robot","tags":[""],"timestamp":"2026-09-03T23:45:26.102085677Z"}
+[dc_bridge-3] {"cmd_vel":{"angular":{"x":0,"y":0,"z":0.0299867},"computed":0.42023804783821106,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0.420238,"y":0,"z":0},"name":"cmd_vel","nested":false,"robot_name":"C3PO","run_id":"170"},"date":1788479127.1009243,"host":"127.0.0.1","name":"robot","position":{"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","name":"position","nested":false,"robot_name":"C3PO","run_id":"170","x":-1.0834591164924419,"y":0.5133007443427651,"yaw":-0.008814692701341621},"source_type":"fluent","speed":{"angular":{"x":0,"y":0,"z":0.027356281873875128},"computed":0.33021257209388344,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0.33021257209388344,"y":0,"z":0},"name":"speed","nested":false,"robot_name":"C3PO","run_id":"170"},"tag":"dc.group.robot","tags":[""],"timestamp":"2026-09-03T23:45:27.100924197Z"}
 ```
 
 So...what happened?

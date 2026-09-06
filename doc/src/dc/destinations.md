@@ -13,6 +13,21 @@ Vector.
 Coming from DC 1.x and its `flb_*` destination plugins? See the
 [migration guide](./migration.md).
 
+## Verified sink versions
+
+| Sink                          | Version verified            |
+| ------------------------------ | ------------------------------ |
+| Vector (the Shipper itself)   | 0.57.0 (vendored by `vector_vendor`) |
+| PostgreSQL (`postgres`)       | 13.23                        |
+| RustFS (`s3`)                 | v1.0.0-beta.11               |
+| Elasticsearch (passthrough)   | 8.19.5                       |
+| InfluxDB (passthrough)        | 1.8.10                       |
+
+`console` and `file` write to local stdout/disk — no external version to track. Any
+other passthrough sink is whatever's current in
+[Vector's own sink catalog](https://vector.dev/docs/reference/configuration/sinks/) for
+the pinned 0.57.0 release above.
+
 ```admonish abstract title="What is public API here"
 Three things on this page are a stable contract you can build against, not
 implementation detail:
@@ -36,9 +51,11 @@ exact TOML layout, Vector's own defaults) may change.
 | `shipper.buffer_max_bytes`  | Disk-buffer size; Vector rejects anything below ~256 MiB                           | int         | Vector's minimum     |
 | `shipper.managed`           | `true`: the Bridge locates, spawns and supervises the Shipper. `false` (unmanaged, #444): the Bridge only renders the config and connects — an orchestrator owns the Shipper's lifecycle | bool | `true` |
 | `shipper.config_path`       | Where the rendered Shipper config is written (atomically: write then rename); shared with the Shipper container/pod in unmanaged mode | str | a temp-file path |
+| `shipper.bind_host`         | The fluent source's own listen address, embedded verbatim into the rendered config — distinct from `vector_forward_host` (below), which is where *this* Bridge process connects. Coincide in managed/native mode; diverge in split mode (#445/#447), where the Shipper binds `0.0.0.0` inside its own container while the Bridge connects by that container's DNS name | str | `vector_forward_host`'s value |
+| `uploader.data_dir`         | Directory for the Uploader's own durable intent queue and multipart-resume state (#441) — need not share a directory with the Shipper's disk buffer | str | `shipper.data_dir`'s value |
 | `custom_config_files`       | Raw Vector config snippets (TOML) to merge — the passthrough                       | list\[str\] | `[]`                 |
-| `vector_forward_host`       | Host the Shipper's ingest socket listens on                                        | str         | `"127.0.0.1"`        |
-| `vector_forward_port`       | Port the Shipper's ingest socket listens on                                        | int         | `24224`              |
+| `vector_forward_host`       | Host *this* Bridge process's Forwarder and readiness prober connect to — not necessarily where the Shipper itself listens (see `shipper.bind_host`) | str         | `"127.0.0.1"`        |
+| `vector_forward_port`       | Port *this* Bridge process's Forwarder and readiness prober connect to             | int         | `24224`              |
 | `files.*`                   | Uploader settings; see [File uploads](#file-uploads-receives-files-the-uploader-adr-0005) | —     | —                    |
 
 ## Deployment modes: `shipper.managed`

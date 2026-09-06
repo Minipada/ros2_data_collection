@@ -1,113 +1,90 @@
 # Setup
 
-DC 2.0 is an ordinary ROS 2 workspace: `rosdep install`, `colcon build`, done. There is
-no forked shipper to compile, no Go toolchain, and nothing needs root.
+DC 2.0 ships as published container images by default — `podman compose` or `podman
+run`, no ROS 2 toolchain to install locally. It is also an ordinary ROS 2 workspace if
+you'd rather build natively: `rosdep install`, `colcon build`, done — no forked shipper
+to compile, no Go toolchain, nothing needs root.
 
-```admonish info
-This is the DC 2.0 (`jazzy`) install. The `humble` line still embeds a patched Fluent Bit
-and has a considerably longer setup; if you are coming from it, read the
-[migration guide](./migration.md).
+## Containerized
+
+The default, recommended way to run DC — nothing to build, nothing but Podman required.
+
+### Quick run
+
+No build needed — the published `:jazzy` images run the all-in-one shape (every ROS
+node, the Bridge and the Shipper in one `dc-ros` container) directly against a local
+Postgres, with RustFS available alongside it for a files/S3 Destination. Isolated
+network by default — `dc-ros` reaches the stores by container name, not the host's
+network — so the commands below run from `deploy/robot/`.
+
+**`podman compose`**, all three containers, one command — the fastest path if you don't
+need to watch each container's own output separately:
+
+```sh
+podman compose -f compose.aio.yaml -f compose.isolated-network.yaml -f compose.local-destinations.yaml up
 ```
 
-## Requirements
+**`podman run`, one step at a time** — same three containers, split so each command
+can be run and checked before the next, in its own terminal:
 
-- ROS 2 Jazzy (`ros-jazzy-ros-base` or larger), on Ubuntu 24.04 or a Debian equivalent
-- `colcon`, `rosdep`, `git`, `vcstool` (`python3-vcstool`), a C++17 compiler
-- x86-64 or aarch64 — the architectures `vector_vendor` has a pinned Vector binary for
+1. Network and volumes:
 
-## Build
+   ```sh
+   podman network create dc_robot_net
+   podman volume create dc_robot_pgdata
+   podman volume create dc_robot_rustfs_data
+   podman volume create dc_robot_aio_buffer
+   ```
 
-```bash
-# 1. Clone into a workspace
-mkdir -p ~/ws/src && cd ~/ws/src
-git clone https://github.com/minipada/ros2_data_collection.git
+2. Postgres, pinned by digest — bump deliberately, check
+   <https://hub.docker.com/_/postgres/tags?name=13> for a newer one:
 
-# 2. Pull in vector_vendor and aws_sdk_vendor (both their own repos — see ADR-0002's
-#    amendment and ADR-0012), register DC's local rosdep rules (two header-only C++
-#    libraries upstream rosdistro has no key for), then resolve dependencies
-cd ~/ws
-vcs import src < src/ros2_data_collection/ros2_data_collection.repos
-echo "yaml file://$PWD/src/ros2_data_collection/rosdep/dc.yaml" \
-  | sudo tee /etc/ros/rosdep/sources.list.d/10-dc.list
-rosdep update
-rosdep install --from-paths src --ignore-src -r -y
+   ```sh
+   # PostgreSQL 13.23
+   podman run --rm -it --network dc_robot_net --name dc_robot_postgres \
+     -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
+     -p 5432:5432 -v dc_robot_pgdata:/var/lib/postgresql/data \
+     docker.io/library/postgres@sha256:4689940c683801b4ab839ab3b0a0a3555a5fe425371422310944e89eca7d8068
+   ```
 
-# 3. Build
-source /opt/ros/jazzy/setup.bash
-colcon build
-```
+   Wait for `database system is ready to accept connections` before moving on.
 
-That is the whole install. `colcon build` also runs `vector_vendor`, which fetches a
-pinned, checksummed [Vector](https://vector.dev/) release tarball live — the external
-**Shipper** the Bridge supervises at runtime (ADR-0002) — and `aws_sdk_vendor`, which
-fetches and builds the AWS SDK for C++ (`core` + `s3`) the Bridge's Uploader uses
-(ADR-0007) live from `github.com/aws/aws-sdk-cpp` at a pinned tag; both steps need
-network access (ADR-0002, ADR-0012), and `aws_sdk_vendor`'s takes several minutes the
-first time.
+3. RustFS, pinned by digest (matches `compose.local-destinations.yaml` — bump
+   deliberately, check <https://hub.docker.com/r/rustfs/rustfs/tags> for the new one):
 
-```admonish tip title="Air-gapped or distro-packaged Vector"
-Point the build at a Vector binary you already have instead of downloading one:
+   ```sh
+   # RustFS v1.0.0-beta.11
+   podman run --rm -it --network dc_robot_net --name dc_robot_rustfs \
+     -p 9000:9000 -v dc_robot_rustfs_data:/data \
+     docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c
+   ```
 
-    colcon build --cmake-args -Dvector_path=/usr/bin/vector
+4. `dc-ros` — on the isolated network, `127.0.0.1` no longer reaches Postgres, so this
+   needs a params override pointed at the hostname `postgres` instead of the image's
+   own baked-in `127.0.0.1` default:
 
-The `VECTOR_PATH` environment variable does the same thing.
-```
+   ```sh
+   podman run --rm -it --network dc_robot_net --name dc_robot_aio \
+     -v dc_robot_aio_buffer:/root/.dc/buffer \
+     -v "$(pwd)/params/aio_params_local.yaml:/opt/dc/dc_params.yaml:ro" \
+     ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy \
+     dc_params_file:=/opt/dc/dc_params.yaml
+   ```
 
-```admonish warning title="Simulation demo packages"
-`dc_demos` and `dc_simulation` still target Gazebo Classic, which Jazzy dropped. Until
-they are ported (tracked in [#268](https://github.com/minipada/ros2_data_collection/issues/268)),
-exclude them if their dependencies are not resolvable on your machine:
+5. Check Records are landing, from a fourth terminal:
 
-    touch src/ros2_data_collection/dc_demos/COLCON_IGNORE
-    touch src/ros2_data_collection/dc_simulation/COLCON_IGNORE
-```
+   ```sh
+   psql -h 127.0.0.1 -U dc -d dc -c 'select * from dc order by date desc limit 5;'
+   ```
 
-### Python dependencies
+   Password `password`.
 
-Only some Measurement plugins (camera inspection, QR code detection) need Python
-packages beyond what ROS 2 installs. `rosdep` covers the ones with rosdistro keys; for
-the rest, [uv](https://docs.astral.sh/uv/) installs `pyproject.toml`'s pins into a
-project virtualenv:
+See
+[`deploy/robot/README.md`](https://github.com/minipada/ros2_data_collection/blob/jazzy/deploy/robot/README.md)
+for the three-container split topology, the host-network variant, and trying it against
+a real store before fleet rollout.
 
-```bash
-uv sync --no-dev   # drop --no-dev to add the tooling and the demo dashboard's packages
-```
-
-## Run
-
-```bash
-source install/setup.bash
-ros2 launch dc_bringup dc_bringup.launch.py
-```
-
-The default parameters file (`dc_bringup/params/dc_params.yaml`) collects uptime and
-writes it to a local PostgreSQL Destination. To run your own:
-
-```bash
-ros2 launch dc_bringup dc_bringup.launch.py params_file:=/path/to/my_params.yaml
-```
-
-See [Configuration examples](./configuration_examples.md) for configurations you can
-copy, and [Destinations](./destinations.md) for the full Bridge configuration contract.
-
-### Useful launch arguments
-
-| Argument      | Default          | Description                                                |
-| ------------- | ---------------- | ---------------------------------------------------------- |
-| `params_file` | `dc_params.yaml` | Parameters file for every DC node                          |
-| `group_node`  | `False`          | Start the Group node (needed by any `group_server` config) |
-| `namespace`   | `""`             | Top-level namespace                                        |
-| `log_level`   | `info`           | Log level for the DC nodes                                 |
-| `autostart`   | `True`           | Let the lifecycle manager configure and activate the nodes |
-
-### What starts, in what order
-
-`dc_bringup.launch.py` brings the pipeline up deterministically (ADR-0006): the Bridge
-and its Shipper first, then a readiness gate, and only then the collection nodes. If the
-Shipper never becomes ready, the launch shuts down loudly instead of collecting data
-nowhere. [Data Pipeline](./data_pipeline.md) describes this in full.
-
-## Containers
+### Building the workspace image
 
 The repository builds a full workspace image with Podman — the same one CI uses:
 
@@ -134,6 +111,109 @@ for the full command sequence and what each step is for.
 k3d's default CNI does not enforce `NetworkPolicy`, so it cannot validate the fleet's
 network-isolation claims. It is the fast inner loop only, deliberately not the
 production-parity check.
+```
+
+## Native
+
+For developing DC itself, or wherever containers aren't an option.
+
+### Requirements
+
+- ROS 2 Jazzy (`ros-jazzy-ros-base` or larger), on Ubuntu 24.04 or a Debian equivalent
+- `colcon`, `rosdep`, `git`, `vcstool` (`python3-vcstool`), a C++17 compiler
+- x86-64 or aarch64 — the architectures `vector_vendor` has a pinned Vector binary for
+
+### Build
+
+1. Clone into a workspace:
+
+   ```bash
+   mkdir -p ~/ws/src && cd ~/ws/src
+   git clone https://github.com/minipada/ros2_data_collection.git
+   ```
+
+2. Pull in `vector_vendor` and `aws_sdk_vendor` (both their own repos — see ADR-0002's
+   amendment and ADR-0012), register DC's local rosdep rules (two header-only C++
+   libraries upstream rosdistro has no key for), then resolve dependencies:
+
+   ```bash
+   cd ~/ws
+   vcs import src < src/ros2_data_collection/ros2_data_collection.repos
+   echo "yaml file://$PWD/src/ros2_data_collection/rosdep/dc.yaml" \
+     | sudo tee /etc/ros/rosdep/sources.list.d/10-dc.list
+   rosdep update
+   rosdep install --from-paths src --ignore-src -r -y
+   ```
+
+3. Build:
+
+   ```bash
+   source /opt/ros/jazzy/setup.bash
+   colcon build
+   ```
+
+That is the whole install. `colcon build` also runs `vector_vendor`, which fetches a
+pinned, checksummed [Vector](https://vector.dev/) release tarball live — the external
+**Shipper** the Bridge supervises at runtime (ADR-0002) — and `aws_sdk_vendor`, which
+fetches and builds the AWS SDK for C++ (`core` + `s3`) the Bridge's Uploader uses
+(ADR-0007) live from `github.com/aws/aws-sdk-cpp` at a pinned tag; both steps need
+network access (ADR-0002, ADR-0012), and `aws_sdk_vendor`'s takes several minutes the
+first time.
+
+### Python dependencies
+
+Only some Measurement plugins (camera inspection, QR code detection) need Python
+packages beyond what ROS 2 installs. `rosdep` covers the ones with rosdistro keys; for
+the rest, [uv](https://docs.astral.sh/uv/) installs `pyproject.toml`'s pins into a
+project virtualenv:
+
+```bash
+uv sync --no-dev   # drop --no-dev to add the tooling and the demo dashboard's packages
+```
+
+### Run
+
+```bash
+source install/setup.bash
+ros2 launch dc_bringup dc_bringup.launch.py
+```
+
+The default parameters file (`dc_bringup/params/dc_params.yaml`) collects uptime and
+writes it to a local PostgreSQL Destination. To run your own:
+
+```bash
+ros2 launch dc_bringup dc_bringup.launch.py dc_params_file:=/path/to/my_params.yaml
+```
+
+See [Configuration examples](./configuration_examples.md) for configurations you can
+copy, and [Destinations](./destinations.md) for the full Bridge configuration contract.
+
+#### Useful launch arguments
+
+| Argument      | Default          | Description                                                |
+| ------------- | ---------------- | ---------------------------------------------------------- |
+| `dc_params_file` | `dc_params.yaml` | Parameters file for every DC node                       |
+| `group_node`  | `False`          | Start the Group node (needed by any `group_server` config) |
+| `namespace`   | `""`             | Top-level namespace                                        |
+| `log_level`   | `info`           | Log level for the DC nodes                                 |
+| `autostart`   | `True`           | Let the lifecycle manager configure and activate the nodes |
+| `use_sim_time` | `False`         | Use simulation (Gazebo) clock — set `True` against a simulator, or TF lookups run on the wall clock while the sim publishes on its own clock and drift into "extrapolation" errors |
+
+### What starts, in what order
+
+`dc_bringup.launch.py` brings the pipeline up deterministically (ADR-0006): the Bridge
+and its Shipper first, then a readiness gate, and only then the collection nodes. If the
+Shipper never becomes ready, the launch shuts down loudly instead of collecting data
+nowhere. [Data Pipeline](./data_pipeline.md) describes this in full.
+
+### Advanced build options
+
+```admonish tip title="Air-gapped or distro-packaged Vector"
+Point the build at a Vector binary you already have instead of downloading one:
+
+    colcon build --cmake-args -Dvector_path=/usr/bin/vector
+
+The `VECTOR_PATH` environment variable does the same thing.
 ```
 
 ## Infrastructure

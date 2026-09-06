@@ -39,7 +39,6 @@ backpressure testing.
 random:
   plugin: "dc_measurements/Random"
   topic_output: "/dc/measurement/random"
-  tags: ["console"]
   type: "double"
   min: 0.0
   max: 1.0

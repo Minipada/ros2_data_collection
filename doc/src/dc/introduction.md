@@ -12,10 +12,10 @@
 
 | Jazzy                                                                                                                                                                                                                        |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [![Format](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml/badge.svg)](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml)                                         |
-| [![Documentation](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml/badge.svg)](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml)                                        |
-| [![Github Pages](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment) |
-| [![CI](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml/badge.svg)](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml)                                                     |
+| [![prek](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml/badge.svg?branch=jazzy)](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml?query=branch%3Ajazzy)         |
+| [![Documentation](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml/badge.svg?branch=jazzy)](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml?query=branch%3Ajazzy)      |
+| [![Github Pages](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment/badge.svg?branch=jazzy)](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment?query=branch%3Ajazzy) |
+| [![CI](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml/badge.svg?branch=jazzy)](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml?query=branch%3Ajazzy)                   |
 
 
 For detailed instructions, see the navigation sidebar, or browse
@@ -26,7 +26,7 @@ GitHub. [Security policy](https://github.com/Minipada/ros2_data_collection/blob/
 
 The DC (Data Collection) project aims at integrating data collection pipelines into ROS 2. The goal is to integrate data collection pipelines with existing APIs to enable data analytics, rather than live monitoring, which already has excellent tools available. As companies increasingly turn to autonomous robots, the ability to understand and improve operations for any type of machine in any environment has become crucial. This involves mostly pick and drop and inspection operations. This framework aims at helping collecting, validating (through JSON schemas) and sending reliably the data to create such APIs and dashboards.
 
-DC uses a modular approach, based on [pluginlib](https://index.ros.org/p/pluginlib/) and greatly inspired by [Nav2](https://navigation.ros.org/) for its architecture. Pluginlib is used to configure which **Measurements** are collected. Data leaves the robot through the **Bridge** (`dc_bridge`), a thin ROS 2 node that renders and supervises an external **Shipper**, [Vector](https://vector.dev/): *Vector is a fast, lightweight observability data pipeline, distributed as a single static binary, with native sinks for PostgreSQL, S3-compatible storage, and many more. DC gets its performance, reliability, and data integrity (backpressure handling and disk buffering) without embedding or forking it*. Four **Destination** types are configured natively from ROS parameters; every other Vector sink is reachable by passing raw Shipper configuration through, with no DC code.
+DC uses a modular approach, based on [pluginlib](https://index.ros.org/p/pluginlib/) and greatly inspired by [Nav2](https://navigation.ros.org/) for its architecture. Pluginlib is used to configure which **Measurements** are collected. Data leaves the robot through the **Bridge** (`dc_bridge`), a thin ROS 2 node that renders and supervises an external **Shipper**, [Vector](https://vector.dev/): *Vector is a fast, lightweight observability data pipeline, distributed as a single static binary, with native sinks for PostgreSQL, S3-compatible storage, and many more. DC gets its performance, reliability, and data integrity (backpressure handling and disk buffering) without embedding or forking it*. Five **Destination** types are configured natively from ROS parameters; every other Vector sink is reachable by passing raw Shipper configuration through, with no DC code.
 
 ## Why collect data from robots?
 
@@ -62,80 +62,9 @@ And inherited from the Vector shipper:
 * Backpressure handling
 * [Disk buffering](https://vector.dev/docs/reference/configuration/global-options/#data_dir), persisting Records across Destination outages and reboots
 
-Here is an example of a pipeline:
+Here is an example of a pipeline, for an AGV doing pick-and-drop and inspection work:
 
-```mermaid
-flowchart LR
-    pl_camera1["Camera bottom"]
-    pl_camera2["Camera middle"]
-    pl_camera3["Camera top"]
-    pl_condition_moving["Moving"]
-    pl_cpu["CPU"]
-    pl_cmd_vel["Command velocity"]
-    pl_memory["Memory"]
-    pl_position["Position"]
-    pl_speed["Speed"]
-    pl_storage["Storage"]
-    pl_uptime["Uptime"]
-    pl_network["Network"]
-    pl_network_boot["Network"]
-    pl_os_boot["OS"]
-
-    subgraph m_n["Measurement node"]
-        subgraph cond["Condition plugins"]
-            pl_condition_moving
-        end
-        subgraph measurements["Measurement plugins"]
-            pl_camera1
-            pl_camera2
-            pl_camera3
-            pl_cpu
-            pl_cmd_vel
-            pl_memory
-            pl_position
-            pl_speed
-            pl_storage
-            pl_uptime
-            pl_network
-            pl_network_boot
-            pl_os_boot
-        end
-    end
-
-    subgraph g_n["Group node (merged Records)"]
-        gr_boot_system["System (boot)"]
-        gr_system["System"]
-        gr_robot["Robot"]
-        gr_inspection["Inspection"]
-    end
-
-    subgraph d_n["Bridge + Shipper → Destinations"]
-        pl_pgsql["PostgreSQL"]
-        pl_rustfs["RustFS"]
-        pl_s3["S3"]
-    end
-
-    pl_camera1 -- if not --> pl_condition_moving --> gr_inspection
-    pl_camera2 -- if not --> pl_condition_moving --> gr_inspection
-    pl_camera3 -- if not --> pl_condition_moving --> gr_inspection
-    pl_cpu --> gr_system
-    pl_memory --> gr_system
-    pl_uptime --> gr_boot_system
-    pl_network_boot --> gr_boot_system
-    pl_os_boot --> gr_boot_system
-    pl_storage --> gr_system
-    pl_cmd_vel --> gr_robot
-    pl_position --> gr_robot
-    pl_speed --> gr_robot
-
-    pl_network -- Network ping and online status --> pl_pgsql
-    gr_boot_system -- os, network interfaces\n, permissions and uptime --> pl_pgsql
-    gr_robot -- Robot cmd_vel, position. speed --> pl_pgsql
-    gr_system -- Available space,\n memory used and cpu usage --> pl_pgsql
-    gr_inspection -- File metadata Records --> pl_pgsql
-    gr_inspection -- "Raw, rotated and/or inspected images (Files)" --> pl_rustfs
-    gr_inspection -- "Raw, rotated and/or inspected images (Files)" --> pl_s3
-```
+![AGV data pipeline: Operations and Pick/drop & inspect Measurements through the Bridge + Shipper to PostgreSQL and object storage](../images/agv-data-pipeline.svg)
 
 # Security
 

@@ -14,11 +14,6 @@ else in [Vector's catalog](https://vector.dev/docs/reference/configuration/sinks
 simulation; this page needs no simulator and no robot — four system Measurements, one
 compose file, one terminal.
 
-```admonish info
-Verified end to end against Elasticsearch 8.19.5 and the Vector 0.57.0 binary vendored by
-`vector_vendor`. Version-sensitive details are called out where they matter.
-```
-
 ## Setup the infrastructure
 
 Start Elasticsearch and Kibana by [following the steps](../infrastructure_setup/elasticsearch.md):
@@ -60,9 +55,9 @@ The `console` Destination prints every Record as it is shipped, so the terminal 
 a local view of what Elasticsearch is receiving:
 
 ```
-[dc_bridge-2] {"cpu":{"average":23.25,"processes":4,"sorted":[]},"date":1786118523.0,"flattened":false,"host":"127.0.0.1","name":"cpu","nested":true,"robot_name":"C3PO","run_id":"1","source_type":"fluent","tag":"dc.measurement.cpu","timestamp":"2026-08-07T16:02:03Z"}
-[dc_bridge-2] {"date":1786118523.0,"flattened":false,"host":"127.0.0.1","memory":{"used":97.25801086425781},"name":"memory","nested":true,"robot_name":"C3PO","run_id":"1","source_type":"fluent","tag":"dc.measurement.memory","timestamp":"2026-08-07T16:02:03Z"}
-[dc_bridge-2] {"date":1786118523.0,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":true,"robot_name":"C3PO","run_id":"1","source_type":"fluent","tag":"dc.measurement.uptime","timestamp":"2026-08-07T16:02:03Z","uptime":{"time":371820}}
+[dc_bridge-2] {"cpu":{"average":0,"processes":9,"sorted":[]},"custom_keys":["robot_name"],"date":1788504548.4015868,"flattened":false,"host":"127.0.0.1","name":"cpu","nested":true,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.cpu","timestamp":"2026-09-04T06:49:08.401586806Z"}
+[dc_bridge-2] {"custom_keys":["robot_name"],"date":1788504548.404685,"flattened":false,"host":"127.0.0.1","memory":{"used":96.89765167236328},"name":"memory","nested":true,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.memory","timestamp":"2026-09-04T06:49:08.404685157Z"}
+[dc_bridge-2] {"custom_keys":["robot_name"],"date":1788504548.4057963,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":true,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.uptime","timestamp":"2026-09-04T06:49:08.405796359Z","uptime":{"time":1636933}}
 ```
 
 ## Visualize the data
@@ -107,6 +102,7 @@ curl -s -H 'Content-Type: application/json' 'http://localhost:9200/dc-records-*/
 ```json
 {
   "@timestamp": "2026-08-07T15:47:09Z",
+  "custom_keys": ["robot_name"],
   "date": 1786117629.0,
   "flattened": false,
   "host": "127.0.0.1",

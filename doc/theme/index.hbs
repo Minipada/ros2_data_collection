@@ -74,6 +74,10 @@
             var path_to_root = "{{ path_to_root }}";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "{{ preferred_dark_theme }}" : "{{ default_theme }}";
         </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="{{ path_to_root }}toc.js"></script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
         <script>
@@ -118,7 +122,10 @@
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
             <div class="sidebar-scrollbox">
-                {{#toc}}{{/toc}}
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="{{ path_to_root }}toc.html"></iframe>
+                </noscript>
                 <footer id="nav-separator"></footer>
                 <a style="margin-right: 10px;" href="https://github.com/minipada/ros2_data_collection" target="_blank"><i  class="lni lni-github-original lni-32"></i></a>
                 <a style="margin-right: 10px;" href="mailto:d.bensoussan@proton.me" target="_blank"><i  class="lni lni-envelope lni-32"></i></a>

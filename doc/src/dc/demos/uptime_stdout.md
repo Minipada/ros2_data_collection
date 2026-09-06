@@ -8,16 +8,17 @@ Let's run it:
 ros2 launch dc_demos uptime_stdout.launch.py
 ```
 
-At the end, the data is displayed:
+At the end, the data is displayed. Every Destination — `console` included — goes
+through the external Vector Shipper (ADR-0002, [Destinations](../destinations.md)), so
+this is Vector's own event object after ingesting the Record over the Fluent-forward
+protocol: `source_type`, `tag`, `host` and `timestamp` are Vector's, not the Bridge's:
 ```
-[component_container_isolated-1] [{"date":1677668906.745817,"time":92395,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}]
-[component_container_isolated-1] [{"date":1677668911.700309,"time":92400,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}]
-[component_container_isolated-1] [{"date":1677668916.70031,"time":92405,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}]
-[component_container_isolated-1] [{"date":1677668921.700388,"time":92410,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}]
-[component_container_isolated-1] [{"date":1677668926.700422,"time":92415,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}]
+[dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476609.152106,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1608993,"timestamp":"2026-09-03T23:03:29.152105868Z"}
+[dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476614.1494331,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1608998,"timestamp":"2026-09-03T23:03:34.149433151Z"}
+[dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476619.149286,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1609003,"timestamp":"2026-09-03T23:03:39.149286154Z"}
 ```
 
-This launchfile is a wrapper of [dc_bringup/launch/bringup.launch.py](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_bringup/launch/dc_bringup.launch.py) which loads a [custom yaml configuration](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/uptime_stdout.yaml)
+This launchfile is a wrapper of [dc_bringup/launch/dc_bringup.launch.py](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_bringup/launch/dc_bringup.launch.py) which loads a [custom yaml configuration](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/uptime_stdout.yaml)
 
 ## Configuration
 ### Measurement
@@ -124,7 +125,7 @@ Let's analyze piece by piece. `dc_bridge` is the single C++ node that owns every
 
 **console.inputs (Mandatory)**: Topics to which to listen to get the data.
 
-**console.time_format (Optional)**: Format the data's timestamp will be printed as (`double` or `iso8601`).
+**console.time_format (Optional)**: Format the data's timestamp will be printed as (`epoch_nanos` (default), `iso8601` or `double`).
 
 **console.time_key (Optional)**: Dictionary key the timestamp is written under.
 
@@ -143,20 +144,20 @@ Now that the node started, let us see what's displayed in the console.
 Measurement server and `dc_bridge` are started in the Lifecycle, you can read more about it [here](../concepts.md#lifecycle-nodes-and-bond). Per [ADR-0006](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0006-bridge-outside-lifecycle-manager.md), the lifecycle manager waits on a `bridge_ready_gate` before activating the collection nodes:
 
 ```
-[bridge_ready_gate-1] dc_bridge reports ready; activating collection nodes.
-[dc_bridge-1] [INFO] [dc_bridge]: Rendered Vector config to /tmp/dc_bridge/vector.toml, destinations: [console]
-[dc_bridge-1] [INFO] [dc_bridge]: Bridge ready
+[INFO] [bridge_ready_gate-3]: process started with pid [31]
+[dc_bridge-2] [INFO] [1788478636.751773322] [dc_bridge]: dc_bridge up: 1 subscribed topic(s), supervising /root/ws/install/vector_vendor/lib/vector_vendor/vector
+[bridge_ready_gate-3] [INFO] [1788478637.212874385] [bridge_ready_gate]: Bridge is ready: vector is accepting connections
+[INFO] [bridge_ready_gate-3]: process has finished cleanly [pid 31]
+[INFO] [launch.user]: dc_bridge reports ready; activating collection nodes.
 ```
 
-`dc_bridge` renders the `destinations` block above into a Vector config, launches (or reloads) the external Vector process pointed at it, and only then reports ready — see [ADR-0002](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0002-vector-as-default-shipper.md) for why Vector runs as its own process rather than embedded in the Bridge.
+`dc_bridge` renders the `destinations` block above into a Vector config and launches (or reloads) the external Vector process pointed at it; `bridge_ready_gate` only lets the launch continue once Vector is actually accepting connections — see [ADR-0002](https://github.com/Minipada/ros2_data_collection/blob/jazzy/docs/adr/0002-vector-as-default-shipper.md) for why Vector runs as its own process rather than embedded in the Bridge.
 
 Finally, we see the data, now printed by Vector's own `console` sink rather than by the Bridge itself:
 ```
-{"date":1677668906.745817,"time":92395,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}
-{"date":1677668911.700309,"time":92400,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}
-{"date":1677668916.70031,"time":92405,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}
-{"date":1677668921.700388,"time":92410,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}
-{"date":1677668926.700422,"time":92415,"id":"be781e5ffb1e7ee4f817fe7b63e92c32","robot_name":"C3PO","run_id":"218"}
+[dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476609.152106,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1608993,"timestamp":"2026-09-03T23:03:29.152105868Z"}
+[dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476614.1494331,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1608998,"timestamp":"2026-09-03T23:03:34.149433151Z"}
+[dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476619.149286,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1609003,"timestamp":"2026-09-03T23:03:39.149286154Z"}
 ```
 
 So...what happened?

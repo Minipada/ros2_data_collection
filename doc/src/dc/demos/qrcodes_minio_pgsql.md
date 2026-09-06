@@ -78,7 +78,16 @@ pass over an hour. See [#52](https://github.com/Minipada/ros2_data_collection/is
 Execute
 
 ```bash
-ros2 launch dc_demos tb3_qrcodes_minio_pgsql.launch.py
+ros2 launch dc_demos tb3_qrcodes_minio_pgsql.launch.py use_sim_time:=True
+```
+
+```admonish warning
+`use_sim_time` defaults to `False` — without the override above, DC's Position
+measurement looks up TF transforms on the wall clock while the simulation publishes
+them on Gazebo's sim clock, which throws "extrapolation into the past"/"transform does
+not exist" errors and can crash `measurement_server` outright once the two clocks
+drift far enough apart (same issue as the [PostgreSQL/RustFS](./tb3_aws_minio_pgsql.md)
+and [InfluxDB](./tb3_aws_influxdb.md) demos).
 ```
 
 With this, all data will be transmitted

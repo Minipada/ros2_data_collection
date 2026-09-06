@@ -58,22 +58,29 @@ ros2 bag info ~/dc_mcap_out/records_<timestamp>_<pid>_0001.mcap
 ```
 
 ```
-Files:             records_20260811T090626Z_4213_0001.mcap
-Bag size:          .. KiB
+Files:             /root/dc_mcap_out/records_20260904T064025Z_40_0001.mcap
+Bag size:          3.8 KiB
 Storage id:        mcap
-Duration:          ...s
-Start:             ...
-End:               ...
-Messages:          20
-Topic information: Topic: dc.dc.measurement.cpu    | Type: unknown | Count: 5 | ...
-                    Topic: dc.dc.measurement.memory | Type: unknown | Count: 5 | ...
-                    Topic: dc.dc.measurement.os      | Type: unknown | Count: 1 | ...
-                    Topic: dc.dc.measurement.uptime  | Type: unknown | Count: 9 | ...
+ROS Distro:        unknown
+Duration:          9.998903549s
+Start:             Sep  4 2026 06:40:26.274123868 (1788504026.274123868)
+End:               Sep  4 2026 06:40:36.273027417 (1788504036.273027417)
+Messages:          10
+Topic information: Topic: dc.measurement.cpu | Type: dc/record | Count: 3 | Serialization Format: json
+                    Topic: dc.measurement.memory | Type: dc/record | Count: 3 | Serialization Format: json
+                    Topic: dc.measurement.os | Type: dc/record | Count: 1 | Serialization Format: json
+                    Topic: dc.measurement.uptime | Type: dc/record | Count: 3 | Serialization Format: json
+Service:           0
+Service information:
 ```
 
-`Type: unknown` is expected — these Channels are JSON-schema, not a registered ROS
-message type, so rosbag2 has nothing to resolve the type name to. Message counts and
-per-topic breakdown come from the file's Statistics/Channel records regardless.
+`Type: dc/record` — not `unknown` — because `dc_mcap_writer` registers its JSON-schema
+Channels under that schema name (`writer.py`'s `register_schema(name="dc/record", ...)`);
+`ros2 bag info` shows it verbatim rather than resolving a ROS message type, since there
+isn't one. Message counts and per-topic breakdown come from the file's
+Statistics/Channel records regardless. Also note the topic name is `dc.measurement.cpu`,
+not `dc.dc.measurement.cpu` — a single `dc.` prefix, matching the `dc.<tag>` routing
+contract in [Destinations](../destinations.md).
 
 Opening the same file in [Foxglove Studio](https://foxglove.dev/) (**Open local
 file…**) lists each `dc.<tag>` Channel and renders its JSON fields (`cpu.average`,

@@ -130,7 +130,7 @@ SELECT * FROM dc_records WHERE incident_id = '3f2b1c7e-…' ORDER BY date;
 
 | Parameter name     | Description                                | Type(s)     | Default          |
 | ------------------- | --------------------------------------------- | ----------- | ---------------- |
-| condition_plugins   | Name of the condition plugins to load       | list\[str\] | N/A (mandatory)  |
+| condition_plugins   | Name of the condition plugins to load       | list\[str\] | []               |
 
 ## Plugin parameters
 

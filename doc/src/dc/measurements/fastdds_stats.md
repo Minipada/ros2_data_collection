@@ -56,13 +56,29 @@ down on a lifecycle transition.
 ## Prerequisites
 
 1. Fast DDS itself built with `-DFASTDDS_STATISTICS=ON` — the Statistics Module is compiled out by
-   default, and most distro/apt Fast DDS builds do not enable it.
-2. `fastdds_statistics_backend` built and installed (from source; see
-   [the eProsima docs](https://fast-dds-statistics-backend.readthedocs.io) — it has no rosdep/apt
-   key for any distro at the time of writing, so `rosdep install` never pulls it in and
-   `dc_measurements/package.xml` deliberately does not list it as a `<depend>`).
+   default, and most distro/apt Fast DDS builds do not enable it. ROS 2 Jazzy pairs with Fast-DDS
+   2.14.x (`eProsima/Fast-DDS` @ `2.14.x`, `eProsima/Fast-CDR` @ `2.2.x`,
+   `eProsima/foonathan_memory_vendor`, `ros2/rmw_fastrtps` @ `jazzy` — the exact set `ros2.repos`
+   lists) — rebuild these in a colcon workspace overlay with that cmake arg, then source the
+   overlay *before* the rest of the workspace so it shadows the apt-installed Fast DDS.
+2. `fastdds_statistics_backend` built and installed against that same Fast-DDS. **Pin the `v1.1.0`
+   tag** — `main` and every tagged release from `v2.0.0` onward require Fast-DDS **3.0.0**
+   (`find_package(fastdds 3.0.0 REQUIRED)`), which Jazzy doesn't ship; only `v1.0.0`/`v1.1.0`
+   target Fast-DDS `>=2.13.0`. No rosdep/apt key exists for any distro, so `rosdep install` never
+   pulls it in and `dc_measurements/package.xml` deliberately does not list it as a `<depend>`.
+3. The `FASTDDS_STATISTICS` environment variable, set on every process before it creates its
+   first DomainParticipant — the library only *emits* the DataKinds named in it (semicolon-
+   separated topic aliases), regardless of whether the plugin is built and running:
 
-Without both, `find_package(fastdds_statistics_backend)` fails at CMake configure time and the
+   ```bash
+   export FASTDDS_STATISTICS="HISTORY_LATENCY_TOPIC;PUBLICATION_THROUGHPUT_TOPIC;SUBSCRIPTION_THROUGHPUT_TOPIC;RTPS_SENT_TOPIC;RTPS_LOST_TOPIC"
+   ```
+
+   Without it, `participant_count`/`datawriter_count`/`datareader_count`/`participants`/`hosts`/
+   `users`/`process_names` still populate (basic discovery data), but `latency_ns_mean` and every
+   throughput/RTPS-packet field stay permanently absent — not intermittently, every single poll.
+
+Without #1/#2, `find_package(fastdds_statistics_backend)` fails at CMake configure time and the
 plugin — and its test — are skipped from the build entirely.
 
 ## Parameters
@@ -112,25 +128,36 @@ fastdds_stats:
   domain_id: 0
 ```
 
-Example Record data:
+Example Record data, captured from a real run (all three prerequisites above met):
 
 ```json
 {
-  "event": "sample",
+  "custom_keys": ["robot_name"],
+  "datareader_count": 1,
+  "datawriter_count": 11,
   "domain_id": 0,
-  "participant_count": 4,
-  "datawriter_count": 6,
-  "datareader_count": 7,
-  "latency_ns_mean": 182345.2,
-  "publication_throughput_bytes_per_sec_mean": 10432.0,
-  "subscription_throughput_bytes_per_sec_mean": 9880.5,
-  "rtps_packets_sent": 214,
-  "rtps_packets_lost": 0,
+  "event": "sample",
+  "flattened": false,
+  "hosts": ["d:14058711922191368192"],
+  "name": "fastdds_stats",
+  "nested": false,
+  "participant_count": 3,
   "participants": [
-    { "name": "measurement_server", "guid": "01.0f.2a.3c.00.00.00.00.00.00.00.00|0.0.1.c1" }
+    { "guid": "01.0f.4d.26.9c.1d.72.46.00.00.00.00|0.0.1.c1", "name": "/" },
+    { "guid": "01.0f.4d.26.13.27.ae.cb.00.00.00.00|0.0.1.c1", "name": "/" },
+    { "guid": "01.0f.4d.26.25.27.c4.fd.00.00.00.00|0.0.1.c1", "name": "/" }
   ],
-  "hosts": ["robot-01"],
-  "users": ["dc"],
-  "process_names": ["measurement_server-12345"]
+  "process_names": ["7580", "10003", "10021"],
+  "robot_name": "C3PO",
+  "run_id": "172",
+  "users": ["root"]
 }
+```
+
+`latency_ns_mean` and every throughput/RTPS field are absent here — genuinely, not a
+capture artifact: nothing exchanged data on a matched DataWriter/DataReader pair
+within this particular 5-second poll window, and per the Statistics Backend's own
+contract, absence is how "nothing to report" is signaled, not a zero. A busier DDS
+graph (more topics, higher rate) makes them appear more often, not guaranteed every
+poll.
 ```

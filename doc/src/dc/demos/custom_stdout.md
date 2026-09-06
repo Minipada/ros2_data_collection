@@ -40,6 +40,7 @@ First, we create a hpp file in `dc_demos/include/dc_demos/plugins/measurements`:
 #ifndef DC_DEMOS__PLUGINS__MEASUREMENTS__UPTIME_CUSTOM_HPP_
 #define DC_DEMOS__PLUGINS__MEASUREMENTS__UPTIME_CUSTOM_HPP_
 
+#include <nlohmann/json-schema.hpp>
 #include <nlohmann/json.hpp>
 
 #include "dc_measurements/measurement.hpp"
@@ -132,6 +133,8 @@ foreach(measurement_plugin ${dc_measurement_plugin_libs})
   ament_target_dependencies(${measurement_plugin} ${dependencies})
   target_link_libraries(
     ${measurement_plugin}
+    nlohmann_json::nlohmann_json
+    nlohmann_json_schema_validator
   )
   target_compile_definitions(${measurement_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
@@ -154,18 +157,27 @@ It creates the library, installs and exports it.
 In the measurement server log, the plugin is detected properly
 
 ```
-[component_container_isolated-1] [INFO] [1677715629.547448938] [measurement_server]: Creating measurement plugin uptime_custom: Type dc_demos/UptimeCustom, Group key: uptime, Polling interval: 5000, Debug: 0, Validator enabled: 1, Schema path: , Init collect: 1, Init Max measurement: 0, Include measurement name: 0, Include measurement plugin name: 0, Remote keys: , Remote prefixes: , Include measurement plugin name: 0, Max measurement on condition: 0, If all condition: , If any condition: , If none condition:
-...
-[component_container_isolated-1] [INFO] [1677715629.550523128] [measurement_server]: schema: {"$schema":"http://json-schema.org/draft-07/schema#","description":"Time the system has been up. Intentionally failing to demonstrate customization and callback","properties":{"time":{"description":"Time the system has been up","maximum":0,"type":"integer"}},"title":"Uptime Custom","type":"object"}
+[component_container_isolated-1] [INFO] [1788506243.714587305] [measurement_server]: Creating measurement plugin uptime_custom: Type dc_demos/UptimeCustom, Group key: uptime, Polling interval: 5000, Debug: 0, Validator enabled: 1, Schema path: , Tags: [], Init collect: 1, Init Max measurement: 0, Include measurement name: 1, Include measurement plugin name: 0, Remote keys: , Remote prefixes: , Nest: 0, Flatten: 0, Include measurement plugin name: 0, Max measurement on condition: 0, If all condition: , If any condition: , If none condition: , Gate condition: , Buffer duration sec: 0, Post roll duration sec: 0, Cooldown sec: 0, Max flush rate hz: 0, Flush topic: /dc/flush
+[component_container_isolated-1] [INFO] [1788506243.724443694] [measurement_server]: Done configuring uptime_custom
+[component_container_isolated-1] [INFO] [1788506243.724997657] [measurement_server]: Looking for schema at /root/ws/install/dc_demos/share/dc_demos/plugins/measurements/json/uptime_custom.json
+[component_container_isolated-1] [INFO] [1788506243.725045689] [measurement_server]: schema: {"$schema":"http://json-schema.org/draft-07/schema#","description":"Time the system has been up. Intentionally failing to demonstrate customization and callback","properties":{"time":{"description":"Time the system has been up","maximum":0,"type":"integer"}},"title":"Uptime Custom","type":"object"}
 ```
 
 Then, it fails as expected:
 
 ```
-[component_container_isolated-1] [ERROR] [1677715634.550778659] [measurement_server]: Validation failed: At /time of 139123 - instance exceeds maximum of 0
-[component_container_isolated-1] data={"time":139123}
-[component_container_isolated-1] [INFO] [1677715634.550911115] [measurement_server]: Callback! Validation failed for uptime custom
-[component_container_isolated-1] [ERROR] [1677715639.550754853] [measurement_server]: Validation failed: At /time of 139128 - instance exceeds maximum of 0
-[component_container_isolated-1] data={"time":139128}
-[component_container_isolated-1] [INFO] [1677715639.550867662] [measurement_server]: Callback! Validation failed for uptime custom
+[component_container_isolated-1] [ERROR] [1788506243.726002578] [measurement_server]: Validation failed: At /time of 1638628 - instance exceeds maximum of 0
+[component_container_isolated-1] data={"time":1638628}
+[component_container_isolated-1] [INFO] [1788506243.726050184] [measurement_server]: Callback! Validation failed for uptime custom
+[component_container_isolated-1] [ERROR] [1788506248.725121430] [measurement_server]: Validation failed: At /time of 1638633 - instance exceeds maximum of 0
+[component_container_isolated-1] data={"time":1638633}
+[component_container_isolated-1] [INFO] [1788506248.725329122] [measurement_server]: Callback! Validation failed for uptime custom
+```
+
+Even though every Record fails validation, `dc_bridge` still ships the raw data to the
+`console` Destination — validation failure only triggers `onFailedValidation`, it doesn't
+drop the Record:
+
+```
+[dc_bridge-2] {"date":1788506243.7255764,"flattened":false,"host":"127.0.0.1","name":"uptime_custom","nested":false,"source_type":"fluent","tag":"dc.measurement.uptime_custom","time":1638628,"timestamp":"2026-09-04T07:17:23.725576334Z"}
 ```

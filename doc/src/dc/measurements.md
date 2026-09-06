@@ -8,12 +8,14 @@ documents — on its own ROS topic. For example, a Record from the Memory Measur
 ```json
 {
     "date": "2022-12-04T14:16:06.810999008",
+    "flattened": false,
+    "id": "3c70afdcb6f248f28f4c3980734064c5",
     "memory": {
         "used": 76.007431
     },
-    "id": "3c70afdcb6f248f28f4c3980734064c5",
+    "nested": true,
     "robot_name": "C3PO",
-    "run_id": 358
+    "run_id": "358"
 }
 ```
 
@@ -37,7 +39,7 @@ the Record as a `tags` field, but it has no routing effect — remove it. See th
 | Parameter name                               | Description                                                                                                                                               | Type(s)     | Default                       |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ----------------------------- |
 | measurement_plugins                          | Name of the measurement plugins to load                                                                                                                   | list\[str\] | N/A (mandatory)               |
-| condition_plugins                            | Name of the condition plugins to load                                                                                                                     | list\[str\] | N/A (mandatory)               |
+| condition_plugins                            | Name of the condition plugins to load                                                                                                                     | list\[str\] | []                            |
 | save_local_base_path                         | Path where files will be saved locally (e.g camera images). Expands $X to environment variables and =Y to custom string parameters                        | str         | "$HOME/ros2/data/%Y/%M/%D/%H" |
 | all_base_path                                | Path where files will be saved at their destination (S3, RustFS...). Expands $X to environment variables and =Y to custom string parameters               | str         | ""                            |
 | custom_key_str_list                          | Custom strings to use in other parameters. They are also appended in the json sent to the destination, and to the File metadata Records of the same Measurement | list\[str\] | N/A                           |
@@ -47,10 +49,10 @@ the Record as a `tags` field, but it has no routing effect — remove it. See th
 | custom_keys_str.<param_name>.value           | Value to set for the key as a fixed string                                                                                                                | str         | N/A (optional)                |
 | custom_keys_str.<param_name>.value_from_file | Path to a file containing the value to set                                                                                                                | str         | N/A (optional)                |
 | custom_keys_str.<param_name>.force_override  | Override value if the key is already present in the measurement                                                                                           | bool        | false                         |
-| run_id.enabled                               | Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter or UUID                                         | str         | true                          |
-| run_id.counter                               | Enable counter for the run_id                                                                                                                             | str         | true                          |
+| run_id.enabled                               | Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter or UUID                                         | bool        | true                          |
+| run_id.counter                               | Enable counter for the run_id                                                                                                                             | bool        | true                          |
 | run_id.counter_path                          | Path to store the last run. It is expanded with environment variables id                                                                                  | str         | "$HOME/run_id"                |
-| run_id.uuid                                  | Generate a new run ID by using a random UUID                                                                                                              | str         | false                         |
+| run_id.uuid                                  | Generate a new run ID by using a random UUID                                                                                                              | bool        | false                         |
 
 ### robot_name resolution
 
@@ -199,19 +201,32 @@ error is logged: it blocks collection when listed in `if_all_conditions` or
 | [Camera](./measurements/camera.md)                       | Camera images, images can be rotated and inspected to detect content in images. They are saved as files |
 | [Command velocity](./measurements/cmd_vel.md)            | Command velocity: navigation commands                                                                   |
 | [CPU](./measurements/cpu.md)                             | CPU statistics                                                                                          |
+| [Diagnostics](./measurements/diagnostics.md)              | `/diagnostics` `DiagnosticStatus` entries, converted to Records so hardware/driver health reaches Destinations |
 | [Distance traveled](./measurements/distance_traveled.md) | Total distance traveled by the robot                                                                    |
+| [Driving type](./measurements/driving_type.md)            | Current operating mode — `autonomous`, `manual`, `teleop` or `unknown`                                  |
 | [Dummy](./measurements/dummy.md)                         | Dummy event, for testing and debugging                                                                  |
 | [Fast DDS statistics](./measurements/fastdds_stats.md)   | eProsima Fast DDS's own Statistics Module: latency, throughput, RTPS packets, physical-layer data. Fast-DDS-specific |
 | [Fault](./measurements/fault.md)                         | Component diagnostic level transitions: one Record per raise, change or clear, a source for MTBF/MTTR   |
+| [Intervention](./measurements/intervention.md)            | Human takeovers: how often, how long autonomous beforehand, how long the takeover lasted                |
 | [IP Camera](./measurements/ip_camera.md)                 | IP camera videos as files                                                                               |
+| [Manipulation](./measurements/manipulation.md)             | One MoveIt `MoveGroup` goal's lifecycle — start and end Records with outcome and timing                 |
 | [Map](./measurements/map.md)                             | ROS map files (yaml and pgm) and metadata used by the robot to localize and navigate                    |
 | [Memory](./measurements/memory.md)                       | System memory usage                                                                                     |
+| [Mission Nav2 (NavigateToPose)](./measurements/mission_nav2.md) | Nav2 adapter of the Mission Measurement for a single-pose `NavigateToPose` goal                     |
+| [Mission (nav2 FollowWaypoints)](./measurements/mission_nav2_follow_waypoints.md) | Outcome of a nav2 `FollowWaypoints` patrol/waypoint-following run, including per-waypoint failures |
+| [Mission Nav2 (NavigateThroughPoses)](./measurements/mission_nav2_through_poses.md) | Nav2 adapter of the Mission Measurement for a `NavigateThroughPoses` goal                       |
+| [Mission (Open-RMF)](./measurements/mission_open_rmf.md)  | Open-RMF adapter of the Mission Measurement, reading `rmf-web`'s per-task `TaskState`                    |
 | [Network](./measurements/network.md)                     | Network interfaces, availability                                                                        |
 | [OS](./measurements/os.md)                               | Operating System information                                                                            |
 | [Permissions](./measurements/permissions.md)             | Permissions of a file or directory                                                                      |
 | [Position](./measurements/position.md)                   | Robot position                                                                                          |
+| [Random](./measurements/random.md)                        | A randomly generated value every polling interval — for exercising the pipeline without robot infrastructure |
+| [ROS2 control status](./measurements/ros2_control_status.md) | When a `ros2_control` controller or hardware component crosses into or out of the `active` state    |
+| [Serial interface](./measurements/serial_interface.md)     | Line-delimited data off a configurable serial port, parsed into named Record fields                      |
+| [slam_toolbox quality](./measurements/slam_toolbox_quality.md) | Localization quality from slam_toolbox's `/pose` and loop-closure topics                             |
 | [Speed](./measurements/speed.md)                         | Robot speed                                                                                             |
 | [Storage](./measurements/storage.md)                     | Available and used space in a directory                                                                 |
 | [String stamped](./measurements/string_stamped.md)       | Republish a string stamped message, can be used for external data                                       |
 | [TCP Health](./measurements/tcp_health.md)               | Health status of a TCP Server                                                                           |
+| [Thermal](./measurements/thermal.md)                       | Temperatures (CPU, GPU, board, …) from the kernel's thermal sysfs interface                              |
 | [Uptime](./measurements/uptime.md)                       | How long the machine has been turned on                                                                 |

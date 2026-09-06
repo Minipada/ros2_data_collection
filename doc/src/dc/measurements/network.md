@@ -9,7 +9,7 @@ Collects ping value, whether or not the PC is online and interfaces available.
 | Parameter        | Description                                                 | Type | Default   |
 | ---------------- | ----------------------------------------------------------- | ---- | --------- |
 | **ping_address** | IP address to test the ping to                              | str  | "8.8.8.8" |
-| **ping_timeout** | Time in ms before ping times out. Offline if superior to it | int  | 5000      |
+| **ping_timeout** | Time in ms before ping times out. Offline if superior to it | int  | 200       |
 
 ## Schema
 
@@ -47,7 +47,6 @@ Collects ping value, whether or not the PC is online and interfaces available.
 network:
   plugin: "dc_measurements/Network"
   topic_output: "/dc/measurement/network"
-  tags: ["console"]
   ping_address: 192.168.0.1
   ping_timeout: 500
 ```

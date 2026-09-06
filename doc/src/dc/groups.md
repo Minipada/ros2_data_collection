@@ -51,7 +51,7 @@ See the [migration guide](./migration.md#tags-what-changed).
 | sync_timeout_log_throttle | Seconds between two sync-timeout warnings for this group. 0.0 logs every one  | float       | 60.0                |
 | group_key          | Dictionary key under which data is grouped                                          | str         | {group_name}        |
 | exclude_keys       | List of keys to exclude from the published data. Data depth is separated by a dot   | list\[str\] | N/A                 |
-| nested_data        | Whether measurements are nested dictionaries or flat                                | bool        | false               |
+| nested_data        | Whether measurements are nested dictionaries or flat                                | bool        | true                |
 | include_group_name | Include group name in the JSON as key="name" and value=<group_key>                  | bool        | true                |
 
 ## Incomplete sets
