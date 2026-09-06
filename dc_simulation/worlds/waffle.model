@@ -37,6 +37,16 @@
             <scale>0.001 0.001 0.001</scale>
           </mesh>
         </geometry>
+        <!-- waffle_base.dae's own embedded COLLADA effect (diffuse 0.8 0.8 0.8) isn't
+             applied by gz-sim's GUI renderer. An SDF-native material, which OGRE2
+             handles directly rather than through the COLLADA-effect import path, renders
+             correctly. Same value the mesh itself specifies, so nothing about the
+             intended look changes. -->
+        <material>
+          <ambient>0.8 0.8 0.8 1</ambient>
+          <diffuse>0.8 0.8 0.8 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
       </visual>
     </link>
 
@@ -127,6 +137,14 @@
             <scale>0.001 0.001 0.001</scale>
           </mesh>
         </geometry>
+        <!-- lds.dae carries no COLLADA material at all (no library_effects). An
+             SDF-native override is the only way this renders as anything but the
+             renderer's default fallback. The real HLS-LFCD-LDS housing is black. -->
+        <material>
+          <ambient>0.15 0.15 0.15 1</ambient>
+          <diffuse>0.15 0.15 0.15 1</diffuse>
+          <specular>0.2 0.2 0.2 1</specular>
+        </material>
       </visual>
 
       <sensor name="hls_lfcd_lds" type="gpu_lidar">
@@ -222,6 +240,14 @@
             <scale>0.001 0.001 0.001</scale>
           </mesh>
         </geometry>
+        <!-- tire.dae carries no COLLADA material at all (no library_effects). An
+             SDF-native override is the only way this renders as anything but the
+             renderer's default fallback. Real tire rubber is black. -->
+        <material>
+          <ambient>0.05 0.05 0.05 1</ambient>
+          <diffuse>0.05 0.05 0.05 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
       </visual>
     </link>
 
@@ -280,6 +306,12 @@
             <scale>0.001 0.001 0.001</scale>
           </mesh>
         </geometry>
+        <!-- Same tire.dae, same missing-material fix as wheel_left_visual above. -->
+        <material>
+          <ambient>0.05 0.05 0.05 1</ambient>
+          <diffuse>0.05 0.05 0.05 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
       </visual>
     </link>
 
