@@ -36,9 +36,15 @@ Bridge has no meaningful deactivated state, so its readiness comes from launch o
 [Deterministic startup ordering](#deterministic-startup-ordering) for the sequence this
 diagram's `bridge_ready_gate` → `dc_lifecycle_manager` relationship summarizes.
 
+**`dc_uploader`** is a fourth, independent process `dc_bringup.launch.py` starts
+alongside the rest of the pipeline when a `receives: files` Destination is configured
+([ADR-0014](./adr/0014-uploader-runs-as-its-own-process.md)) — it uploads Files and
+reports their status directly to the Shipper over its own connection, so an Uploader
+crash or restart never touches Record collection.
+
 ![Container diagram for DC (Data Collection)](../images/dc-c4-container.svg)
 
-### Inside the bridge container (C3)
+### Inside dc_bridge and dc_uploader (C3)
 
 The pieces added across #244–#267, now invisible from the outside: `BridgeNode` wires a
 Forwarder (Records → Shipper), a Supervisor (owns the Vector child process), a Config
@@ -46,11 +52,18 @@ renderer ([ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md)'s
 `shipper`/`destinations` params → Vector TOML, including passthrough snippet
 validation), Readiness (backs `~/ready`), and — for `receives: files` Destinations
 ([ADR-0005](./adr/0005-file-uploads-are-bridge-responsibility.md)) — a durable
-IntentQueue feeding the Uploader,
-which verifies File uploads against an S3-compatible ObjectStore and reports status
-Records back through the same Forwarder under the `dc.files` Tag.
+on-disk IntentQueue it enqueues into and forgets.
 
-![Component diagram for dc_bridge (the Bridge)](../images/dc-c4-component.svg)
+That queue is where the Bridge's responsibility for a File ends. **`dc_uploader`**
+([ADR-0014](./adr/0014-uploader-runs-as-its-own-process.md)) is a separate process —
+its own executable, no `rclcpp`/`rclpy` dependency — that rescans the same on-disk
+queue, uploads Files against an S3-compatible ObjectStore, and reports status Records
+over its *own* Forwarder/Shipper connection under the `dc.files` Tag, entirely
+independent of the Bridge's own Forwarder. Killing or restarting `dc_uploader` never
+touches Record collection, since there is no shared address space left for it to take
+down.
+
+![Component diagram for dc_bridge and dc_uploader](../images/dc-c4-component.svg)
 
 ## The path of a Record
 
@@ -63,7 +76,11 @@ flowchart LR
     end
     subgraph bridge["Bridge (dc_bridge)"]
         fwd["Forwarder"]
+        iq[("Intent queue<br/>(disk)")]
+    end
+    subgraph uploader["dc_uploader (own process)"]
         upl["Uploader"]
+        ufwd["Forwarder<br/>(own connection)"]
     end
     subgraph shipper["Shipper (Vector)"]
         route["dc.&lt;tag&gt; routes"]
@@ -79,13 +96,16 @@ flowchart LR
     meas -- "Records (StringStamped)" --> fwd
     meas -- "Records" --> group
     group -- "merged Records" --> fwd
-    meas -. "Files on disk" .-> upl
+    meas -. "Files on disk" .-> fwd
+    fwd -. "enqueues intent" .-> iq
+    iq -. "rescans (poll)" .-> upl
     fwd -- "shipper ingest protocol" --> route
     route --> buf
     buf --> pg
     buf --> other
     upl -- "File bytes" --> s3
-    upl -- "status Records (dc.files)" --> fwd
+    upl -- "status Record" --> ufwd
+    ufwd -- "dc.files, its own connection" --> route
 ```
 
 1. **A Measurement produces a Record.** Each Measurement plugin samples its source on a
@@ -104,10 +124,13 @@ flowchart LR
    disk buffer, and delivers it to each Destination wired to that route — retrying with
    its own backoff until it succeeds.
 5. **Files take a different path.** A **File** (camera image, map, video) is never sent
-   through the Shipper. The Bridge's **Uploader** reads the `local_paths` /
-   `remote_paths` references embedded in the Record, uploads the bytes directly to
-   object storage, verifies them, and emits a *status Record* under the `dc.files` Tag —
-   which then travels the ordinary Record path. See
+   through the Shipper. `dc_bridge` parses the `local_paths`/`remote_paths` references
+   embedded in the Record and durably enqueues an intent to a shared on-disk queue —
+   then forgets it. **`dc_uploader`**, a separate process
+   ([ADR-0014](./adr/0014-uploader-runs-as-its-own-process.md)), rescans that same
+   queue, uploads the bytes to object storage, verifies them, and emits a *status
+   Record* under the `dc.files` Tag over its own Shipper connection — which then
+   travels the ordinary Record path. See
    [File uploads](./destinations.md#file-uploads-receives-files-the-uploader-adr-0005).
 
 ## Where each piece is configured
@@ -118,6 +141,7 @@ flowchart LR
 | Gating collection              | `measurement_server` | [Conditions](./conditions.md)                 |
 | Merging Records                | `group_server`     | [Groups](./groups.md)                          |
 | Routing, buffering, delivering | `dc_bridge`        | [Destinations](./destinations.md)              |
+| Uploading Files, reporting status | `dc_uploader`   | [File uploads](./destinations.md#file-uploads-receives-files-the-uploader-adr-0005) |
 
 Routing is decided in exactly one place: a Destination's `inputs` list names the topics
 it receives. Nothing on the producing side selects a Destination.
@@ -129,7 +153,12 @@ it receives. Nothing on the producing side selects a Destination.
 can be emitted before the pipeline is able to accept it:
 
 1. **Bridge first.** `dc_bridge` starts as a plain node (outside the lifecycle manager)
-   and spawns the Vector Shipper as a supervised child process. The measurement server
+   and spawns the Vector Shipper as a supervised child process. `dc_uploader` starts
+   alongside it at this same step, as its own process, unless the `run_uploader`
+   launch argument is `False`
+   ([ADR-0014](./adr/0014-uploader-runs-as-its-own-process.md)) — it isn't gated by
+   readiness the way the collection nodes are, since it has nothing to wait for
+   beyond the on-disk intent queue it rescans. The measurement server
    also starts here, but stays unconfigured and inactive — its publishers cannot emit
    anything yet.
 2. **Readiness gate.** A `bridge_ready_gate` process blocks, polling the Bridge's
@@ -163,3 +192,6 @@ once activated.
   resumes as soon as the respawned Bridge is ready.
 - **Delivery semantics.** At-least-once. After a crash or an induced outage, a boundary
   Record may be re-sent; deduplicate on read if that matters to you.
+- **File uploads survive an Uploader crash.** An intent is only removed from the disk
+  queue after a successful upload is acknowledged; killing `dc_uploader` mid-upload
+  loses nothing; the next start replays the same intent from disk.
