@@ -11,6 +11,9 @@ dc_bridge:
     # subscriptions and `dc.<tag>` routes from `destinations` alone, never from a
     # passthrough snippet's `inputs`. Copy the passthrough sink into place first:
     #   mkdir -p ~/.dc && cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/uptime_custom_stdout_sink.toml" ~/.dc/
+    # (dc_bringup.launch.py now stages this file automatically at launch time if
+    # it's not already there -- see _stage_custom_config_files -- so this manual
+    # step is only needed when running dc_bridge some other way.)
     destinations: ["records_log"]
     records_log:
       type: file
