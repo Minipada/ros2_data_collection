@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 import os
+import shutil
 
 import yaml
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
@@ -191,6 +192,36 @@ def build_uploader_action(raw_params):
     ]
 
 
+def _stage_custom_config_files(params_file_path, custom_config_files):
+    """Stage a demo's passthrough sink TOML(s) at the path `custom_config_files` names.
+
+    A `custom_config_files` entry (ADR-0003 passthrough, #471) is handed to `dc_bridge`
+    as a plain filesystem path -- nothing installs a file there on its own. A
+    containerized deploy solves this with a bind mount straight onto that path
+    (deploy/robot/compose.isolated-network.yaml); a demo launched from an installed
+    package has no such mount, so without this the referenced file is simply missing
+    and `dc_bridge` runs without the sink (see the sim CI job this fixed: qrcodes_stdout
+    reached every nav waypoint but read zero QR codes, because the passthrough console
+    sink was never in place, and no `dc.*` route makes it to the Measurement pipeline
+    without one). Recipes live in a `config/` directory `dc_demos/CMakeLists.txt`
+    installs as a sibling of `params/`, so that sibling is where this looks for a
+    same-named file to copy from. Never overwrites an existing destination file --
+    demos.md and elasticsearch.md both document hand-editing the staged copy to
+    experiment, which a blind refresh on every launch would clobber.
+    """
+    config_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(params_file_path))), "config"
+    )
+    for raw_path in custom_config_files:
+        dest_path = os.path.expanduser(os.path.expandvars(raw_path))
+        if os.path.exists(dest_path):
+            continue
+        candidate = os.path.join(config_dir, os.path.basename(dest_path))
+        if os.path.isfile(candidate):
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            shutil.copyfile(candidate, dest_path)
+
+
 def build_bridge_and_mcap_actions(configured_params):
     """Build the `dc_bridge` Node, plus `dc_mcap_writer` if the params file enables it.
 
@@ -240,6 +271,11 @@ def build_bridge_and_mcap_actions(configured_params):
                 raw_params = yaml.safe_load(f) or {}
         except OSError:
             raw_params = {}
+
+        dc_bridge_params_early = (raw_params.get("dc_bridge") or {}).get("ros__parameters") or {}
+        _stage_custom_config_files(
+            params_file_path, dc_bridge_params_early.get("custom_config_files", [])
+        )
 
         mcap_params = (raw_params.get("dc_mcap_writer") or {}).get("ros__parameters") or {}
         bridge_parameters = [configured_params]
