@@ -23,7 +23,8 @@
 # pull_request the same way: a not-yet-merged PR must never move that floating ref.
 #
 #   build-workspace (Release: build + colcon test) ─┬─▶ sim                    (pull dc-workspace, simulation smoke check)
-#                                                    ├─▶ build-e2e-image ────▶ e2e   (pull dc-e2e, zero-loss harness)
+#                                                    ├─▶ build-e2e-image ────▶ e2e        (pull dc-e2e, zero-loss harness, managed shipper)
+#                                                    │                     └─▶ e2e-split  (same image, unmanaged shipper + passthrough merge)
 #                                                    ├─▶ build-dc-ros-image ─┬─▶ verify-published-images  (pull + run, no build)
 #                                                    │                      ├─▶ verify-kind-networkpolicy (#452: kind + Calico, NetworkPolicy proof)
 #                                                    └─▶ build-dc-uploader-image ─┴─▶ verify-robot-manifests (#450: podman kube play + network isolation)
@@ -1014,4 +1015,40 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: e2e-harness-logs
+          path: tools/e2e/.run/**
+
+  e2e-split:
+    needs: [build-workspace, build-e2e-image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify podman
+        run: podman --version
+
+      - name: Log in to ghcr.io (to pull the E2E image)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Run split-topology E2E harness (unmanaged shipper + passthrough merge)
+        # Proves merge_custom_config_files() (#472) works end-to-end: dc-ros writes a
+        # single merged Vector config (rendered TOML + passthrough snippet) to the shared
+        # volume, a separate Vector container reads it, and Records reach Postgres. Uses
+        # shorter outage/delay windows than the local default so the CI job finishes in
+        # reasonable time while still exercising the full split-topology recovery path
+        # (Shipper starts late, dc-ros restarts mid-outage, zero-loss verified).
+        env:
+          DC_E2E_SPLIT_OUTAGE_SECONDS: "30"
+          DC_E2E_SPLIT_STEADY_STATE_SECONDS: "15"
+          DC_E2E_IMAGE: ${{ needs.build-workspace.outputs.e2e_ref }}
+        run: ./tools/e2e/scripts/run_split.sh
+
+      - name: Upload split E2E harness logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-split-harness-logs
           path: tools/e2e/.run/**
