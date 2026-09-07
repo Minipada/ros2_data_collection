@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `pgsql_files` Destination, retired by
+# #472 — see doc/src/dc/destinations.md's "Recipes: postgres, s3, console via
+# passthrough". `pgsql_files` in e2e_limits_params.yaml is now a `type: file` anchor
+# only (named by `files.metadata_destination`); the real delivery to Postgres happens
+# here. `dc-e2e-limits-postgres`, not 127.0.0.1 — see e2e_limits_params.yaml's header:
+# the Uploader writes File metadata directly over libpq, with no Vector hop, so it
+# bypasses the two-tier chain and reaches run_limits_two_tier.sh's shared Postgres
+# straight over the network (its own bridge network).
+
+[sinks.pgsql_files_store]
+type = "postgres"
+inputs = ["dc.dc.files"]
+endpoint = "postgres://dc:password@dc-e2e-limits-postgres:5432/dc"
+table = "dc_files"
+
+[sinks.pgsql_files_store.buffer]
+type = "disk"
+max_size = 268435488

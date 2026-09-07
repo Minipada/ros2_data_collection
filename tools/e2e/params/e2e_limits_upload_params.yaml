@@ -70,18 +70,17 @@ dc_bridge:
       data_dir: "$HOME/.dc/e2e/buffer"
     destinations: ["pgsql_files", "rustfs"]
 
+    # `type: postgres` was retired by #472 — this is now a `type: file` anchor only, so
+    # dc_bridge still renders its `dc.<tag>` routes and it still exists to be named by
+    # `files.metadata_destination` below. The real delivery to Postgres — still
+    # dc-e2e-upload-postgres, not 127.0.0.1: the Uploader writes File metadata directly
+    # over libpq, with no Vector hop, straight to run_limits_upload_concurrency.sh's
+    # shared Postgres over its own bridge network — moved to the passthrough recipe in
+    # e2e_limits_upload_pgsql_sink.toml (custom_config_files below).
     pgsql_files:
-      type: postgres
+      type: file
       receives: records
-      # dc-e2e-upload-postgres, not 127.0.0.1: the Uploader writes File metadata
-      # directly over libpq, with no Vector hop, straight to
-      # run_limits_upload_concurrency.sh's shared Postgres over its own bridge network.
-      host: "dc-e2e-upload-postgres"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc_files"
+      path: "/root/.dc/e2e/data/pgsql_files_anchor/records.ndjson"
       time_key: "date"
 
     rustfs:
@@ -101,6 +100,8 @@ dc_bridge:
       # asserts delete only fires after verification, which needs deletes to happen.
       delete_when_sent: true
       metadata_destination: "pgsql_files"
+
+    custom_config_files: ["/opt/e2e/e2e_limits_upload_pgsql_sink.toml"]
 
     # Same-container loopback — never leaves the container regardless of topology.
     vector_forward_host: "127.0.0.1"

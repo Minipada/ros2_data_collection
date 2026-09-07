@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `pgsql_records` Destination, retired
+# by #472 — see doc/src/dc/destinations.md's "Recipes: postgres, s3, console via
+# passthrough". For smoke_params.yaml's `pgsql_records` Destination.
+#
+# This scenario runs `shipper.managed: false` (unmanaged-shipper mode, #444) —
+# `merge_custom_config_files` (#472) folds this into the same file dc_bridge writes to
+# `shipper.config_path` ($CONFIG_VOL, shared with the separate `vector` container), so
+# it reaches Vector correctly even though this snippet's own bind-mounted path doesn't.
+
+[sinks.pgsql_records_store]
+type = "postgres"
+inputs = ["dc.dc.measurement.uptime"]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc_records"
+
+[sinks.pgsql_records_store.buffer]
+type = "disk"
+max_size = 268435488

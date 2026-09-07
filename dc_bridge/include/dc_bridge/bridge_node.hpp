@@ -7,17 +7,19 @@
 //
 // Vector's own configuration is produced by dc_bridge::render (ADR-0003) from the
 // `shipper`/`destinations` parameters; this node declares those parameters, expands the
-// $HOME/$DC_PG_PASSWORD-style env references the config contract uses, and atomically
-// writes the result to `shipper.config_path`. In the default managed mode
-// (`shipper.managed: true`) it also hands the config to the Supervisor, which locates,
-// `vector validate`s, and spawns/supervises the vendored Vector binary — raw Vector
-// snippets in `custom_config_files` (ADR-0003 passthrough) are collision-checked and
-// validated together with the rendered config so a bad snippet fails loudly at startup.
-// In unmanaged mode (`shipper.managed: false`, #440/#444) none of that runs: an
-// orchestrator owns the Shipper's lifecycle instead, and the Bridge only renders the
-// config and connects. Either way the node subscribes to the union of every
-// Records-Destination's `inputs` topics and forwards each Record to Vector over the
-// shipper ingest protocol.
+// $HOME/$VAR-style env references the config contract uses, and atomically writes the
+// result to `shipper.config_path`. Raw Vector snippets in `custom_config_files`
+// (ADR-0003 passthrough) are collision-checked against the rendered config and merged
+// into that same file (dc_bridge::merge_custom_config_files) — one self-contained file
+// regardless of mode, since in unmanaged/split-deployment mode a snippet's own
+// filesystem path is never wired into the separate Shipper container. In the default
+// managed mode (`shipper.managed: true`) the merged config is also handed to the
+// Supervisor, which locates, `vector validate`s, and spawns/supervises the vendored
+// Vector binary, so a bad snippet fails loudly at startup. In unmanaged mode
+// (`shipper.managed: false`, #440/#444) none of that runs: an orchestrator owns the
+// Shipper's lifecycle instead, and the Bridge only renders/writes the config and
+// connects. Either way the node subscribes to the union of every Records-Destination's
+// `inputs` topics and forwards each Record to Vector over the shipper ingest protocol.
 //
 // `receives: files` Destinations (ADR-0005): the Bridge subscribes and writes upload
 // intents to the durable queue; a separate dc_uploader process (#446) reads, uploads, and

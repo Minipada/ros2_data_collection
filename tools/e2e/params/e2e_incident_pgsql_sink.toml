@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `pgsql_records` Destination, retired by
+# #472 — see doc/src/dc/destinations.md's "Recipes: postgres, s3, console via
+# passthrough". `pgsql_records` in e2e_incident_params.yaml is now a `type: file` anchor
+# only; the real delivery to Postgres (including the `incident_id` column
+# run_incident.sh asserts on) happens here. `incident_id` needs no special handling from
+# dc_bridge: it is already a top-level key of every Record's JSON payload, so Vector's
+# `postgres` sink maps it straight onto the `incident_id` column the same as any other
+# column — see destinations.md's `incident_id` section for what changed with #472.
+
+[sinks.pgsql_records_store]
+type = "postgres"
+inputs = ["dc.dc.measurement.uptime", "dc.dc.measurement.memory"]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc_records"
+
+[sinks.pgsql_records_store.buffer]
+type = "disk"
+max_size = 268435488

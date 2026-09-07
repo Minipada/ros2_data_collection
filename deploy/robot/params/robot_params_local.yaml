@@ -28,31 +28,26 @@ dc_bridge:
       bind_host: "0.0.0.0"
     uploader:
       data_dir: "$HOME/.dc/robot/uploader"
-    # NOT migrated to the ADR-0003 passthrough recipe (#471) -- unlike aio_params_local.yaml,
-    # this scenario runs `shipper.managed: false` (the three-container split, ADR-0015):
-    # `custom_config_files` snippets are validated against the render but, in unmanaged
-    # mode, dc_bridge writes only the single rendered `shipper.config_path` file for the
-    # separate `vector` container to read -- the snippet's own path is never copied
-    # anywhere that container can see, so a passthrough sink here would silently never
-    # run. Confirmed empirically: rendering this scenario with `custom_config_files`
-    # pointed at a passthrough postgres sink produced a `vector.toml` with no `pgsql`
-    # sink in it at all. Filed as a gap in dc_bridge/the split-deployment topology
-    # (custom_config_files needs a way to reach the unmanaged Shipper too) rather than
-    # worked around here; `pgsql` stays blessed until that's fixed.
+    # Migrated to the ADR-0003 passthrough recipe (#472): `pgsql` is now a `type: file`
+    # anchor only; the real delivery to Postgres is robot_pgsql_sink.toml
+    # (custom_config_files below, bind-mounted by compose.local-destinations.yaml).
+    # This scenario runs `shipper.managed: false` (the three-container split, ADR-0015),
+    # which used to be a real gap: `custom_config_files` snippets were validated against
+    # the render but never reached the separate `vector` container's config in unmanaged
+    # mode (confirmed empirically pre-#472: a passthrough postgres sink here produced a
+    # `vector.toml` with no `pgsql` sink in it at all). Fixed by
+    # `merge_custom_config_files` (#472), which folds every validated snippet into the
+    # same file dc_bridge writes to `shipper.config_path` — the one file both modes
+    # actually share — so `pgsql` no longer needs to stay blessed here.
     destinations: ["pgsql"]
     pgsql:
-      type: postgres
+      type: file
       receives: records
       inputs: ["/dc/measurement/uptime"]
-      # compose.local-destinations.yaml's postgres service, credentials to match.
-      host: "postgres"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc"
+      path: "/tmp/dc/pgsql_anchor.ndjson"
       time_key: "date"
       time_format: "epoch_nanos"
+    custom_config_files: ["$HOME/.dc/robot_pgsql_sink.toml"]
 
     vector_forward_host: "vector"
     vector_forward_port: 24224

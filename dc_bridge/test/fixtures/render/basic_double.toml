@@ -3,15 +3,17 @@ data_dir = "/home/dc/.dc/buffer"
 [acknowledgements]
 enabled = true
 
-[sinks.pgsql]
-endpoint = "postgres://dc:hunter2@127.0.0.1:5432/dc"
+[sinks.records_log]
 inputs = ["dc.dc.group.robot"]
-table = "dc"
-type = "postgres"
+path = "/var/log/dc/records.log"
+type = "file"
 
-[sinks.pgsql.buffer]
+[sinks.records_log.buffer]
 max_size = 268435488
 type = "disk"
+
+[sinks.records_log.encoding]
+codec = "json"
 
 [sources.dc_bridge_in]
 address = "127.0.0.1:24224"
@@ -31,9 +33,6 @@ inputs = ["dc_bridge_in"]
 source = """
 if includes(["dc.group.robot"], .tag) {
   .date = to_float(to_unix_timestamp!(.timestamp, unit: "nanoseconds")) / 1000000000.0
-  if exists(.incident_id) {
-    .incident_id = to_string(.incident_id) ?? null
-  }
 }
 """
 type = "remap"

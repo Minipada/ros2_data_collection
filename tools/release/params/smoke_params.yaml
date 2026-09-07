@@ -25,17 +25,18 @@ dc_bridge:
       data_dir: "/var/lib/vector"
       bind_host: "0.0.0.0"
     destinations: ["pgsql_records"]
+    # `type: postgres` was retired by #472 — this is now a `type: file` anchor only.
+    # The real delivery to Postgres moved to the passthrough recipe in
+    # smoke_pgsql_sink.toml (custom_config_files below) — see that file's header for
+    # why this still works in this scenario's unmanaged mode.
     pgsql_records:
-      type: postgres
+      type: file
       receives: records
       inputs: ["/dc/measurement/uptime"]
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc_records"
+      path: "/tmp/dc/pgsql_records_anchor.ndjson"
       time_key: "date"
+
+    custom_config_files: ["$HOME/.dc/smoke_pgsql_sink.toml"]
 
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224

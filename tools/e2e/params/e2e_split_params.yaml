@@ -190,27 +190,21 @@ dc_bridge:
     uploader:
       data_dir: "$HOME/.dc/e2e/uploader"
     destinations: ["pgsql_records", "pgsql_files", "rustfs"]
+    # pgsql_records/pgsql_files: `type: postgres` was retired by #472 — these are now
+    # `type: file` anchors only. The real delivery to Postgres moved to the passthrough
+    # recipe in e2e_split_pgsql_sink.toml (custom_config_files below) — see that file's
+    # header for why this now works in this scenario's unmanaged mode too.
     pgsql_records:
-      type: postgres
+      type: file
       receives: records
       inputs: ["/dc/measurement/memory", "/dc/measurement/os", "/dc/measurement/storage", "/dc/measurement/uptime", "/dc/measurement/tcp_health", "/dc/measurement/dummy", "/dc/measurement/synth00", "/dc/measurement/synth01", "/dc/measurement/synth02", "/dc/measurement/synth03", "/dc/measurement/synth04", "/dc/measurement/synth05", "/dc/measurement/synth06", "/dc/measurement/synth07", "/dc/measurement/synth08", "/dc/measurement/synth09", "/dc/measurement/synth10", "/dc/measurement/synth11", "/dc/measurement/synth12", "/dc/measurement/synth13"]
-      host: "postgres"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc_records"
+      path: "/root/.dc/e2e/data/pgsql_records_anchor/records.ndjson"
       time_key: "date"
 
     pgsql_files:
-      type: postgres
+      type: file
       receives: records
-      host: "postgres"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc_files"
+      path: "/root/.dc/e2e/data/pgsql_files_anchor/records.ndjson"
       time_key: "date"
 
     rustfs:
@@ -223,6 +217,8 @@ dc_bridge:
     files:
       delete_when_sent: false
       metadata_destination: "pgsql_files"
+
+    custom_config_files: ["/opt/e2e/e2e_split_pgsql_sink.toml"]
 
     vector_forward_host: "vector"
     vector_forward_port: 24224

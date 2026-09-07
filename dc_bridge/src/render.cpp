@@ -3,7 +3,6 @@
 
 #include "dc_bridge/render.hpp"
 
-#include <cstdio>
 #include <map>
 #include <set>
 #include <sstream>
@@ -185,29 +184,6 @@ std::string tag_condition(const std::set<std::string>& tags, const std::set<std:
   return out;
 }
 
-// Normalizes the Record envelope's `incident_id` (#291) for a Destination whose sink maps
-// top-level keys onto table columns.
-//
-// Vector's `postgres` sink has no column-mapping options of its own: it hands the event to
-// `jsonb_populate_record`, so a top-level key lands in the same-named column and anything
-// else is dropped. There is therefore no `columns = [...]` to write — this block is where the
-// generated config names `incident_id` as a field DC maps onto a column, which is what makes
-// the column part of the rendered contract (and what the render tests assert) rather than an
-// undocumented consequence of the key happening to be top-level.
-//
-// `to_string(...) ?? null` for the same reason the route predicates coerce `.tag`: VRL types
-// an event field as `any`. A Measurement whose own payload already carries a non-string
-// `incident_id` (an object, say) would otherwise reach the sink as a value the text column
-// cannot take and fail the whole insert batch; coerced, that Record still lands, with a NULL
-// in the column. Guarded by `exists` because `to_string(null)` is `""` — a Record that is not
-// part of an incident must leave the column NULL, not empty-string.
-std::string render_incident_id_normalization()
-{
-  return "  if exists(.incident_id) {\n"
-         "    .incident_id = to_string(.incident_id) ?? null\n"
-         "  }\n";
-}
-
 std::string render_normalize_source(const RenderConfig& config)
 {
   std::string out;
@@ -230,35 +206,7 @@ std::string render_normalize_source(const RenderConfig& config)
     {
       out += "  ." + dest.time_key + " = format_timestamp!(.timestamp, format: \"%Y-%m-%dT%H:%M:%S%.9f\")\n";
     }
-    if (std::holds_alternative<PostgresParams>(dest.kind))
-    {
-      out += render_incident_id_normalization();
-    }
     out += "}\n";
-  }
-  return out;
-}
-
-// Percent-encodes a postgres URI userinfo component byte-by-byte so arbitrary credential
-// characters can't corrupt the postgres://user:pass@host:port/db endpoint.
-std::string percent_encode_userinfo(const std::string& value)
-{
-  std::string out;
-  for (unsigned char byte : value)
-  {
-    char c = static_cast<char>(byte);
-    bool unreserved = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' ||
-                      c == '.' || c == '_' || c == '~';
-    if (unreserved)
-    {
-      out.push_back(c);
-    }
-    else
-    {
-      char hex[4];
-      std::snprintf(hex, sizeof(hex), "%%%02X", byte);
-      out += hex;
-    }
   }
   return out;
 }
@@ -297,52 +245,7 @@ toml::table render_sink(const RenderConfig& config, const Destination& dest)
   toml::table sink;
   sink.insert("inputs", sink_inputs(dest));
 
-  if (const auto* pg = std::get_if<PostgresParams>(&dest.kind))
-  {
-    sink.insert("type", "postgres");
-    sink.insert("endpoint", "postgres://" + percent_encode_userinfo(pg->user) + ":" +
-                                percent_encode_userinfo(pg->password) + "@" + pg->host + ":" +
-                                std::to_string(pg->port) + "/" + pg->database);
-    sink.insert("table", pg->table);
-    sink.insert("buffer", disk_buffer(config));
-  }
-  else if (const auto* s3 = std::get_if<S3Params>(&dest.kind))
-  {
-    sink.insert("type", "aws_s3");
-    sink.insert("bucket", s3->bucket);
-    if (s3->region)
-    {
-      sink.insert("region", *s3->region);
-    }
-    if (s3->endpoint)
-    {
-      sink.insert("endpoint", *s3->endpoint);
-    }
-    if (s3->key_prefix)
-    {
-      sink.insert("key_prefix", *s3->key_prefix);
-    }
-    if (s3->force_path_style)
-    {
-      sink.insert("force_path_style", *s3->force_path_style);
-    }
-    if (s3->auth)
-    {
-      toml::table auth;
-      auth.insert("access_key_id", s3->auth->access_key_id);
-      auth.insert("secret_access_key", s3->auth->secret_access_key);
-      sink.insert("auth", std::move(auth));
-    }
-    if (s3->batch_timeout_secs)
-    {
-      toml::table batch;
-      batch.insert("timeout_secs", static_cast<std::int64_t>(*s3->batch_timeout_secs));
-      sink.insert("batch", std::move(batch));
-    }
-    sink.insert("encoding", json_encoding());
-    sink.insert("buffer", disk_buffer(config));
-  }
-  else if (const auto* file = std::get_if<FileParams>(&dest.kind))
+  if (const auto* file = std::get_if<FileParams>(&dest.kind))
   {
     sink.insert("type", "file");
     sink.insert("path", file->path);
@@ -356,11 +259,16 @@ toml::table render_sink(const RenderConfig& config, const Destination& dest)
     sink.insert("buffer", disk_buffer(config));
   }
   else
-  {  // Console
-    sink.insert("type", "console");
-    sink.insert("target", "stdout");
-    sink.insert("encoding", json_encoding());
-    // No disk buffer: console is a debugging sink.
+  {
+    // destination_from_raw only ever produces an S3Params kind for `receives: files`
+    // (object storage served by dc_uploader, ADR-0005 — never a Vector sink), and
+    // validate() above already rejects any non-Records destination reaching this
+    // renderer. Reaching here means one of those invariants broke, not a normal config
+    // error a user's params could trigger.
+    throw RenderError(RenderErrorKind::UnexpectedDestinationKind,
+                      "internal error: destination '" + dest.name +
+                          "' has a kind with no `receives: records` Vector sink templating",
+                      dest.name);
   }
   return sink;
 }
@@ -471,27 +379,6 @@ std::string route_output_for_tag(const std::string& tag)
 std::string route_output_for_tag_prefix(const std::string& prefix)
 {
   return std::string(ROUTE_TRANSFORM_ID) + "." + route_branch_for_tag_prefix(prefix);
-}
-
-PostgresParams postgres_from_raw(const std::string& name, const RawDestinationParams& raw)
-{
-  PostgresParams pg;
-  pg.user = required_field(name, raw.user, "user");
-  pg.password = required_field(name, raw.password, "password");
-  pg.database = required_field(name, raw.database, "database");
-  pg.table = required_field(name, raw.table, "table");
-  pg.host = optional_field(raw.host).value_or("127.0.0.1");
-
-  std::int64_t port_raw = raw.port.value_or(5432);
-  if (port_raw <= 0 || port_raw > 65535)
-  {
-    throw RenderError(RenderErrorKind::InvalidPort,
-                      "destination '" + name + "': port " + std::to_string(port_raw) +
-                          " is out of range (expected 1-65535)",
-                      name, "", port_raw);
-  }
-  pg.port = static_cast<std::uint16_t>(port_raw);
-  return pg;
 }
 
 S3Params s3_from_raw(const std::string& name, const RawDestinationParams& raw)
@@ -611,21 +498,17 @@ Destination destination_from_raw(const std::string& name, const std::string& typ
   }
 
   DestinationKind kind;
-  if (type_str == "postgres")
+  if (receives == Receives::Files)
   {
-    kind = postgres_from_raw(name, raw);
-  }
-  else if (type_str == "s3")
-  {
+    // FilesRequireObjectStorage above already enforced type_str == "s3": object storage
+    // for `receives: files` is served by dc_uploader's own S3 client (ADR-0005), never by
+    // a Vector sink, so it stays blessed even though `type: s3` is no longer a `receives:
+    // records` Vector-sink type (#472).
     kind = s3_from_raw(name, raw);
   }
   else if (type_str == "file")
   {
     kind = file_from_raw(name, raw);
-  }
-  else if (type_str == "console")
-  {
-    kind = ConsoleParams{};
   }
   else if (type_str == "vector")
   {
@@ -635,7 +518,8 @@ Destination destination_from_raw(const std::string& name, const std::string& typ
   {
     throw RenderError(RenderErrorKind::UnsupportedType,
                       "destination '" + name + "': type '" + type_str +
-                          "' is not a blessed destination type (supported: postgres, s3, file, console, vector)",
+                          "' is not a blessed destination type (supported: file, vector; `type: s3` only for "
+                          "`receives: files`); configure it via `custom_config_files` instead",
                       name, type_str);
   }
 
@@ -763,6 +647,21 @@ void validate_custom_config_files(const RenderConfig& config, const std::vector<
       owners.emplace(id, file.path);
     }
   }
+}
+
+std::string merge_custom_config_files(const std::string& rendered, const std::vector<CustomConfigFile>& files)
+{
+  std::string out = rendered;
+  for (const auto& file : files)
+  {
+    if (!out.empty() && out.back() != '\n')
+    {
+      out.push_back('\n');
+    }
+    out += "\n# passthrough (ADR-0003): " + file.path + "\n";
+    out += file.content;
+  }
+  return out;
 }
 
 std::string render(const RenderConfig& config)

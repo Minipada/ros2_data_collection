@@ -4,10 +4,24 @@ A **Destination** is an external system that receives Records or Files. In the D
 architecture ([ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md)), the
 pluginlib destination-plugin layer is retired. The Bridge (`dc_bridge`) renders the
 external Vector **Shipper's** configuration from plain ROS parameters for a **blessed
-set** of Destination types — `postgres`, `s3`, `file`, `console`, `vector` — and every
-other destination in Vector's sink catalog is available through the **passthrough**: raw
-Vector config snippets listed in the `custom_config_files` parameter, merged natively by
-Vector.
+set** of `receives: records` Destination types — `file`, `vector` — and every other
+destination in Vector's sink catalog, including `postgres`, `s3` and `console`, is
+available through the **passthrough**: raw Vector config snippets listed in the
+`custom_config_files` parameter, merged into the same rendered config (see
+[Passthrough](#passthrough-custom_config_files) below).
+
+`type: s3` also stays blessed, but only for `receives: files` Destinations — object
+storage there is served entirely by the separate Uploader process reading these same ROS
+params ([ADR-0005](./adr/0005-file-uploads-are-bridge-responsibility.md)), never by a
+Vector sink, so there is no passthrough equivalent for it (see
+[File uploads](#file-uploads-receives-files-the-uploader-adr-0005) below).
+`postgres`/`s3` (for `receives: records`)/`console` were blessed types through DC 2.0's
+early releases; their dedicated ROS-param templating was removed in
+[#471](https://github.com/minipada/ros2_data_collection/issues/471)/[#472](https://github.com/minipada/ros2_data_collection/issues/472)
+once passthrough recipes for all three shipped
+([#470](https://github.com/minipada/ros2_data_collection/issues/470)) — see
+[Recipes](#recipes-postgres-s3-console-via-passthrough) below for the equivalent
+snippets.
 
 ## Verified sink versions
 
@@ -119,21 +133,21 @@ dc_bridge:
     shipper:
       data_dir: "$HOME/.dc/buffer"   # Vector's disk-buffer directory
       # buffer_max_bytes: 268435488  # optional; Vector's disk-buffer minimum
-    destinations: ["pgsql", "rustfs"]
-    pgsql:
-      type: postgres
+    destinations: ["records_log", "to_aggregator", "rustfs"]
+    records_log:
+      type: file
       receives: records
       inputs: ["/dc/measurement/uptime"]   # ROS topics feeding this Destination
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "$DC_PG_PASSWORD"          # $VAR / ${VAR} env references are expanded
-      database: "dc"
-      table: "dc"
-    rustfs:
-      type: s3
+      path: "/var/log/dc/records-%Y-%m-%d.log"   # Vector template syntax allowed
+    to_aggregator:
+      type: vector
       receives: records
       inputs: ["/dc/measurement/uptime"]
+      host: "edge-aggregator.local"
+      port: 6000
+    rustfs:
+      type: s3               # blessed only for `receives: files` — see below
+      receives: files
       bucket: "dc-records"
       endpoint: "http://127.0.0.1:9000"    # omit for AWS S3
       region: "us-east-1"
@@ -141,35 +155,30 @@ dc_bridge:
       secret_access_key: "$DC_S3_SECRET"
       force_path_style: true               # path-style addressing for self-hosted stores
       key_prefix: "robot1/"
-      batch_timeout_secs: 60               # object write interval; Vector default 300
 ```
-
-The `s3` type works with any S3-compatible store. For self-hosting,
-[RustFS](https://rustfs.com/) (Apache 2.0, S3-compatible, a drop-in MinIO
-replacement) is the recommended choice — MinIO's community edition was archived
-upstream in 2026 and no longer receives maintenance — but existing MinIO or Ceph RGW
-deployments work identically: set `endpoint`, explicit credentials, and (typically)
-`force_path_style: true`.
 
 The `vector` type forwards to another Shipper over Vector's own native inter-instance
 protocol (`type = "vector"` sink → `type = "vector"` source) — the standard way to chain
 a robot's local Shipper to an edge aggregator's Shipper in a fleet deployment. `host` and
-`port` name the downstream Shipper; unlike `postgres`, there is no default for either,
-since there's no sensible address to assume for another Shipper.
+`port` name the downstream Shipper; there is no default for either, since there's no
+sensible address to assume for another Shipper.
 
-```yaml
-    to_aggregator:
-      type: vector
-      receives: records
-      inputs: ["/dc/measurement/uptime"]
-      host: "edge-aggregator.local"
-      port: 6000
-```
+The `s3` type — used above with `receives: files` — works with any S3-compatible store.
+For self-hosting, [RustFS](https://rustfs.com/) (Apache 2.0, S3-compatible, a drop-in
+MinIO replacement) is the recommended choice — MinIO's community edition was archived
+upstream in 2026 and no longer receives maintenance — but existing MinIO or Ceph RGW
+deployments work identically: set `endpoint`, explicit credentials, and (typically)
+`force_path_style: true`. See [File uploads](#file-uploads-receives-files-the-uploader-adr-0005)
+below for the full `receives: files` contract; `batch_timeout_secs` above is a
+`receives: records` passthrough recipe field only (see
+[Recipes](#recipes-postgres-s3-console-via-passthrough)), not something the Uploader's
+own S3 client uses.
 
 Common parameters for every blessed type: `type`, `receives` (`records` | `files`, see
-the File uploads section below), `inputs` (ROS topic names), `time_key` (default
-`date`) and `time_format` (default `epoch_nanos`) controlling the normalized timestamp
-field written into each Record before routing.
+the File uploads section below), `inputs` (ROS topic names — required for `receives:
+records`; optional for `receives: files`, see below), `time_key` (default `date`) and
+`time_format` (default `epoch_nanos`, `receives: records` only) controlling the
+normalized timestamp field written into each Record before routing.
 
 ### `time_format`
 
@@ -198,43 +207,56 @@ The destination's own column type can truncate independently of `time_format`. A
 ### `incident_id`
 
 A Measurement configured for [incident capture](./measurements.md) tags every Record it
-releases with the `incident_id` of the `FlushEvent` that released it. That field is part of
-the Record envelope, so a `postgres` Destination writes it to its own **`incident_id`
-column** — "everything from this one event" is a plain `WHERE incident_id = '…'` query:
+releases with the `incident_id` of the `FlushEvent` that released it. That field is part
+of the Record envelope, so it is already a top-level key of the JSON every Destination
+receives — no Bridge-side templating is needed to expose it. A `postgres` sink (via the
+[passthrough recipe](#recipes-postgres-s3-console-via-passthrough) below) can therefore
+write it straight into its own **`incident_id` column** with no extra mapping —
+"everything from this one event" is a plain `WHERE incident_id = '…'` query — since
+Vector's `postgres` sink has no column options of its own: a top-level event key lands in
+the same-named column and everything else is dropped. The column has to exist in the
+table before the first incident, exactly like every other column (`tools/e2e/sql/init.sql`
+and `tools/infrastructure/docker/config/postgresql/init.sql` both carry it):
 
 ```sql
 ALTER TABLE dc ADD COLUMN incident_id text;
 ```
 
-The Bridge renders the mapping into the `dc_bridge_normalize` transform for every `postgres`
-Destination. Vector's `postgres` sink has no column options of its own — a top-level event
-key lands in the same-named column and everything else is dropped — so the column has to
-exist in the table before the first incident, exactly like every other column
-(`tools/e2e/sql/init.sql` and `tools/infrastructure/docker/config/postgresql/init.sql` both
-carry it). Records collected outside an incident have no `incident_id` and leave the column
-NULL. Other Destination types need nothing: `incident_id` is already a top-level key of the
-JSON they receive.
+Records collected outside an incident have no `incident_id` and leave the column NULL.
+
+```admonish note
+Through [#471](https://github.com/minipada/ros2_data_collection/issues/471), the blessed
+`postgres` Destination additionally coerced `incident_id` to a string (or `null`) before
+insertion, so a Measurement whose own payload happened to set a non-string `incident_id`
+couldn't fail the whole insert batch. That coercion was Bridge-side templating specific
+to the now-removed blessed `postgres` type and is not reproduced by the passthrough
+recipe — in the (narrow) case where a Measurement's payload sets a non-string
+`incident_id`, add your own `remap` transform ahead of the passthrough sink if this
+matters for your data.
+```
 
 Type-specific parameters:
 
-| Type       | Required                                    | Optional                                                                                                          |
-| ---------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `postgres` | `user`, `password`, `database`, `table`     | `host` (default `127.0.0.1`), `port` (default `5432`)                                                             |
-| `s3`       | `bucket`                                    | `region`, `endpoint`, `key_prefix`, `access_key_id` + `secret_access_key` (together), `force_path_style`, `batch_timeout_secs` |
-| `file`     | `path` (Vector template syntax allowed)     |                                                                                                                    |
-| `console`  |                                             |                                                                                                                    |
-| `vector`   | `host`, `port`                              |                                                                                                                    |
+| Type       | `receives`                | Required                                    | Optional                                                                                                          |
+| ---------- | -------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `file`     | `records`                  | `path` (Vector template syntax allowed)     |                                                                                                                    |
+| `vector`   | `records`                  | `host`, `port`                              |                                                                                                                    |
+| `s3`       | `files`                     | `bucket`                                    | `region`, `endpoint`, `key_prefix`, `access_key_id` + `secret_access_key` (together), `force_path_style`          |
+
+`postgres`, `s3` (for `receives: records`) and `console` are configured via the
+[passthrough](#passthrough-custom_config_files) instead — see
+[Recipes](#recipes-postgres-s3-console-via-passthrough) below.
 
 Invalid parameters (unknown `type`, missing required field, half a credential pair, an
 out-of-range port…) are rejected with a clear error at Bridge startup — before Vector
 is ever started.
 
 `$VAR` environment references are expanded by the Bridge in `shipper.data_dir`,
-`custom_config_files`, and the `password` / `secret_access_key` credentials — and
-**nowhere else**. In particular `file`'s `path` is handed to Vector verbatim, and Vector
-does not expand environment variables there: `path: "$HOME/records.ndjson"` silently
-writes to a literal `$HOME` directory beside the Bridge's working directory. Use an
-absolute path (Vector creates missing parent directories).
+`custom_config_files`, and the `secret_access_key` credential — and **nowhere else**. In
+particular `file`'s `path` is handed to Vector verbatim, and Vector does not expand
+environment variables there: `path: "$HOME/records.ndjson"` silently writes to a literal
+`$HOME` directory beside the Bridge's working directory. Use an absolute path (Vector
+creates missing parent directories).
 
 ## The `dc.<tag>` routing contract (public API)
 
@@ -276,19 +298,22 @@ dc_bridge:
 Snippets must not re-define component ids owned by the generated config (the
 `dc_bridge_in` source, the `dc_bridge_normalize` and `dc` transforms, or any configured
 Destination's name) or by another snippet. An invalid or colliding snippet is a loud
-Bridge startup error naming the offending file; as a backstop, the merged config set is
-also checked with `vector validate` before the Shipper is started. A snippet may define
-transforms as well as sinks — only *defining* a reserved id is rejected, consuming one is
-not.
+Bridge startup error naming the offending file. The Bridge then folds every validated
+snippet into the same file it writes to `shipper.config_path` — one self-contained file
+regardless of [deployment mode](#deployment-modes-shippermanaged), since in unmanaged mode
+a snippet's own filesystem path is never wired into the separately-run Shipper container —
+and, in managed mode, runs `vector validate` over that merged file as a backstop before
+starting Vector. A snippet may define transforms as well as sinks — only *defining* a
+reserved id is rejected, consuming one is not.
 
 A snippet cannot route a topic on its own. The Bridge derives both its ROS subscriptions
 and its `dc.<tag>` route branches from `destinations`, and never reads a snippet's
 `inputs` — so every topic a snippet consumes must also appear in some blessed
-Destination's `inputs`, and `destinations` must name at least one (a `console` or `file`
-Destination is the cheapest way to satisfy that). Two consequences follow from the
-passthrough being outside the rendered config: the snippet's sink gets Vector's **default
-in-memory buffer**, not the disk buffer `dc_bridge` gives every blessed sink, and it is
-the snippet's job to make re-delivery idempotent if the store cares — the Shipper is
+Destination's `inputs`, and `destinations` must name at least one (a `file` Destination is
+the cheapest way to satisfy that). Two consequences follow from the passthrough being
+outside the rendered config: the snippet's sink gets Vector's **default in-memory
+buffer**, not the disk buffer `dc_bridge` gives every blessed sink, and it is the
+snippet's job to make re-delivery idempotent if the store cares — the Shipper is
 at-least-once ([ADR-0002](./adr/0002-vector-as-default-shipper.md)) either way.
 
 The [Elasticsearch tutorial](./demos/elasticsearch.md) is the worked example for all of
@@ -300,26 +325,24 @@ to follow for any store Vector has no sink for at all.
 
 ### Recipes: `postgres`, `s3`, `console` via passthrough
 
-Per ADR-0003, `postgres`, `s3` and `console` are pure Vector-sink wrappers with no
-DC-specific logic layered on top — Vector's own `vector validate` already gives clear,
-field-level errors for these three sinks, so passthrough loses nothing on the validation
-front for this subset. Anyone using the blessed form today can move to passthrough now,
-before the blessed code path for these three types is removed
-([#471](https://github.com/minipada/ros2_data_collection/issues/471),
-[#472](https://github.com/minipada/ros2_data_collection/issues/472)). Each recipe below
-reproduces exactly what `dc_bridge` itself renders for the equivalent blessed
-configuration in [Configuration contract](#configuration-contract) above — confirmed by
-running Vector 0.57.0 against a live PostgreSQL and RustFS instance, not just written by
-inspection.
+Per ADR-0003, `postgres`, `s3` (for `receives: records`) and `console` are pure
+Vector-sink wrappers with no DC-specific logic layered on top — Vector's own `vector
+validate` already gives clear, field-level errors for these three sinks, so passthrough
+loses nothing on the validation front for this subset. This is now the **only** way to
+configure them: their dedicated ROS-param templating was removed in
+[#471](https://github.com/minipada/ros2_data_collection/issues/471)/[#472](https://github.com/minipada/ros2_data_collection/issues/472).
+Each recipe below reproduces exactly what `dc_bridge` used to render for the equivalent
+formerly-blessed configuration — confirmed by running Vector 0.57.0 against a live
+PostgreSQL and RustFS instance, not just written by inspection.
 
 As with any passthrough, at least one blessed Destination is still needed to create the
-`dc.<tag>` route the snippet consumes — `console` is the cheapest (see
+`dc.<tag>` route the snippet consumes — `file` is the cheapest (see
 [above](#passthrough-custom_config_files)). If you're migrating the `console` Destination
 itself, keep a `file` Destination (or another cheap blessed type) as the route anchor
 instead.
 
-**`postgres`** — the blessed form's `host`/`port`/`user`/`password`/`database` collapse
-into a single connection-string `endpoint`; `table` is unchanged:
+**`postgres`** — the former blessed form's `host`/`port`/`user`/`password`/`database`
+collapse into a single connection-string `endpoint`; `table` is unchanged:
 
 ```toml
 # ~/.dc/postgres_sink.toml — passthrough equivalent of the blessed `pgsql` Destination
@@ -335,8 +358,8 @@ max_size = 268435488   # Vector's disk-buffer minimum; a passthrough sink gets n
 ```
 
 If `user` or `password` contain characters reserved in a URI (`:`, `@`, `/`, `%`),
-percent-encode them yourself — `dc_bridge` does this automatically when rendering the
-blessed form, but a passthrough `endpoint` is handed to Vector verbatim.
+percent-encode them yourself — the former blessed form did this automatically, but a
+passthrough `endpoint` is handed to Vector verbatim.
 
 **`s3`** — Vector's own sink id is `aws_s3`, not `s3`; credentials move under
 `[sinks.<name>.auth]` and `batch_timeout_secs` becomes `[sinks.<name>.batch] timeout_secs`:
@@ -367,8 +390,8 @@ max_size = 268435488
 codec = "json"
 ```
 
-**`console`** — has no required fields either way, so this recipe mostly matters for
-consistency with the other two once the blessed path is gone:
+**`console`** — had no required fields either way, so this recipe mostly matters for
+consistency with the other two:
 
 ```toml
 # ~/.dc/console_sink.toml — passthrough equivalent of the blessed `console` Destination
@@ -572,8 +595,10 @@ was just abandoned without ever leaving the robot.
 
 A Destination named by `metadata_destination` may declare **no `inputs` at all** — being
 named there is itself what routes the `dc.files` Tag to it. That is the usual shape when
-the status log lives in its own table: one `postgres` Destination with `inputs` for the
-Records, and a second one with no `inputs` for the File status log.
+the status log lives in its own table: one blessed `file` Destination (typically anchoring
+a passthrough `postgres` sink, [Recipes](#recipes-postgres-s3-console-via-passthrough)
+above) with `inputs` for the Records, and a second one with no `inputs` for the File
+status log.
 
 `inputs` is otherwise mandatory: a Destination that neither lists a topic nor receives
 `dc.files` would have nothing to deliver, and is rejected at Bridge startup.

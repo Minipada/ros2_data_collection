@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `pgsql_records`/`pgsql_files`
+# Destinations, retired by #472 — see doc/src/dc/destinations.md's
+# "Recipes: postgres, s3, console via passthrough". `pgsql_records`/`pgsql_files` in
+# e2e_retention_params.yaml are now `type: file` anchors only; the real delivery to
+# Postgres happens here.
+
+[sinks.pgsql_records_store]
+type = "postgres"
+inputs = ["dc.dc.measurement.uptime"]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc_records"
+
+[sinks.pgsql_records_store.buffer]
+type = "disk"
+max_size = 268435488
+
+[sinks.pgsql_files_store]
+type = "postgres"
+inputs = ["dc.dc.files"]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc_files"
+
+[sinks.pgsql_files_store.buffer]
+type = "disk"
+max_size = 268435488

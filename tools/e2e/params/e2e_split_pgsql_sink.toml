@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `pgsql_records`/`pgsql_files`
+# Destinations, retired by #472 — see doc/src/dc/destinations.md's
+# "Recipes: postgres, s3, console via passthrough". `pgsql_records`/`pgsql_files` in
+# e2e_split_params.yaml are now `type: file` anchors only; the real delivery to Postgres
+# happens here. `postgres`, not 127.0.0.1: compose.split.yaml's service name.
+#
+# This scenario runs `shipper.managed: false` (the split-deployment topology, #440/#444)
+# — dc_bridge merges this snippet into the same file it writes to `shipper.config_path`
+# (`merge_custom_config_files`, #472), so the separate `vector` container (which only
+# ever reads that one shared file, never this snippet's own path) still gets it.
+
+[sinks.pgsql_records_store]
+type = "postgres"
+inputs = [
+  "dc.dc.measurement.memory", "dc.dc.measurement.os", "dc.dc.measurement.storage",
+  "dc.dc.measurement.uptime", "dc.dc.measurement.tcp_health", "dc.dc.measurement.dummy",
+  "dc.dc.measurement.synth00", "dc.dc.measurement.synth01", "dc.dc.measurement.synth02",
+  "dc.dc.measurement.synth03", "dc.dc.measurement.synth04", "dc.dc.measurement.synth05",
+  "dc.dc.measurement.synth06", "dc.dc.measurement.synth07", "dc.dc.measurement.synth08",
+  "dc.dc.measurement.synth09", "dc.dc.measurement.synth10", "dc.dc.measurement.synth11",
+  "dc.dc.measurement.synth12", "dc.dc.measurement.synth13",
+]
+endpoint = "postgres://dc:password@postgres:5432/dc"
+table = "dc_records"
+
+[sinks.pgsql_records_store.buffer]
+type = "disk"
+max_size = 268435488
+
+[sinks.pgsql_files_store]
+type = "postgres"
+inputs = ["dc.dc.files"]
+endpoint = "postgres://dc:password@postgres:5432/dc"
+table = "dc_files"
+
+[sinks.pgsql_files_store.buffer]
+type = "disk"
+max_size = 268435488

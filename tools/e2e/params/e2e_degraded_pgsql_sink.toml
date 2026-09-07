@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `pgsql_records`/`pgsql_files`
+# Destinations, retired by #472 — see doc/src/dc/destinations.md's
+# "Recipes: postgres, s3, console via passthrough". `pgsql_records`/`pgsql_files` in
+# e2e_degraded_params.yaml are now `type: file` anchors only; the real delivery to
+# Postgres happens here. `dc_e2e_deg_postgres`, not 127.0.0.1: run_degraded.sh's shaped
+# bridge network resolves it via container-name DNS (podman's aardvark-dns on
+# user-defined networks) — see that file's header.
+
+[sinks.pgsql_records_store]
+type = "postgres"
+inputs = [
+  "dc.dc.measurement.memory", "dc.dc.measurement.os", "dc.dc.measurement.storage",
+  "dc.dc.measurement.uptime", "dc.dc.measurement.tcp_health", "dc.dc.measurement.dummy",
+  "dc.dc.measurement.synth00", "dc.dc.measurement.synth01", "dc.dc.measurement.synth02",
+  "dc.dc.measurement.synth03", "dc.dc.measurement.synth04", "dc.dc.measurement.synth05",
+  "dc.dc.measurement.synth06", "dc.dc.measurement.synth07", "dc.dc.measurement.synth08",
+  "dc.dc.measurement.synth09", "dc.dc.measurement.synth10", "dc.dc.measurement.synth11",
+  "dc.dc.measurement.synth12", "dc.dc.measurement.synth13",
+]
+endpoint = "postgres://dc:password@dc_e2e_deg_postgres:5432/dc"
+table = "dc_records"
+
+[sinks.pgsql_records_store.buffer]
+type = "disk"
+max_size = 268435488
+
+[sinks.pgsql_files_store]
+type = "postgres"
+inputs = ["dc.dc.files"]
+endpoint = "postgres://dc:password@dc_e2e_deg_postgres:5432/dc"
+table = "dc_files"
+
+[sinks.pgsql_files_store.buffer]
+type = "disk"
+max_size = 268435488

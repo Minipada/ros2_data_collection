@@ -8,9 +8,11 @@ runs anywhere in the pipeline; see CONTEXT.md). Delivery is confirmed end-to-end
 every frame carries a `chunk` id and Vector's `ack` response for it clears that Record
 from an in-memory unacked window, so a Record is only forgotten once the Shipper has
 actually durably buffered it — see "Delivery guarantees" below. It renders Vector's
-configuration from ROS parameters for the blessed Destination set (`postgres`, `s3`,
-`file`, `console` — ADR-0003) and passes raw Vector snippets (`custom_config_files`)
-through for everything else.
+configuration from ROS parameters for the blessed `receives: records` Destination set
+(`file`, `vector` — ADR-0003) and passes raw Vector snippets (`custom_config_files`)
+through for everything else (postgres, s3, console, …). `type: s3` also stays blessed for
+`receives: files` Destinations — object storage there is served by `dc_uploader`'s own S3
+client (ADR-0005), never by a Vector sink, so it never went through this templating.
 
 This package also builds **`dc_uploader`** (ADR-0005, docs/adr/0014-uploader-runs-as-its-
 own-process.md): a separate, ROS-free executable that serves `receives: files`
@@ -118,29 +120,30 @@ dc_bridge:
   ros__parameters:
     shipper:
       data_dir: "$HOME/.dc/buffer"
-    destinations: ["pgsql"]
-    pgsql:
-      type: postgres            # blessed types: postgres | s3 | file | console | vector
+    destinations: ["records_log"]
+    records_log:
+      type: file                # blessed `receives: records` types: file | vector
       receives: records          # records (default) | files
       inputs: ["/dc/group/robot"]
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "$DC_PG_PASSWORD"   # $VAR / ${VAR} env expansion
-      database: "dc"
-      table: "dc"
+      path: "/var/log/dc/records-%Y-%m-%d.log"
       time_key: "date"
       time_format: "double"      # double | iso8601
+    # Everything else (postgres, s3, console, …) goes through custom_config_files
+    # passthrough instead — see doc/src/dc/destinations.md's recipes.
+    custom_config_files: ["$HOME/.dc/records_log_sink.toml"]
 ```
 
 It renders: the shipper ingest protocol source (with global acknowledgements enabled,
 #266); one `remap` (VRL) transform normalizing each destination's timestamp into its
 `time_key`; one `route` transform whose branches expose every distinct Tag at the public
 `dc.<tag>` output (ADR-0003's passthrough contract, see `doc/src/dc/destinations.md`); a
-disk buffer per persistent sink; and the blessed sinks.
-`validate_custom_config_files` collision-checks passthrough snippets, and `main.cpp` runs
-`vector validate --no-environment` over the merged config before starting Vector, so a
-bad config fails loudly at startup rather than crash-looping.
+disk buffer per persistent sink; and the blessed `file`/`vector` sinks.
+`validate_custom_config_files` collision-checks passthrough snippets against the rendered
+config, `merge_custom_config_files` folds them into the same file written to
+`shipper.config_path` (so a passthrough sink runs in unmanaged/split-deployment mode too,
+not only when the Bridge itself spawns Vector), and `main.cpp` runs `vector validate
+--no-environment` over that merged config before starting Vector, so a bad config fails
+loudly at startup rather than crash-looping.
 
 ## Raw / generic-subscription mode (#227)
 

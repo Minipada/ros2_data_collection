@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `pgsql` Destination, retired by #472 —
+# see doc/src/dc/destinations.md's "Recipes: postgres, s3, console via passthrough".
+# For robot_params_local.yaml's `pgsql` Destination — matches
+# compose.local-destinations.yaml's `postgres` service, credentials to match.
+#
+# `merge_custom_config_files` (#472) folds this into the same file dc_bridge writes to
+# `shipper.config_path` (dc_robot_config, shared with the `vector` container), so this
+# now reaches Vector correctly even in this deployment's `shipper.managed: false` mode —
+# previously the reason `pgsql` had to stay blessed here (see git history on this file).
+
+[sinks.pgsql_store]
+type = "postgres"
+inputs = ["dc.dc.measurement.uptime"]
+endpoint = "postgres://dc:password@postgres:5432/dc"
+table = "dc"
+
+[sinks.pgsql_store.buffer]
+type = "disk"
+max_size = 268435488

@@ -18,16 +18,27 @@ dc_bridge:
       data_dir: "$HOME/.dc/buffer"
 
     destinations: ["raw_console"]
+    # Blessed `console` was retired by #472 — `raw_console` is now a `type: file`
+    # anchor only, so dc_bridge still renders the `dc.dc.raw` route (dc_bridge derives
+    # its routes from `destinations` alone, never from a passthrough snippet's
+    # `inputs`). The actual "print to stdout" behavior moves to the passthrough recipe
+    # in dc_raw_console_sink.toml (custom_config_files below), staged automatically at
+    # launch — swap it for postgres/s3/file/any other Vector sink to route raw mode's
+    # output elsewhere; see doc/src/dc/destinations.md's
+    # "Recipes: postgres, s3, console via passthrough".
     raw_console:
-      type: console         # JSON on the Bridge's stdout; swap for postgres/s3/file
+      type: file
       receives: records
       # No `inputs` key on purpose: this Destination takes no *topic* subscriptions.
       # Raw mode routes to it by Tag namespace instead (`raw.destination` below), which
       # is what lets topics discovered after startup reach it without re-rendering the
       # Shipper config. (`inputs: []` cannot be written here — rclcpp can't load an
       # empty YAML array — so the key is omitted.)
+      path: "/tmp/dc/raw_console_anchor.ndjson"
       time_key: "date"
       time_format: "iso8601"
+
+    custom_config_files: ["$HOME/.dc/dc_raw_console_sink.toml"]
 
     raw:
       enabled: true

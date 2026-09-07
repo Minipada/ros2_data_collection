@@ -102,9 +102,6 @@ Destination declare_destination(rclcpp::Node* node, const std::string& name)
   raw.time_format = declare_optional_string(node, name + ".time_format");
   raw.host = declare_optional_string(node, name + ".host");
   raw.port = declare_optional_int(node, name + ".port");
-  raw.user = declare_optional_string(node, name + ".user");
-  raw.database = declare_optional_string(node, name + ".database");
-  raw.table = declare_optional_string(node, name + ".table");
   raw.bucket = declare_optional_string(node, name + ".bucket");
   raw.region = declare_optional_string(node, name + ".region");
   raw.endpoint = declare_optional_string(node, name + ".endpoint");
@@ -114,11 +111,7 @@ Destination declare_destination(rclcpp::Node* node, const std::string& name)
   raw.batch_timeout_secs = declare_optional_int(node, name + ".batch_timeout_secs");
   raw.path = declare_optional_string(node, name + ".path");
 
-  // Credentials support $DC_PG_PASSWORD-style env references (ADR-0003 contract).
-  if (auto pw = declare_optional_string(node, name + ".password"))
-  {
-    raw.password = expand_with_env(*pw);
-  }
+  // Credentials support $VAR-style env references (ADR-0003 contract).
   if (auto sk = declare_optional_string(node, name + ".secret_access_key"))
   {
     raw.secret_access_key = expand_with_env(*sk);
@@ -344,19 +337,23 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
   }
   validate_custom_config_files(render_config, custom_files);
 
-  // --- write the rendered config atomically (write then rename, #444), build the
-  // --config set --- so a Shipper reading the file (its own process in managed mode, an
-  // orchestrator-supervised one in unmanaged mode) can never observe a partial write.
+  // Merged into one file rather than kept as separate `--config` paths: Vector merges
+  // multiple `--config` files natively, but in unmanaged/split-deployment mode (#440/#444)
+  // the Shipper is a separate process/container that only ever reads `shipper.config_path`
+  // — a snippet's own filesystem path is never wired into that container's own config, so
+  // a passthrough sink would silently never run there otherwise (confirmed empirically
+  // against the split topology before this fix).
+  const std::string merged = merge_custom_config_files(rendered, custom_files);
+
+  // --- write the merged config atomically (write then rename, #444) --- so a Shipper
+  // reading the file (its own process in managed mode, an orchestrator-supervised one in
+  // unmanaged mode) can never observe a partial write.
   const std::string config_path = shipper_config_path_param.empty() ?
                                       (std::filesystem::temp_directory_path() / "dc_bridge_vector.toml").string() :
                                       expand_with_env(shipper_config_path_param);
-  write_file_atomically(config_path, rendered);
+  write_file_atomically(config_path, merged);
 
-  std::vector<std::string> config_paths{ config_path };
-  for (const auto& f : custom_files)
-  {
-    config_paths.push_back(f.path);
-  }
+  const std::vector<std::string> config_paths{ config_path };
 
   // --- locate, validate and supervise the vendored Vector binary — managed mode only
   // (#444). In unmanaged mode the Shipper's lifecycle belongs to an orchestrator: the

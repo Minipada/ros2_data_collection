@@ -17,7 +17,7 @@ endforeach()
 dc_package()
 
 install(
-  DIRECTORY launch params
+  DIRECTORY launch params config
   DESTINATION share/${PROJECT_NAME})
 
 install(

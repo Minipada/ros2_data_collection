@@ -198,19 +198,17 @@ dc_bridge:
       path: "/root/.dc/e2e/data/local_sink/records.ndjson"
       time_key: "date"
 
+    # `type: postgres` was retired by #472 — this is now a `type: file` anchor only
+    # (real delivery moved to e2e_limits_pgsql_files_sink.toml, added to
+    # custom_config_files below): dc-e2e-limits-postgres, not 127.0.0.1 — see this
+    # file's header: the Uploader writes File metadata directly, with no Vector hop, so
+    # it bypasses the two-tier chain and reaches run_limits_two_tier.sh's shared
+    # Postgres straight over the network (its own bridge network — see that script for
+    # why).
     pgsql_files:
-      type: postgres
+      type: file
       receives: records
-      # dc-e2e-limits-postgres, not 127.0.0.1 — see this file's header: the Uploader
-      # writes File metadata directly, with no Vector hop, so it bypasses the two-tier
-      # chain and reaches run_limits_two_tier.sh's shared Postgres straight over the
-      # network (its own bridge network — see that script for why).
-      host: "dc-e2e-limits-postgres"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc_files"
+      path: "/root/.dc/e2e/data/pgsql_files_anchor/records.ndjson"
       time_key: "date"
 
     rustfs:
@@ -249,7 +247,7 @@ dc_bridge:
       delete_when_sent: false
       metadata_destination: "pgsql_files"
 
-    custom_config_files: ["/opt/e2e/e2e_passthrough_sink.toml", "/opt/e2e/e2e_mcap_sink.toml", "/opt/e2e/e2e_limits_forward_sink.toml"]
+    custom_config_files: ["/opt/e2e/e2e_passthrough_sink.toml", "/opt/e2e/e2e_mcap_sink.toml", "/opt/e2e/e2e_limits_forward_sink.toml", "/opt/e2e/e2e_limits_pgsql_files_sink.toml"]
 
     # Same-container loopback (Bridge-to-own-local-Shipper) — never leaves the container,
     # so this stays 127.0.0.1 regardless of topology (same reasoning as

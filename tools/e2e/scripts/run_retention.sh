@@ -118,6 +118,7 @@ podman run -d --network host --name "$DC_C" \
   -v dc_e2e_ret_buffer:/root/.dc/e2e/buffer \
   -v dc_e2e_ret_data:/root/.dc/e2e/data \
   -v "$E2E_DIR/params/e2e_retention_params.yaml:/opt/e2e/e2e_params.yaml:ro" \
+  -v "$E2E_DIR/params/e2e_retention_pgsql_sink.toml:/opt/e2e/e2e_retention_pgsql_sink.toml:ro" \
   "$DC_IMAGE" >/dev/null
 
 # --- verify the shed happens while the store is down ---------------------------------

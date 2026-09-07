@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `console` Destination, retired by #472
+# — see doc/src/dc/destinations.md's "Recipes: postgres, s3, console via passthrough".
+# For dc_raw_params.yaml's `raw_console` Destination: consumes the `dc.dc.raw` route
+# raw mode's `tag_prefix` namespace is exposed under (route_output_for_tag_prefix), not
+# a single topic's exact-Tag route.
+#
+# Staged automatically at `$HOME/.dc/dc_raw_console_sink.toml` by dc_raw.launch.py if not
+# already there (same `_stage_custom_config_files` dc_bringup.launch.py uses for demos)
+# — no manual copy needed to just run `ros2 launch dc_bringup dc_raw.launch.py`.
+
+[sinks.debug_console]
+type = "console"
+inputs = ["dc.dc.raw"]
+target = "stdout"
+
+[sinks.debug_console.encoding]
+codec = "json"

@@ -59,6 +59,7 @@ services:
       - dc_e2e_split_data:/root/.dc/e2e/data
       - dc_e2e_split_config:/etc/dc/shipper
       - ./params/e2e_split_params.yaml:/opt/e2e/e2e_params.yaml:ro
+      - ./params/e2e_split_pgsql_sink.toml:/opt/e2e/e2e_split_pgsql_sink.toml:ro
     # dc_uploader runs in its own container below (#447) — don't also spawn it here.
     command: ["run_uploader:=false"]
     restart: unless-stopped

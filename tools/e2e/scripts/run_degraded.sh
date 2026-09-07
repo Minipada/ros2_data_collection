@@ -288,6 +288,7 @@ podman run -d --network "$NET" --name "$DC_C" \
   -v dc_e2e_deg_buffer:/root/.dc/e2e/buffer \
   -v dc_e2e_deg_data:/root/.dc/e2e/data \
   -v "$E2E_DIR/params/e2e_degraded_params.yaml:/opt/e2e/e2e_params.yaml:ro" \
+  -v "$E2E_DIR/params/e2e_degraded_pgsql_sink.toml:/opt/e2e/e2e_degraded_pgsql_sink.toml:ro" \
   "$DC_IMAGE" >/dev/null
 
 FIRST_RECORD_LATENCY=""
