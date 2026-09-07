@@ -16,6 +16,13 @@
 # do, so dc-ros/vector reach them as plain hostnames ("postgres", "rustfs") — matching
 # params/robot_params_local.yaml's Destination `host` fields.
 services:
+  # compose merges `volumes:` lists additively across `-f` files, so this only adds a
+  # bind mount to compose.yaml's dc-ros service rather than replacing its list —
+  # robot_params_local.yaml's `pgsql` passthrough recipe (ADR-0003, #472).
+  dc-ros:
+    volumes:
+      - ./params/robot_pgsql_sink.toml:/root/.dc/robot_pgsql_sink.toml:ro
+
   postgres:
     image: docker.io/library/postgres:13
     container_name: dc_robot_postgres

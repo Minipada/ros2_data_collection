@@ -5,12 +5,15 @@
 // parameters to a complete Vector configuration. `render()` produces Vector TOML with:
 // the shipper ingest protocol source (global acknowledgements enabled — #266, delivery
 // is confirmed end-to-end), one VRL transform normalizing each blessed destination's
-// timestamp (and, for a `postgres` destination, the envelope's `incident_id` — #291, so
-// the incident an armed Measurement released a Record under is a queryable column rather
-// than an opaque payload key), one `route` transform exposing the public per-Tag
-// `dc.<tag>` routes (the
+// timestamp, one `route` transform exposing the public per-Tag `dc.<tag>` routes (the
 // passthrough contract — see route_output_for_tag), disk-buffer settings, and the
-// blessed sinks (postgres, s3, file, console, vector).
+// blessed `receives: records` sinks (file, vector). Everything else (postgres, s3,
+// console, …) is configured via the `custom_config_files` passthrough (ADR-0003, #472).
+//
+// `s3` stays a blessed *type* for `receives: files` Destinations only — object storage
+// there is served by dc_uploader's own S3 client (ADR-0005), never by a Vector sink, so
+// S3Params/s3_from_raw remain even though render_sink() no longer templates an `aws_s3`
+// Vector sink for it.
 //
 // Two layers, both pure: destination_from_raw (+ the per-type from_raw builders) turns
 // the flat, stringly-typed values ROS parameters give into validated typed config (this
@@ -70,16 +73,6 @@ enum class Receives
   Files,
 };
 
-struct PostgresParams
-{
-  std::string host;
-  std::uint16_t port;
-  std::string user;
-  std::string password;
-  std::string database;
-  std::string table;
-};
-
 struct S3Auth
 {
   std::string access_key_id;
@@ -105,21 +98,16 @@ struct FileParams
   std::string path;  ///< Vector template syntax passes through untouched.
 };
 
-struct ConsoleParams
-{
-};
-
 /// Forwards to another Shipper (typically an edge aggregator) over Vector's own native
 /// inter-instance protocol — the `vector` sink/source pair. `host`/`port` name that
-/// Shipper's `vector` source; there is no sensible default for either, unlike postgres's
-/// dev-friendly `127.0.0.1`/`5432` (#443).
+/// Shipper's `vector` source; there is no sensible default for either (#443).
 struct VectorParams
 {
   std::string host;
   std::uint16_t port;
 };
 
-using DestinationKind = std::variant<PostgresParams, S3Params, FileParams, ConsoleParams, VectorParams>;
+using DestinationKind = std::variant<S3Params, FileParams, VectorParams>;
 
 struct Destination
 {
@@ -164,6 +152,7 @@ enum class RenderErrorKind
   InvalidReceives,
   FilesRequireObjectStorage,
   FilesDestinationInShipperConfig,
+  UnexpectedDestinationKind,
   InvalidTimeFormat,
   MissingField,
   InvalidPort,
@@ -220,13 +209,9 @@ struct RawDestinationParams
 {
   std::optional<std::string> time_key;
   std::optional<std::string> time_format;
-  // postgres, vector
+  // vector
   std::optional<std::string> host;
   std::optional<std::int64_t> port;
-  std::optional<std::string> user;
-  std::optional<std::string> password;
-  std::optional<std::string> database;
-  std::optional<std::string> table;
   // s3
   std::optional<std::string> bucket;
   std::optional<std::string> region;
@@ -240,7 +225,6 @@ struct RawDestinationParams
   std::optional<std::string> path;
 };
 
-PostgresParams postgres_from_raw(const std::string& name, const RawDestinationParams& raw);
 S3Params s3_from_raw(const std::string& name, const RawDestinationParams& raw);
 FileParams file_from_raw(const std::string& name, const RawDestinationParams& raw);
 VectorParams vector_from_raw(const std::string& name, const RawDestinationParams& raw);
@@ -284,6 +268,15 @@ struct CustomConfigFile
 /// valid TOML, define ≥1 component, and claim no component id owned by the rendered
 /// config or another snippet. Throws RenderError naming the offending file.
 void validate_custom_config_files(const RenderConfig& config, const std::vector<CustomConfigFile>& files);
+
+/// Merges validated `custom_config_files` snippets into `rendered` (the already-rendered
+/// config text) so the whole pipeline lives in one self-contained file. Vector natively
+/// merges multiple `--config` files, but in unmanaged/split-deployment mode (#440/#444)
+/// the Shipper is a separate process/container that only ever reads `shipper.config_path`
+/// — a snippet's own filesystem path is never wired into that container, so a passthrough
+/// sink would silently never run there unless it is folded into the one file everyone
+/// reads. Call only after validate_custom_config_files() has confirmed no id collisions.
+std::string merge_custom_config_files(const std::string& rendered, const std::vector<CustomConfigFile>& files);
 
 /// Renders `config` into a complete Vector TOML configuration. Pure. Throws RenderError
 /// on invalid config.

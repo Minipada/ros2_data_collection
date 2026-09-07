@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# ADR-0003 passthrough equivalent of the blessed `postgres` Destination, retired by
+# #472 — see doc/src/dc/destinations.md's "Recipes: postgres, s3, console via
+# passthrough". For dc_params.yaml's `pgsql` Destination — matches
+# tools/infrastructure/docker/docker-compose.postgresql.yaml's credentials.
+#
+# Staged automatically at `$HOME/.dc/dc_params_pgsql_sink.toml` by dc_bringup.launch.py
+# if not already there (`_stage_custom_config_files`) — no manual copy needed to just
+# run `ros2 launch dc_bringup dc_bringup.launch.py`.
+
+[sinks.pgsql_store]
+type = "postgres"
+inputs = ["dc.dc.measurement.uptime"]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc"
+
+[sinks.pgsql_store.buffer]
+type = "disk"
+max_size = 268435488

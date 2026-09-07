@@ -38,17 +38,18 @@ dc_bridge:
     shipper:
       data_dir: "$HOME/.dc/e2e/buffer"
     destinations: ["pgsql_records"]
+    # `type: postgres` was retired by #472 — this is now a `type: file` anchor only, so
+    # dc_bridge still renders its `dc.<tag>` routes. The real delivery to Postgres moved
+    # to the passthrough recipe in e2e_incident_pgsql_sink.toml (custom_config_files
+    # below).
     pgsql_records:
-      type: postgres
+      type: file
       receives: records
       inputs: ["/dc/measurement/uptime", "/dc/measurement/memory"]
-      host: "127.0.0.1"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc_records"
+      path: "/root/.dc/e2e/data/pgsql_records_anchor/records.ndjson"
       time_key: "date"
+
+    custom_config_files: ["/opt/e2e/e2e_incident_pgsql_sink.toml"]
 
     vector_forward_host: "127.0.0.1"
     vector_forward_port: 24224

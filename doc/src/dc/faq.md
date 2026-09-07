@@ -17,12 +17,13 @@ question below.
 ## How can I send data to a Destination that isn't blessed?
 
 The Bridge (`dc_bridge`) renders its Shipper's (Vector) config from plain ROS
-parameters for a **blessed set** of Destination types only (PostgreSQL,
-S3-compatible storage, file, console, another Vector Shipper — see
-[Destinations](./destinations.md)). Every
-other sink in [Vector's catalog](https://vector.dev/docs/reference/configuration/sinks/)
-(Kafka, Kinesis, InfluxDB, webhooks, …) is reachable through the **passthrough**: list a
-raw Vector config snippet (TOML) in the `custom_config_files` parameter, and consume the
+parameters for a **blessed set** of `receives: records` Destination types only (local
+file, another Vector Shipper — see [Destinations](./destinations.md); S3-compatible
+storage is also blessed, but only for `receives: files` File uploads). Every other sink
+in [Vector's catalog](https://vector.dev/docs/reference/configuration/sinks/) — including
+PostgreSQL, S3-compatible storage for Records, console, and third-party sinks like Kafka,
+Kinesis, InfluxDB, webhooks, … — is reachable through the **passthrough**: list a raw
+Vector config snippet (TOML) in the `custom_config_files` parameter, and consume the
 public `dc.<tag>` route it needs. No DC code, plugin, or extra language required — only
 Vector configuration.
 

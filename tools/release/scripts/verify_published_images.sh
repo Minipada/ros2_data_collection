@@ -127,6 +127,7 @@ log "starting dc-ros"
 podman run -d --network host --name "$DC_ROS_C" \
   -v "$CONFIG_VOL:/etc/dc/shipper" \
   -v "$RELEASE_DIR/params/smoke_params.yaml:/opt/dc/smoke_params.yaml:ro" \
+  -v "$RELEASE_DIR/params/smoke_pgsql_sink.toml:/root/.dc/smoke_pgsql_sink.toml:ro" \
   "$DC_ROS_IMAGE" \
   dc_params_file:=/opt/dc/smoke_params.yaml run_uploader:=false \
   >/dev/null

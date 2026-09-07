@@ -44,9 +44,9 @@ Destination make_destination(const std::string& name, std::vector<std::string> i
   return d;
 }
 
-PostgresParams postgres_kind()
+FileParams file_kind()
 {
-  return PostgresParams{ "127.0.0.1", 5432, "dc", "hunter2", "dc", "dc" };
+  return FileParams{ "/var/log/dc/records.log" };
 }
 
 VectorParams vector_kind()
@@ -67,7 +67,7 @@ RenderConfig config_with(std::vector<Destination> dests)
 
 RenderConfig basic_config(TimeFormat tf)
 {
-  return config_with({ make_destination("pgsql", { "/dc/group/robot" }, tf, postgres_kind()) });
+  return config_with({ make_destination("records_log", { "/dc/group/robot" }, tf, file_kind()) });
 }
 
 void assert_matches_fixture(const std::string& rendered, const std::string& fixture_name)
@@ -81,7 +81,7 @@ void assert_matches_fixture(const std::string& rendered, const std::string& fixt
 
 }  // namespace
 
-TEST(Render, SinglePostgresDestinationDouble)
+TEST(Render, SingleFileDestinationDouble)
 {
   assert_matches_fixture(render(basic_config(TimeFormat::Double)), "basic_double.toml");
 }
@@ -94,44 +94,23 @@ TEST(Render, Iso8601FormatTimestamp)
 TEST(Render, MultipleDestinationsSharePerTagRoutes)
 {
   auto config = config_with({
-      make_destination("pgsql", { "/dc/group/robot" }, TimeFormat::Double, postgres_kind()),
-      make_destination("pgsql_archive", { "/dc/measurement/uptime" }, TimeFormat::Iso8601, postgres_kind()),
+      make_destination("records_log", { "/dc/group/robot" }, TimeFormat::Double, file_kind()),
+      make_destination("to_aggregator", { "/dc/measurement/uptime" }, TimeFormat::Iso8601, vector_kind()),
   });
   assert_matches_fixture(render(config), "multiple_destinations.toml");
 }
 
-TEST(Render, S3SelfHostedCustomEndpoint)
-{
-  S3Params s3;
-  s3.bucket = "dc-records";
-  s3.region = "us-east-1";
-  s3.endpoint = "http://127.0.0.1:9000";
-  s3.key_prefix = "robot1/";
-  s3.auth = S3Auth{ "rustfsadmin", "rustfsadmin" };
-  s3.force_path_style = true;
-  s3.batch_timeout_secs = 2;
-  auto config = config_with(
-      { make_destination("rustfs", { "/dc/group/robot", "/dc/measurement/uptime" }, TimeFormat::Double, s3) });
-  assert_matches_fixture(render(config), "s3_custom_endpoint.toml");
-}
-
-TEST(Render, S3AwsAmbientCredentials)
-{
-  S3Params s3;
-  s3.bucket = "dc-records";
-  s3.region = "eu-west-1";
-  auto config = config_with({ make_destination("s3_archive", { "/dc/group/robot" }, TimeFormat::Iso8601, s3) });
-  assert_matches_fixture(render(config), "s3_aws.toml");
-}
-
-TEST(Render, FileAndConsoleDestinations)
+// #472: postgres/s3(records)/console retired their blessed Vector-sink templating —
+// `file` and `vector` are the only `receives: records` sinks render_sink() still knows
+// how to build, and coexist fine in one config.
+TEST(Render, FileAndVectorDestinationsInOneConfig)
 {
   auto config = config_with({
       make_destination("local_log", { "/dc/group/robot" }, TimeFormat::Double,
                        FileParams{ "/var/log/dc/records-%Y-%m-%d.log" }),
-      make_destination("debug_console", { "/dc/group/robot" }, TimeFormat::Double, ConsoleParams{}),
+      make_destination("to_aggregator", { "/dc/group/robot" }, TimeFormat::Double, vector_kind()),
   });
-  assert_matches_fixture(render(config), "file_and_console.toml");
+  assert_matches_fixture(render(config), "file_and_vector.toml");
 }
 
 // #443: `vector` forwards to another Shipper (typically an edge aggregator) over
@@ -144,65 +123,43 @@ TEST(Render, VectorDestinationForwardsToAggregator)
   assert_matches_fixture(render(config), "vector_destination.toml");
 }
 
-// #291: `incident_id` is a first-class column, not a key buried in the payload. Vector's
-// postgres sink has no column-mapping options — a top-level event key lands in the
-// same-named column — so the mapping *is* this line of the normalize transform, and it must
-// be rendered for every postgres destination whatever its time_format.
-TEST(Render, PostgresDestinationsNormalizeIncidentIdIntoItsOwnColumn)
+// #472: `S3Params` stays a valid DestinationKind (object storage for `receives: files`,
+// ADR-0005), but render_sink() no longer templates a Vector `aws_s3` sink for it — that
+// was the blessed-s3-for-records feature this issue removes. A `receives: files`
+// destination itself never reaches render() (validate() rejects it, see
+// RejectsFilesDestinationReachingShipperConfig below); this covers the other way an
+// S3Params destination could reach render_sink() — a `receives: records` one, which
+// destination_from_raw itself can no longer produce (`type: s3` + `receives: records` is
+// UnsupportedType), but render()'s pure API still accepts directly.
+TEST(Render, RecordsDestinationWithS3KindIsRejectedByRenderSink)
 {
-  for (auto tf : { TimeFormat::EpochNanos, TimeFormat::Double, TimeFormat::Iso8601 })
+  S3Params s3;
+  s3.bucket = "dc-records";
+  auto config = config_with({ make_destination("rustfs", { "/dc/group/robot" }, TimeFormat::Double, s3) });
+  try
   {
-    toml::table parsed = toml::parse(render(basic_config(tf)));
-    const std::string source(parsed["transforms"][NORMALIZE_TRANSFORM_ID]["source"].value_or(""));
-    EXPECT_NE(source.find("if exists(.incident_id) {"), std::string::npos) << source;
-    EXPECT_NE(source.find(".incident_id = to_string(.incident_id) ?? null"), std::string::npos) << source;
+    render(config);
+    FAIL();
+  }
+  catch (const RenderError& e)
+  {
+    EXPECT_EQ(e.kind(), RenderErrorKind::UnexpectedDestinationKind);
+    EXPECT_EQ(e.arg0(), "rustfs");
   }
 }
 
-// One remap transform serves every destination, so the incident_id block has to sit inside
-// the branch guarding the postgres destination's own Tags — not at top level, where it would
-// also rewrite events no column-mapped sink ever sees.
-TEST(Render, IncidentIdNormalizationIsScopedToThePostgresDestinationsTags)
+// #472: incident_id normalization was postgres-specific column-mapping support; with the
+// blessed postgres sink gone, no destination kind gets it any more — the field rides
+// along in the JSON payload as it always has, for every kind.
+TEST(Render, NormalizeNeverEmitsIncidentIdHandling)
 {
   auto config = config_with({
-      make_destination("pgsql", { "/dc/group/robot" }, TimeFormat::EpochNanos, postgres_kind()),
-      make_destination("debug_console", { "/dc/measurement/uptime" }, TimeFormat::EpochNanos, ConsoleParams{}),
-  });
-  toml::table parsed = toml::parse(render(config));
-  const std::string source(parsed["transforms"][NORMALIZE_TRANSFORM_ID]["source"].value_or(""));
-
-  const auto pg_branch = source.find("if includes([\"dc.group.robot\"], .tag) {");
-  const auto console_branch = source.find("if includes([\"dc.measurement.uptime\"], .tag) {");
-  const auto incident = source.find("if exists(.incident_id) {");
-  ASSERT_NE(pg_branch, std::string::npos) << source;
-  ASSERT_NE(console_branch, std::string::npos) << source;
-  ASSERT_NE(incident, std::string::npos) << source;
-  EXPECT_GT(incident, pg_branch) << source;
-  EXPECT_LT(incident, console_branch) << source;
-  // Exactly one destination is column-mapped, so exactly one block is rendered.
-  EXPECT_EQ(source.find("if exists(.incident_id) {", incident + 1), std::string::npos) << source;
-}
-
-// A config with no column-mapped sink has nothing to map incident_id onto; the field rides
-// along in the JSON payload as it always has.
-TEST(Render, NonPostgresDestinationsGetNoIncidentIdNormalization)
-{
-  auto config = config_with({
-      make_destination("local_log", { "/dc/group/robot" }, TimeFormat::EpochNanos,
-                       FileParams{ "/var/log/dc/records.log" }),
-      make_destination("debug_console", { "/dc/group/robot" }, TimeFormat::EpochNanos, ConsoleParams{}),
+      make_destination("local_log", { "/dc/group/robot" }, TimeFormat::EpochNanos, file_kind()),
+      make_destination("to_aggregator", { "/dc/measurement/uptime" }, TimeFormat::EpochNanos, vector_kind()),
   });
   toml::table parsed = toml::parse(render(config));
   const std::string source(parsed["transforms"][NORMALIZE_TRANSFORM_ID]["source"].value_or(""));
   EXPECT_EQ(source.find("incident_id"), std::string::npos) << source;
-}
-
-TEST(Render, ConsoleSinkHasNoDiskBuffer)
-{
-  auto config =
-      config_with({ make_destination("debug_console", { "/dc/group/robot" }, TimeFormat::Double, ConsoleParams{}) });
-  toml::table parsed = toml::parse(render(config));
-  EXPECT_FALSE(parsed["sinks"]["debug_console"].as_table()->contains("buffer"));
 }
 
 // #266: the Forwarder tags every frame with a chunk id and depends on Vector actually
@@ -221,8 +178,8 @@ TEST(Render, EnablesGlobalAcknowledgements)
 TEST(Render, RoutesArePerTagAndSinksConsumeDcDotTag)
 {
   auto config = config_with({
-      make_destination("pgsql", { "/dc/group/robot", "/dc/measurement/uptime" }, TimeFormat::Double, postgres_kind()),
-      make_destination("debug_console", { "/dc/measurement/uptime" }, TimeFormat::Double, ConsoleParams{}),
+      make_destination("records_log", { "/dc/group/robot", "/dc/measurement/uptime" }, TimeFormat::Double, file_kind()),
+      make_destination("to_aggregator", { "/dc/measurement/uptime" }, TimeFormat::Double, vector_kind()),
   });
   toml::table parsed = toml::parse(render(config));
 
@@ -232,10 +189,10 @@ TEST(Render, RoutesArePerTagAndSinksConsumeDcDotTag)
   EXPECT_TRUE(route->contains("dc.measurement.uptime"));
   EXPECT_EQ(route->size(), 2u);
 
-  auto pgsql_inputs = parsed["sinks"]["pgsql"]["inputs"].as_array();
-  ASSERT_NE(pgsql_inputs, nullptr);
-  EXPECT_EQ((*pgsql_inputs)[0].value<std::string>(), "dc.dc.group.robot");
-  EXPECT_EQ((*pgsql_inputs)[1].value<std::string>(), "dc.dc.measurement.uptime");
+  auto records_log_inputs = parsed["sinks"]["records_log"]["inputs"].as_array();
+  ASSERT_NE(records_log_inputs, nullptr);
+  EXPECT_EQ((*records_log_inputs)[0].value<std::string>(), "dc.dc.group.robot");
+  EXPECT_EQ((*records_log_inputs)[1].value<std::string>(), "dc.dc.measurement.uptime");
 }
 
 TEST(Render, RouteOutputForTagIsPublicName)
@@ -299,7 +256,7 @@ TEST(Render, RejectsEmptyInputs)
   catch (const RenderError& e)
   {
     EXPECT_EQ(e.kind(), RenderErrorKind::EmptyInputs);
-    EXPECT_EQ(e.arg0(), "pgsql");
+    EXPECT_EQ(e.arg0(), "records_log");
   }
 }
 
@@ -315,7 +272,7 @@ TEST(Render, RejectsDuplicateDestinationNames)
   catch (const RenderError& e)
   {
     EXPECT_EQ(e.kind(), RenderErrorKind::DuplicateDestination);
-    EXPECT_EQ(e.arg0(), "pgsql");
+    EXPECT_EQ(e.arg0(), "records_log");
   }
 }
 
@@ -368,24 +325,16 @@ TEST(Render, DestinationFromRawRejectsUnsupportedType)
   }
 }
 
-TEST(Render, DestinationFromRawBuildsS3FileConsole)
+// #472: postgres/s3(records)/console are gone as blessed `receives: records` types —
+// `mongodb`-style rejection above covers those the same as any other unrecognized
+// string now. `s3` stays valid, but only for `receives: files` (ADR-0005 object
+// storage) — see DestinationFromRawAcceptsFilesS3.
+TEST(Render, DestinationFromRawBuildsFileAndVector)
 {
-  RawDestinationParams s3raw;
-  s3raw.bucket = "dc-records";
-  s3raw.endpoint = "http://127.0.0.1:9000";
-  s3raw.access_key_id = "rustfsadmin";
-  s3raw.secret_access_key = "rustfsadmin";
-  s3raw.force_path_style = true;
-  auto s3 = destination_from_raw("rustfs", "s3", "records", { "/dc/group/robot" }, s3raw);
-  EXPECT_TRUE(std::holds_alternative<S3Params>(s3.kind));
-
   RawDestinationParams fileraw;
   fileraw.path = "/var/log/dc/records.log";
   auto file = destination_from_raw("local_log", "file", "records", { "/dc/group/robot" }, fileraw);
   EXPECT_TRUE(std::holds_alternative<FileParams>(file.kind));
-
-  auto console = destination_from_raw("debug_console", "console", "records", { "/dc/group/robot" }, {});
-  EXPECT_TRUE(std::holds_alternative<ConsoleParams>(console.kind));
 
   RawDestinationParams vecraw;
   vecraw.host = "dc-e2e-limits-agg";
@@ -396,7 +345,7 @@ TEST(Render, DestinationFromRawBuildsS3FileConsole)
 
 TEST(Render, DestinationFromRawRejectsFilesOnNonObjectStorage)
 {
-  for (const std::string bad : { "postgres", "file", "console" })
+  for (const std::string bad : { "file", "vector" })
   {
     try
     {
@@ -448,7 +397,7 @@ TEST(Render, ExtraTagsAreRoutedNormalizedAndConsumed)
   EXPECT_TRUE(route->contains("dc.files"));
   EXPECT_TRUE(route->contains("dc.group.robot"));
 
-  auto inputs = parsed["sinks"]["pgsql"]["inputs"].as_array();
+  auto inputs = parsed["sinks"]["records_log"]["inputs"].as_array();
   EXPECT_EQ((*inputs)[0].value<std::string>(), "dc.dc.files");
   EXPECT_EQ((*inputs)[1].value<std::string>(), "dc.dc.group.robot");
 
@@ -470,7 +419,7 @@ TEST(Render, TagPrefixesRouteAWholeNamespaceWithStartsWith)
   // The exact-Tag branches are untouched.
   EXPECT_TRUE(route->contains("dc.group.robot"));
 
-  auto inputs = parsed["sinks"]["pgsql"]["inputs"].as_array();
+  auto inputs = parsed["sinks"]["records_log"]["inputs"].as_array();
   ASSERT_EQ(inputs->size(), 2u);
   EXPECT_EQ((*inputs)[0].value<std::string>(), "dc.dc.group.robot");
   EXPECT_EQ((*inputs)[1].value<std::string>(), "dc.dc.raw");
@@ -508,7 +457,7 @@ TEST(Render, RejectsATagThatCollidesWithARoutedNamespace)
 {
   // Topic `/dc/raw` derives Tag `dc.raw`, which is also the branch id the `dc.raw.`
   // namespace claims — one would silently overwrite the other in the route table.
-  auto config = config_with({ make_destination("pgsql", { "/dc/raw" }, TimeFormat::Double, postgres_kind()) });
+  auto config = config_with({ make_destination("records_log", { "/dc/raw" }, TimeFormat::Double, file_kind()) });
   config.destinations[0].tag_prefixes.push_back("dc.raw.");
   try
   {
@@ -534,7 +483,7 @@ TEST(Render, DestinationFromRawRejectsInvalidReceives)
 {
   try
   {
-    destination_from_raw("archive", "postgres", "bogus", { "/dc/measurement/map" }, {});
+    destination_from_raw("archive", "file", "bogus", { "/dc/measurement/map" }, {});
     FAIL();
   }
   catch (const RenderError& e)
@@ -550,7 +499,7 @@ TEST(Render, DestinationFromRawRejectsInvalidTimeFormat)
   raw.time_format = "rfc2822";
   try
   {
-    destination_from_raw("debug_console", "console", "records", { "/dc/measurement/map" }, raw);
+    destination_from_raw("misconfigured", "vector", "records", { "/dc/measurement/map" }, raw);
     FAIL();
   }
   catch (const RenderError& e)
@@ -569,7 +518,8 @@ TEST(Render, DestinationFromRawAcceptsEveryTimeFormat)
   {
     RawDestinationParams raw;
     raw.time_format = c.first;
-    auto dest = destination_from_raw("debug_console", "console", "records", { "/dc/measurement/map" }, raw);
+    raw.path = "/var/log/dc/records.log";
+    auto dest = destination_from_raw("local_log", "file", "records", { "/dc/measurement/map" }, raw);
     EXPECT_EQ(dest.time_format, c.second) << "time_format '" << c.first << "'";
   }
 }
@@ -579,60 +529,12 @@ TEST(Render, DestinationFromRawAcceptsEveryTimeFormat)
 TEST(Render, EpochNanosNormalizesWithoutFloatRounding)
 {
   auto config =
-      config_with({ make_destination("pgsql", { "/dc/group/robot" }, TimeFormat::EpochNanos, postgres_kind()) });
+      config_with({ make_destination("records_log", { "/dc/group/robot" }, TimeFormat::EpochNanos, file_kind()) });
   const std::string rendered = render(config);
   EXPECT_NE(rendered.find(".date = to_unix_timestamp!(.timestamp, unit: \"nanoseconds\")"), std::string::npos)
       << rendered;
   EXPECT_EQ(rendered.find("to_float("), std::string::npos)
       << "epoch_nanos must not round through a float: " << rendered;
-}
-
-TEST(Render, PostgresFromRawRejectsMissingRequiredFields)
-{
-  RawDestinationParams raw;
-  raw.user = "dc";
-  try
-  {
-    postgres_from_raw("pgsql", raw);
-    FAIL();
-  }
-  catch (const RenderError& e)
-  {
-    EXPECT_EQ(e.kind(), RenderErrorKind::MissingField);
-    EXPECT_EQ(e.arg1(), "password");
-  }
-}
-
-TEST(Render, PostgresFromRawRejectsOutOfRangePort)
-{
-  RawDestinationParams raw;
-  raw.user = "dc";
-  raw.password = "secret";
-  raw.database = "dc";
-  raw.table = "dc";
-  raw.port = 70000;
-  try
-  {
-    postgres_from_raw("pgsql", raw);
-    FAIL();
-  }
-  catch (const RenderError& e)
-  {
-    EXPECT_EQ(e.kind(), RenderErrorKind::InvalidPort);
-    EXPECT_EQ(e.number(), 70000);
-  }
-}
-
-TEST(Render, PostgresFromRawAppliesDefaults)
-{
-  RawDestinationParams raw;
-  raw.user = "dc";
-  raw.password = "secret";
-  raw.database = "dc";
-  raw.table = "dc";
-  auto pg = postgres_from_raw("pgsql", raw);
-  EXPECT_EQ(pg.host, "127.0.0.1");
-  EXPECT_EQ(pg.port, 5432);
 }
 
 TEST(Render, VectorFromRawRejectsMissingHost)
@@ -698,7 +600,9 @@ TEST(Render, VectorFromRawBuildsAddress)
 // that says nothing about time must not silently round its timestamps.
 TEST(Render, DestinationFromRawAppliesTimeDefaults)
 {
-  auto dest = destination_from_raw("debug_console", "console", "records", { "/dc/group/robot" }, {});
+  RawDestinationParams raw;
+  raw.path = "/var/log/dc/records.log";
+  auto dest = destination_from_raw("local_log", "file", "records", { "/dc/group/robot" }, raw);
   EXPECT_EQ(dest.time_key, "date");
   EXPECT_EQ(dest.time_format, TimeFormat::EpochNanos);
 }
@@ -806,7 +710,7 @@ TEST(Render, CustomConfigFilesRejectEmptySnippet)
 TEST(Render, CustomConfigFilesRejectCollisionsWithRendered)
 {
   auto config = basic_config(TimeFormat::Double);
-  for (const std::string id : { "pgsql", "dc", "dc_bridge_in", "dc_bridge_normalize" })
+  for (const std::string id : { "records_log", "dc", "dc_bridge_in", "dc_bridge_normalize" })
   {
     std::vector<CustomConfigFile> files = {
       { "/etc/dc/collide.toml",
@@ -844,17 +748,43 @@ TEST(Render, CustomConfigFilesRejectSameComponentInTwoSnippets)
   }
 }
 
+// #472: the fix for the unmanaged/split-deployment gap (#471's commit message) — a
+// passthrough snippet's own filesystem path is never wired into a separately-run
+// Shipper container, so it has to be folded into the one file that container reads.
+TEST(Render, MergeCustomConfigFilesAppendsSnippetsAfterTheRenderedConfig)
+{
+  auto config = basic_config(TimeFormat::Double);
+  const std::string rendered = render(config);
+  std::vector<CustomConfigFile> files = { { "/etc/dc/http.toml",
+                                            "[sinks.my_http]\ntype = \"http\"\ninputs = [\"dc.dc.group.robot\"]\nuri = "
+                                            "\"http://127.0.0.1:8080/ingest\"\nencoding.codec = \"json\"\n" } };
+  const std::string merged = merge_custom_config_files(rendered, files);
+
+  toml::table parsed = toml::parse(merged);
+  EXPECT_NE(parsed["sinks"]["records_log"].as_table(), nullptr) << merged;
+  auto* my_http = parsed["sinks"]["my_http"].as_table();
+  ASSERT_NE(my_http, nullptr) << merged;
+  EXPECT_EQ(my_http->at("type").value<std::string>(), "http");
+}
+
+TEST(Render, MergeCustomConfigFilesWithNoFilesReturnsRenderedUnchanged)
+{
+  auto config = basic_config(TimeFormat::Double);
+  const std::string rendered = render(config);
+  EXPECT_EQ(merge_custom_config_files(rendered, {}), rendered);
+}
+
 TEST(Render, ExpandEnvSubstitutesBothForms)
 {
   auto lookup = [](const std::string& k) -> std::optional<std::string> {
     if (k == "HOME")
       return "/home/dc";
-    if (k == "DC_PG_PASSWORD")
+    if (k == "DC_S3_SECRET")
       return "s3cr3t";
     return std::nullopt;
   };
   EXPECT_EQ(expand_env("$HOME/.dc/buffer", lookup), "/home/dc/.dc/buffer");
-  EXPECT_EQ(expand_env("${DC_PG_PASSWORD}", lookup), "s3cr3t");
+  EXPECT_EQ(expand_env("${DC_S3_SECRET}", lookup), "s3cr3t");
 }
 
 TEST(Render, ExpandEnvRejectsUndefinedVariable)
@@ -868,13 +798,4 @@ TEST(Render, ExpandEnvRejectsUndefinedVariable)
   {
     EXPECT_EQ(e.var(), "MISSING");
   }
-}
-
-TEST(Render, PercentEncodesSpecialCharactersInCredentials)
-{
-  auto config = basic_config(TimeFormat::Double);
-  std::get<PostgresParams>(config.destinations[0].kind).password = "p@ss/w:rd%";
-  toml::table parsed = toml::parse(render(config));
-  EXPECT_EQ(parsed["sinks"]["pgsql"]["endpoint"].value<std::string>(),
-            "postgres://dc:p%40ss%2Fw%3Ard%25@127.0.0.1:5432/dc");
 }

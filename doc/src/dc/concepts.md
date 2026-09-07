@@ -138,10 +138,11 @@ passthrough Destinations consume. A Destination selects what it receives through
 ## Destinations
 
 A Destination is where data ends up: a file is **blessed** (rendered from plain ROS
-parameters), and so are PostgreSQL, S3-compatible storage, another Shipper, and (through a
-[passthrough recipe](./destinations.md#recipes-postgres-s3-console-via-passthrough) rather
-than the ROS-param form, per [ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md))
-the console; any other Vector sink is reachable through the **passthrough** too. See
+parameters), and so is another Shipper, and (only for File uploads, not Records)
+S3-compatible storage. PostgreSQL, S3-compatible storage for Records, and the console
+are reached through a [passthrough recipe](./destinations.md#recipes-postgres-s3-console-via-passthrough)
+instead of the ROS-param form (per [ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md));
+any other Vector sink is reachable through the **passthrough** too. See
 [Destinations](./destinations.md) for the full contract.
 
 ```yaml

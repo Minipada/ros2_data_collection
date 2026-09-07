@@ -18,6 +18,9 @@ COPY scripts/workload_generator.py /opt/e2e/workload_generator.py
 COPY params/e2e_params.yaml /opt/e2e/e2e_params.yaml
 COPY params/e2e_passthrough_sink.toml /opt/e2e/e2e_passthrough_sink.toml
 COPY params/e2e_mcap_sink.toml /opt/e2e/e2e_mcap_sink.toml
+# ADR-0003 passthrough for pgsql_records/pgsql_files (#472 retired the blessed
+# `postgres` type) — see e2e_pgsql_sink.toml.
+COPY params/e2e_pgsql_sink.toml /opt/e2e/e2e_pgsql_sink.toml
 COPY scripts/mcap_summary.py /opt/e2e/mcap_summary.py
 # run_degraded.sh (#366): stdlib-only, run as one-off containers on its shaped bridge
 # network for readiness polling and the shaping pre-check (see measure_rtt.py's header).

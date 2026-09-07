@@ -56,6 +56,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import os
 import re
 import subprocess
 import sys
@@ -179,6 +180,11 @@ def _start_level_containers(
             f"{data_vol}:/root/.dc/e2e/data",
             "-v",
             f"{params_file}:/opt/e2e/e2e_params.yaml:ro",
+            # ADR-0003 passthrough for pgsql_files (#472 retired the blessed `postgres`
+            # type) — see e2e_limits_upload_pgsql_sink.toml.
+            "-v",
+            f"{os.path.join(os.path.dirname(params_file), 'e2e_limits_upload_pgsql_sink.toml')}"
+            ":/opt/e2e/e2e_limits_upload_pgsql_sink.toml:ro",
             image,
         )
         names.append(name)

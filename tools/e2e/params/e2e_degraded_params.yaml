@@ -169,30 +169,22 @@ dc_bridge:
     shipper:
       data_dir: "$HOME/.dc/e2e/buffer"
     destinations: ["pgsql_records", "pgsql_files", "rustfs", "raw_file"]
+    # pgsql_records/pgsql_files: `type: postgres` was retired by #472 — these are now
+    # `type: file` anchors only, so dc_bridge still renders their `dc.<tag>` routes and
+    # pgsql_files still exists to be named by `files.metadata_destination` below. The
+    # real delivery to Postgres moved to the passthrough recipe in
+    # e2e_degraded_pgsql_sink.toml (custom_config_files below).
     pgsql_records:
-      type: postgres
+      type: file
       receives: records
       inputs: ["/dc/measurement/memory", "/dc/measurement/os", "/dc/measurement/storage", "/dc/measurement/uptime", "/dc/measurement/tcp_health", "/dc/measurement/dummy", "/dc/measurement/synth00", "/dc/measurement/synth01", "/dc/measurement/synth02", "/dc/measurement/synth03", "/dc/measurement/synth04", "/dc/measurement/synth05", "/dc/measurement/synth06", "/dc/measurement/synth07", "/dc/measurement/synth08", "/dc/measurement/synth09", "/dc/measurement/synth10", "/dc/measurement/synth11", "/dc/measurement/synth12", "/dc/measurement/synth13"]
-      # dc_e2e_deg_postgres, not 127.0.0.1: run_degraded.sh's shaped bridge network
-      # resolves it via container-name DNS (podman's aardvark-dns on user-defined
-      # networks) — see this file's header.
-      host: "dc_e2e_deg_postgres"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc_records"
+      path: "/root/.dc/e2e/data/pgsql_records_anchor/records.ndjson"
       time_key: "date"
 
     pgsql_files:
-      type: postgres
+      type: file
       receives: records
-      host: "dc_e2e_deg_postgres"
-      port: 5432
-      user: "dc"
-      password: "password"
-      database: "dc"
-      table: "dc_files"
+      path: "/root/.dc/e2e/data/pgsql_files_anchor/records.ndjson"
       time_key: "date"
 
     rustfs:
@@ -225,7 +217,7 @@ dc_bridge:
       delete_when_sent: false
       metadata_destination: "pgsql_files"
 
-    custom_config_files: ["/opt/e2e/e2e_passthrough_sink.toml", "/opt/e2e/e2e_mcap_sink.toml"]
+    custom_config_files: ["/opt/e2e/e2e_passthrough_sink.toml", "/opt/e2e/e2e_mcap_sink.toml", "/opt/e2e/e2e_degraded_pgsql_sink.toml"]
 
     # Same-container loopback (Bridge-to-Shipper) — not shaped, see this file's header.
     vector_forward_host: "127.0.0.1"

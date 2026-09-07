@@ -16,8 +16,8 @@ dc_bridge:
       data_dir: "$HOME/.dc/buffer"
     destinations: ["raw_log"]
     raw_log:
-      type: file              # any blessed type works: postgres | s3 | file | vector, or console
-                               # via its passthrough recipe (destinations.md#recipes-postgres-s3-console-via-passthrough)
+      type: file              # blessed types: file | vector — or postgres/s3/console via
+                               # its passthrough recipe (destinations.md#recipes-postgres-s3-console-via-passthrough)
       receives: records
       path: "/tmp/dc/raw_records.ndjson"
       time_key: "date"

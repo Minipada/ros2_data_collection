@@ -3,14 +3,6 @@ data_dir = "/home/dc/.dc/buffer"
 [acknowledgements]
 enabled = true
 
-[sinks.debug_console]
-inputs = ["dc.dc.group.robot"]
-target = "stdout"
-type = "console"
-
-[sinks.debug_console.encoding]
-codec = "json"
-
 [sinks.local_log]
 inputs = ["dc.dc.group.robot"]
 path = "/var/log/dc/records-%Y-%m-%d.log"
@@ -22,6 +14,15 @@ type = "disk"
 
 [sinks.local_log.encoding]
 codec = "json"
+
+[sinks.to_aggregator]
+address = "dc-e2e-limits-agg:6000"
+inputs = ["dc.dc.group.robot"]
+type = "vector"
+
+[sinks.to_aggregator.buffer]
+max_size = 268435488
+type = "disk"
 
 [sources.dc_bridge_in]
 address = "127.0.0.1:24224"

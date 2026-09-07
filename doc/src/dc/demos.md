@@ -16,7 +16,7 @@ the [ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md) passthrough.
 
 | Tier                                    | Infrastructure to run                                                          | DC machinery involved                                                                               |
 | ------------------------------------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| [Beginner](./demos/beginner.md)         | None. Nothing but the built workspace                                          | Measurements and the blessed `console` Destination, configured in YAML                              |
+| [Beginner](./demos/beginner.md)         | None. Nothing but the built workspace                                          | Measurements and the `console` Destination (via the ADR-0003 passthrough), configured in YAML                              |
 | [Intermediate](./demos/intermediate.md) | At most one stack from `tools/infrastructure/docker/`, that you start yourself | PostgreSQL/RustFS reached via the [ADR-0003](./adr/0003-blessed-destinations-plus-passthrough.md) [passthrough](./destinations.md#recipes-postgres-s3-console-via-passthrough), or a store with no blessed type at all |
 | [Advanced](./demos/advanced.md)         | The full inspection stack — PostgreSQL, RustFS and Grafana at once             | Code you write yourself, or Measurements, Conditions, Groups, Files and dashboards wired end to end |
 
