@@ -3,6 +3,8 @@
 
 #include "dc_bridge/uploader/group.hpp"
 
+#include "dc_common/record_file_walk.hpp"
+
 namespace dc_bridge::uploader
 {
 
@@ -24,82 +26,41 @@ std::optional<std::string> str_field(const nlohmann::json& obj, const char* key)
   return std::nullopt;
 }
 
-void collect_files(const nlohmann::json& value, const std::set<std::string>& storages,
+void collect_files(const nlohmann::json& record, const std::set<std::string>& storages,
                    std::map<std::string, FileRef>& files)
 {
-  if (!value.is_object())
-  {
-    return;
-  }
-
-  auto local_paths_it = value.find("local_paths");
-  if (local_paths_it != value.end() && local_paths_it->is_object())
-  {
-    auto remote_paths_it = value.find("remote_paths");
-    for (auto it = local_paths_it->begin(); it != local_paths_it->end(); ++it)
+  // The walk — nested local_paths objects and a flattened Record's JSON-pointer keys alike —
+  // is owned by dc_common's record_file_walk (#479), the same one the Measurement's staging
+  // side goes through, so exactly the Files staged upstream are the ones collected here.
+  dc_common::record_file_walk::for_each_file_site(record, [&](const dc_common::record_file_walk::FileSite& site) {
+    std::map<std::string, std::string> remotes;
+    for (const auto& storage : storages)
     {
-      const std::string& key = it.key();
-      if (!it->is_string())
+      auto it = site.remote_paths.find(storage);
+      if (it != site.remote_paths.end())
       {
-        continue;
-      }
-      const std::string local_path = it->get<std::string>();
-      if (local_path.empty())
-      {
-        continue;
-      }
-      std::map<std::string, std::string> remotes;
-      if (remote_paths_it != value.end() && remote_paths_it->is_object())
-      {
-        for (const auto& storage : storages)
-        {
-          auto s_it = remote_paths_it->find(storage);
-          if (s_it == remote_paths_it->end() || !s_it->is_object())
-          {
-            continue;
-          }
-          auto k_it = s_it->find(key);
-          if (k_it != s_it->end() && k_it->is_string())
-          {
-            std::string remote = k_it->get<std::string>();
-            if (!remote.empty())
-            {
-              remotes.emplace(storage, remote);
-            }
-          }
-        }
-      }
-      if (remotes.empty())
-      {
-        continue;
-      }
-      // The same local path can appear in several sub-objects; merge their Destination
-      // sets rather than uploading twice.
-      auto existing = files.find(local_path);
-      if (existing != files.end())
-      {
-        for (auto& [k, v] : remotes)
-        {
-          existing->second.remote_paths[k] = v;
-        }
-      }
-      else
-      {
-        files.emplace(local_path, FileRef{ key, local_path, std::move(remotes) });
+        remotes.emplace(storage, it->second);
       }
     }
-  }
-
-  for (auto it = value.begin(); it != value.end(); ++it)
-  {
-    const std::string& key = it.key();
-    // base64 holds inline file content (potentially huge) and never Files.
-    if (key == "local_paths" || key == "remote_paths" || key == "base64")
+    if (remotes.empty())
     {
-      continue;
+      return;
     }
-    collect_files(*it, storages, files);
-  }
+    // The same local path can appear in several sub-objects; merge their Destination
+    // sets rather than uploading twice.
+    auto existing = files.find(site.local_path);
+    if (existing != files.end())
+    {
+      for (auto& [k, v] : remotes)
+      {
+        existing->second.remote_paths[k] = v;
+      }
+    }
+    else
+    {
+      files.emplace(site.local_path, FileRef{ site.key, site.local_path, std::move(remotes) });
+    }
+  });
 }
 
 }  // namespace

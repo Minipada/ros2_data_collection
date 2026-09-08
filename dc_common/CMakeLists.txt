@@ -42,6 +42,15 @@ if(BUILD_TESTING)
     )
   endforeach()
 
+  # RecordFileWalk (#479) walks nlohmann::json Records, so it links nlohmann_json beyond the
+  # plain-header tests above.
+  ament_add_gtest(${PROJECT_NAME}_record_file_walk_test test/record_file_walk_test.cpp)
+  target_include_directories(${PROJECT_NAME}_record_file_walk_test PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+  target_link_libraries(${PROJECT_NAME}_record_file_walk_test nlohmann_json::nlohmann_json)
+
   # WebSocketJsonClient (#390) needs nlohmann_json and pthread beyond the other header-only
   # utilities above, and its fixture (a synchronous websocket echo server) needs Boost.Asio/Beast
   # too -- linked explicitly rather than relying on Boost's headers being found on the system

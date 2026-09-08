@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "dc_common/file_scratch_ring.hpp"
+#include "dc_common/record_file_walk.hpp"
 #include "dc_core/condition.hpp"
 #include "dc_core/condition_set.hpp"
 #include "dc_core/measurement.hpp"
@@ -636,58 +637,22 @@ public:
   }
 
   // Stage every File `value` references, rewriting each local_paths entry to its staged copy.
-  // Returns whether anything was staged. Walks the Record the same way dc_bridge's
-  // parse_file_group() does, so exactly the paths the Bridge would have uploaded are the ones
-  // that move: local_paths at any depth (a `nested` Measurement puts it under its own name),
-  // never base64 (inline content, not a path).
+  // Returns whether anything was staged. The Record walk itself is owned by dc_common's
+  // record_file_walk (#479) -- the same one dc_bridge's parse_file_group() goes through, so
+  // exactly the paths the Bridge would have uploaded are the ones that move, in either written
+  // form (nested local_paths objects, or a flattened Record's JSON-pointer keys).
   bool stageRecordFiles(json& value, const std::chrono::system_clock::time_point& stamp)
   {
-    if (!value.is_object())
-    {
-      return false;
-    }
-
-    bool staged = false;
-    auto local_paths_it = value.find("local_paths");
-    if (local_paths_it != value.end() && local_paths_it->is_object())
-    {
-      for (auto it = local_paths_it->begin(); it != local_paths_it->end(); ++it)
-      {
-        staged = stageOneFile(*it, stamp) || staged;
-      }
-    }
-
-    for (auto it = value.begin(); it != value.end(); ++it)
-    {
-      const std::string& key = it.key();
-      if (key == "local_paths" || key == "remote_paths" || key == "base64")
-      {
-        continue;
-      }
-      // A `flatten`ed Record has no nested objects left: its keys are JSON pointers, so the File
-      // paths show up as "/local_paths/raw" (or "/<name>/local_paths/raw" when also nested).
-      if (it->is_string() && key.find("/local_paths/") != std::string::npos)
-      {
-        staged = stageOneFile(*it, stamp) || staged;
-        continue;
-      }
-      staged = stageRecordFiles(*it, stamp) || staged;
-    }
-    return staged;
+    return dc_common::record_file_walk::rewrite_local_paths(value, [&](std::string& path) {
+      return stageOneFile(path, stamp);
+    });
   }
 
-  // Move one File into the scratch ring and rewrite `path_value` to the staged copy.
-  bool stageOneFile(json& path_value, const std::chrono::system_clock::time_point& stamp)
+  // Move one File into the scratch ring and rewrite `path` to the staged copy. The walk hands
+  // over non-empty local-path strings only.
+  bool stageOneFile(std::string& path, const std::chrono::system_clock::time_point& stamp)
   {
-    if (!path_value.is_string())
-    {
-      return false;
-    }
-    const std::string original = path_value.get<std::string>();
-    if (original.empty())
-    {
-      return false;
-    }
+    const std::string original = path;
 
     try
     {
@@ -700,7 +665,7 @@ public:
       // to the unchanged remote_paths key the Measurement computed at collection time.
       std::error_code ec;
       std::filesystem::remove(original, ec);
-      path_value = staged_path.string();
+      path = staged_path.string();
       return true;
     }
     catch (const std::filesystem::filesystem_error& e)
