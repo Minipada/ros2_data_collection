@@ -17,6 +17,11 @@
 #   DC_E2E_SPLIT_STEADY_STATE_SECONDS      warmup before the outage (default 15)
 #   DC_E2E_SPLIT_OUTAGE_SECONDS            outage duration (default 60)
 #   DC_E2E_SPLIT_DRAIN_SECONDS             settle time before verifying (default 30)
+#   DC_E2E_SPLIT_QUEUE_DRAIN_TIMEOUT_SECONDS bound for the upload intent queue to drain
+#                                          after the drain window, before the check
+#                                          fails (default 120 — the uploader's
+#                                          exponential retry backoff can outlast
+#                                          DC_E2E_SPLIT_DRAIN_SECONDS; see the check)
 #   DC_E2E_KEEP                            "true" to leave the stack up on failure
 #   DC_E2E_IMAGE / DC_WORKSPACE_IMAGE      same meaning as run.sh
 set -euo pipefail
@@ -31,6 +36,7 @@ RECOVERY_TIMEOUT_SECONDS="${DC_E2E_SPLIT_RECOVERY_TIMEOUT_SECONDS:-60}"
 STEADY_STATE_SECONDS="${DC_E2E_SPLIT_STEADY_STATE_SECONDS:-15}"
 OUTAGE_SECONDS="${DC_E2E_SPLIT_OUTAGE_SECONDS:-60}"
 DRAIN_SECONDS="${DC_E2E_SPLIT_DRAIN_SECONDS:-30}"
+QUEUE_DRAIN_TIMEOUT_SECONDS="${DC_E2E_SPLIT_QUEUE_DRAIN_TIMEOUT_SECONDS:-120}"
 KEEP="${DC_E2E_KEEP:-false}"
 
 # podman-compose, not the docker-compose cli-plugin (CLAUDE.md "Containers: Podman, not
@@ -188,24 +194,49 @@ log "restoring Postgres + RustFS"
 podman start "$PG_C" "$RUSTFS_C" >/dev/null
 timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
   || { log "Postgres never came back"; exit 1; }
+# RustFS too, same probe as bring-up above — not just Postgres: a pg_isready-only gate
+# lets the uploader's first post-restore attempt hit a still-warming object store,
+# fail, and double that intent's retry backoff (doubling is what pushes it past the
+# fixed drain window below).
+timeout 60 bash -c "until podman run --rm --network dc_e2e_split_net --entrypoint python3 '$DC_IMAGE' \
+  /opt/e2e/measure_rtt.py $RUSTFS_C 9000 --count 1 --timeout 2 >/dev/null 2>&1; do sleep 1; done" \
+  || { log "RustFS never came back"; exit 1; }
 
 log "draining for ${DRAIN_SECONDS}s"
 sleep "$DRAIN_SECONDS"
 
 log "stopping the workload so counts settle before verification"
-podman stop "$DC_ROS_C" "$UPLOADER_C" "$VECTOR_C" >/dev/null
+podman stop "$DC_ROS_C" >/dev/null
 sleep 5
 
-# --- durable upload intent queue (#265) — same check as run.sh -----------------------
+# --- durable upload intent queue (#265) — same standard as run.sh ---------------------
+# The uploader retries a failed intent on an exponential backoff (5s base, doubling,
+# capped high — dc_bridge's intent_queue.hpp). In this split topology the uploader
+# process rides out the whole outage un-restarted, so intents that failed against the
+# dead RustFS can legitimately still be inside that backoff when the fixed drain
+# window ends — unlike run.sh, where the mid-outage restart of the all-in-one dc
+# container resets it. So: wait for the queue to drain with dc-uploader still running
+# (a stopped uploader can't drain anything), bounded — an intent that never drains
+# within the bound is a real orphan and still fails the run, per #265.
 log "verifying the durable upload intent queue drained (no orphaned intents after the outage+restart)"
-LEFTOVER_INTENTS=$(podman run --rm --entrypoint bash \
-  -v dc_e2e_split_uploader:/vol:ro "$DC_IMAGE" \
-  -c 'find /vol/queue/upload -maxdepth 1 -name "*.json" 2>/dev/null | wc -l')
-if [ "${LEFTOVER_INTENTS:-0}" -ne 0 ]; then
-  log "FAIL: ${LEFTOVER_INTENTS} orphaned upload intent(s) left in the queue after the run"
-  exit 1
-fi
+QUEUE_DEADLINE=$(( $(date +%s) + QUEUE_DRAIN_TIMEOUT_SECONDS ))
+while :; do
+  LEFTOVER_INTENTS=$(podman run --rm --entrypoint bash \
+    -v dc_e2e_split_uploader:/vol:ro "$DC_IMAGE" \
+    -c 'find /vol/queue/upload -maxdepth 1 -name "*.json" 2>/dev/null | wc -l')
+  if [ "${LEFTOVER_INTENTS:-0}" -eq 0 ]; then
+    break
+  fi
+  if [ "$(date +%s)" -ge "$QUEUE_DEADLINE" ]; then
+    log "FAIL: ${LEFTOVER_INTENTS} orphaned upload intent(s) left in the queue after the run"
+    exit 1
+  fi
+  sleep 5
+done
 log "PASS: upload intent queue empty (0 orphaned intents)"
+
+log "stopping dc-uploader and vector (queue drained, nothing left in flight)"
+podman stop "$UPLOADER_C" "$VECTOR_C" >/dev/null
 
 # --- verify -----------------------------------------------------------------------
 log "extracting the workload ledger (what the generator published)"
