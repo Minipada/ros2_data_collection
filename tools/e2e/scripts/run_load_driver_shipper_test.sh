@@ -48,11 +48,13 @@ KEEP="${DC_E2E_KEEP:-false}"
 
 VECTOR_C=dc_e2e_ldtest_vector
 
-# The exact version dc_bridge is built and tested against -- read out of the .repos pin
-# that fetches vector_vendor (its own repo as of #424's follow-up split; see
-# docs/adr/0002-vector-as-default-shipper.md), not duplicated here as a second source of
-# truth that could drift from it.
-VECTOR_VERSION="$(grep -A3 'vector_vendor:' "$REPO_ROOT/ros2_data_collection.repos" | grep -oP 'version: v\K[0-9.]+')"
+# The exact version dc_bridge is built and tested against — resolved from the .repos
+# pin that fetches vector_vendor (its own repo as of #424's split; see
+# docs/adr/0002-vector-as-default-shipper.md) by lib/version.sh (#484), not duplicated
+# here as a second source of truth.
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/version.sh"
+VECTOR_VERSION="$(vector_version)"
 VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
 
 log() { echo "[load-driver-shipper-test $(date -u +%H:%M:%S)] $*"; }

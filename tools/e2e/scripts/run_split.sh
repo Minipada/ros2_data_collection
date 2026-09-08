@@ -46,13 +46,6 @@ QUEUE_DRAIN_TIMEOUT_SECONDS="${DC_E2E_SPLIT_QUEUE_DRAIN_TIMEOUT_SECONDS:-120}"
 # Docker"; matches ci.yaml's own compose.test.yaml usage) — it needs no Podman API socket.
 export PODMAN_COMPOSE_PROVIDER="${PODMAN_COMPOSE_PROVIDER:-podman-compose}"
 
-# compose.split.yaml's vector service interpolates this (#448: the Vector image tag and
-# vector_vendor's pinned version come from one place) — same grep already used by
-# run_limits_two_tier.sh / run_load_driver_shipper_test.sh / run_limits_drain_rate.sh /
-# run_limits_shipper_fanin.sh, so the apt and container paths cannot drift apart.
-VECTOR_VERSION="$(grep -A3 'vector_vendor:' "$E2E_DIR/../../ros2_data_collection.repos" | grep -oP 'version: v\K[0-9.]+')"
-export VECTOR_VERSION
-
 PG_C=dc_e2e_split_postgres
 RUSTFS_C=dc_e2e_split_rustfs
 DC_ROS_C=dc_e2e_split_dc_ros
@@ -65,6 +58,12 @@ HARNESS_NETWORK=dc_e2e_split_net
 
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/harness.sh"
+
+# compose.split.yaml's vector service interpolates this (#448: the Vector image tag and
+# vector_vendor's pinned version come from one place) — vector_version() arrives via
+# lib/harness.sh, which sources lib/version.sh (#484).
+VECTOR_VERSION="$(vector_version)"
+export VECTOR_VERSION
 
 mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"

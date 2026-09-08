@@ -22,6 +22,11 @@
 HARNESS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HARNESS_E2E_DIR="$(dirname "$HARNESS_SCRIPT_DIR")"
 
+# vector_version() lives in its own lib file (#484) so the limits/load and release
+# scripts can source it without pulling in this e2e-only skeleton.
+# shellcheck disable=SC1091
+source "$HARNESS_SCRIPT_DIR/lib/version.sh"
+
 # rustfs/rustfs 1.0.0-beta.11 — pinned by digest, not :latest, so an upstream image
 # change can't silently alter harness behavior. Bump deliberately: check
 # https://hub.docker.com/r/rustfs/rustfs/tags for the new digest.

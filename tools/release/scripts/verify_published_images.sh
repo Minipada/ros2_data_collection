@@ -20,7 +20,8 @@
 #   DC_ROS_IMAGE       (required) the dc-ros image ref to pull and run.
 #   DC_UPLOADER_IMAGE  (required) the dc-uploader image ref to pull and run.
 #   VECTOR_VERSION     Vector image tag; defaults to ros2_data_collection.repos'
-#                      vector_vendor pin (#448: single source, same grep run_split.sh uses).
+#                      vector_vendor pin (#484: single source, lib/version.sh's
+#                      resolver — the same one run_split.sh uses).
 #   DC_RELEASE_TIMEOUT_SECONDS  deadline for the first Record to land (default 60).
 set -euo pipefail
 
@@ -32,9 +33,11 @@ mkdir -p "$RUN_DIR"
 
 DC_ROS_IMAGE="${DC_ROS_IMAGE:?DC_ROS_IMAGE must be set to a published dc-ros image ref}"
 DC_UPLOADER_IMAGE="${DC_UPLOADER_IMAGE:?DC_UPLOADER_IMAGE must be set to a published dc-uploader image ref}"
-# -A3, not a bare grep across the whole file: aws_sdk_vendor's own `version: v...` line
-# would otherwise match too, embedding a second version (and a newline) in this value.
-VECTOR_VERSION="${VECTOR_VERSION:-$(grep -A3 'vector_vendor:' "$REPO_ROOT/ros2_data_collection.repos" | grep -oP 'version: v\K[0-9.]+')}"
+# The resolver lives with the e2e lib it was extracted from (#484) — this script already
+# borrows tools/e2e fixtures (compose.test.yaml) rather than duplicating them.
+# shellcheck disable=SC1091
+source "$REPO_ROOT/tools/e2e/scripts/lib/version.sh"
+VECTOR_VERSION="${VECTOR_VERSION:-$(vector_version)}"
 VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
 TIMEOUT_SECONDS="${DC_RELEASE_TIMEOUT_SECONDS:-60}"
 
