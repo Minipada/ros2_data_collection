@@ -68,6 +68,10 @@
 #   DC_E2E_KEEP                     "true" to leave the stack (and its network) up after a
 #                                    failure for debugging
 #   DC_E2E_IMAGE / DC_WORKSPACE_IMAGE   same meaning as run.sh
+#
+# The shared harness skeleton (lib/harness.sh) is parameterized for this scenario by
+# HARNESS_NETWORK=$NET: destinations, readiness probes and the bucket CLI all run on the
+# shaped bridge network.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -79,7 +83,6 @@ STEADY_STATE_SECONDS="${DC_E2E_STEADY_STATE_SECONDS:-30}"
 LINK_OUTAGE_SECONDS="${DC_E2E_LINK_OUTAGE_SECONDS:-60}"
 DRAIN_SECONDS="${DC_E2E_DRAIN_SECONDS:-30}"
 STARTUP_TIMEOUT_SECONDS="${DC_E2E_STARTUP_TIMEOUT_SECONDS:-10}"
-KEEP="${DC_E2E_KEEP:-false}"
 
 NET=dc_e2e_deg_net
 SHAPER_IMAGE=dc-e2e-shaper:latest
@@ -87,11 +90,16 @@ PG_C=dc_e2e_deg_postgres
 RUSTFS_C=dc_e2e_deg_rustfs
 DC_C=dc_e2e_deg_dc
 VOLUMES=(dc_e2e_deg_pgdata dc_e2e_deg_rustfs_data dc_e2e_deg_buffer dc_e2e_deg_data)
+# shellcheck disable=SC2034  # consumed by lib/harness.sh
+HARNESS_TAG=e2e-degraded
+# shellcheck disable=SC2034
+HARNESS_NETWORK="$NET"
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/harness.sh"
 
 mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
-
-log() { echo "[e2e-degraded $(date -u +%H:%M:%S)] $*"; }
 
 remove_stack() {
   podman rm -f --ignore "$DC_C" "$PG_C" "$RUSTFS_C" >/dev/null
@@ -103,24 +111,9 @@ remove_stack() {
   podman network rm "$NET" >/dev/null 2>&1 || true
 }
 
-pg_exec() {
-  podman exec "$PG_C" psql -U dc -d dc -tAc "$1"
-}
-
-cleanup() {
-  local exit_code=$?
-  if [ "$exit_code" -ne 0 ] && [ "$KEEP" = "true" ]; then
-    log "FAILED (exit $exit_code) — leaving the stack up (DC_E2E_KEEP=true) for debugging"
-    exit "$exit_code"
-  fi
-  log "tearing down"
-  if podman container exists "$DC_C"; then
-    podman logs "$DC_C" > "$RUN_DIR/dc_degraded.log" 2>&1
-  fi
-  remove_stack
-  exit "$exit_code"
-}
-trap cleanup EXIT
+# shellcheck disable=SC2034  # consumed by lib/harness.sh's teardown
+HARNESS_LOG_CAPTURES=("$DC_C:dc_degraded.log")
+trap harness_cleanup EXIT
 
 # --- resolve the network profile (scripts/network_profiles.py — one declarative place) --
 log "resolving network profile '$PROFILE_NAME'"
@@ -134,24 +127,8 @@ NETEM_ARGS="$(python3 "$SCRIPT_DIR/network_profiles.py" "$PROFILE_NAME" --tc-arg
 log "profile '$PROFILE_NAME': delay=${PROFILE_DELAY_MS}ms jitter=${PROFILE_JITTER_MS}ms loss=${PROFILE_LOSS_PCT}% rate=${PROFILE_RATE_KBIT}kbit shaped=${PROFILE_IS_SHAPED}"
 
 # --- obtain the DC stack image (shared with run.sh — see its header) ------------------
-if [ -n "${DC_E2E_IMAGE:-}" ]; then
-  log "using prebuilt E2E image: $DC_E2E_IMAGE (no build)"
-  podman image exists "$DC_E2E_IMAGE" || podman pull "$DC_E2E_IMAGE"
-  DC_IMAGE="$DC_E2E_IMAGE"
-else
-  if [ -n "${DC_WORKSPACE_IMAGE:-}" ]; then
-    log "using prebuilt DC workspace image: $DC_WORKSPACE_IMAGE (skipping build.sh)"
-    podman image exists "$DC_WORKSPACE_IMAGE" || podman pull "$DC_WORKSPACE_IMAGE"
-    WORKSPACE_IMAGE="$DC_WORKSPACE_IMAGE"
-  else
-    log "building the DC workspace image (tools/e2e/scripts/build.sh — the same build CI uses)"
-    "$SCRIPT_DIR/build.sh"
-    WORKSPACE_IMAGE="dc-workspace:latest"
-  fi
-  log "building the E2E image (Containerfile.e2e, FROM the workspace image)"
-  podman build --build-arg "BASE_IMAGE=$WORKSPACE_IMAGE" -t dc-e2e:latest -f Containerfile.e2e .
-  DC_IMAGE="dc-e2e:latest"
-fi
+DC_IMAGE="" # set by resolve_image
+resolve_image
 
 # --- the netem shaper helper image: alpine + iproute2, built once and reused -----------
 if ! podman image exists "$SHAPER_IMAGE"; then
@@ -200,30 +177,13 @@ log "creating the shaped bridge network ($NET)"
 podman network create "$NET" >/dev/null
 
 log "starting Postgres + RustFS on $NET (unmodified — no special capabilities on either)"
-podman run -d --network "$NET" --name "$PG_C" \
-  -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
-  -v dc_e2e_deg_pgdata:/var/lib/postgresql/data \
-  -v "$E2E_DIR/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro" \
-  docker.io/library/postgres:13 >/dev/null
-podman run -d --network "$NET" --name "$RUSTFS_C" \
-  -v dc_e2e_deg_rustfs_data:/data \
-  docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c >/dev/null
-
-timeout 120 bash -c "until podman exec $PG_C psql -U dc -d dc -tAc \"SELECT to_regclass('public.dc_records')\" 2>/dev/null | grep -q dc_records; do sleep 2; done" \
-  || { log "FAIL: Postgres never came up with sql/init.sql applied"; exit 1; }
-
-log "waiting for RustFS to accept TCP connections on $NET"
-timeout 60 bash -c "
-  until podman run --rm --network $NET '$DC_IMAGE' python3 /opt/e2e/measure_rtt.py $RUSTFS_C 9000 --count 1 --timeout 2 >/dev/null 2>&1; do
-    sleep 1
-  done
-" || { log "FAIL: RustFS never became reachable on $NET"; exit 1; }
+start_postgres dc_e2e_deg_pgdata
+start_rustfs dc_e2e_deg_rustfs_data
+wait_postgres_ready
+wait_rustfs_ready
 
 log "creating the RustFS bucket"
-podman run --rm --network "$NET" \
-  -e AWS_ACCESS_KEY_ID=rustfsadmin -e AWS_SECRET_ACCESS_KEY=rustfsadmin -e AWS_DEFAULT_REGION=us-east-1 \
-  docker.io/amazon/aws-cli:latest \
-  --endpoint-url "http://$RUSTFS_C:9000" s3 mb s3://dc-e2e
+create_rustfs_bucket "http://$RUSTFS_C:9000"
 
 # --- apply the profile's steady-state shaping, then verify it actually took effect -----
 if [ "$PROFILE_IS_SHAPED" = "true" ]; then
@@ -236,8 +196,12 @@ else
   log "profile '$PROFILE_NAME' is unshaped — no qdisc applied (today's loopback behaviour)"
 fi
 
+# --entrypoint python3 on the one-off probe containers below, for the reason
+# lib/harness.sh's wait_rustfs_ready spells out: the image's own ENTRYPOINT would
+# otherwise swallow the probe as extra ros2-launch arguments.
 log "shaping pre-check: measuring the actual TCP connect-time round trip to $PG_C"
-RTT_JSON="$(podman run --rm --network "$NET" "$DC_IMAGE" python3 /opt/e2e/measure_rtt.py "$PG_C" 5432 --count 10 --timeout 3)"
+RTT_JSON="$(podman run --rm --network "$NET" --entrypoint python3 "$DC_IMAGE" \
+  /opt/e2e/measure_rtt.py "$PG_C" 5432 --count 10 --timeout 3)"
 echo "$RTT_JSON" > "$RUN_DIR/rtt_precheck.json"
 AVG_MS="$(python3 -c "import json; print(json.load(open('$RUN_DIR/rtt_precheck.json'))['avg_ms'])")"
 log "measured avg connect time: ${AVG_MS}ms"
@@ -342,26 +306,22 @@ sleep 5
 
 # --- extract the passthrough sink's output (ADR-0003) --------------------------------
 log "extracting the passthrough sink's output"
-podman run --rm --entrypoint bash \
-  -v dc_e2e_deg_data:/vol:ro "$DC_IMAGE" \
+extract_from_volume dc_e2e_deg_data bash \
   -c 'cat /vol/passthrough/records.ndjson 2>/dev/null || true' > "$RUN_DIR/passthrough_degraded.ndjson"
 
 # --- extract raw / generic-subscription mode's output (#227) -------------------------
 log "extracting raw mode's Destination output"
-podman run --rm --entrypoint bash \
-  -v dc_e2e_deg_data:/vol:ro "$DC_IMAGE" \
+extract_from_volume dc_e2e_deg_data bash \
   -c 'cat /vol/raw/records.ndjson 2>/dev/null || true' > "$RUN_DIR/raw_degraded.ndjson"
 
 # --- summarize the MCAP passthrough writer's output (ADR-0009, #210) -----------------
 log "summarizing the MCAP passthrough writer's output"
-podman run --rm --entrypoint python3 \
-  -v dc_e2e_deg_data:/vol:ro "$DC_IMAGE" \
-  /opt/e2e/mcap_summary.py /vol/mcap > "$RUN_DIR/mcap_summary_degraded.json"
+extract_from_volume dc_e2e_deg_data python3 /opt/e2e/mcap_summary.py /vol/mcap \
+  > "$RUN_DIR/mcap_summary_degraded.json"
 
 # --- verify (verify_zero_loss.py's own logic, unmodified — only conditions are added) --
 log "extracting the workload ledger (what the generator published)"
-podman run --rm --entrypoint bash \
-  -v dc_e2e_deg_data:/vol:ro "$DC_IMAGE" \
+extract_from_volume dc_e2e_deg_data bash \
   -c 'cat /vol/workload_ledger.txt 2>/dev/null || true' > "$RUN_DIR/workload_ledger_degraded.txt"
 
 log "verifying zero-loss against the published ledger, under profile '$PROFILE_NAME'"

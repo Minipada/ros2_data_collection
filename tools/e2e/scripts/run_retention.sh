@@ -31,6 +31,9 @@
 # a minute — verified empirically in this environment, same pre-existing characteristic
 # #265's own notes call out — not something this scenario's timeout should race against);
 # DC_E2E_UPLOAD_TIMEOUT_SECONDS (default 60, once RustFS is up connections are fast).
+#
+# The shared harness skeleton (image resolution, cleanup trap, destination bring-up and
+# readiness waits) lives in lib/harness.sh.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,17 +42,19 @@ RUN_DIR="$E2E_DIR/.run"
 
 SHED_TIMEOUT_SECONDS="${DC_E2E_SHED_TIMEOUT_SECONDS:-480}"
 UPLOAD_TIMEOUT_SECONDS="${DC_E2E_UPLOAD_TIMEOUT_SECONDS:-60}"
-KEEP="${DC_E2E_KEEP:-false}"
 
 PG_C=dc_e2e_ret_postgres
 RUSTFS_C=dc_e2e_ret_rustfs
 DC_C=dc_e2e_ret_dc
 VOLUMES=(dc_e2e_ret_pgdata dc_e2e_ret_rustfs_data dc_e2e_ret_buffer dc_e2e_ret_data)
+# shellcheck disable=SC2034  # consumed by lib/harness.sh
+HARNESS_TAG=e2e-retention
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/harness.sh"
 
 mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
-
-log() { echo "[e2e-retention $(date -u +%H:%M:%S)] $*"; }
 
 remove_stack() {
   podman rm -f --ignore "$DC_C" "$PG_C" "$RUSTFS_C" >/dev/null
@@ -60,57 +65,20 @@ remove_stack() {
   done
 }
 
-pg_exec() {
-  podman exec "$PG_C" psql -U dc -d dc -tAc "$1"
-}
-
-cleanup() {
-  local exit_code=$?
-  if [ "$exit_code" -ne 0 ] && [ "$KEEP" = "true" ]; then
-    log "FAILED (exit $exit_code) — leaving the stack up (DC_E2E_KEEP=true) for debugging"
-    exit "$exit_code"
-  fi
-  log "tearing down"
-  if podman container exists "$DC_C"; then
-    podman logs "$DC_C" > "$RUN_DIR/dc_retention.log" 2>&1
-  fi
-  remove_stack
-  exit "$exit_code"
-}
-trap cleanup EXIT
+# shellcheck disable=SC2034  # consumed by lib/harness.sh's teardown
+HARNESS_LOG_CAPTURES=("$DC_C:dc_retention.log")
+trap harness_cleanup EXIT
 
 # --- obtain the DC stack image (shared with run.sh — see its header) ----------------
-if [ -n "${DC_E2E_IMAGE:-}" ]; then
-  log "using prebuilt E2E image: $DC_E2E_IMAGE (no build)"
-  podman image exists "$DC_E2E_IMAGE" || podman pull "$DC_E2E_IMAGE"
-  DC_IMAGE="$DC_E2E_IMAGE"
-else
-  if [ -n "${DC_WORKSPACE_IMAGE:-}" ]; then
-    log "using prebuilt DC workspace image: $DC_WORKSPACE_IMAGE (skipping build.sh)"
-    podman image exists "$DC_WORKSPACE_IMAGE" || podman pull "$DC_WORKSPACE_IMAGE"
-    WORKSPACE_IMAGE="$DC_WORKSPACE_IMAGE"
-  else
-    log "building the DC workspace image (tools/e2e/scripts/build.sh — the same build CI uses)"
-    "$SCRIPT_DIR/build.sh"
-    WORKSPACE_IMAGE="dc-workspace:latest"
-  fi
-  log "building the E2E image (Containerfile.e2e, FROM the workspace image)"
-  podman build --build-arg "BASE_IMAGE=$WORKSPACE_IMAGE" -t dc-e2e:latest -f Containerfile.e2e .
-  DC_IMAGE="dc-e2e:latest"
-fi
+DC_IMAGE="" # set by resolve_image
+resolve_image
 
 remove_stack
 
 # --- bring up Postgres only — RustFS deliberately stays down ------------------------
 log "starting Postgres (RustFS deliberately NOT started yet — this scenario's 'store down')"
-podman run -d --network host --name "$PG_C" \
-  -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
-  -v dc_e2e_ret_pgdata:/var/lib/postgresql/data \
-  -v "$E2E_DIR/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro" \
-  docker.io/library/postgres:13 >/dev/null
-
-timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
-  || { log "Postgres never became ready"; exit 1; }
+start_postgres dc_e2e_ret_pgdata
+wait_postgres_ready
 
 # --- start the DC stack against the retention params ---------------------------------
 log "starting the DC stack (files.retention.max_bytes configured small; RustFS unreachable)"
@@ -155,15 +123,9 @@ fi
 
 # --- bring RustFS up; remaining (unshed) Files must upload normally ------------------
 log "starting RustFS — remaining/future Files must now upload and verify normally"
-podman run -d --network host --name "$RUSTFS_C" \
-  -v dc_e2e_ret_rustfs_data:/data \
-  docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c >/dev/null
-timeout 60 bash -c 'until curl -sf http://127.0.0.1:9000 >/dev/null 2>&1 || curl -s http://127.0.0.1:9000 >/dev/null 2>&1; do sleep 1; done' \
-  || { log "RustFS never became ready"; exit 1; }
-podman run --rm --network host \
-  -e AWS_ACCESS_KEY_ID=rustfsadmin -e AWS_SECRET_ACCESS_KEY=rustfsadmin -e AWS_DEFAULT_REGION=us-east-1 \
-  docker.io/amazon/aws-cli:latest \
-  --endpoint-url http://127.0.0.1:9000 s3 mb s3://dc-e2e >/dev/null
+start_rustfs dc_e2e_ret_rustfs_data
+wait_rustfs_ready
+create_rustfs_bucket http://127.0.0.1:9000 >/dev/null
 
 log "waiting up to ${UPLOAD_TIMEOUT_SECONDS}s for a normal upload (uploaded=true) in dc_files now that RustFS is up"
 DEADLINE=$(( $(date +%s) + UPLOAD_TIMEOUT_SECONDS ))

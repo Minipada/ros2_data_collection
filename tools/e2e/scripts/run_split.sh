@@ -24,6 +24,10 @@
 #                                          DC_E2E_SPLIT_DRAIN_SECONDS; see the check)
 #   DC_E2E_KEEP                            "true" to leave the stack up on failure
 #   DC_E2E_IMAGE / DC_WORKSPACE_IMAGE      same meaning as run.sh
+#
+# The shared harness skeleton (lib/harness.sh) is parameterized for this scenario by
+# HARNESS_NETWORK=dc_e2e_split_net: readiness probes and the bucket CLI run as one-off
+# containers on the compose network rather than the host.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -37,7 +41,6 @@ STEADY_STATE_SECONDS="${DC_E2E_SPLIT_STEADY_STATE_SECONDS:-15}"
 OUTAGE_SECONDS="${DC_E2E_SPLIT_OUTAGE_SECONDS:-60}"
 DRAIN_SECONDS="${DC_E2E_SPLIT_DRAIN_SECONDS:-30}"
 QUEUE_DRAIN_TIMEOUT_SECONDS="${DC_E2E_SPLIT_QUEUE_DRAIN_TIMEOUT_SECONDS:-120}"
-KEEP="${DC_E2E_KEEP:-false}"
 
 # podman-compose, not the docker-compose cli-plugin (CLAUDE.md "Containers: Podman, not
 # Docker"; matches ci.yaml's own compose.test.yaml usage) — it needs no Podman API socket.
@@ -55,11 +58,16 @@ RUSTFS_C=dc_e2e_split_rustfs
 DC_ROS_C=dc_e2e_split_dc_ros
 UPLOADER_C=dc_e2e_split_dc_uploader
 VECTOR_C=dc_e2e_split_vector
+# shellcheck disable=SC2034  # consumed by lib/harness.sh
+HARNESS_TAG=e2e-split
+# shellcheck disable=SC2034
+HARNESS_NETWORK=dc_e2e_split_net
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/harness.sh"
 
 mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
-
-log() { echo "[e2e-split $(date -u +%H:%M:%S)] $*"; }
 
 compose() { podman compose -f "$COMPOSE_FILE" "$@"; }
 
@@ -67,44 +75,13 @@ remove_stack() {
   compose down --volumes --remove-orphans >/dev/null 2>&1 || true
 }
 
-pg_exec() {
-  podman exec "$PG_C" psql -U dc -d dc -tAc "$1"
-}
-
-cleanup() {
-  local exit_code=$?
-  if [ "$exit_code" -ne 0 ] && [ "$KEEP" = "true" ]; then
-    log "FAILED (exit $exit_code) — leaving the stack up (DC_E2E_KEEP=true) for debugging"
-    exit "$exit_code"
-  fi
-  log "tearing down"
-  podman logs "$DC_ROS_C" > "$RUN_DIR/dc-ros.log" 2>&1 || true
-  podman logs "$UPLOADER_C" > "$RUN_DIR/dc-uploader.log" 2>&1 || true
-  podman logs "$VECTOR_C" > "$RUN_DIR/vector.log" 2>&1 || true
-  remove_stack
-  exit "$exit_code"
-}
-trap cleanup EXIT
+# shellcheck disable=SC2034  # consumed by lib/harness.sh's teardown
+HARNESS_LOG_CAPTURES=("$DC_ROS_C:dc-ros.log" "$UPLOADER_C:dc-uploader.log" "$VECTOR_C:vector.log")
+trap harness_cleanup EXIT
 
 # --- obtain the DC stack image (same logic as run.sh) --------------------------------
-if [ -n "${DC_E2E_IMAGE:-}" ]; then
-  log "using prebuilt E2E image: $DC_E2E_IMAGE (no build)"
-  podman image exists "$DC_E2E_IMAGE" || podman pull "$DC_E2E_IMAGE"
-  DC_IMAGE="$DC_E2E_IMAGE"
-else
-  if [ -n "${DC_WORKSPACE_IMAGE:-}" ]; then
-    log "using prebuilt DC workspace image: $DC_WORKSPACE_IMAGE (skipping build.sh)"
-    podman image exists "$DC_WORKSPACE_IMAGE" || podman pull "$DC_WORKSPACE_IMAGE"
-    WORKSPACE_IMAGE="$DC_WORKSPACE_IMAGE"
-  else
-    log "building the DC workspace image (tools/e2e/scripts/build.sh)"
-    "$SCRIPT_DIR/build.sh"
-    WORKSPACE_IMAGE="dc-workspace:latest"
-  fi
-  log "building the E2E image (Containerfile.e2e, FROM the workspace image)"
-  podman build --build-arg "BASE_IMAGE=$WORKSPACE_IMAGE" -t dc-e2e:latest -f Containerfile.e2e .
-  DC_IMAGE="dc-e2e:latest"
-fi
+DC_IMAGE="" # set by resolve_image
+resolve_image
 export DC_E2E_IMAGE="$DC_IMAGE"
 
 remove_stack
@@ -113,17 +90,8 @@ remove_stack
 log "starting Postgres + RustFS"
 compose up -d postgres rustfs
 
-timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
-  || { log "Postgres never became ready"; exit 1; }
-# No --network host here (unlike run.sh) — probe from a container on dc_e2e_split_net,
-# same as run_degraded.sh. --entrypoint python3 is required: $DC_IMAGE's own ENTRYPOINT
-# is entrypoint.sh (the full DC stack), so without overriding it the probe args land as
-# extra ros2-launch arguments instead of actually running measure_rtt.py — the container
-# would always exit non-zero regardless of RustFS's actual reachability.
-log "waiting for RustFS to accept TCP connections on dc_e2e_split_net"
-timeout 60 bash -c "until podman run --rm --network dc_e2e_split_net --entrypoint python3 '$DC_IMAGE' \
-  /opt/e2e/measure_rtt.py $RUSTFS_C 9000 --count 1 --timeout 2 >/dev/null 2>&1; do sleep 1; done" \
-  || { log "RustFS never became reachable on dc_e2e_split_net"; exit 1; }
+wait_postgres_ready
+wait_rustfs_ready
 
 log "creating the RustFS bucket (the S3 sink doesn't create it)"
 # The compose service name, not $RUSTFS_C: aws-cli's own --endpoint-url validation
@@ -132,10 +100,7 @@ log "creating the RustFS bucket (the S3 sink doesn't create it)"
 # dc_e2e_split_net and has none. dc-uploader's DC_UPLOADER_S3_ENDPOINT and
 # e2e_split_params.yaml's rustfs.endpoint already use the service name for the same
 # reason.
-podman run --rm --network dc_e2e_split_net \
-  -e AWS_ACCESS_KEY_ID=rustfsadmin -e AWS_SECRET_ACCESS_KEY=rustfsadmin -e AWS_DEFAULT_REGION=us-east-1 \
-  docker.io/amazon/aws-cli:latest \
-  --endpoint-url "http://rustfs:9000" s3 mb s3://dc-e2e
+create_rustfs_bucket "http://rustfs:9000"
 
 # --- start dc-ros + dc-uploader, prove no orchestrator-level ordering is needed ------
 # vector deliberately isn't up yet: no depends_on in compose.split.yaml. dc-uploader
@@ -192,15 +157,12 @@ podman restart "$DC_ROS_C" >/dev/null
 
 log "restoring Postgres + RustFS"
 podman start "$PG_C" "$RUSTFS_C" >/dev/null
-timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
-  || { log "Postgres never came back"; exit 1; }
-# RustFS too, same probe as bring-up above — not just Postgres: a pg_isready-only gate
+wait_postgres_ready
+# RustFS too, same probe as bring-up above — not just Postgres: a Postgres-only gate
 # lets the uploader's first post-restore attempt hit a still-warming object store,
 # fail, and double that intent's retry backoff (doubling is what pushes it past the
 # fixed drain window below).
-timeout 60 bash -c "until podman run --rm --network dc_e2e_split_net --entrypoint python3 '$DC_IMAGE' \
-  /opt/e2e/measure_rtt.py $RUSTFS_C 9000 --count 1 --timeout 2 >/dev/null 2>&1; do sleep 1; done" \
-  || { log "RustFS never came back"; exit 1; }
+wait_rustfs_ready
 
 log "draining for ${DRAIN_SECONDS}s"
 sleep "$DRAIN_SECONDS"
@@ -221,8 +183,7 @@ sleep 5
 log "verifying the durable upload intent queue drained (no orphaned intents after the outage+restart)"
 QUEUE_DEADLINE=$(( $(date +%s) + QUEUE_DRAIN_TIMEOUT_SECONDS ))
 while :; do
-  LEFTOVER_INTENTS=$(podman run --rm --entrypoint bash \
-    -v dc_e2e_split_uploader:/vol:ro "$DC_IMAGE" \
+  LEFTOVER_INTENTS=$(extract_from_volume dc_e2e_split_uploader bash \
     -c 'find /vol/queue/upload -maxdepth 1 -name "*.json" 2>/dev/null | wc -l')
   if [ "${LEFTOVER_INTENTS:-0}" -eq 0 ]; then
     break
@@ -240,8 +201,7 @@ podman stop "$UPLOADER_C" "$VECTOR_C" >/dev/null
 
 # --- verify -----------------------------------------------------------------------
 log "extracting the workload ledger (what the generator published)"
-podman run --rm --entrypoint bash \
-  -v dc_e2e_split_data:/vol:ro "$DC_IMAGE" \
+extract_from_volume dc_e2e_split_data bash \
   -c 'cat /vol/workload_ledger.txt 2>/dev/null || true' > "$RUN_DIR/workload_ledger_split.txt"
 
 log "verifying zero-loss against the published ledger (no passthrough/MCAP/raw checks — see params/e2e_split_params.yaml's header)"

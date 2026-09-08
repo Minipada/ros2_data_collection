@@ -36,6 +36,10 @@
 # observed shipping nothing; generous because it covers the whole stack's startup, Vector
 # included); DC_E2E_INCIDENT_TIMEOUT_SECONDS (default 120 — from the FlushEvent to the
 # released window being committed, which includes the post-roll phase and Vector's own batch).
+#
+# The shared harness skeleton (image resolution, cleanup trap, Postgres bring-up and its
+# init.sql-aware readiness wait) lives in lib/harness.sh. No RustFS here: both Measurements
+# route to Postgres only.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -44,7 +48,6 @@ RUN_DIR="$E2E_DIR/.run"
 
 LIVE_TIMEOUT_SECONDS="${DC_E2E_LIVE_TIMEOUT_SECONDS:-180}"
 INCIDENT_TIMEOUT_SECONDS="${DC_E2E_INCIDENT_TIMEOUT_SECONDS:-120}"
-KEEP="${DC_E2E_KEEP:-false}"
 
 # Fixed rather than random: a failed run leaves rows in the Postgres volume that are worth
 # being able to find again by name, and the whole point is that the id the event carried is
@@ -57,11 +60,14 @@ LIVE_TAG="dc.measurement.memory"
 PG_C=dc_e2e_inc_postgres
 DC_C=dc_e2e_inc_dc
 VOLUMES=(dc_e2e_inc_pgdata dc_e2e_inc_buffer dc_e2e_inc_data)
+# shellcheck disable=SC2034  # consumed by lib/harness.sh
+HARNESS_TAG=e2e-incident
+
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/harness.sh"
 
 mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
-
-log() { echo "[e2e-incident $(date -u +%H:%M:%S)] $*"; }
 
 remove_stack() {
   podman rm -f --ignore "$DC_C" "$PG_C" >/dev/null
@@ -72,68 +78,20 @@ remove_stack() {
   done
 }
 
-pg_exec() {
-  podman exec "$PG_C" psql -U dc -d dc -tAc "$1"
-}
-
-# A count query that reads 0 rather than aborting the run while Postgres/the table is still
-# settling — every call site is inside a deadline loop that fails loudly on its own.
-pg_count() {
-  pg_exec "$1" 2>/dev/null | tr -d '[:space:]' || true
-}
-
-cleanup() {
-  local exit_code=$?
-  if [ "$exit_code" -ne 0 ] && [ "$KEEP" = "true" ]; then
-    log "FAILED (exit $exit_code) — leaving the stack up (DC_E2E_KEEP=true) for debugging"
-    exit "$exit_code"
-  fi
-  log "tearing down"
-  if podman container exists "$DC_C"; then
-    podman logs "$DC_C" > "$RUN_DIR/dc_incident.log" 2>&1
-  fi
-  remove_stack
-  exit "$exit_code"
-}
-trap cleanup EXIT
+# shellcheck disable=SC2034  # consumed by lib/harness.sh's teardown
+HARNESS_LOG_CAPTURES=("$DC_C:dc_incident.log")
+trap harness_cleanup EXIT
 
 # --- obtain the DC stack image (shared with run.sh — see its header) ------------------
-if [ -n "${DC_E2E_IMAGE:-}" ]; then
-  log "using prebuilt E2E image: $DC_E2E_IMAGE (no build)"
-  podman image exists "$DC_E2E_IMAGE" || podman pull "$DC_E2E_IMAGE"
-  DC_IMAGE="$DC_E2E_IMAGE"
-else
-  if [ -n "${DC_WORKSPACE_IMAGE:-}" ]; then
-    log "using prebuilt DC workspace image: $DC_WORKSPACE_IMAGE (skipping build.sh)"
-    podman image exists "$DC_WORKSPACE_IMAGE" || podman pull "$DC_WORKSPACE_IMAGE"
-    WORKSPACE_IMAGE="$DC_WORKSPACE_IMAGE"
-  else
-    log "building the DC workspace image (tools/e2e/scripts/build.sh — the same build CI uses)"
-    "$SCRIPT_DIR/build.sh"
-    WORKSPACE_IMAGE="dc-workspace:latest"
-  fi
-  log "building the E2E image (Containerfile.e2e, FROM the workspace image)"
-  podman build --build-arg "BASE_IMAGE=$WORKSPACE_IMAGE" -t dc-e2e:latest -f Containerfile.e2e .
-  DC_IMAGE="dc-e2e:latest"
-fi
+DC_IMAGE="" # set by resolve_image
+resolve_image
 
 remove_stack
 
 # --- Postgres ------------------------------------------------------------------------
 log "starting Postgres (sql/init.sql — dc_records has the incident_id column under test)"
-podman run -d --network host --name "$PG_C" \
-  -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
-  -v dc_e2e_inc_pgdata:/var/lib/postgresql/data \
-  -v "$E2E_DIR/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro" \
-  docker.io/library/postgres:13 >/dev/null
-
-# Deliberately not `pg_isready`: the postgres image runs /docker-entrypoint-initdb.d against a
-# *temporary* server that is then shut down and restarted, and pg_isready answers yes to that
-# one. Waiting for `dc_records` to resolve instead gates on the only state that matters — the
-# real server is up and init.sql has been applied — and cannot match the throwaway one, whose
-# shutdown otherwise lands in the middle of the first query below.
-timeout 120 bash -c "until podman exec $PG_C psql -U dc -d dc -tAc \"SELECT to_regclass('public.dc_records')\" 2>/dev/null | grep -q dc_records; do sleep 2; done" \
-  || { log "Postgres never came up with sql/init.sql applied"; exit 1; }
+start_postgres dc_e2e_inc_pgdata
+wait_postgres_ready
 
 # The column has to be a column. A table without it would make every assertion below fail
 # for a reason that has nothing to do with the pipeline, so say so here instead.
@@ -152,6 +110,12 @@ podman run -d --network host --name "$DC_C" \
   -v "$E2E_DIR/params/e2e_incident_params.yaml:/opt/e2e/e2e_params.yaml:ro" \
   -v "$E2E_DIR/params/e2e_incident_pgsql_sink.toml:/opt/e2e/e2e_incident_pgsql_sink.toml:ro" \
   "$DC_IMAGE" >/dev/null
+
+# A count query that reads 0 rather than aborting the run while Postgres/the table is still
+# settling — every call site is inside a deadline loop that fails loudly on its own.
+pg_count() {
+  pg_exec "$1" 2>/dev/null | tr -d '[:space:]' || true
+}
 
 # --- 1. armed means silent, live means flowing -------------------------------------------
 log "waiting up to ${LIVE_TIMEOUT_SECONDS}s for the live Measurement's first rows"
