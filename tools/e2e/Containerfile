@@ -5,20 +5,27 @@
 # - `cacher`: extracts just the package manifests (package.xml) from the full source
 #   tree, so `toolchain`'s COPY --from below keys its own cache on dependency lists
 #   alone, not on every source edit — without having to hardcode one COPY per package.
-# - `toolchain-base`: ROS 2 + the OS packages every later stage needs (git, ccache,
-#   pip tools), then `vcs import`s vector_vendor and aws_sdk_vendor — both live in
-#   their own repos (docs/adr/0002, docs/adr/0012) — before anything else is copied
-#   in. Split from `toolchain` below so this layer's cache key is
+# - `toolchain-base`: a small stable apt layer (git + vcstool), then `vcs import`s
+#   vector_vendor and aws_sdk_vendor — both live in their own repos (docs/adr/0002,
+#   docs/adr/0012) — then the daily-busted dist-upgrade + the remaining OS packages
+#   every later stage needs (ccache, lcov, pip tools). Keeping the fetch tools and the
+#   vendor fetch OUT from under the cache-bust layer means the network-bound `vcs
+#   import` only re-runs when ros2_data_collection.repos changes, not once per UTC
+#   day. Split from `toolchain` below so this stage's cache keys stay
 #   `ros2_data_collection.repos`'s own content (a vendor-package version bump), not
 #   the full-workspace rosdep install `toolchain` adds on top.
 # - `toolchain`: `toolchain-base` + pre-built aws-sdk-cpp + full-workspace rosdep
-#   install. Stays a cache hit across ordinary source changes.
+#   install. Stays a cache hit across ordinary source changes; re-runs caused by
+#   parent invalidation (daily cache-bust, .repos/rosdep changes) compile from the
+#   shared dc-ccache mount, so the ~15-min aws-sdk-cpp build only pays cold once.
 # - `workspace`: inherits toolchain, COPYs the full source, then one `colcon build` +
-#   `colcon test`. Two `RUN --mount=type=cache` mounts persist across builds
-#   independently of the layer they are attached to: `dc-ccache` (compiler object files,
-#   so a change to one file only recompiles that file's translation unit) and `dc-apt`
-#   (downloaded .deb archives, so re-running rosdep install on the same package set
-#   skips the network round-trip). Both mounts live under buildah's own
+#   `colcon test`. Three `RUN --mount=type=cache` mounts persist across builds
+#   independently of the layer they are attached to: `dc-ccache` (compiler object
+#   files, shared with toolchain's aws_sdk_vendor build, so a change to one file only
+#   recompiles that file's translation unit), `dc-apt` (downloaded .deb archives, so
+#   re-running rosdep install on the same package set skips the network round-trip)
+#   and `dc-pip` (wheels for toolchain-base's pip install). All three mounts live
+#   under buildah's own
 #   $TMPDIR/buildah-cache/<id>, entirely separate from --cache-from/--cache-to's
 #   registry export (which only carries *layers*, not cache-mount content — verified
 #   against two live CI runs, not assumed); on a fresh runner they survive only if the
@@ -55,18 +62,13 @@ RUN mkdir -p /tmp/manifests && \
 
 FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS toolchain-base
 
-ARG APT_CACHEBUST=unknown
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Daily apt cache-bust (see CLAUDE.md "Containers: Podman, not Docker"): a date-valued
-# build-arg rebuilds the apt layer once per UTC day so OS security patches don't go stale.
-# Its own RUN layer (no DC source) so it stays a cache hit across code changes.
-# fastcov: tools/code_coverage_report.bash's C++ coverage tool; lcov/ccache round it out.
-# mcap: dc_mcap_writer's (#210/ADR-0009) one Python dependency. `colcon build`'s
-# ament_python step installs each package with `pip install --no-deps`, deliberately
-# never fetching a package's `install_requires` over the network at build time — so
-# listing `mcap` in dc_mcap_writer/setup.py alone does not make it importable here; it
-# has to be installed into this image explicitly, same as fastcov below.
+# Stable fetch-tools layer — deliberately ahead of the daily cache-bust RUN below so
+# the `vcs import` layered on top of it is not invalidated once per UTC day (git/vcstool
+# still get their security patches: the dist-upgrade below upgrades every package
+# installed here, and the layer cache keys on instruction text, so a newer git in the
+# archive alone doesn't re-run this layer).
 #
 # dc-apt: apt's .deb archive dir as a `RUN --mount=type=cache` mount, same mechanics
 # as the workspace stage's dc-ccache below (buildah stores it under
@@ -74,19 +76,15 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # APT_CACHEBUST refresh included). docker-clean is rewritten rather than deleted: its
 # Post-Invoke hooks rm every .deb after each apt-get, which would empty the mount, but
 # its pkgcache-off half is kept — without it apt writes a tens-of-MB pkgcache.bin into
-# this RUN's layer on every update. The toolchain/workspace stages inherit the
-# rewritten file and just carry the mount themselves. /var/lib/apt/lists stays
-# ephemeral: every RUN re-fetches indexes via apt-get update anyway, so mounting them
-# would save no downloads while adding shared mutable state across builds.
+# the RUN's layer on every update. The rewrite persists into every later stage of this
+# chain (toolchain, workspace). /var/lib/apt/lists stays ephemeral: every RUN
+# re-fetches indexes via apt-get update anyway, so mounting them would save no
+# downloads while adding shared mutable state across builds.
 RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
     printf 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";\n' \
       > /etc/apt/apt.conf.d/docker-clean && \
-    echo "apt cache bust: ${APT_CACHEBUST}" && \
     apt-get -q update && \
-    apt-get -q -y dist-upgrade && \
-    apt-get -q install --no-install-recommends -y \
-    git python3-pip python3-vcstool ccache lcov && \
-    pip install --break-system-packages --no-cache-dir fastcov mcap && \
+    apt-get -q install --no-install-recommends -y git python3-vcstool && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /root/ws
@@ -94,10 +92,11 @@ WORKDIR /root/ws
 # vector_vendor and aws_sdk_vendor both live in their own repos (docs/adr/0002's
 # amendment, docs/adr/0012), so they have to be fetched into the workspace source tree
 # the same way a developer's own `vcs import` would, before anything downstream can
-# `colcon build` them. A separate COPY (not folded into the apt RUN above) keys this
-# layer's own cache on ros2_data_collection.repos's content: it re-fetches when that
-# file changes (either package's version bump) or when APT_CACHEBUST invalidates the
-# layer above (daily) — not on an ordinary source edit elsewhere in the repo. `vcs
+# `colcon build` them. A separate COPY (not folded into an apt RUN) keys this layer's
+# own cache on ros2_data_collection.repos's content: it re-fetches when that file
+# changes (either package's version bump) — not on an ordinary source edit elsewhere
+# in the repo, and not on the daily APT_CACHEBUST refresh, whose layer sits above
+# this one rather than below. `vcs
 # import` needs network; every later `colcon build`/`colcon test` in downstream stages
 # runs against the already-materialized result. Keying the fetch on
 # ros2_data_collection.repos rather than the full source tree is also what keeps
@@ -107,6 +106,36 @@ WORKDIR /root/ws
 COPY ros2_data_collection.repos .
 RUN mkdir -p src/ros2_data_collection && \
     vcs import --shallow src/ros2_data_collection < ros2_data_collection.repos
+
+# Daily apt cache-bust (see CLAUDE.md "Containers: Podman, not Docker"): a date-valued
+# build-arg rebuilds the apt layer once per UTC day so OS security patches don't go stale.
+# Its own RUN layer (no DC source) so it stays a cache hit across code changes.
+#
+# The ARG is declared HERE, immediately before its only use, not at the top of the
+# stage: buildah carries every in-scope build-arg in each RUN's environment, so its
+# cache key picks up the arg's value even for RUNs that never reference it — declared
+# at the top, the changing date invalidated the fetch-tools and `vcs import` layers
+# above daily too (verified empirically: a one-day-older APT_CACHEBUST re-cloned both
+# vendor repos with the top placement, and cache-hits both with this placement).
+ARG APT_CACHEBUST=unknown
+# fastcov: tools/code_coverage_report.bash's C++ coverage tool; lcov/ccache round it out.
+# mcap: dc_mcap_writer's (#210/ADR-0009) one Python dependency. `colcon build`'s
+# ament_python step installs each package with `pip install --no-deps`, deliberately
+# never fetching a package's `install_requires` over the network at build time — so
+# listing `mcap` in dc_mcap_writer/setup.py alone does not make it importable here; it
+# has to be installed into this image explicitly, same as fastcov below.
+#
+# dc-pip keeps pip's wheel cache on a mount (fastcov/mcap are unpinned, so every daily
+# re-run re-resolves them; the mount means the re-resolution re-downloads nothing).
+RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
+    --mount=type=cache,id=dc-pip,target=/root/.cache/pip \
+    echo "apt cache bust: ${APT_CACHEBUST}" && \
+    apt-get -q update && \
+    apt-get -q -y dist-upgrade && \
+    apt-get -q install --no-install-recommends -y \
+    python3-pip ccache lcov && \
+    pip install --break-system-packages fastcov mcap && \
+    rm -rf /var/lib/apt/lists/*
 
 FROM toolchain-base AS toolchain
 
@@ -120,9 +149,14 @@ FROM toolchain-base AS toolchain
 # reuses this layer's already-built install/ via `colcon build --packages-skip
 # aws_sdk_vendor`.
 COPY rosdep src/ros2_data_collection/rosdep
-# dc-apt mount (see toolchain-base): toolchain-base's rewritten docker-clean already
-# persists into this stage, so only the mount itself is needed here.
+# Mounts (see toolchain-base): dc-apt for the rosdep install's .debs, and dc-ccache —
+# same id as the workspace stage below, flag-keyed entries coexisting — for the
+# aws_sdk_vendor build. This layer re-runs whenever a parent invalidates (daily
+# APT_CACHEBUST, a .repos or rosdep/ change), but the ~15-min aws-sdk-cpp compile only
+# pays cold once: afterwards ccache serves every object whose preprocessed input
+# (headers included) didn't change, and the re-run costs mostly linking.
 RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
+    --mount=type=cache,id=dc-ccache,target=/root/.ccache \
     echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
       > /etc/ros/rosdep/sources.list.d/10-dc.list && \
     apt-get -q update && \
@@ -131,7 +165,10 @@ RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
     rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
     # shellcheck disable=SC1091
     . /opt/ros/jazzy/setup.sh && \
-    colcon build --packages-select aws_sdk_vendor --event-handlers desktop_notification- status- && \
+    colcon build --packages-select aws_sdk_vendor \
+      --cmake-args -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+      --event-handlers desktop_notification- status- && \
+    ccache -s && \
     rm -rf /var/lib/apt/lists/*
 
 # Full-workspace rosdep install for system (apt) dependencies — nav2_common,
@@ -236,7 +273,16 @@ WORKDIR /root/ws
 # resolve their own transitive deps as apt packages.
 COPY --from=cacher /tmp/manifests/src ./src
 COPY rosdep src/ros2_data_collection/rosdep
-RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
+# dc-apt + the docker-clean rewrite (see toolchain-base). The rewrite is mandatory
+# here, not hygiene: this stage starts fresh FROM ros-base with the stock docker-clean,
+# whose Post-Invoke rm would wipe the .debs out of the dc-apt mount every other stage
+# in this build shares. This layer only invalidates when the manifests or rosdep/
+# change, and when it does the exec-dep .debs are already in dc-apt from toolchain's
+# (build+exec) rosdep install above — a dependency bump re-downloads nothing here.
+RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
+    printf 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";\n' \
+      > /etc/apt/apt.conf.d/docker-clean && \
+    echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
       > /etc/ros/rosdep/sources.list.d/10-dc.list && \
     apt-get -q update && \
     rosdep update --include-eol-distros && \
