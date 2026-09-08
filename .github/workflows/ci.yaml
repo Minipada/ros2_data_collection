@@ -32,6 +32,7 @@
 #                                                                      └─▶ build-dc-uploader-coverage-image (dc-uploader:jazzy-coverage)
 #   kpi-views (standalone: SQL + a throwaway Postgres, no workspace image needed)
 #   raw-volume (standalone: stdlib Python fixtures over the shared volume accounting)
+#   vector-pin (standalone: Vector version literals vs the .repos pin, #484)
 #
 # dc-ros/dc-uploader FROM the `runtime` stage (tools/e2e/Containerfile) now, not the
 # raw `workspace` image — install/ plus exec-only deps, not the full source/build/
@@ -991,6 +992,17 @@ jobs:
 
       - name: Fixture test for the KPI views
         run: ./tools/infrastructure/scripts/test_kpi_views.sh
+
+  # The deployment trees pin the Vector image as literals (compose, quadlet, Kubernetes
+  # pod, kind manifests, Helm values, compose.split.yaml's default) that must track the
+  # canonical ros2_data_collection.repos pin (#484) — plain YAML can't interpolate it.
+  vector-pin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check Vector version literals against the .repos pin
+        run: ./tools/ci/check_vector_pin.sh
 
   e2e:
     needs: [build-workspace, build-e2e-image]

@@ -59,7 +59,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 E2E_DIR="$(dirname "$SCRIPT_DIR")"
-REPO_ROOT="$(cd "$E2E_DIR/../.." && pwd)"
 RUN_DIR="$E2E_DIR/.run/limits_shipper_fanin"
 
 REAL_STACKS="${DC_E2E_FANIN_REAL_STACKS:-1}"
@@ -162,9 +161,12 @@ else
   DC_IMAGE="dc-e2e:latest"
 fi
 
-# Read out of the .repos pin that fetches vector_vendor (its own repo as of #424's
-# follow-up split), not duplicated here as a second source of truth.
-VECTOR_VERSION="$(grep -A3 'vector_vendor:' "$REPO_ROOT/ros2_data_collection.repos" | grep -oP 'version: v\K[0-9.]+')"
+# Resolved from the .repos pin that fetches vector_vendor (its own repo as of #424's
+# follow-up split) by lib/version.sh (#484), not duplicated here as a second source
+# of truth.
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/version.sh"
+VECTOR_VERSION="$(vector_version)"
 VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
 
 remove_all
