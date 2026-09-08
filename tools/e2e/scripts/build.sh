@@ -31,8 +31,10 @@
 #                  round-trip.
 #   BUILDAH_TMPDIR a directory to use as $TMPDIR for this build, so the Containerfile's
 #                  `RUN --mount=type=cache` mounts — dc-ccache (compiler object files,
-#                  workspace stage) and dc-apt (#474, downloaded .deb archives for the
-#                  apt/rosdep RUNs) — which buildah stores under
+#                  shared by toolchain's aws_sdk_vendor build and the workspace stage's
+#                  colcon build), dc-apt (#474, downloaded .deb archives for the
+#                  apt/rosdep RUNs) and dc-pip (wheels for toolchain-base's pip
+#                  install) — which buildah stores under
 #                  $TMPDIR/buildah-cache/<id>, entirely separate from
 #                  --cache-from/--cache-to's registry export (verified: --cache-to
 #                  does not carry cache-mount content, only layers) — land

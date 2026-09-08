@@ -51,10 +51,12 @@
 # (registry-backed --cache-from/--cache-to), which round-trips podman's *layer* cache
 # through ghcr.io so a cold GitHub-hosted runner still starts warm on the
 # rarely-changing apt/toolchain/aws_sdk_vendor layers; and BUILDAH_TMPDIR, which
-# relocates the Containerfile's `RUN --mount=type=cache` mounts — dc-ccache (the
-# workspace stage's compiler object files) and dc-apt (#474, downloaded .deb archives
-# for the apt/rosdep RUNs; buildah stores these under $TMPDIR/buildah-cache/<id>, a
-# mechanism --cache-from/--cache-to does not touch at all) — into a directory
+# relocates the Containerfile's `RUN --mount=type=cache` mounts — dc-ccache (compiler
+# object files, shared by toolchain's aws_sdk_vendor build and the workspace stage's
+# colcon build), dc-apt (#474, downloaded .deb archives for the apt/rosdep RUNs) and
+# dc-pip (wheels for toolchain-base's pip install) — which buildah stores under
+# $TMPDIR/buildah-cache/<id>, a
+# mechanism --cache-from/--cache-to does not touch at all — into a directory
 # `actions/cache` persists across runs.
 
 name: CI
@@ -164,14 +166,15 @@ jobs:
       # registry export (verified: --cache-to only carries layers, never cache-mount
       # content — a real gap found by comparing two live runs' `ccache -s` output, not
       # assumed). BUILDAH_TMPDIR below (see build.sh) relocates it into this cached
-      # directory instead, so BOTH mounts — dc-ccache (compiler object files) and
-      # dc-apt (#474, downloaded .deb archives) — actually survive between runs on
+      # directory instead, so ALL THREE mounts — dc-ccache (compiler object files),
+      # dc-apt (#474, downloaded .deb archives) and dc-pip (pip wheels) — actually
+      # survive between runs on
       # GitHub's otherwise-ephemeral runners. Caching the parent dir, not
       # `.../buildah-cache` itself: buildah names it `buildah-cache-<uid>`
       # (confirmed via a diagnostic run — `buildah-cache-1001` on this runner user),
       # a detail not worth hardcoding. The buildah-ccache-* restore-key keeps the
       # pre-#474 (ccache-only) cache warm for the first runs after the key rename.
-      - name: Cache the RUN --mount=type=cache content (ccache + apt archives)
+      - name: Cache the RUN --mount=type=cache content (ccache + apt archives + pip wheels)
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/buildah-tmp
@@ -184,10 +187,11 @@ jobs:
       # rosdep-installs, colcon builds, and colcon tests the whole workspace in one
       # `podman build`. CACHE_REF round-trips podman's layer cache (the rarely-changing
       # apt/toolchain/aws_sdk_vendor layers) through the registry; BUILDAH_TMPDIR
-      # points the Containerfile's dc-ccache and dc-apt cache mounts at the
+      # points the Containerfile's dc-ccache/dc-apt/dc-pip cache mounts at the
       # actions/cache-managed directory above — together they mean a cold runner still
       # starts warm, for layers that didn't change, for object files ccache has
-      # already compiled, and for .deb archives dc-apt already downloaded. A
+      # already compiled, for .deb archives dc-apt already downloaded, and for pip
+      # wheels dc-pip already fetched. A
       # failing `colcon test` does NOT fail this `podman build` (see the Containerfile's
       # `workspace` stage) — it's recorded in the image's own /root/ws/TEST_RESULT
       # instead, so the image still gets tagged and its coverage data is still

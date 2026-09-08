@@ -31,8 +31,9 @@ two things a local build doesn't need: `CACHE_REF`, a registry ref `build.sh` pa
 `podman build --cache-from/--cache-to` so a cold GitHub-hosted runner still starts from
 warm *layers* (the rarely-changing apt/toolchain/aws_sdk_vendor ones) rather than
 podman's otherwise local-only layer cache; and `BUILDAH_TMPDIR`, which relocates the
-`workspace` stage's `ccache` mount (see `Containerfile` below) into a directory
-`actions/cache` persists between runs — that mount lives entirely outside
+Containerfile's `RUN --mount=type=cache` mounts (dc-ccache, dc-apt, dc-pip — see
+`Containerfile` below) into a directory
+`actions/cache` persists between runs — those mounts live entirely outside
 `--cache-from`/`--cache-to`'s reach (verified: it carries only layers, never
 cache-mount content).
 
@@ -716,12 +717,15 @@ Not wired into `ci.yaml`, same as every scenario above.
   manifests + pre-built `aws_sdk_vendor` — rarely changes, so it stays a build-cache
   hit), and `workspace` (inherits `toolchain`, `COPY`s full source, runs `rosdep
   install`/`colcon build`/`colcon test`; `ARG CCOV` gates coverage-instrumented
-  compiler flags). The apt/rosdep RUNs across `toolchain-base`/`toolchain`/`workspace`
-  and the `workspace` stage's compile/test step use two
-  `RUN --mount=type=cache` mounts — `dc-apt` (downloaded `.deb` archives, #474) and
-  `dc-ccache` (compiler object files) — which persist independently of their RUN's
-  own layer (so they survive even though the layer itself invalidates on every source
-  change) — but only if `$TMPDIR` points somewhere that itself persists between
+  compiler flags). The apt/rosdep RUNs across
+  `toolchain-base`/`toolchain`/`workspace`/`runtime` and the compile steps
+  (`toolchain`'s aws_sdk_vendor build, the `workspace` stage's colcon build) use three
+  `RUN --mount=type=cache` mounts — `dc-apt` (downloaded `.deb` archives, #474),
+  `dc-ccache` (compiler object files, shared between both compile steps, so the
+  ~15-min aws-sdk-cpp build only pays cold once even when its layer re-runs) and
+  `dc-pip` (wheels for toolchain-base's pip install) — which persist independently of
+  their RUN's own layer (so they survive even though the layer itself invalidates on
+  every source change) — but only if `$TMPDIR` points somewhere that itself persists between
   builds, since buildah stores the mount under `$TMPDIR/buildah-cache/<id>`, entirely
   outside `--cache-from`/`--cache-to`'s reach (verified: it round-trips only layers
   through the registry, never cache-mount content). CI arranges that persistence via
