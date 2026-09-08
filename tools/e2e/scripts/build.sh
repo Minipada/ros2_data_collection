@@ -29,11 +29,13 @@
 #                  layer cache is otherwise local-only and doesn't survive a fresh
 #                  machine/runner. Omit for a plain local build with no registry
 #                  round-trip.
-#   BUILDAH_TMPDIR a directory to use as $TMPDIR for this build, so the workspace
-#                  stage's `RUN --mount=type=cache` ccache mount — which buildah
-#                  stores under $TMPDIR/buildah-cache/<id>, entirely separate from
+#   BUILDAH_TMPDIR a directory to use as $TMPDIR for this build, so the Containerfile's
+#                  `RUN --mount=type=cache` mounts — dc-ccache (compiler object files,
+#                  workspace stage) and dc-apt (#474, downloaded .deb archives for the
+#                  apt/rosdep RUNs) — which buildah stores under
+#                  $TMPDIR/buildah-cache/<id>, entirely separate from
 #                  --cache-from/--cache-to's registry export (verified: --cache-to
-#                  does not carry cache-mount content, only layers) — lands
+#                  does not carry cache-mount content, only layers) — land
 #                  somewhere the caller can persist across runs (see ci.yaml's
 #                  actions/cache step) instead of the default $TMPDIR (/tmp on a
 #                  GitHub-hosted runner, gone once the job ends). Omit for a plain

@@ -64,9 +64,10 @@ so CI no longer calls `test.sh` directly. CI adds two things local dev doesn't n
 `CACHE_REF`, a registry ref `build.sh` passes to `podman build --cache-from`/
 `--cache-to` so the rarely-changing apt/toolchain/aws_sdk_vendor *layers* stay warm
 on a cold GitHub-hosted runner (podman's layer cache is otherwise local to one
-machine); and `BUILDAH_TMPDIR`, which relocates the `workspace` stage's ccache
-`RUN --mount=type=cache` mount into a directory `actions/cache` persists between
-runs — that mount lives under buildah's own `$TMPDIR`, a mechanism
+machine); and `BUILDAH_TMPDIR`, which relocates the Containerfile's
+`RUN --mount=type=cache` mounts (`dc-ccache` compiler objects, `dc-apt` downloaded
+`.deb` archives — #474) into a directory `actions/cache` persists between
+runs — those mounts live under buildah's own `$TMPDIR`, a mechanism
 `--cache-from`/`--cache-to` does not touch at all (verified against two live CI runs:
 the mount showed a 0% hit rate under `--cache-to`/`--cache-from` alone). Together
 they mean a change to one source file only recompiles that file's translation units,
