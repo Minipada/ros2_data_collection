@@ -38,6 +38,13 @@ SPDX-License-Identifier: MPL-2.0
        libtomlplusplus-dev / libmsgpack-cxx-dev so `rosdep install` resolves them. -->
   <depend>tomlplusplus</depend>
   <depend>msgpack-cxx</depend>
+  <!-- Header-only dc_common utilities. record_file_walk.hpp (#479) is a real build dep —
+       the shared owner of where Files live in a Record, used by the Uploader's
+       collect_files() and the Measurement's staging side so the two can't drift (before it,
+       a flattened Record's Files were staged but never uploaded). FileScratchRing stays
+       tests-only: uploader_test stages a File exactly the way an armed Measurement stages
+       it (#290), while the Bridge itself remains unaware of incident capture. -->
+  <depend>dc_common</depend>
   <!-- The AWS SDK for C++ (s3), built from source — the Uploader's object-storage client
        (ADR-0005). -->
   <depend>aws_sdk_vendor</depend>
@@ -53,10 +60,6 @@ SPDX-License-Identifier: MPL-2.0
   <exec_depend>ffmpeg</exec_depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
-  <!-- Tests only (uploader_test, #290): dc_common's header-only FileScratchRing, so the Files
-       pipeline can be exercised against a File staged exactly the way an armed Measurement
-       stages it. The Bridge itself has no incident-capture code and depends on none of it. -->
-  <test_depend>dc_common</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

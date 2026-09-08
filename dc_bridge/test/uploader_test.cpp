@@ -186,6 +186,17 @@ json camera_payload(const std::string& local_path, const std::vector<std::string
                { "remote_paths", remote } };
 }
 
+// The same payload after a `flatten: true` Measurement's flattenSample(): json::flatten()
+// pointer keys plus the marker keys it adds afterwards. Built with the real flatten() so the
+// test can't diverge from what production writes.
+json flattened_camera_payload(const std::string& local_path, const std::vector<std::string>& storages)
+{
+  json flat = camera_payload(local_path, storages).flatten();
+  flat["flattened"] = true;
+  flat["nested"] = false;
+  return flat;
+}
+
 // An EmitFn collecting rows into `rows`.
 EmitFn collect_rows(std::shared_ptr<std::vector<json>> rows)
 {
@@ -227,6 +238,29 @@ TEST(Uploader, HappyPathUploadsVerifiesEmitsStatusRows)
   EXPECT_EQ(rows_of_kind(*rows, "file_status").size(), 2u);
   EXPECT_EQ(rows_of_kind(*rows, "group_complete").size(), 1u);
   EXPECT_TRUE(std::filesystem::exists(local));
+}
+
+TEST(Uploader, FlattenedRecordFilesStillUpload)
+{
+  // #479: a `flatten: true` Measurement's Record reaches the Bridge with JSON-pointer keys
+  // ("/local_paths/raw") instead of nested local_paths objects. Before the shared
+  // record_file_walk, collect_files() matched only nested objects, so these Files were
+  // staged by the Measurement yet silently never uploaded.
+  Fixture fx({ "minio" });
+  auto local = fx.write_file("img.jpg", JPEG_BYTES);
+  auto up = fx.uploader(false);
+  auto rows = std::make_shared<std::vector<json>>();
+
+  auto summary =
+      up.process_record(flattened_camera_payload(local, { "minio" }), "dc.measurement.camera", collect_rows(rows));
+
+  EXPECT_EQ(summary.files, 1u);
+  EXPECT_EQ(summary.verified, 1u);
+  EXPECT_TRUE(summary.group_complete);
+  for (auto& store : fx.stores)
+  {
+    EXPECT_EQ(store->object_bytes("cam/2026/img.jpg"), JPEG_BYTES);
+  }
 }
 
 TEST(Uploader, MetadataRecordHasHumbleShape)

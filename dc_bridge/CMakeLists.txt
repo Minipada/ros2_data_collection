@@ -27,6 +27,9 @@ find_package(Threads REQUIRED)
 find_package(rosidl_runtime_cpp REQUIRED)
 find_package(rosidl_typesupport_introspection_cpp REQUIRED)
 find_package(rcpputils REQUIRED)
+# record_file_walk.hpp (#479): the shared owner of where Files live in a Record, used by the
+# Uploader's collect_files() and the Measurement's staging side alike, so the two can't drift.
+find_package(dc_common REQUIRED)
 # The AWS SDK for C++ (s3) comes from the aws_sdk_vendor package (built from source);
 # colcon puts its install prefix on CMAKE_PREFIX_PATH so this resolves.
 find_package(AWSSDK REQUIRED COMPONENTS s3)
@@ -57,6 +60,10 @@ add_library(dc_bridge_core
 target_include_directories(dc_bridge_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+# Header-only dc_common dep (record_file_walk.hpp, #479); not in any public header, and
+# ament_target_dependencies can't be used here — it would mix target_link_libraries
+# signatures on a target that already uses the keyword form above.
+target_include_directories(dc_bridge_core PRIVATE ${dc_common_INCLUDE_DIRS})
 target_link_libraries(dc_bridge_core PUBLIC
   nlohmann_json::nlohmann_json
   tomlplusplus::tomlplusplus
@@ -103,10 +110,9 @@ install(TARGETS dc_bridge dc_uploader DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
-  # Header-only, ROS-free utilities (#285). Tests only: uploader_test stages a File the way an
-  # armed Measurement does (#290) to check the Files pipeline ingests a released one unchanged.
-  # dc_bridge itself needs no part of it — the Bridge is deliberately unaware of incident capture.
-  find_package(dc_common REQUIRED)
+  # Header-only, ROS-free utilities (#285): uploader_test stages a File the way an armed
+  # Measurement does (#290) to check the Files pipeline ingests a released one unchanged.
+  # (dc_common itself is found above now — the core links its record_file_walk, #479.)
   # All gtests link only the aws-free core (uploader_test uses an in-memory ObjectStore).
   foreach(t forwarder supervisor render misc uploader intent_queue retention thumbnail raw_config process_config)
     ament_add_gtest(${t}_test test/${t}_test.cpp)

@@ -4,9 +4,11 @@
 // Parsing the Files a Record references out of its JSON payload — the
 // local_paths/remote_paths structure Measurements embed (camera/map), replacing the
 // Humble-era parallel src_fields/upload_fields arrays. remote_paths is keyed by
-// Destination name; the payload is walked recursively so a bare Measurement Record and a
-// Group-merged Record parse identically; base64 subtrees are skipped. All Files found in
-// one Record form one group (the unit ADR-0005's completion marker covers).
+// Destination name; the payload walk itself (nested or flattened form) is owned by
+// dc_common's record_file_walk (#479), shared with the Measurement's staging side, so a
+// bare Measurement Record and a Group-merged Record parse identically; base64 subtrees
+// are skipped. All Files found in one Record form one group (the unit ADR-0005's
+// completion marker covers).
 #ifndef DC_BRIDGE__UPLOADER__GROUP_HPP_
 #define DC_BRIDGE__UPLOADER__GROUP_HPP_
 
