@@ -114,15 +114,15 @@ measurement_server:
     condition_plugins: ["min_distance_traveled", "max_distance_traveled"]
     # Conditions
     min_distance_traveled:
-      plugin: "dc_conditions/DoubleSuperior"
+      plugin: "dc_conditions/Compare"
       key: "distance_traveled"
       value: 0.01
-      include_value: true
+      comparison: "ge"
     max_distance_traveled:
-      plugin: "dc_conditions/DoubleInferior"
+      plugin: "dc_conditions/Compare"
       key: "distance_traveled"
       value: 2.0
-      include_value: true
+      comparison: "le"
     # System data
     cpu:
       plugin: "dc_measurements/Cpu"

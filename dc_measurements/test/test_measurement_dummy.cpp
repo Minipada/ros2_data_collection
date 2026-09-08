@@ -174,7 +174,7 @@ TEST_F(MeasurementDummyTest, RobotNameResolvesFromFile)
 // rclcpp_lifecycle wraps every transition callback (on_configure here) in its own catch,
 // converting an uncaught exception into a CallbackReturn::ERROR rather than letting it
 // propagate to the caller of configure() (same behavior documented in
-// test_measurement_bool_equal.cpp's MeasurementServerConfigureFailsToReachInactiveState).
+// test_measurement_compare.cpp's InvalidComparisonFailsToReachInactiveState).
 // So the observable, end-to-end consequence of an unreadable value_from_file is that the
 // whole MeasurementServer fails to reach the "inactive" state, with the resolveRobotName()
 // error logged as the ERROR/FATAL "Original error" during the transition.

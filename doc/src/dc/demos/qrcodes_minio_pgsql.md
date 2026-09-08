@@ -375,8 +375,9 @@ measurement_server:
   moving:
     plugin: "dc_conditions/Moving"
   inspected_exists:
-    plugin: "dc_conditions/Exist"
+    plugin: "dc_conditions/Compare"
     key: "inspected"
+    comparison: "exists"
   right_camera:
     plugin: "dc_measurements/Camera"
     group_key: "right_camera"

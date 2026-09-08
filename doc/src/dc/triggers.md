@@ -70,7 +70,7 @@ to the Trigger.
 
 ```admonish note title="Only self-updating Conditions are meaningful here"
 A Measurement passes its own freshly-collected Record to each Condition it consults, so
-plugins like `BoolEqual` read a field out of that Record. A Trigger has no Record of its
+plugins like `Compare` read a field out of that Record. A Trigger has no Record of its
 own: it only makes sense to compose Conditions that maintain their own state from a
 subscription, such as [Moving](./conditions/moving.md).
 ```
