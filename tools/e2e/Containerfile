@@ -14,14 +14,15 @@
 # - `toolchain`: `toolchain-base` + pre-built aws-sdk-cpp + full-workspace rosdep
 #   install. Stays a cache hit across ordinary source changes.
 # - `workspace`: inherits toolchain, COPYs the full source, then one `colcon build` +
-#   `colcon test`. The compiler's object-file cache (ccache) comes from a
-#   `RUN --mount=type=cache` mount, which persists across builds independently of the
-#   layer it's attached to — so a change to one file only recompiles that file's
-#   translation unit, not the whole workspace. That mount lives under buildah's own
+#   `colcon test`. Two `RUN --mount=type=cache` mounts persist across builds
+#   independently of the layer they are attached to: `dc-ccache` (compiler object files,
+#   so a change to one file only recompiles that file's translation unit) and `dc-apt`
+#   (downloaded .deb archives, so re-running rosdep install on the same package set
+#   skips the network round-trip). Both mounts live under buildah's own
 #   $TMPDIR/buildah-cache/<id>, entirely separate from --cache-from/--cache-to's
 #   registry export (which only carries *layers*, not cache-mount content — verified
-#   against two live CI runs, not assumed); on a fresh runner it survives only if the
-#   caller points $TMPDIR somewhere it persists itself, which is what CI's
+#   against two live CI runs, not assumed); on a fresh runner they survive only if the
+#   caller points $TMPDIR somewhere that persists itself, which is what CI's
 #   BUILDAH_TMPDIR (build.sh) + actions/cache does. Local dev gets no such
 #   persistence unless it does the same.
 #
@@ -66,7 +67,21 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # never fetching a package's `install_requires` over the network at build time — so
 # listing `mcap` in dc_mcap_writer/setup.py alone does not make it importable here; it
 # has to be installed into this image explicitly, same as fastcov below.
-RUN echo "apt cache bust: ${APT_CACHEBUST}" && \
+#
+# dc-apt: apt's .deb archive dir as a `RUN --mount=type=cache` mount, same mechanics
+# as the workspace stage's dc-ccache below (buildah stores it under
+# $TMPDIR/buildah-cache/dc-apt, so it survives this layer's invalidation — the daily
+# APT_CACHEBUST refresh included). docker-clean is rewritten rather than deleted: its
+# Post-Invoke hooks rm every .deb after each apt-get, which would empty the mount, but
+# its pkgcache-off half is kept — without it apt writes a tens-of-MB pkgcache.bin into
+# this RUN's layer on every update. The toolchain/workspace stages inherit the
+# rewritten file and just carry the mount themselves. /var/lib/apt/lists stays
+# ephemeral: every RUN re-fetches indexes via apt-get update anyway, so mounting them
+# would save no downloads while adding shared mutable state across builds.
+RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
+    printf 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";\n' \
+      > /etc/apt/apt.conf.d/docker-clean && \
+    echo "apt cache bust: ${APT_CACHEBUST}" && \
     apt-get -q update && \
     apt-get -q -y dist-upgrade && \
     apt-get -q install --no-install-recommends -y \
@@ -105,7 +120,10 @@ FROM toolchain-base AS toolchain
 # reuses this layer's already-built install/ via `colcon build --packages-skip
 # aws_sdk_vendor`.
 COPY rosdep src/ros2_data_collection/rosdep
-RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
+# dc-apt mount (see toolchain-base): toolchain-base's rewritten docker-clean already
+# persists into this stage, so only the mount itself is needed here.
+RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
+    echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
       > /etc/ros/rosdep/sources.list.d/10-dc.list && \
     apt-get -q update && \
     rosdep update --include-eol-distros && \
@@ -123,7 +141,8 @@ RUN echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
 # layer's cache key is the manifests' own content — it invalidates only when a
 # dependency list changes, not on an ordinary source edit.
 COPY --from=cacher /tmp/manifests/src ./src
-RUN apt-get -q update && \
+RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
+    apt-get -q update && \
     DEBIAN_FRONTEND=noninteractive \
     rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
     rm -rf /var/lib/apt/lists/*
@@ -147,7 +166,8 @@ COPY . src/ros2_data_collection
 # invocations (buildah stores the mount under $TMPDIR/buildah-cache/dc-ccache — not
 # part of the image, not covered by --cache-from/--cache-to, which only carry
 # layers). CI arranges that via build.sh's BUILDAH_TMPDIR + an actions/cache step;
-# a plain local build gets no such persistence.
+# a plain local build gets no such persistence. dc-apt (the rosdep install's .deb
+# cache — see toolchain-base) rides the same mechanism.
 #
 # colcon test-result doesn't accept --packages-skip (unlike colcon build/test) and
 # doesn't need it — it only scans build/ subdirectories that exist, and
@@ -160,6 +180,7 @@ COPY . src/ros2_data_collection
 # `podman run` the coverage data out of. ci.yaml checks TEST_RESULT itself, after
 # extracting coverage, and only pushes the image when it reads 0.
 RUN --mount=type=cache,id=dc-ccache,target=/root/.ccache \
+    --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
     apt-get -q update && \
     DEBIAN_FRONTEND=noninteractive \
     rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \

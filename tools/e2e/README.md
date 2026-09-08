@@ -716,15 +716,18 @@ Not wired into `ci.yaml`, same as every scenario above.
   manifests + pre-built `aws_sdk_vendor` — rarely changes, so it stays a build-cache
   hit), and `workspace` (inherits `toolchain`, `COPY`s full source, runs `rosdep
   install`/`colcon build`/`colcon test`; `ARG CCOV` gates coverage-instrumented
-  compiler flags). The `workspace` stage's compile/test step uses a
-  `RUN --mount=type=cache` ccache mount, which persists independently of that RUN's own
-  layer (so it survives even though the layer itself invalidates on every source
+  compiler flags). The apt/rosdep RUNs across `toolchain-base`/`toolchain`/`workspace`
+  and the `workspace` stage's compile/test step use two
+  `RUN --mount=type=cache` mounts — `dc-apt` (downloaded `.deb` archives, #474) and
+  `dc-ccache` (compiler object files) — which persist independently of their RUN's
+  own layer (so they survive even though the layer itself invalidates on every source
   change) — but only if `$TMPDIR` points somewhere that itself persists between
   builds, since buildah stores the mount under `$TMPDIR/buildah-cache/<id>`, entirely
   outside `--cache-from`/`--cache-to`'s reach (verified: it round-trips only layers
   through the registry, never cache-mount content). CI arranges that persistence via
   `scripts/build.sh`'s `BUILDAH_TMPDIR` + an `actions/cache` step in `ci.yaml` — so a
-  change to one file recompiles that file's translation units, not the whole
+  change to one file recompiles that file's translation units (and re-runs rosdep
+  without re-downloading its package set), not the whole
   workspace, on a fresh runner too. `colcon test`
   failing doesn't fail the `podman build` itself (see the Containerfile's own
   comments) — it's recorded in the image's `/root/ws/TEST_RESULT` instead, so the image
