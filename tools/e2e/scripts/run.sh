@@ -40,6 +40,9 @@
 #   DC_WORKSPACE_IMAGE           a prebuilt DC workspace image to use as the base for the
 #                                locally-built dc-e2e image (skips build.sh). Ignored when
 #                                DC_E2E_IMAGE is set. Unset: build.sh builds it.
+#
+# The shared harness skeleton (image resolution, cleanup trap, destination bring-up and
+# readiness waits, volume extraction) lives in lib/harness.sh.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -50,7 +53,6 @@ OUTAGE_SECONDS="${DC_E2E_OUTAGE_SECONDS:-600}"
 STEADY_STATE_SECONDS="${DC_E2E_STEADY_STATE_SECONDS:-30}"
 DRAIN_SECONDS="${DC_E2E_DRAIN_SECONDS:-30}"
 STARTUP_TIMEOUT_SECONDS="${DC_E2E_STARTUP_TIMEOUT_SECONDS:-10}"
-KEEP="${DC_E2E_KEEP:-false}"
 
 # Container + volume names. Volumes are named (not host bind-mounts) so a full stack
 # restart (podman restart / stop+start) preserves dc_bridge's on-disk state
@@ -67,10 +69,11 @@ RUSTFS_C=dc_e2e_rustfs
 DC_C=dc_e2e_dc
 VOLUMES=(dc_e2e_pgdata dc_e2e_rustfs_data dc_e2e_buffer dc_e2e_uploader dc_e2e_data)
 
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/harness.sh"
+
 mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
-
-log() { echo "[e2e $(date -u +%H:%M:%S)] $*"; }
 
 remove_stack() {
   # --ignore makes "no such container" a clean success while still surfacing real errors
@@ -83,78 +86,26 @@ remove_stack() {
   done
 }
 
-pg_exec() {
-  podman exec "$PG_C" psql -U dc -d dc -tAc "$1"
-}
-
-STATS_PID=""
-cleanup() {
-  local exit_code=$?
-  if [ -n "$STATS_PID" ] && kill -0 "$STATS_PID" 2>/dev/null; then
-    kill "$STATS_PID"
-  fi
-  if [ "$exit_code" -ne 0 ] && [ "$KEEP" = "true" ]; then
-    log "FAILED (exit $exit_code) — leaving the stack up (DC_E2E_KEEP=true) for debugging"
-    exit "$exit_code"
-  fi
-  log "tearing down"
-  if podman container exists "$DC_C"; then
-    podman logs "$DC_C" > "$RUN_DIR/dc.log" 2>&1
-  fi
-  remove_stack
-  exit "$exit_code"
-}
-trap cleanup EXIT
+# shellcheck disable=SC2034  # consumed by lib/harness.sh's teardown
+HARNESS_LOG_CAPTURES=("$DC_C:dc.log")
+trap harness_cleanup EXIT
 
 # --- obtain the DC stack image ------------------------------------------------------
-if [ -n "${DC_E2E_IMAGE:-}" ]; then
-  log "using prebuilt E2E image: $DC_E2E_IMAGE (no build)"
-  podman image exists "$DC_E2E_IMAGE" || podman pull "$DC_E2E_IMAGE"
-  DC_IMAGE="$DC_E2E_IMAGE"
-else
-  if [ -n "${DC_WORKSPACE_IMAGE:-}" ]; then
-    log "using prebuilt DC workspace image: $DC_WORKSPACE_IMAGE (skipping build.sh)"
-    podman image exists "$DC_WORKSPACE_IMAGE" || podman pull "$DC_WORKSPACE_IMAGE"
-    WORKSPACE_IMAGE="$DC_WORKSPACE_IMAGE"
-  else
-    log "building the DC workspace image (tools/e2e/scripts/build.sh — the same build CI uses)"
-    "$SCRIPT_DIR/build.sh"
-    WORKSPACE_IMAGE="dc-workspace:latest"
-  fi
-  log "building the E2E image (Containerfile.e2e, FROM the workspace image)"
-  podman build --build-arg "BASE_IMAGE=$WORKSPACE_IMAGE" -t dc-e2e:latest -f Containerfile.e2e .
-  DC_IMAGE="dc-e2e:latest"
-fi
+DC_IMAGE="" # set by resolve_image
+resolve_image
 
 # Clean any leftovers from a previous (possibly DC_E2E_KEEP=true) run.
 remove_stack
 
 # --- bring up the destinations ------------------------------------------------------
 log "starting Postgres + RustFS"
-podman run -d --network host --name "$PG_C" \
-  -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
-  -v dc_e2e_pgdata:/var/lib/postgresql/data \
-  -v "$E2E_DIR/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro" \
-  docker.io/library/postgres:13 >/dev/null
-# rustfs/rustfs 1.0.0-beta.11 — pinned by digest, not :latest, so an upstream image
-# change can't silently alter harness behavior. Bump deliberately: check
-# https://hub.docker.com/r/rustfs/rustfs/tags for the new digest.
-podman run -d --network host --name "$RUSTFS_C" \
-  -v dc_e2e_rustfs_data:/data \
-  docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c >/dev/null
-
-timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
-  || { log "Postgres never became ready"; exit 1; }
-timeout 60 bash -c 'until curl -sf http://127.0.0.1:9000 >/dev/null 2>&1 || curl -s http://127.0.0.1:9000 >/dev/null 2>&1; do sleep 1; done' \
-  || { log "RustFS never became ready"; exit 1; }
+start_postgres dc_e2e_pgdata
+start_rustfs dc_e2e_rustfs_data
+wait_postgres_ready
+wait_rustfs_ready
 
 log "creating the RustFS bucket (the S3 sink / Uploader doesn't create it)"
-# The AWS CLI talks plain S3 to RustFS via --endpoint-url — same protocol dc_bridge's
-# Uploader uses (aws-sdk-cpp), so no extra vendor (the retired minio/mc client) in the loop.
-podman run --rm --network host \
-  -e AWS_ACCESS_KEY_ID=rustfsadmin -e AWS_SECRET_ACCESS_KEY=rustfsadmin -e AWS_DEFAULT_REGION=us-east-1 \
-  docker.io/amazon/aws-cli:latest \
-  --endpoint-url http://127.0.0.1:9000 s3 mb s3://dc-e2e
+create_rustfs_bucket http://127.0.0.1:9000
 
 # Resource usage (CPU/RSS) is informational per the PRD, not gating — sampled for the
 # whole run so tools/e2e/scripts/measure_resources.sh's summary covers steady state.
@@ -205,8 +156,7 @@ podman restart "$DC_C" >/dev/null
 
 log "restoring Postgres + RustFS"
 podman start "$PG_C" "$RUSTFS_C" >/dev/null
-timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
-  || { log "Postgres never came back"; exit 1; }
+wait_postgres_ready
 
 log "draining for ${DRAIN_SECONDS}s"
 sleep "$DRAIN_SECONDS"
@@ -234,8 +184,7 @@ STATS_PID=""
 # The queue lives under uploader.data_dir (#441), not shipper.data_dir — on its own
 # dc_e2e_uploader volume here, separate from the Shipper's dc_e2e_buffer.
 log "verifying the durable upload intent queue drained (no orphaned intents after the outage+restart)"
-LEFTOVER_INTENTS=$(podman run --rm --entrypoint bash \
-  -v dc_e2e_uploader:/vol:ro "$DC_IMAGE" \
+LEFTOVER_INTENTS=$(extract_from_volume dc_e2e_uploader bash \
   -c 'find /vol/queue/upload -maxdepth 1 -name "*.json" 2>/dev/null | wc -l')
 if [ "${LEFTOVER_INTENTS:-0}" -ne 0 ]; then
   log "FAIL: ${LEFTOVER_INTENTS} orphaned upload intent(s) left in the queue after the run"
@@ -251,8 +200,7 @@ log "PASS: upload intent queue empty (0 orphaned intents)"
 # an empty file would otherwise be indistinguishable from a passthrough that shipped
 # nothing. verify_zero_loss.py hard-fails on a missing or empty file either way.
 log "extracting the passthrough sink's output"
-podman run --rm --entrypoint bash \
-  -v dc_e2e_data:/vol:ro "$DC_IMAGE" \
+extract_from_volume dc_e2e_data bash \
   -c 'cat /vol/passthrough/records.ndjson 2>/dev/null || true' > "$RUN_DIR/passthrough.ndjson"
 
 # --- extract raw / generic-subscription mode's output (#227) -------------------------
@@ -261,8 +209,7 @@ podman run --rm --entrypoint bash \
 # for the same reason — a failed extraction must not be mistakable for an empty result;
 # verify_zero_loss.py's check_raw() hard-fails on a missing or empty file.
 log "extracting raw mode's Destination output"
-podman run --rm --entrypoint bash \
-  -v dc_e2e_data:/vol:ro "$DC_IMAGE" \
+extract_from_volume dc_e2e_data bash \
   -c 'cat /vol/raw/records.ndjson 2>/dev/null || true' > "$RUN_DIR/raw.ndjson"
 
 # --- summarize the MCAP passthrough writer's output (ADR-0009, #210) -----------------
@@ -271,17 +218,15 @@ podman run --rm --entrypoint bash \
 # dc_e2e_data volume dc_mcap_writer wrote to, same as every other extraction above,
 # rather than parsing the binary .mcap files on this script's own host runner.
 log "summarizing the MCAP passthrough writer's output"
-podman run --rm --entrypoint python3 \
-  -v dc_e2e_data:/vol:ro "$DC_IMAGE" \
-  /opt/e2e/mcap_summary.py /vol/mcap > "$RUN_DIR/mcap_summary.json"
+extract_from_volume dc_e2e_data python3 /opt/e2e/mcap_summary.py /vol/mcap \
+  > "$RUN_DIR/mcap_summary.json"
 
 # --- verify -------------------------------------------------------------------------
 # The generator's ledger of what it published (#312) — the independent side of the
 # comparison. It lives on the dc_e2e_data volume so it survives the restart above; read it
 # back the same way the intent-queue check does, via a one-off container on that volume.
 log "extracting the workload ledger (what the generator published)"
-podman run --rm --entrypoint bash \
-  -v dc_e2e_data:/vol:ro "$DC_IMAGE" \
+extract_from_volume dc_e2e_data bash \
   -c 'cat /vol/workload_ledger.txt 2>/dev/null || true' > "$RUN_DIR/workload_ledger.txt"
 
 log "verifying zero-loss against the published ledger"
