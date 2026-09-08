@@ -106,8 +106,9 @@ measurement_server:
     moving:
       plugin: "dc_conditions/Moving"
     inspected_exists:
-      plugin: "dc_conditions/Exist"
+      plugin: "dc_conditions/Compare"
       key: "inspected"
+      comparison: "exists"
     cmd_vel:
       plugin: "dc_measurements/CmdVel"
       group_key: "cmd_vel"

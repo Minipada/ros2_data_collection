@@ -101,50 +101,14 @@ include_directories(
 )
 
 # Condition plugins
-add_library(dc_bool_equal_condition SHARED plugins/conditions/bool_equal.cpp)
-list(APPEND dc_condition_plugin_libs dc_bool_equal_condition)
-
-add_library(dc_double_equal_condition SHARED plugins/conditions/double_equal.cpp)
-list(APPEND dc_condition_plugin_libs dc_double_equal_condition)
-
-add_library(dc_double_inferior_condition SHARED plugins/conditions/double_inferior.cpp)
-list(APPEND dc_condition_plugin_libs dc_double_inferior_condition)
-
-add_library(dc_double_superior_condition SHARED plugins/conditions/double_superior.cpp)
-list(APPEND dc_condition_plugin_libs dc_double_superior_condition)
-
-add_library(dc_exist_condition SHARED plugins/conditions/exist.cpp)
-list(APPEND dc_condition_plugin_libs dc_exist_condition)
-
-add_library(dc_integer_equal_condition SHARED plugins/conditions/integer_equal.cpp)
-list(APPEND dc_condition_plugin_libs dc_integer_equal_condition)
-
-add_library(dc_integer_inferior_condition SHARED plugins/conditions/integer_inferior.cpp)
-list(APPEND dc_condition_plugin_libs dc_integer_inferior_condition)
-
-add_library(dc_integer_superior_condition SHARED plugins/conditions/integer_superior.cpp)
-list(APPEND dc_condition_plugin_libs dc_integer_superior_condition)
-
-add_library(dc_list_bool_equal_condition SHARED plugins/conditions/list_bool_equal.cpp)
-list(APPEND dc_condition_plugin_libs dc_list_bool_equal_condition)
-
-add_library(dc_list_double_equal_condition SHARED plugins/conditions/list_double_equal.cpp)
-list(APPEND dc_condition_plugin_libs dc_list_double_equal_condition)
-
-add_library(dc_list_integer_equal_condition SHARED plugins/conditions/list_integer_equal.cpp)
-list(APPEND dc_condition_plugin_libs dc_list_integer_equal_condition)
-
-add_library(dc_list_string_equal_condition SHARED plugins/conditions/list_string_equal.cpp)
-list(APPEND dc_condition_plugin_libs dc_list_string_equal_condition)
+add_library(dc_compare_condition SHARED plugins/conditions/compare.cpp)
+list(APPEND dc_condition_plugin_libs dc_compare_condition)
 
 add_library(dc_moving_condition SHARED plugins/conditions/moving.cpp)
 list(APPEND dc_condition_plugin_libs dc_moving_condition)
 
 add_library(dc_same_as_previous_condition SHARED plugins/conditions/same_as_previous.cpp)
 list(APPEND dc_condition_plugin_libs dc_same_as_previous_condition)
-
-add_library(dc_string_match_condition SHARED plugins/conditions/string_match.cpp)
-list(APPEND dc_condition_plugin_libs dc_string_match_condition)
 
 # Measurement plugins
 add_library(dc_battery_measurement SHARED plugins/measurements/battery.cpp)
@@ -370,29 +334,18 @@ set(tests
   test_code_pose
   test_incident_releaser
   test_measurement_battery
-  test_measurement_bool_equal
   test_measurement_buffering
   test_measurement_camera
   test_measurement_cmd_vel
+  test_measurement_compare
   test_measurement_diagnostics
   test_measurement_distance_traveled
-  test_measurement_double_equal
-  test_measurement_double_inferior
-  test_measurement_double_superior
   test_measurement_driving_type
   test_measurement_dummy
-  test_measurement_exist
   test_measurement_fault
   test_measurement_gate_condition
-  test_measurement_integer_equal
-  test_measurement_integer_inferior
-  test_measurement_integer_superior
   test_measurement_intervention
   test_measurement_ip_camera
-  test_measurement_list_bool_equal
-  test_measurement_list_double_equal
-  test_measurement_list_integer_equal
-  test_measurement_list_string_equal
   test_measurement_manipulation
   test_measurement_map
   test_measurement_memory
@@ -414,7 +367,6 @@ set(tests
   test_measurement_slam_toolbox_quality
   test_measurement_speed
   test_measurement_storage
-  test_measurement_string_match
   test_measurement_tcp_health
   test_measurement_thermal
   test_measurement_uptime
