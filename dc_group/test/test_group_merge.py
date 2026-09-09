@@ -91,6 +91,77 @@ def test_merge_does_not_mutate_the_payloads_it_is_given():
     assert payloads[1]["data"] == {"free": 34.0}
 
 
+# --- payloads that are not objects ----------------------------------------------------------
+# A Measurement can publish any JSON value `json.loads` accepts, and `dict()` on the ones
+# that are not objects used to raise out of the Group node's callback, killing it (#514).
+# The rule, the same never-raise, never-drop one as #508: the value keeps its place under
+# its `group_key`, and only an object can carry envelope fields.
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ['"hi"', "42", "3.25", "true", "false", "null", "[1, 2]", "[]", '{"used": 12.0}'],
+)
+def test_every_json_payload_merges_without_raising(raw):
+    record = merge([payload("a", json.loads(raw))])
+
+    assert record["name"] == GROUP
+
+
+@pytest.mark.parametrize(
+    ("raw", "value"),
+    [
+        ('"hi"', "hi"),
+        ("42", 42),
+        ("3.25", 3.25),
+        ("true", True),
+        ("false", False),
+        ("null", None),
+        ("[1, 2]", [1, 2]),
+        ("[]", []),
+    ],
+)
+def test_a_non_object_payload_is_kept_as_it_is_under_its_group_key(raw, value):
+    record = merge([payload("a", json.loads(raw))])
+
+    assert record["a"] == value
+
+
+def test_an_array_payload_survives_the_flatten_round_trip():
+    record = merge([payload("a", {"samples": [1.0, 2.0]}), payload("b", [1.0, 2.0])])
+
+    assert record["a"] == {"samples": [1.0, 2.0]}
+    assert record["b"] == [1.0, 2.0]
+
+
+def test_an_array_payload_is_indexed_when_nesting_is_off():
+    record = merge([payload("a", [1.0, 2.0])], nested_data=False)
+
+    assert record == {"a.0": 1.0, "a.1": 2.0, "tags": ["dc"], "name": GROUP}
+
+
+def test_a_non_object_member_carries_no_envelope_field():
+    record = merge(
+        [
+            payload("a", "hi"),
+            payload("b", {"plugin": "memory", "free": 1.0, "incident_id": "incident-42"}),
+        ]
+    )
+
+    # Nothing to lift off a scalar: no plugin of its own in the list, and the incident id
+    # comes from the member that actually carried one.
+    assert record["plugins"] == ["memory"]
+    assert record["incident_id"] == "incident-42"
+
+
+def test_merge_does_not_mutate_a_non_object_payload():
+    data = [1.0, 2.0]
+
+    merge([payload("a", data)], tags=[""])
+
+    assert data == [1.0, 2.0]
+
+
 # --- exclude_keys -------------------------------------------------------------------------
 
 

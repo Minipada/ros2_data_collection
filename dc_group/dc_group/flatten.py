@@ -6,7 +6,8 @@
 `GroupServer` calls these from a synchroniser callback, where an exception takes the node
 down, so both directions are total: no payload a Measurement publishes makes them raise, and
 no shape they cannot express silently drops a value — a key that cannot be nested keeps its
-scalar and the key under it keeps its literal dotted key.
+scalar and the key under it keeps its literal dotted key. A payload that is not an object at
+all keeps its value under its `group_key` instead of being reshaped or dropped (#514).
 """
 
 from collections.abc import Iterable
