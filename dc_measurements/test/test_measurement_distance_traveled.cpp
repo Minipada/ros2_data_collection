@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 #include <gtest/gtest.h>
+#include <tf2/time.h>
+#include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <chrono>
 #include <thread>
@@ -77,6 +80,24 @@ protected:
     tf_broadcaster_->sendTransform(tf_msg);
   }
 
+  // Bounded poll of canTransform on a test-owned tf listener: sendTransform is fire-and-forget,
+  // so the fixture must not assume the frame is already there. Keeps re-broadcasting because a
+  // listener that subscribed after the first sendTransform would otherwise never get one.
+  void waitForMapFrame()
+  {
+    auto tf_wait_node = std::make_shared<rclcpp::Node>("distance_traveled_tf_wait");
+    tf2_ros::Buffer tf_buffer(tf_wait_node->get_clock());
+    tf2_ros::TransformListener tf_listener(tf_buffer, tf_wait_node, /*spin_thread=*/true);
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (!tf_buffer.canTransform("map", "base_link", tf2::TimePointZero))
+    {
+      ASSERT_LT(std::chrono::steady_clock::now(), deadline)
+          << "map->base_link never reached a tf buffer -- broadcast likely never left the fixture";
+      broadcastMapToBaseLink(3.0, 4.0);
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+  }
+
   std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
   rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
@@ -88,17 +109,22 @@ public:
 
 TEST_F(MeasurementDistanceTraveledTest, PublishesDistanceFromOriginOnFirstFix)
 {
+  // The plugin's timer starts at activation: have the frame in tf first, so the first collect()
+  // cycle is a real fix rather than an empty Record.
+  waitForMapFrame();
   startLifecycleNode();
 
   // last_x_/last_y_ start at (0, 0), so the first successful transform lookup reports the
-  // straight-line distance from the origin. Keep re-broadcasting and resetting until a Record
-  // carrying "distance_traveled" shows up (earlier collect() cycles may fire before the
-  // transform is in the tf buffer, publishing an empty "{}" Record instead). tf2_ros::
-  // TransformListener spins on its own background thread (MeasurementServer never passed it an
-  // explicit node/executor, so it defaults to one); a short sleep between spins here gives that
-  // thread real scheduling opportunities instead of this loop busy-spinning a core out from
+  // straight-line distance from the origin. Wait for the first Record carrying
+  // "distance_traveled" and assert on *that* one: with a static pose every later cycle reports
+  // 0.0 from the previous fix, and a loaded runner can let a second cycle queue up before the
+  // spin_some below runs, so the latest Record is not necessarily the one under test (#519).
+  // tf2_ros::TransformListener spins on its own background thread (MeasurementServer never passed
+  // it an explicit node/executor, so it defaults to one); a short sleep between spins here gives
+  // that thread real scheduling opportunities instead of this loop busy-spinning a core out from
   // under it.
   bool got_distance = false;
+  double first_distance = 0.0;
   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
   while (!got_distance)
   {
@@ -111,12 +137,13 @@ TEST_F(MeasurementDistanceTraveledTest, PublishesDistanceFromOriginOnFirstFix)
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
     if (callback_active_ && data_json_.contains("distance_traveled"))
     {
+      first_distance = data_json_["distance_traveled"].get<double>();
       got_distance = true;
     }
   }
 
   // sqrt(3^2 + 4^2)
-  EXPECT_NEAR(data_json_["distance_traveled"].get<double>(), 5.0, 1e-2);
+  EXPECT_NEAR(first_distance, 5.0, 1e-2);
 }
 
 TEST_F(MeasurementDistanceTraveledTest, NoTransformProducesNoPublish)
