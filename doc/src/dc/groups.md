@@ -17,11 +17,14 @@ A merged Record is an ordinary Record from there on: it carries the Tag derived 
 output topic, and a Destination receives it by listing that topic in `inputs`.
 
 Envelope fields do not get nested under a member's key: a member's `tags` is replaced by the
-Group's own, and its `incident_id` — the id a Measurement stamps on a Record it released as
-part of an [incident](./measurements.md) — is lifted to the merged Record's top level, where
-a `postgres` Destination has a column for it. Buried under `<group_key>.incident_id` it would
-simply be dropped by that sink. A member payload that is not a JSON object — a bare scalar or
-an array — has no such fields to lift, and is merged as it is under its `group_key`.
+Group's own, and the `incident_id` on its envelope — the id a Measurement stamps on a Record
+it released as part of an [incident](./measurements.md) — is carried onto the merged Record's
+own envelope (first non-empty wins, so a partial Record built from a mix of released and live
+members still carries it). The Bridge lifts that envelope field into the payload's top level,
+where a `postgres` Destination has a column for it; buried under `<group_key>.incident_id` it
+would simply be dropped by that sink. A member payload that is not a JSON object — a bare
+scalar or an array — has no such fields to lift, and is merged as it is under its
+`group_key`.
 
 ```admonish info
 The Group node is written in Python: allocating and passing a variable number of inputs to

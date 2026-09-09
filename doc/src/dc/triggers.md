@@ -51,7 +51,7 @@ publishes a `FlushEvent` on a configurable topic (`/dc/flush` by default) each t
                     ┌──────────▼───────────┐
                     │  Trigger (EdgeTrigger)│  false → true?
                     └──────────┬───────────┘
-                               │ FlushEvent { incident_id, stamp }
+                               │ FlushEvent { incident_id }
                     ┌──────────▼───────────┐
                     │      /dc/flush       │
                     └───┬──────────────┬───┘
@@ -95,17 +95,16 @@ Measurement side:
 | Field         | Type                     | Description                                                        |
 | ------------- | ------------------------ | ------------------------------------------------------------------ |
 | `incident_id` | string                   | UUID minted by the broadcast node, one per firing                  |
-| `stamp`       | builtin_interfaces/Time  | When the Trigger fired                                             |
 
 A Measurement adopts the `incident_id` it receives; it never generates its own. An event that
 arrives while a Measurement is already flushing, in post-roll, or in cooldown is ignored.
 
 ## `incident_id`
 
-`incident_id` is a top-level field of the Record envelope, beside `tags`, `run_id` and `name`
-— not a key nested inside the measurement's own data. Every Record and File released by one
-flush cycle carries the same value, so "everything from this one event" is a single query
-rather than a timestamp range reconstructed by hand:
+`incident_id` is a typed field of the `dc_interfaces/msg/StringStamped` Record envelope,
+beside `group_key` — not a key nested inside the measurement's own data. Every Record and
+File released by one flush cycle carries the same value, so "everything from this one event"
+is a single query rather than a timestamp range reconstructed by hand:
 
 ```sql
 SELECT * FROM dc_records WHERE incident_id = '3f2b1c7e-…' ORDER BY date;
@@ -113,12 +112,12 @@ SELECT * FROM dc_records WHERE incident_id = '3f2b1c7e-…' ORDER BY date;
 
 - A `postgres` Destination writes it to its own **`incident_id` column** — the column must
   exist in the table beforehand; see [Destinations](./destinations.md#incident_id).
-- A Record collected outside an incident carries no `incident_id` at all, leaving the column
+- A Record collected outside an incident carries an empty `incident_id`, leaving the column
   NULL.
-- A [Group](./groups.md) lifts a member's `incident_id` onto the merged Record the same way it
-  does `tags`, so grouping does not bury it.
-- Other Destination types need no configuration: `incident_id` is already a top-level key of
-  the JSON they receive.
+- A [Group](./groups.md) carries a member's envelope `incident_id` onto its own output
+  envelope, so grouping does not bury it.
+- Every Destination receives it as a top-level key of the JSON the Bridge ships: the Bridge
+  lifts the envelope field into the payload before handing a Record to its Destinations.
 
 ## Available plugins
 

@@ -5,10 +5,10 @@
 # #472 — see doc/src/dc/destinations.md's "Recipes: postgres, s3, console via
 # passthrough". `pgsql_records` in e2e_incident_params.yaml is now a `type: file` anchor
 # only; the real delivery to Postgres (including the `incident_id` column
-# run_incident.sh asserts on) happens here. `incident_id` needs no special handling from
-# dc_bridge: it is already a top-level key of every Record's JSON payload, so Vector's
-# `postgres` sink maps it straight onto the `incident_id` column the same as any other
-# column — see destinations.md's `incident_id` section for what changed with #472.
+# run_incident.sh asserts on) happens here. `incident_id` reaches the sink as a top-level
+# key of the Record payload — dc_bridge lifts it off the typed StringStamped envelope
+# (#506) — so Vector's `postgres` sink maps it onto the same-named column like any other
+# column.
 
 [sinks.pgsql_records_store]
 type = "postgres"

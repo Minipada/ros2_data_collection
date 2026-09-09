@@ -403,6 +403,7 @@ private:
     dc_interfaces::msg::StringStamped msg;
     msg.data = out.data;
     msg.group_key = out.group_key;
+    msg.incident_id = out.incident_id;
     msg.header.stamp = rclcpp::Time(out.stamp_ns);
     data_pub_->publish(msg);
   }

@@ -98,8 +98,6 @@ podman run -d --network host --name "$DC_C" \
   "$DC_IMAGE" >/dev/null
 
 # --- 1. armed means silent, live means flowing -------------------------------------------
-# Also where dc_records.incident_id is asserted to be a column at all: without it, nothing
-# below could mean what it claims to.
 log "waiting up to ${LIVE_TIMEOUT_SECONDS}s for the live Measurement's first rows, then asserting the armed one shipped nothing"
 python3 "$SCRIPT_DIR/verify_zero_loss.py" \
   --postgres-container "$PG_C" \

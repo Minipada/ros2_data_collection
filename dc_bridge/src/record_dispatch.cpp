@@ -53,6 +53,16 @@ void RecordDispatcher::dispatch(const IncomingRecord& incoming) const
 
   nlohmann::json payload = parse_payload(incoming.data);
 
+  // The incident_id rides the StringStamped envelope (#506), but everything downstream of
+  // the Bridge — the Uploader's payload and the Shipper's Record — only ever sees the
+  // payload JSON, so lift it to a top-level key: the same place the pre-#506 injection put
+  // it, and all a `postgres` sink maps onto a column. A payload that is not an object has
+  // no top level to receive it and keeps as it is.
+  if (!incoming.incident_id.empty() && payload.is_object())
+  {
+    payload["incident_id"] = incoming.incident_id;
+  }
+
   if (routing.enqueue_intent)
   {
     // Durable enqueue (#265): the intent lands on disk before this returns, so it

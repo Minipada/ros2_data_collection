@@ -105,7 +105,6 @@ void TriggerBroadcastNode::checkTrigger()
 
   dc_interfaces::msg::FlushEvent msg;
   msg.incident_id = mintIncidentId();
-  msg.stamp = get_clock()->now();
 
   RCLCPP_INFO_STREAM(get_logger(), "Trigger '" << trigger_id_ << "' fired, incident_id=" << msg.incident_id);
 

@@ -437,6 +437,7 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
           incoming.topic = topic;
           incoming.stamp_secs = msg.header.stamp.sec;
           incoming.stamp_nanos = msg.header.stamp.nanosec;
+          incoming.incident_id = msg.incident_id;
           incoming.data = msg.data;
           dispatcher_->dispatch(incoming);
         });

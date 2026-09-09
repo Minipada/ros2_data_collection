@@ -21,8 +21,9 @@ namespace dc_bridge
 {
 
 /// One Record arriving on a subscribed topic, as the ROS subscription hands it over: the
-/// topic, the header stamp, and the payload bytes verbatim. No rclcpp/dc_interfaces types
-/// — the Bridge node's subscription callback is the only thing that sees StringStamped.
+/// topic, the header stamp, the envelope's incident_id, and the payload bytes verbatim. No
+/// rclcpp/dc_interfaces types — the Bridge node's subscription callback is the only thing
+/// that sees StringStamped.
 struct IncomingRecord
 {
   std::string topic;
@@ -30,6 +31,8 @@ struct IncomingRecord
   /// is clamped to 0 when the forwarded Record is built.
   std::int32_t stamp_secs{ 0 };
   std::uint32_t stamp_nanos{ 0 };
+  /// The StringStamped envelope's incident_id (#506): empty outside an Incident.
+  std::string incident_id;
   std::string data;
 };
 

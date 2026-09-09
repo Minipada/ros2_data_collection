@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
 // The per-Record dispatch (#494): the enqueue-vs-forward decision, the parse-or-wrap
-// rule, and the stamp/envelope assembly, against a real intent-queue writer (the Bridge's
-// write half) and a loopback shipper ingest protocol peer — no ROS node.
+// rule, the stamp/envelope assembly, and the envelope incident_id's lift into the payload
+// (#506), against a real intent-queue writer (the Bridge's write half) and a loopback
+// shipper ingest protocol peer — no ROS node.
 #include "dc_bridge/record_dispatch.hpp"
 
 #include <arpa/inet.h>
@@ -42,12 +43,13 @@ std::filesystem::path unique_dir()
 }
 
 IncomingRecord make_incoming(const std::string& topic, const std::string& data, std::int32_t secs = 1700000000,
-                             std::uint32_t nanos = 123456789)
+                             std::uint32_t nanos = 123456789, const std::string& incident_id = std::string())
 {
   IncomingRecord in;
   in.topic = topic;
   in.stamp_secs = secs;
   in.stamp_nanos = nanos;
+  in.incident_id = incident_id;
   in.data = data;
   return in;
 }
@@ -379,6 +381,89 @@ TEST(RecordDispatch, ArrayPayloadIsNotCoercedIntoAnObject)
   ASSERT_EQ(message->type, msgpack::type::ARRAY);
   ASSERT_EQ(message->via.array.size, 3u);
   EXPECT_EQ(message->via.array.ptr[2].as<std::uint64_t>(), 3u);
+}
+
+// #506: the incident_id rides the StringStamped envelope; dispatch lifts it to a top-level
+// payload key, the only place the Destinations downstream of the Bridge can map it from.
+
+// The wire record's "incident_id" value, or nullptr when the record has no such key.
+const msgpack::object* wire_incident_id(const msgpack::object& record)
+{
+  if (record.type != msgpack::type::MAP)
+  {
+    return nullptr;
+  }
+  for (std::uint32_t i = 0; i < record.via.map.size; ++i)
+  {
+    if (record.via.map.ptr[i].key.as<std::string>() == "incident_id")
+    {
+      return &record.via.map.ptr[i].val;
+    }
+  }
+  return nullptr;
+}
+
+TEST(RecordDispatch, EnvelopeIncidentIdIsLiftedToAPayloadTopLevelKey)
+{
+  RecordDispatcher::Topics topics;
+  topics.records = { "/dc/measurement/uptime" };
+  Harness h(std::move(topics));
+
+  h.dispatcher->dispatch(make_incoming("/dc/measurement/uptime", R"({"uptime_s": 42})", 1700000000, 0, "incident-42"));
+
+  ASSERT_TRUE(h.peer->read_frame(std::chrono::seconds(2)));
+  msgpack::object_handle oh = unpack_frame(h.peer->frame());
+  const msgpack::object* incident_id = wire_incident_id(wire_record_map(oh.get()));
+  ASSERT_NE(incident_id, nullptr);
+  EXPECT_EQ(incident_id->as<std::string>(), "incident-42");
+}
+
+TEST(RecordDispatch, AnEmptyEnvelopeIncidentIdAddsNoPayloadKey)
+{
+  RecordDispatcher::Topics topics;
+  topics.records = { "/dc/measurement/uptime" };
+  Harness h(std::move(topics));
+
+  // The default make_incoming() incident_id: empty, as on every Record collected outside
+  // an incident. The Record must reach the Shipper exactly as it was published.
+  h.dispatcher->dispatch(make_incoming("/dc/measurement/uptime", R"({"uptime_s": 42})"));
+
+  ASSERT_TRUE(h.peer->read_frame(std::chrono::seconds(2)));
+  msgpack::object_handle oh = unpack_frame(h.peer->frame());
+  EXPECT_EQ(wire_incident_id(wire_record_map(oh.get())), nullptr);
+}
+
+TEST(RecordDispatch, EnvelopeIncidentIdReachesTheUploadIntentPayload)
+{
+  RecordDispatcher::Topics topics;
+  topics.files = { "/dc/camera/image" };
+  Harness h(std::move(topics));
+
+  h.dispatcher->dispatch(
+      make_incoming("/dc/camera/image", R"({"path": "/files/img.jpg"})", 1700000000, 0, "incident-42"));
+
+  ASSERT_EQ(h.queue->size(), 1u);
+  IntentQueue reader(h.queue_dir.string());
+  const Intent intent = reader.pending().at(0);
+  EXPECT_EQ(intent.payload, json::parse(R"({"path": "/files/img.jpg", "incident_id": "incident-42"})"));
+}
+
+TEST(RecordDispatch, ANonObjectPayloadCarriesNoIncidentIdKey)
+{
+  RecordDispatcher::Topics topics;
+  topics.records = { "/dc/measurement/array" };
+  Harness h(std::move(topics));
+
+  // No top level to receive the key: the payload keeps as it is, wrapped, not coerced
+  // into an object for the id's sake.
+  h.dispatcher->dispatch(make_incoming("/dc/measurement/array", "[1, 2, 3]", 1700000000, 0, "incident-42"));
+
+  ASSERT_TRUE(h.peer->read_frame(std::chrono::seconds(2)));
+  msgpack::object_handle oh = unpack_frame(h.peer->frame());
+  const msgpack::object* message = wire_message_value(wire_record_map(oh.get()));
+  ASSERT_NE(message, nullptr);
+  ASSERT_EQ(message->type, msgpack::type::ARRAY);
+  EXPECT_EQ(wire_incident_id(wire_record_map(oh.get())), nullptr);
 }
 
 TEST(RecordDispatch, NegativeStampSecondsClampToZeroAndNanosecondsSurvive)

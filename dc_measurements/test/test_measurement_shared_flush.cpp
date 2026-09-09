@@ -49,6 +49,7 @@ protected:
   void onRecord(const std::string& measurement, const dc_interfaces::msg::StringStamped& msg) override
   {
     received_[measurement].push_back(msg.data);
+    incident_ids_[measurement].push_back(msg.incident_id);
   }
 
   void declareMeasurement(const std::string& name, const int polling_interval)
@@ -67,14 +68,13 @@ protected:
     flush_pub_->publish(flush_msg);
   }
 
-  // How many of this Measurement's Records carry exactly this incident_id.
+  // How many of this Measurement's Records carry exactly this incident_id on the envelope.
   int countTaggedWith(const std::string& name, const std::string& incident_id)
   {
     int count = 0;
-    for (const auto& data : received_[name])
+    for (const auto& id : incident_ids_[name])
     {
-      nlohmann::json data_json = nlohmann::json::parse(data);
-      if (data_json.contains("incident_id") && data_json["incident_id"].get<std::string>() == incident_id)
+      if (id == incident_id)
       {
         count++;
       }
@@ -97,9 +97,9 @@ protected:
   int countCarryingAnIncident(const std::string& name)
   {
     int count = 0;
-    for (const auto& data : received_[name])
+    for (const auto& id : incident_ids_[name])
     {
-      if (nlohmann::json::parse(data).contains("incident_id"))
+      if (!id.empty())
       {
         count++;
       }
@@ -111,6 +111,7 @@ protected:
 
 public:
   std::map<std::string, std::vector<std::string>> received_;
+  std::map<std::string, std::vector<std::string>> incident_ids_;
 };
 
 // Acceptance criterion: a single FlushEvent releases the buffered window of every Measurement

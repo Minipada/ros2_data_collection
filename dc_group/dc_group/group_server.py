@@ -71,12 +71,20 @@ class GroupServer(Node):
         """
         collected_time = self.get_clock().now()
         parsed_payloads = []
+        incident_id = ""
         for measurement in measurements:
             # https://github.com/ros2/rosidl_python/blob/0f5c8f360be92566ad86f4b29f3db1febfca2242/rosidl_generator_py/resource/_msg.py.em#L187-L189
             measurement_dict = message_converter.convert_ros_message_to_dictionary(measurement)
             parsed_payloads.append(
                 {"group_key": measurement_dict["group_key"], "data": json.loads(measurement.data)}
             )
+            # `incident_id` rides the envelope (#506), not the payload: one FlushEvent mints
+            # one id for every Measurement listening, so the members of a released window all
+            # carry the same one — first non-empty wins, and a partial Record built from a mix
+            # of released and live members still carries it. Empty outside an incident, so a
+            # Record collected outside one leaves the column NULL rather than writing "".
+            if not incident_id and measurement.incident_id:
+                incident_id = measurement.incident_id
 
         data_dict = merge_records(
             parsed_payloads,
@@ -90,6 +98,7 @@ class GroupServer(Node):
         msg.data = json.dumps(data_dict)
         msg.header.stamp = collected_time.to_msg()
         msg.group_key = self.params[group]["group_key"]
+        msg.incident_id = incident_id
         self.publishers_[group].publish(msg)
 
     def init_parameters(self):

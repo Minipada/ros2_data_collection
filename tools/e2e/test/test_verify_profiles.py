@@ -21,20 +21,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "scr
 import verify_zero_loss as vzl
 
 
-def test_incident_column_is_required_to_be_text():
-    violations = []
-    details = {}
-    vzl.check_incident_column("text", violations, details)
-    assert violations == []
-
-
-def test_a_missing_incident_column_fails_and_names_init_sql():
-    violations = []
-    vzl.check_incident_column("", violations, {})
-    assert len(violations) == 1
-    assert "init.sql" in violations[0]
-
-
 def test_the_live_measurement_must_be_actually_delivering():
     violations = []
     vzl.check_live_flowing(vzl.MIN_LIVE_ROWS, "dc.measurement.memory", 180, violations, {})

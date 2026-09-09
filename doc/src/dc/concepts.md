@@ -72,6 +72,8 @@ The `StringStamped` message carries:
 1. **header**: ROS timestamp as `std_msgs/Header`
 2. **data**: the Record, as a JSON string
 3. **group_key**: the key this Record is nested under when merged into a Group
+4. **incident_id**: the [Incident](#triggers-and-incidents) a released Record belongs to;
+   empty outside an incident
 
 The `data` string **must** be valid JSON:
 

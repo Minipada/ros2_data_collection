@@ -44,12 +44,14 @@ enum class LogLevel
   Error,
 };
 
-/// One Record on its way out of the pipeline: the finished payload, the Group merge key, and the
-/// collection timestamp in nanoseconds since the epoch.
+/// One Record on its way out of the pipeline: the finished payload, the Group merge key, the
+/// collection timestamp in nanoseconds since the epoch, and the Incident it belongs to (empty
+/// outside one).
 struct RecordOut
 {
   std::string data;
   std::string group_key;
+  std::string incident_id;
   std::int64_t stamp_ns{ 0 };
 };
 

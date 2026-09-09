@@ -113,7 +113,7 @@ void MeasurementCore::publish(const std::string& data, const std::string& group_
 
   if (publish_gate_.offer(conditionSetOn(conditions)))
   {
-    publish_(RecordOut{ enriched, group_key, stamp_ns });
+    publish_(RecordOut{ enriched, group_key, {}, stamp_ns });
   }
 }
 
@@ -448,20 +448,13 @@ std::filesystem::path MeasurementCore::scratchDir() const
 void MeasurementCore::publishIncidentRecord(const std::string& record_json, const TimePoint& stamp,
                                             const std::string& incident_id)
 {
+  // The Incident rides the typed envelope field, not a key injected into the payload (#506): no
+  // serialize / re-parse / re-dump round trip, and the payload stays pure member data.
   RecordOut out;
+  out.data = record_json;
   out.group_key = config_.group_key;
+  out.incident_id = incident_id;
   out.stamp_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(stamp.time_since_epoch()).count();
-  try
-  {
-    json data_json = json::parse(record_json);
-    data_json["incident_id"] = incident_id;
-    out.data = data_json.dump(-1, ' ', true);
-  }
-  catch (json::parse_error& e)
-  {
-    log_(LogLevel::Error, "Error parsing Record JSON while releasing incident " + incident_id + ": " + record_json);
-    return;
-  }
   publish_(out);
 }
 
