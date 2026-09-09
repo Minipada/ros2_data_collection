@@ -69,9 +69,10 @@ std::chrono::system_clock::time_point enqueued_at_from_id(const std::string& id)
   }
 }
 
-}  // namespace
-
-std::vector<std::string> IntentQueue::list_json_names(const std::string& dir)
+// Every "*.json" filename currently on disk under `dir`, sorted oldest-first (ids sort
+// lexicographically in enqueue order — see make_id() above). Both halves of the queue
+// share it: the reader loads entries from it, the writer counts it.
+std::vector<std::string> list_json_names(const std::string& dir)
 {
   std::vector<std::string> names;
   for (const auto& e : std::filesystem::directory_iterator(dir))
@@ -84,6 +85,57 @@ std::vector<std::string> IntentQueue::list_json_names(const std::string& dir)
   }
   std::sort(names.begin(), names.end());
   return names;
+}
+
+// The one write path both halves share — IntentQueueWriter's enqueue() and IntentQueue's
+// are the same bytes on disk, which is what keeps the format (#265) single-owner. `seq`
+// is the caller's own per-instance counter (make_id() needs it for uniqueness within one
+// process).
+std::string write_intent_file(const std::string& dir, std::uint64_t seq, const std::string& tag,
+                              const nlohmann::json& payload)
+{
+  const std::uint64_t now_ns = static_cast<std::uint64_t>(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+  const std::string id = make_id(now_ns, seq);
+
+  nlohmann::json doc{ { "version", 1 }, { "tag", tag }, { "timestamp", iso8601_now() }, { "payload", payload } };
+  const std::string final_path = dir + "/" + id;
+  const std::string tmp_path = final_path + ".tmp";
+  {
+    std::ofstream out(tmp_path, std::ios::binary | std::ios::trunc);
+    out << doc.dump();
+  }
+  // No fsync (FLB `storage.sync normal` parity) — the rename itself is what makes the
+  // write crash-atomic; losing the last few milliseconds of writes on a hard power loss
+  // is an accepted, pre-existing tradeoff this queue doesn't change.
+  if (std::rename(tmp_path.c_str(), final_path.c_str()) != 0)
+  {
+    throw std::runtime_error("failed to rename intent queue entry into place: " + final_path);
+  }
+  return id;
+}
+
+}  // namespace
+
+std::string intent_queue_dir(const std::string& uploader_data_dir)
+{
+  return (std::filesystem::path(uploader_data_dir) / "queue" / "upload").string();
+}
+
+IntentQueueWriter::IntentQueueWriter(std::string dir) : dir_(std::move(dir))
+{
+  std::filesystem::create_directories(dir_);
+}
+
+std::string IntentQueueWriter::enqueue(const std::string& tag, const nlohmann::json& payload)
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  return write_intent_file(dir_, seq_++, tag, payload);
+}
+
+std::size_t IntentQueueWriter::size() const
+{
+  return list_json_names(dir_).size();
 }
 
 std::optional<IntentQueue::Entry> IntentQueue::load_entry(const std::string& dir, const std::string& name)
@@ -166,36 +218,18 @@ std::string IntentQueue::path_for(const std::string& id) const
 
 std::string IntentQueue::enqueue(const std::string& tag, const nlohmann::json& payload)
 {
-  std::uint64_t now_ns = static_cast<std::uint64_t>(
-      std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
   std::uint64_t seq;
   {
     std::lock_guard<std::mutex> lock(mutex_);
     seq = seq_++;
   }
-  const std::string id = make_id(now_ns, seq);
-
-  nlohmann::json doc{ { "version", 1 }, { "tag", tag }, { "timestamp", iso8601_now() }, { "payload", payload } };
-  const std::string final_path = path_for(id);
-  const std::string tmp_path = final_path + ".tmp";
-  {
-    std::ofstream out(tmp_path, std::ios::binary | std::ios::trunc);
-    out << doc.dump();
-  }
-  // No fsync (FLB `storage.sync normal` parity) — the rename itself is what makes the
-  // write crash-atomic; losing the last few milliseconds of writes on a hard power loss
-  // is an accepted, pre-existing tradeoff this queue doesn't change.
-  if (std::rename(tmp_path.c_str(), final_path.c_str()) != 0)
-  {
-    throw std::runtime_error("failed to rename intent queue entry into place: " + final_path);
-  }
+  const std::string id = write_intent_file(dir_, seq, tag, payload);
 
   std::lock_guard<std::mutex> lock(mutex_);
   Entry entry;
   entry.tag = tag;
   entry.payload = payload;
-  entry.enqueued_at =
-      std::chrono::system_clock::time_point(std::chrono::nanoseconds(static_cast<std::int64_t>(now_ns)));
+  entry.enqueued_at = enqueued_at_from_id(id);
   entries_.emplace(id, std::move(entry));
   order_.push_back(id);
   return id;

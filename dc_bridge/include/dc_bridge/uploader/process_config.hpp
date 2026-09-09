@@ -56,7 +56,8 @@ struct UploaderProcessConfig
   UploaderConfig uploader_config{ std::string(), false };
 
   /// The durable upload intent queue directory (DC_UPLOADER_QUEUE_DIR) — the Bridge
-  /// writes intents here; this process reads, acks, and replays them.
+  /// writes intents here; this process reads, acks, and replays them. dc_bringup sets it
+  /// to intent_queue_dir(uploader.data_dir), the path the Bridge itself derives.
   std::string queue_dir;
 
   /// Sanity-checked for existence at process startup only (DC_UPLOADER_FILES_DIR):

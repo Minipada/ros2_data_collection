@@ -274,3 +274,49 @@ TEST(IntentQueue, RecordsWithoutFilesNeverLingerInSteadyState)
   EXPECT_TRUE(q.empty());
   (void)id;
 }
+
+TEST(IntentQueue, QueueDirIsDerivedFromTheUploaderDataDirInOnePlace)
+{
+  EXPECT_EQ(intent_queue_dir("/data/uploader"), "/data/uploader/queue/upload");
+  EXPECT_EQ(intent_queue_dir("/data/uploader/"), "/data/uploader/queue/upload");
+}
+
+// #505: the Bridge holds the write half only. Its constructor loads nothing and its
+// size() is a count of what is on disk — so it stays true while the reader process acks
+// in its own address space, which an in-memory count copied at construction never was.
+TEST(IntentQueue, WriterCountsOnDiskIntentsItNeverLoaded)
+{
+  Fixture fx;
+  {
+    IntentQueue q(fx.dir.string());
+    q.enqueue("dc.measurement.camera", json{ { "seq", 1 } });
+    q.enqueue("dc.measurement.camera", json{ { "seq", 2 } });
+  }
+
+  IntentQueueWriter writer(fx.dir.string());
+  EXPECT_EQ(writer.size(), 2u);
+
+  IntentQueue reader(fx.dir.string());
+  reader.ack(reader.next_ready()->id);
+  EXPECT_EQ(writer.size(), 1u);
+}
+
+TEST(IntentQueue, WriterEnqueueIsVisibleToAReaderRescan)
+{
+  // The production split (#446): a Bridge process's IntentQueueWriter appends, a
+  // separate dc_uploader process's IntentQueue discovers the intent by rescanning.
+  Fixture fx;
+  IntentQueueWriter writer(fx.dir.string());
+  IntentQueue reader(fx.dir.string());
+  EXPECT_TRUE(reader.empty());
+
+  const std::string id = writer.enqueue("dc.measurement.camera", json{ { "name", "camera" } });
+  EXPECT_EQ(writer.size(), 1u);
+  EXPECT_TRUE(reader.empty());  // not yet rescanned
+
+  EXPECT_EQ(reader.rescan(), 1u);
+  auto ready = reader.next_ready();
+  ASSERT_TRUE(ready.has_value());
+  EXPECT_EQ(ready->id, id);
+  EXPECT_EQ(ready->payload["name"], "camera");
+}

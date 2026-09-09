@@ -163,6 +163,7 @@ enum class RenderErrorKind
   InvalidReceives,
   FilesRequireObjectStorage,
   FilesDestinationInShipperConfig,
+  TooManyFilesDestinations,
   UnexpectedDestinationKind,
   InvalidTimeFormat,
   MissingField,
@@ -243,6 +244,13 @@ VectorParams vector_from_raw(const std::string& name, const RawDestinationParams
 /// Validates and builds one Destination from the flat parameters ROS declares for it.
 Destination destination_from_raw(const std::string& name, const std::string& type_str, const std::string& receives_str,
                                  std::vector<std::string> inputs, const RawDestinationParams& raw);
+
+/// At most one `receives: files` Destination per deployment (#505): the upload intent
+/// queue is one store behind one dc_uploader process, and that process is configured with
+/// exactly one object-storage endpoint (DC_UPLOADER_STORAGE_NAME). Enforced here, beside
+/// destination_from_raw's per-Destination validation, rather than only in dc_bringup's
+/// launch translation. Throws RenderError naming every offending Destination.
+void validate_files_destinations(const std::vector<Destination>& files_destinations);
 
 /// Thrown by expand_env for an undefined variable reference.
 class ExpandError : public std::runtime_error

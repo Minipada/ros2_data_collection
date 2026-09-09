@@ -538,6 +538,21 @@ Destination destination_from_raw(const std::string& name, const std::string& typ
   return dest;
 }
 
+void validate_files_destinations(const std::vector<Destination>& files_destinations)
+{
+  if (files_destinations.size() <= 1)
+  {
+    return;
+  }
+  std::string names;
+  for (const auto& dest : files_destinations)
+  {
+    names += (names.empty() ? "" : ", ") + dest.name;
+  }
+  throw RenderError(RenderErrorKind::TooManyFilesDestinations,
+                    "at most one `receives: files` destination is supported per deployment; found " + names, names);
+}
+
 std::string expand_env(const std::string& input,
                        const std::function<std::optional<std::string>(const std::string&)>& lookup)
 {
