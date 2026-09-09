@@ -41,6 +41,7 @@
 #include "dc_bridge/raw_config.hpp"
 #include "dc_bridge/raw_subscriptions.hpp"
 #include "dc_bridge/readiness.hpp"
+#include "dc_bridge/record_dispatch.hpp"
 #include "dc_bridge/render.hpp"
 #include "dc_bridge/supervisor.hpp"
 #include "dc_bridge/uploader/file_status_tag.hpp"
@@ -84,6 +85,10 @@ private:
   // dc_uploader process (#446) owns reading, replaying, uploading, and emitting status
   // Records — see docs/adr/0014-uploader-runs-as-its-own-process.md.
   std::unique_ptr<uploader::IntentQueue> intent_queue_;
+
+  // Per-Record dispatch (enqueue vs. forward, per topic). Borrows intent_queue_, the
+  // Forwarder and its mutex above; declared after them so it dies first.
+  std::unique_ptr<RecordDispatcher> dispatcher_;
 
   // Raw / generic-subscription mode (#227) — created only when `raw.enabled` is true.
   // Its Records go out through the same Forwarder as the Measurement Records above,

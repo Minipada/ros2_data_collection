@@ -13,13 +13,12 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <optional>
-#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 
 #include "dc_bridge/atomic_write.hpp"
-#include "dc_bridge/topic_config.hpp"
+#include "dc_bridge/record_dispatch.hpp"
 #include "dc_bridge/vector_binary.hpp"
 
 namespace dc_bridge
@@ -408,77 +407,36 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
   prober_thread_ = std::thread(&BridgeNode::run_prober, this, vector_host, forward_port);
 
   // Topics feeding Records destinations (forwarded to Vector) vs. topics feeding files
-  // destinations (scanned for File references, whose intents the Bridge writes for the
-  // separate dc_uploader process to read, #446). A topic can be in both.
-  std::set<std::string> records_topics;
+  // destinations (whose Records the Bridge writes as upload intents for the separate
+  // dc_uploader process to read, #446). A topic can be in both.
+  RecordDispatcher::Topics topics;
   for (const auto& d : render_config.destinations)
   {
-    for (const auto& t : d.inputs)
-    {
-      records_topics.insert(t);
-    }
+    topics.records.insert(topics.records.end(), d.inputs.begin(), d.inputs.end());
   }
-  std::set<std::string> files_topics;
   for (const auto& d : files_destinations)
   {
-    for (const auto& t : d.inputs)
-    {
-      files_topics.insert(t);
-    }
+    topics.files.insert(topics.files.end(), d.inputs.begin(), d.inputs.end());
   }
 
+  RecordDispatcher::Deps dispatch_deps;
+  dispatch_deps.intent_queue = intent_queue_.get();
+  dispatch_deps.forwarder = forwarder_.get();
+  dispatch_deps.forwarder_mutex = &forwarder_mutex_;
+  dispatch_deps.on_warning = [this](const std::string& msg) { RCLCPP_WARN(this->get_logger(), "%s", msg.c_str()); };
+  dispatcher_ = std::make_unique<RecordDispatcher>(std::move(topics), std::move(dispatch_deps));
+
   // Subscribe to the union, once each.
-  std::set<std::string> subscribed = records_topics;
-  subscribed.insert(files_topics.begin(), files_topics.end());
-
-  for (const auto& topic : subscribed)
+  for (const auto& topic : dispatcher_->subscribed_topics())
   {
-    const std::string tag = TopicConfig::derive_tag(topic);
-    const bool forward_to_vector = records_topics.count(topic) > 0;
-    const bool feeds_uploader = files_topics.count(topic) > 0;
     auto sub = this->create_subscription<dc_interfaces::msg::StringStamped>(
-        topic, rclcpp::QoS(10),
-        [this, tag, forward_to_vector, feeds_uploader](const dc_interfaces::msg::StringStamped& msg) {
-          nlohmann::json payload;
-          try
-          {
-            payload = nlohmann::json::parse(msg.data);
-          }
-          catch (const nlohmann::json::exception&)
-          {
-            payload = nlohmann::json(msg.data);
-          }
-
-          if (feeds_uploader)
-          {
-            // Durable enqueue (#265): the intent lands on disk before this callback
-            // returns, so it survives a Bridge crash/restart (or the separate dc_uploader
-            // process, #446, never having been up at all). dc_uploader's own poll loop
-            // picks it up by rescanning the queue directory; there is no in-process
-            // wake-up signal to a different OS process.
-            intent_queue_->enqueue(tag, payload);
-          }
-
-          if (forward_to_vector)
-          {
-            Record record;
-            record.tag = tag;
-            // Both halves of the ROS stamp. The nanoseconds used to be dropped here,
-            // which rounded every Record to the second and left a Measurement polling
-            // faster than 1 Hz with Records indistinguishable in time (#308).
-            record.timestamp_secs = static_cast<std::uint64_t>(std::max<std::int32_t>(0, msg.header.stamp.sec));
-            record.timestamp_nanos = msg.header.stamp.nanosec;
-            record.payload = std::move(payload);
-            try
-            {
-              std::lock_guard<std::mutex> lock(forwarder_mutex_);
-              forwarder_->send(record);
-            }
-            catch (const ForwarderError& e)
-            {
-              RCLCPP_WARN(this->get_logger(), "failed to forward record on tag '%s': %s", tag.c_str(), e.what());
-            }
-          }
+        topic, rclcpp::QoS(10), [this, topic](const dc_interfaces::msg::StringStamped& msg) {
+          IncomingRecord incoming;
+          incoming.topic = topic;
+          incoming.stamp_secs = msg.header.stamp.sec;
+          incoming.stamp_nanos = msg.header.stamp.nanosec;
+          incoming.data = msg.data;
+          dispatcher_->dispatch(incoming);
         });
     subscriptions_.push_back(sub);
   }
