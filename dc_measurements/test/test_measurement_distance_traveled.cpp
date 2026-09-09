@@ -32,6 +32,21 @@ protected:
     ms_node_->declare_parameter("distance_traveled.transform_timeout", 0.5);
   }
 
+  // The first successful transform lookup reports the origin distance; every later poll reports
+  // 0.0 (the pose didn't move between polls). Records from several polls can be queued by the
+  // time a wait loop spins them, so the newest one is not necessarily the origin one (#519) --
+  // latch the first key-bearing value here, where each Record is still the only one the loop
+  // has seen from its poll.
+  void onRecord(const std::string& measurement, const dc_interfaces::msg::StringStamped& msg) override
+  {
+    MeasurementBench::onRecord(measurement, msg);
+    if (!first_distance_observed_ && data_json_.contains("distance_traveled"))
+    {
+      first_distance_ = data_json_["distance_traveled"].get<double>();
+      first_distance_observed_ = true;
+    }
+  }
+
   void broadcastMapToBaseLink(double x, double y)
   {
     geometry_msgs::msg::TransformStamped tf_msg;
@@ -63,6 +78,8 @@ protected:
   }
 
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+  double first_distance_{ 0.0 };
+  bool first_distance_observed_{ false };
 };
 
 TEST_F(MeasurementDistanceTraveledTest, PublishesDistanceFromOriginOnFirstFix)
@@ -75,31 +92,23 @@ TEST_F(MeasurementDistanceTraveledTest, PublishesDistanceFromOriginOnFirstFix)
   startLifecycleNode();
 
   // last_x_/last_y_ start at (0, 0), so the first successful transform lookup reports the
-  // straight-line distance from the origin. Assert on the *first* Record carrying
-  // "distance_traveled": with a static pose every later cycle reports 0.0 from the previous
-  // fix, and a loaded runner can let a second cycle queue up before the spin runs, so the
-  // latest Record is not necessarily the one under test (#519). Keep re-broadcasting inside the
-  // wait: earlier collect() cycles may fire before the transform is in the tf buffer, publishing
-  // an empty "{}" Record (no distance key) instead. tf2_ros::TransformListener spins on its own
-  // background thread (MeasurementServer never passed it an explicit node/executor, so it
-  // defaults to one); the sleep between spins in spinUntil gives that thread real scheduling
-  // opportunities instead of this loop busy-spinning a core out from under it.
-  double first_distance = 0.0;
+  // straight-line distance from the origin, and every later poll reports 0.0 (static pose).
+  // Assert on the value onRecord() latched (see there for why the newest Record isn't the one
+  // under test). Keep re-broadcasting inside the wait so a tf listener that subscribed late
+  // still gets a transform. tf2_ros::TransformListener spins on its own background thread
+  // (MeasurementServer never passed it an explicit node/executor, so it defaults to one); the
+  // sleep between spins in spinUntil gives that thread real scheduling opportunities instead of
+  // this loop busy-spinning a core out from under it.
   ASSERT_TRUE(spinUntil(
       [&] {
         broadcastMapToBaseLink(3.0, 4.0);
-        if (callback_active_ && data_json_.contains("distance_traveled"))
-        {
-          first_distance = data_json_["distance_traveled"].get<double>();
-          return true;
-        }
-        return false;
+        return first_distance_observed_;
       },
       10000))
       << "never observed a Record with \"distance_traveled\" -- tf broadcast likely never reached the buffer";
 
   // sqrt(3^2 + 4^2)
-  EXPECT_NEAR(first_distance, 5.0, 1e-2);
+  EXPECT_NEAR(first_distance_, 5.0, 1e-2);
 }
 
 TEST_F(MeasurementDistanceTraveledTest, NoTransformProducesNoPublish)
