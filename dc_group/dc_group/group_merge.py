@@ -6,6 +6,10 @@
 Plain dicts in, plain dict out: no `rclpy`, no clock, no messages. `GroupServer` converts
 at the edges and hands over already-parsed payloads, so these rules are testable without a
 ROS install.
+
+A member payload is whatever `json.loads` made of its Record — object, array, or bare
+scalar (#514). Only an object can carry the envelope fields, so a non-object member is
+merged as its value under its `group_key`, the same never-raise, never-drop rule as #508.
 """
 
 from fnmatch import fnmatchcase
@@ -52,7 +56,8 @@ def merge_records(
     Args:
         parsed_payloads (list): One entry per member Record, ordered by the input it came
             from: `{"group_key": <the member's group_key>, "data": <its parsed payload>}`.
-            Two members sharing a `group_key` collapse into the last one's fields
+            Two members sharing a `group_key` collapse into the last one's fields. A `data`
+            that is not an object — a bare scalar or an array — is merged as it is
         group (str): Name of the group being published
         group_cfg (dict): The group's parameters — `exclude_keys`, `tags`, `nested_data`
             and `include_group_name`
@@ -68,21 +73,29 @@ def merge_records(
     plugins_list = []
     incident_id = None
     for payload in parsed_payloads:
-        m_data = dict(payload["data"])
-        m_data.pop("tags", None)
-        # `incident_id` is an envelope field, not measurement data (#291): merged under a
-        # member's `group_key` it would become `<group_key>.incident_id`, which is no
-        # column any Destination table has and so is silently dropped by the Postgres
-        # sink. Lifted to the merged Record's top level instead, the same way `tags` is,
-        # so a grouped incident stays queryable as `WHERE incident_id = ...`. One
-        # FlushEvent mints one id for every Measurement listening, so the members of a
-        # released window all carry the same one — first non-null wins, and a partial
-        # Record built from a mix of released and live members still carries it.
-        member_incident_id = m_data.pop("incident_id", None)
-        if incident_id is None:
-            incident_id = member_incident_id
-        if collect_plugins and "plugin" in m_data:
-            plugins_list.append(m_data["plugin"])
+        m_data = payload["data"]
+        if isinstance(m_data, dict):
+            # A copy: the pops below must not reach back into the caller's payload.
+            m_data = dict(m_data)
+            m_data.pop("tags", None)
+            # `incident_id` is an envelope field, not measurement data (#291): merged under a
+            # member's `group_key` it would become `<group_key>.incident_id`, which is no
+            # column any Destination table has and so is silently dropped by the Postgres
+            # sink. Lifted to the merged Record's top level instead, the same way `tags` is,
+            # so a grouped incident stays queryable as `WHERE incident_id = ...`. One
+            # FlushEvent mints one id for every Measurement listening, so the members of a
+            # released window all carry the same one — first non-null wins, and a partial
+            # Record built from a mix of released and live members still carries it.
+            member_incident_id = m_data.pop("incident_id", None)
+            if incident_id is None:
+                incident_id = member_incident_id
+            if collect_plugins and "plugin" in m_data:
+                plugins_list.append(m_data["plugin"])
+        # else: a payload that is not an object (#514) — a bare scalar or an array. It has
+        # no `tags`, `incident_id` or `plugin` to lift, and `dict()` on it is what used to
+        # raise from the callback. It goes under the member's `group_key` as it is: the
+        # same never-raise, never-drop rule as #508, and the flatten round trip below
+        # already brings a scalar or an array back unchanged.
         data_dict = data_dict | flatten(
             nested_dict={payload["group_key"]: m_data}, separator=SEPARATOR
         )

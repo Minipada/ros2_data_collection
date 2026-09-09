@@ -20,7 +20,8 @@ Envelope fields do not get nested under a member's key: a member's `tags` is rep
 Group's own, and its `incident_id` — the id a Measurement stamps on a Record it released as
 part of an [incident](./measurements.md) — is lifted to the merged Record's top level, where
 a `postgres` Destination has a column for it. Buried under `<group_key>.incident_id` it would
-simply be dropped by that sink.
+simply be dropped by that sink. A member payload that is not a JSON object — a bare scalar or
+an array — has no such fields to lift, and is merged as it is under its `group_key`.
 
 ```admonish info
 The Group node is written in Python: allocating and passing a variable number of inputs to
