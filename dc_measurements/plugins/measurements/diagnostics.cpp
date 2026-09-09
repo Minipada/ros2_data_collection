@@ -93,19 +93,23 @@ void Diagnostics::diagnosticsCb(const diagnostic_msgs::msg::DiagnosticArray& msg
   json data_json;
   data_json["statuses"] = statuses;
 
-  dc_interfaces::msg::StringStamped pub_msg;
-  pub_msg.group_key = group_key_;
-  pub_msg.data = data_json.dump(-1, ' ', true);
-  auto node = getNode();
-  pub_msg.header.stamp = node->get_clock()->now();
-  last_data_ = pub_msg;
+  // Keep-only-the-latest is the shape here, so a displaced value is by design, not a drop to
+  // warn about.
+  latest_statuses_.push({ std::move(data_json), getNode()->get_clock()->now() });
 }
 
 dc_interfaces::msg::StringStamped Diagnostics::collect()
 {
-  dc_interfaces::msg::StringStamped msg = last_data_;
-  last_data_ = dc_interfaces::msg::StringStamped();
+  dc_interfaces::msg::StringStamped msg;
 
+  const auto statuses = latest_statuses_.pop();
+  if (!statuses)
+  {
+    return msg;
+  }
+  msg.group_key = group_key_;
+  msg.header.stamp = statuses->second;
+  msg.data = statuses->first.dump(-1, ' ', true);
   return msg;
 }
 

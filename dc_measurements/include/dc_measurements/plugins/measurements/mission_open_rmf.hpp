@@ -12,8 +12,8 @@
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
 #include "dc_measurements/mission_record_json.hpp"
-#include "dc_measurements/pending_record_queue.hpp"
 #include "dc_measurements/plugins/measurements/mission_open_rmf_core.hpp"
+#include "dc_measurements/source_adapter.hpp"
 #include "dc_util/node_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
 
@@ -63,7 +63,7 @@ private:
   // Records wait here for a poll to carry them out, one per poll, so they travel the same publish
   // path (Conditions, buffering, Group) as every other Record -- same shape as
   // MissionNav2ThroughPoses::pending_records_.
-  PendingRecordQueue pending_records_;
+  SourceAdapter<std::pair<json, rclcpp::Time>> pending_records_{ 64 };
 
 protected:
   void onConfigure() override;

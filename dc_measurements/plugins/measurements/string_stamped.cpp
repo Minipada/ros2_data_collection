@@ -24,7 +24,9 @@ void StringStamped::onConfigure()
 
 void StringStamped::dataCb(const dc_interfaces::msg::StringStamped& msg)
 {
-  last_data_ = msg;
+  // Keep-only-the-latest is the shape here, so a displaced Record is by design, not a drop to
+  // warn about.
+  latest_record_.push(msg);
   if (!timer_based_)
   {
     publishFromMsg(msg);
@@ -33,9 +35,8 @@ void StringStamped::dataCb(const dc_interfaces::msg::StringStamped& msg)
 
 dc_interfaces::msg::StringStamped StringStamped::collect()
 {
-  dc_interfaces::msg::StringStamped msg = last_data_;
-  last_data_ = dc_interfaces::msg::StringStamped();
-  return msg;
+  const auto cached = latest_record_.pop();
+  return cached ? *cached : dc_interfaces::msg::StringStamped{};
 }
 
 }  // namespace dc_measurements

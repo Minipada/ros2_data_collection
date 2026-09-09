@@ -142,7 +142,7 @@ void MissionOpenRmf::onCleanup()
 void MissionOpenRmf::emit(json data, const rclcpp::Time& stamp)
 {
   // One Record leaves per poll, same overflow policy as MissionNav2ThroughPoses::emit().
-  if (pending_records_.push(std::move(data), stamp))
+  if (pending_records_.push({ std::move(data), stamp }))
   {
     RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
                                 "Measurement " << measurement_name_
@@ -214,15 +214,13 @@ dc_interfaces::msg::StringStamped MissionOpenRmf::collect()
   dc_interfaces::msg::StringStamped msg;
   msg.group_key = group_key_;
 
-  const std::lock_guard<std::mutex> lock(mutex_);
-  if (pending_records_.empty())
+  const auto record = pending_records_.pop();
+  if (!record)
   {
     return msg;
   }
-
-  auto record = pending_records_.pop();
-  msg.header.stamp = record.second;
-  msg.data = record.first.dump(-1, ' ', true);
+  msg.header.stamp = record->second;
+  msg.data = record->first.dump(-1, ' ', true);
   return msg;
 }
 

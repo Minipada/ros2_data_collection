@@ -23,13 +23,9 @@ void Speed::odomCb(const nav_msgs::msg::Odometry& msg)
   data_json["angular"]["z"] = msg.twist.twist.angular.z;
   data_json["computed"] =
       sqrt(msg.twist.twist.linear.x * msg.twist.twist.linear.x + msg.twist.twist.linear.y * msg.twist.twist.linear.y);
-  dc_interfaces::msg::StringStamped pub_msg;
-  pub_msg.group_key = group_key_;
-  pub_msg.data = data_json.dump(-1, ' ', true);
-  data_json.clear();
-  auto node = getNode();
-  pub_msg.header.stamp = node->get_clock()->now();
-  last_data_ = pub_msg;
+  // Keep-only-the-latest is the shape here, so a displaced value is by design, not a drop to
+  // warn about.
+  latest_odom_.push({ std::move(data_json), getNode()->get_clock()->now() });
 }
 
 void Speed::onConfigure()
@@ -43,8 +39,16 @@ void Speed::onConfigure()
 
 dc_interfaces::msg::StringStamped Speed::collect()
 {
-  dc_interfaces::msg::StringStamped msg = last_data_;
-  last_data_ = dc_interfaces::msg::StringStamped();
+  dc_interfaces::msg::StringStamped msg;
+
+  const auto twist = latest_odom_.pop();
+  if (!twist)
+  {
+    return msg;
+  }
+  msg.group_key = group_key_;
+  msg.header.stamp = twist->second;
+  msg.data = twist->first.dump(-1, ' ', true);
   return msg;
 }
 

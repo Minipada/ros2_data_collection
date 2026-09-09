@@ -6,6 +6,7 @@
 
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_measurements/source_adapter.hpp"
 #include "dc_util/json_utils.hpp"
 #include "dc_util/node_utils.hpp"
 #include "geometry_msgs/msg/twist.hpp"
@@ -25,7 +26,8 @@ public:
 private:
   void cmdVelCb(const geometry_msgs::msg::Twist& msg);
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_;
-  dc_interfaces::msg::StringStamped last_data_;
+  // The latest decoded Twist, displaced by every newer one and drained one per poll (#502).
+  SourceAdapter<std::pair<json, rclcpp::Time>> latest_twist_{ 1 };
   std::string cmd_vel_topic_;
 
 protected:

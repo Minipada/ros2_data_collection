@@ -7,6 +7,7 @@
 #include "dc_core/measurement.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_measurements/source_adapter.hpp"
 #include "dc_util/node_utils.hpp"
 
 namespace dc_measurements
@@ -24,7 +25,10 @@ public:
   void onConfigure() override;
 
 protected:
-  dc_interfaces::msg::StringStamped last_data_;
+  // The latest Record, displaced by every newer one and drained one per poll (#502). The Record
+  // is republished verbatim -- source stamp and group_key included -- so the message itself is
+  // what the adapter caches.
+  SourceAdapter<dc_interfaces::msg::StringStamped> latest_record_{ 1 };
   std::string topic_;
   rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr subscription_;
   bool timer_based_;

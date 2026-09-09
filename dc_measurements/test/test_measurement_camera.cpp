@@ -112,7 +112,7 @@ TEST_F(MeasurementCameraTest, NoPublishBeforeFirstImageReceived)
   startLifecycleNode();
 
   // Poll through several collect() cycles with no image published; the plugin must not
-  // publish a Record while last_data_ is still unset.
+  // publish a Record before any frame has been received.
   spinFor(polling_interval * 3);
 
   EXPECT_FALSE(callback_active_);

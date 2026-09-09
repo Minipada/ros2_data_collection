@@ -6,6 +6,7 @@
 
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_measurements/source_adapter.hpp"
 #include "dc_util/node_utils.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 
@@ -28,7 +29,8 @@ protected:
 
   std::string odom_topic_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscription_;
-  dc_interfaces::msg::StringStamped last_data_;
+  // The latest decoded twist, displaced by every newer one and drained one per poll (#502).
+  SourceAdapter<std::pair<json, rclcpp::Time>> latest_odom_{ 1 };
 };
 
 }  // namespace dc_measurements

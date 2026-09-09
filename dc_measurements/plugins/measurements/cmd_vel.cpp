@@ -18,12 +18,9 @@ void CmdVel::cmdVelCb(const geometry_msgs::msg::Twist& msg)
   YAML::Node yaml_node = YAML::Load(yaml_str);
   json data_json = dc_util::tojson::detail::yaml2json(yaml_node);
   data_json["computed"] = sqrt(msg.linear.x * msg.linear.x + msg.linear.y * msg.linear.y);
-  dc_interfaces::msg::StringStamped pub_msg;
-  pub_msg.group_key = group_key_;
-  pub_msg.data = data_json.dump(-1, ' ', true);
-  auto node = getNode();
-  pub_msg.header.stamp = node->get_clock()->now();
-  last_data_ = pub_msg;
+  // Keep-only-the-latest is the shape here, so a displaced value is by design, not a drop to
+  // warn about.
+  latest_twist_.push({ std::move(data_json), getNode()->get_clock()->now() });
 }
 
 void CmdVel::onConfigure()
@@ -37,9 +34,16 @@ void CmdVel::onConfigure()
 
 dc_interfaces::msg::StringStamped CmdVel::collect()
 {
-  dc_interfaces::msg::StringStamped msg = last_data_;
-  last_data_ = dc_interfaces::msg::StringStamped();
+  dc_interfaces::msg::StringStamped msg;
 
+  const auto twist = latest_twist_.pop();
+  if (!twist)
+  {
+    return msg;
+  }
+  msg.group_key = group_key_;
+  msg.header.stamp = twist->second;
+  msg.data = twist->first.dump(-1, ' ', true);
   return msg;
 }
 

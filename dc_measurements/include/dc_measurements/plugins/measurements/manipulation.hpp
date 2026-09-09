@@ -5,7 +5,6 @@
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__MANIPULATION_HPP_
 
 #include <cstdint>
-#include <deque>
 #include <map>
 #include <mutex>
 #include <string>
@@ -14,6 +13,7 @@
 #include "action_msgs/msg/goal_status_array.hpp"
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_measurements/source_adapter.hpp"
 #include "dc_util/node_utils.hpp"
 #include "moveit_msgs/action/move_group.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -85,7 +85,9 @@ private:
   // both are simply skipped, which also means a goal whose accept this instance missed (started
   // watching mid-goal) never gets a synthesized start it can't back up.
   std::map<std::string, GoalTracking> goals_;
-  std::deque<std::pair<json, rclcpp::Time>> pending_events_;
+  // manipulation_start/end Records wait here for a poll to carry them out, one per poll, so they
+  // travel the same publish path (Conditions, buffering, Group) as every other Record (#502).
+  SourceAdapter<std::pair<json, rclcpp::Time>> pending_events_{ 64 };
   // Per-Record, not per-goal: a global counter across every goal, so a consumer can tell a
   // dropped Record apart from one that was never produced.
   std::uint64_t record_seq_{ 0 };

@@ -349,6 +349,7 @@ set(tests
   test_measurement_uptime
   test_publish_gate
   test_record_enricher
+  test_source_adapter
   mission_follow_waypoints_tracker_test
   mission_nav2_tracker_test
   test_mission_nav2_through_poses_core
@@ -388,6 +389,8 @@ if(BUILD_TESTING)
   # test_measurement_mission_open_rmf's fixture is its own small websocket server (Boost.Beast),
   # standing in for #391's real websocket_url endpoint; needs std::thread like the plugin itself.
   target_link_libraries(${PROJECT_NAME}_test_measurement_mission_open_rmf Threads::Threads)
+  # test_source_adapter's concurrent-handoff test is the adapter's whole point.
+  target_link_libraries(${PROJECT_NAME}_test_source_adapter Threads::Threads)
 endif()
 
 ament_export_include_directories(include)

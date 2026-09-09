@@ -15,7 +15,7 @@
 #include "dc_common/state_transition_detector.hpp"
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
-#include "dc_measurements/pending_record_queue.hpp"
+#include "dc_measurements/source_adapter.hpp"
 #include "dc_util/node_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
 
@@ -55,7 +55,7 @@ private:
   std::map<std::string, dc_common::StateTransitionDetector<uint8_t>> hardware_component_detectors_;
   // Records wait here for a poll to carry them out, one per poll, so they travel the same publish
   // path (Conditions, buffering, Group) as every other Record.
-  PendingRecordQueue pending_records_;
+  SourceAdapter<std::pair<json, rclcpp::Time>> pending_records_{ 64 };
 
   // Per-Record, not per-component: a global counter across every controller and hardware
   // component, so a consumer can tell a dropped Record apart from one that never changed.

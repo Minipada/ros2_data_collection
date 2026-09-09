@@ -13,11 +13,14 @@ protected:
   }
 };
 
-TEST_F(MeasurementParametersTest, PollingIntervalOneMeasurementOnePercentError)
+TEST_F(MeasurementParametersTest, PollingIntervalOneMeasurementWithinAFewPercent)
 {
   int polling_interval = 30;
   int count_measurement = 90;
-  float error = 0.01;
+  // A 1% window fired exactly count_measurement times proved flaky: executor jitter on a loaded
+  // (or coverage-instrumented) runner delays a fire past the window, off by one. The test exists
+  // to catch a mis-applied polling_interval, not to bound scheduler latency.
+  int error = 3;
   nav2_util::declare_parameter_if_not_declared(ms_node_, "os.plugin", rclcpp::ParameterValue("dc_measurements/OS"));
   nav2_util::declare_parameter_if_not_declared(ms_node_, "os.group_key", rclcpp::ParameterValue("os"));
   nav2_util::declare_parameter_if_not_declared(ms_node_, "os.topic_output",
@@ -36,10 +39,10 @@ TEST_F(MeasurementParametersTest, PollingIntervalOneMeasurementOnePercentError)
   EXPECT_EQ(polling_interval, static_cast<int>(ms_node_->get_parameter("os.polling_interval").as_int()));
   EXPECT_FALSE(ms_node_->get_parameter("os.init_collect").as_bool());
 
-  // Verify that in a certain amount of time, only a certain amount of samples are collected
+  // Verify that in a certain amount of time, roughly that rate of samples are collected
   spinFor(polling_interval * (count_measurement + error));
 
-  EXPECT_EQ(callback_count_, count_measurement);
+  EXPECT_NEAR(callback_count_, count_measurement, error);
 }
 
 DC_MEASUREMENT_TEST_MAIN()

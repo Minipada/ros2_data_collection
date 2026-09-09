@@ -15,8 +15,6 @@ namespace dc_measurements
 namespace
 {
 
-constexpr size_t kMaxPendingEvents = 64;
-
 // Canonical 8-4-4-4-12 hex form, used both as this Record's `goal_id` and as the internal
 // tracking key -- readable in a Record without a lookup table.
 std::string uuidToString(const unique_identifier_msgs::msg::UUID& uuid)
@@ -118,7 +116,13 @@ void Manipulation::statusCb(const action_msgs::msg::GoalStatusArray& msg)
       data["goal_id"] = key;
       data["group_name"] = group_name_;
       data["sequence"] = ++record_seq_;
-      pending_events_.emplace_back(std::move(data), stamp);
+      if (pending_events_.push({ std::move(data), stamp }))
+      {
+        RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
+                                    "Measurement " << measurement_name_
+                                                   << ": manipulation Records are arriving faster than the polling "
+                                                      "interval can report them; dropping the oldest.");
+      }
       continue;
     }
 
@@ -167,14 +171,12 @@ void Manipulation::enqueueEnd(const std::string& goal_key, const std::string& ou
   data["error_code"] = error_code;
   data["planning_time"] = planning_time;
   data["duration_sec"] = duration_sec;
-  pending_events_.emplace_back(std::move(data), stamp);
 
   // One event leaves per poll, so goals resolving far faster than the polling interval would
   // otherwise queue without bound. The oldest goes first: the recent boundaries are the ones
-  // still worth reporting.
-  while (pending_events_.size() > kMaxPendingEvents)
+  // still worth reporting. Pushed under mutex_ so Records leave in `sequence` order.
+  if (pending_events_.push({ std::move(data), stamp }))
   {
-    pending_events_.pop_front();
     RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
                                 "Measurement " << measurement_name_
                                                << ": manipulation Records are arriving faster than the polling "
@@ -187,16 +189,13 @@ dc_interfaces::msg::StringStamped Manipulation::collect()
   dc_interfaces::msg::StringStamped msg;
   msg.group_key = group_key_;
 
-  const std::lock_guard<std::mutex> lock(mutex_);
-  if (pending_events_.empty())
+  const auto event = pending_events_.pop();
+  if (!event)
   {
     return msg;
   }
-
-  auto event = std::move(pending_events_.front());
-  pending_events_.pop_front();
-  msg.header.stamp = event.second;
-  msg.data = event.first.dump(-1, ' ', true);
+  msg.header.stamp = event->second;
+  msg.data = event->first.dump(-1, ' ', true);
   return msg;
 }
 

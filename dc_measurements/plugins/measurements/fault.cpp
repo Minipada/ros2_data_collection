@@ -134,7 +134,7 @@ void Fault::diagnosticsCb(const diagnostic_msgs::msg::DiagnosticArray& msg)
     // One Record leaves per poll, so a component (or set of components) flapping far faster than
     // the polling interval would otherwise queue without bound. The oldest goes first: the recent
     // transitions are the ones still worth reporting.
-    if (pending_records_.push(std::move(data), stamp))
+    if (pending_records_.push({ std::move(data), stamp }))
     {
       RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
                                   "Measurement " << measurement_name_
@@ -149,15 +149,13 @@ dc_interfaces::msg::StringStamped Fault::collect()
   dc_interfaces::msg::StringStamped msg;
   msg.group_key = group_key_;
 
-  const std::lock_guard<std::mutex> lock(mutex_);
-  if (pending_records_.empty())
+  const auto record = pending_records_.pop();
+  if (!record)
   {
     return msg;
   }
-
-  auto record = pending_records_.pop();
-  msg.header.stamp = record.second;
-  msg.data = record.first.dump(-1, ' ', true);
+  msg.header.stamp = record->second;
+  msg.data = record->first.dump(-1, ' ', true);
   return msg;
 }
 
