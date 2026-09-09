@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 import os
-import shutil
+import subprocess
 
 import yaml
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
@@ -53,17 +53,49 @@ def start_collection_after_gate(collection_actions):
     return on_gate_exit
 
 
-def _topic_to_dc_tag_route(topic: str) -> str:
-    """Convert a ROS topic name to its public `dc.<tag>` Shipper route (ADR-0003).
+def _dc_render(*args):
+    """Run dc_bridge's ROS-free `dc_render` CLI, failing the launch loudly on an error.
 
-    Args:
-        topic: A ROS topic name, e.g. `/dc/measurement/cpu`.
-
-    Returns:
-        The route name a passthrough sink consumes, e.g. `dc.dc.measurement.cpu`.
+    Every Shipper config fact launch needs — the public `dc.<tag>` route a topic is
+    exposed under (ADR-0003), the passthrough socket-sink block (ADR-0009), the recipe
+    staging rule, `$VAR`/`~` expansion — is owned by dc_bridge's render module, and this
+    is the only door to it from Python. Launch wires processes up; it re-derives no
+    config (#495 — the Python route derivation this replaced had already drifted).
     """
-    tag = topic.lstrip("/").replace("/", ".")
-    return f"dc.{tag}"
+    binary = os.path.join(get_package_prefix("dc_bridge"), "lib", "dc_bridge", "dc_render")
+    try:
+        result = subprocess.run([binary, *args], capture_output=True, text=True)
+    except OSError as err:
+        raise RuntimeError(
+            f"could not run {binary} (is dc_bridge built and sourced?): {err}"
+        ) from err
+    if result.returncode != 0:
+        raise RuntimeError(f"dc_render {' '.join(args)} failed:\n{result.stdout}{result.stderr}")
+
+
+def _stage_custom_config_files(params_file_path, custom_config_files):
+    """Stage a demo's passthrough sink TOML(s) at the path `custom_config_files` names.
+
+    A `custom_config_files` entry (ADR-0003 passthrough, #471) is handed to `dc_bridge`
+    as a plain filesystem path -- nothing installs a file there on its own. A
+    containerized deploy solves this with a bind mount straight onto that path
+    (deploy/robot/compose.isolated-network.yaml); a demo launched from an installed
+    package has no such mount, so without staging the referenced file is simply missing
+    and `dc_bridge` runs without the sink (ea610761). Recipes live in a `config/`
+    directory `dc_demos/CMakeLists.txt` installs as a sibling of `params/`, so that
+    sibling is the recipe dir handed to `dc_render stage` — which owns the rule itself:
+    copy-forward, so a corrected recipe wins over a staged copy (#495; the rule used to
+    be copy-only-if-absent, which let a stale hand-edited sink beat the recipe forever).
+    """
+    if not custom_config_files:
+        return
+    recipe_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(params_file_path))), "config"
+    )
+    args = ["stage", "--recipe-dir", recipe_dir]
+    for entry in custom_config_files:
+        args += ["--path", entry]
+    _dc_render(*args)
 
 
 def build_uploader_action(raw_params):
@@ -192,36 +224,6 @@ def build_uploader_action(raw_params):
     ]
 
 
-def _stage_custom_config_files(params_file_path, custom_config_files):
-    """Stage a demo's passthrough sink TOML(s) at the path `custom_config_files` names.
-
-    A `custom_config_files` entry (ADR-0003 passthrough, #471) is handed to `dc_bridge`
-    as a plain filesystem path -- nothing installs a file there on its own. A
-    containerized deploy solves this with a bind mount straight onto that path
-    (deploy/robot/compose.isolated-network.yaml); a demo launched from an installed
-    package has no such mount, so without this the referenced file is simply missing
-    and `dc_bridge` runs without the sink (see the sim CI job this fixed: qrcodes_stdout
-    reached every nav waypoint but read zero QR codes, because the passthrough console
-    sink was never in place, and no `dc.*` route makes it to the Measurement pipeline
-    without one). Recipes live in a `config/` directory `dc_demos/CMakeLists.txt`
-    installs as a sibling of `params/`, so that sibling is where this looks for a
-    same-named file to copy from. Never overwrites an existing destination file --
-    demos.md and elasticsearch.md both document hand-editing the staged copy to
-    experiment, which a blind refresh on every launch would clobber.
-    """
-    config_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(params_file_path))), "config"
-    )
-    for raw_path in custom_config_files:
-        dest_path = os.path.expanduser(os.path.expandvars(raw_path))
-        if os.path.exists(dest_path):
-            continue
-        candidate = os.path.join(config_dir, os.path.basename(dest_path))
-        if os.path.isfile(candidate):
-            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-            shutil.copyfile(candidate, dest_path)
-
-
 def build_bridge_and_mcap_actions(configured_params):
     """Build the `dc_bridge` Node, plus `dc_mcap_writer` if the params file enables it.
 
@@ -234,11 +236,13 @@ def build_bridge_and_mcap_actions(configured_params):
     reads a `dc_mcap_writer:` top-level block (sibling to `dc_bridge:`, not nested
     inside it) at launch time, and if `enabled: true`:
 
-    1. Renders the ADR-0009 passthrough sink (a Vector `socket` sink) from its `inputs`
-       to a generated TOML file, and merges that file into `dc_bridge`'s own
-       `custom_config_files` (on top of whatever the params file already lists there —
-       a second parameters-list entry *overrides* a list-valued parameter, so the merge
-       has to happen here, in Python, not by relying on launch_ros to combine them).
+    1. Has dc_bridge's `dc_render` CLI render the ADR-0009 passthrough sink (a Vector
+       `socket` sink) from its `inputs` to a generated TOML file, and merges that file
+       into `dc_bridge`'s own `custom_config_files` (on top of whatever the params file
+       already lists there — a second parameters-list entry *overrides* a list-valued
+       parameter, so the merge has to happen here, in Python, not by relying on
+       launch_ros to combine them). The block's own TOML — routes, address, disk buffer —
+       is the render module's, not this file's (#495).
     2. Starts `dc_mcap_writer` itself as a plain `ExecuteProcess`, not `ros2 run`: `ros2
        run` spawns its target as a child of its own process and does not forward
        signals to it, so a `respawn`/shutdown-triggering `kill` on what `ros2 run`
@@ -292,29 +296,28 @@ def build_bridge_and_mcap_actions(configured_params):
             max_duration_secs = mcap_params.get("max_duration_secs", 300)
             prefix = mcap_params.get("prefix", "records")
 
-            routes = ", ".join(f'"{_topic_to_dc_tag_route(topic)}"' for topic in inputs)
-            listen_address = str(host) + ":" + str(port)
-            sink_toml = (
-                f"# Generated by dc_bringup.launch.py from the dc_mcap_writer: block in\n"
-                f"# {params_file_path} (ADR-0009, #210) — regenerated every launch, not\n"
-                f"# meant to be hand-edited.\n"
-                f"[sinks.dc_mcap_writer]\n"
-                f'type = "socket"\n'
-                f"inputs = [{routes}]\n"
-                f'mode = "tcp"\n'
-                f'address = "{listen_address}"\n'
-                f'encoding.codec = "json"\n'
-                f'framing.method = "newline_delimited"\n'
-                f"\n"
-                f"[sinks.dc_mcap_writer.buffer]\n"
-                f'type = "disk"\n'
-                f"max_size = 268435488\n"
+            generated_sink_path = os.path.expanduser("~/.dc/generated_mcap_sink.toml")
+            origin = (
+                "Generated by dc_bringup.launch.py from the dc_mcap_writer: block in "
+                f"{params_file_path} (ADR-0009, #210) — regenerated every launch, not meant "
+                "to be hand-edited."
             )
-            generated_dir = os.path.expanduser("~/.dc")
-            os.makedirs(generated_dir, exist_ok=True)
-            generated_sink_path = os.path.join(generated_dir, "generated_mcap_sink.toml")
-            with open(generated_sink_path, "w") as f:
-                f.write(sink_toml)
+            sink_args = [
+                "socket-sink",
+                "--sink-id",
+                "dc_mcap_writer",
+                "--host",
+                str(host),
+                "--port",
+                str(port),
+                "--origin",
+                origin,
+                "--output",
+                generated_sink_path,
+            ]
+            for topic in inputs:
+                sink_args += ["--topic", topic]
+            _dc_render(*sink_args)
 
             dc_bridge_params = (raw_params.get("dc_bridge") or {}).get("ros__parameters") or {}
             merged_custom_config_files = list(dc_bridge_params.get("custom_config_files", [])) + [

@@ -24,10 +24,10 @@ Measurements) when you want any of that.
 """
 
 import os
-import shutil
+import subprocess
 
 import yaml
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import get_package_prefix, get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, SetEnvironmentVariable
 from launch.substitutions import LaunchConfiguration
@@ -36,26 +36,32 @@ from nav2_common.launch import RewrittenYaml
 
 
 def _stage_custom_config_files(params_file_path, custom_config_files):
-    """Same helper as dc_bringup.launch.py's — see that module for the full docstring.
+    """Stage passthrough sink TOML(s) via dc_bridge's `dc_render` CLI — see
+    dc_bringup.launch.py's `_stage_custom_config_files` for the full story (why staging
+    exists, and what the copy-forward rule means now, #495).
 
-    Duplicated rather than imported: launch files are executed as standalone scripts
-    by `ros2 launch`, not reliably importable as a package module. Stages a demo's
-    passthrough sink TOML(s) at the path `custom_config_files` names, from this
-    package's `config/` directory (installed as a sibling of `params/` by
-    dc_bringup/CMakeLists.txt), so `ros2 launch dc_bringup dc_raw.launch.py` keeps
-    working with zero manual setup now that `console` is passthrough-only (#472).
+    This shim is duplicated rather than shared: launch files are executed as standalone
+    scripts by `ros2 launch`, not reliably importable as a package module. Only the
+    invocation is duplicated — the recipe lookup, `$VAR`/`~` expansion and the staging
+    rule live in the render module, which is also what the Bridge's own config path uses.
     """
-    config_dir = os.path.join(
+    if not custom_config_files:
+        return
+    recipe_dir = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(params_file_path))), "config"
     )
-    for raw_path in custom_config_files:
-        dest_path = os.path.expanduser(os.path.expandvars(raw_path))
-        if os.path.exists(dest_path):
-            continue
-        candidate = os.path.join(config_dir, os.path.basename(dest_path))
-        if os.path.isfile(candidate):
-            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-            shutil.copyfile(candidate, dest_path)
+    args = ["stage", "--recipe-dir", recipe_dir]
+    for entry in custom_config_files:
+        args += ["--path", entry]
+    binary = os.path.join(get_package_prefix("dc_bridge"), "lib", "dc_bridge", "dc_render")
+    try:
+        result = subprocess.run([binary, *args], capture_output=True, text=True)
+    except OSError as err:
+        raise RuntimeError(
+            f"could not run {binary} (is dc_bridge built and sourced?): {err}"
+        ) from err
+    if result.returncode != 0:
+        raise RuntimeError(f"dc_render {' '.join(args)} failed:\n{result.stdout}{result.stderr}")
 
 
 def generate_launch_description():
