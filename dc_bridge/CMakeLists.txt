@@ -34,12 +34,13 @@ find_package(dc_common REQUIRED)
 # colcon puts its install prefix on CMAKE_PREFIX_PATH so this resolves.
 find_package(AWSSDK REQUIRED COMPONENTS s3)
 
-# ROS-independent core: Forwarder/Supervisor/Readiness/TopicConfig/ConfigRenderer/
-# vector_binary plus the Uploader logic (ADR-0005). Deliberately aws-free — the S3
-# ObjectStore implementation lives in the dc_uploader executable below (#446) — so the
-# Uploader is unit-tested with an in-memory fake and plain gtest, no cloud dependency.
+# ROS-independent core: Forwarder/RecordDispatcher/Supervisor/Readiness/TopicConfig/
+# ConfigRenderer/vector_binary plus the Uploader logic (ADR-0005). Deliberately aws-free —
+# the S3 ObjectStore implementation lives in the dc_uploader executable below (#446) — so
+# the Uploader is unit-tested with an in-memory fake and plain gtest, no cloud dependency.
 add_library(dc_bridge_core
   src/forwarder.cpp
+  src/record_dispatch.cpp
   src/readiness.cpp
   src/net_resolve.cpp
   src/topic_config.cpp
@@ -122,7 +123,8 @@ if(BUILD_TESTING)
   # Measurement does (#290) to check the Files pipeline ingests a released one unchanged.
   # (dc_common itself is found above now — the core links its record_file_walk, #479.)
   # All gtests link only the aws-free core (uploader_test uses an in-memory ObjectStore).
-  foreach(t forwarder supervisor render misc uploader intent_queue retention thumbnail raw_config process_config)
+  foreach(t forwarder record_dispatch supervisor render misc uploader intent_queue retention thumbnail raw_config
+            process_config)
     ament_add_gtest(${t}_test test/${t}_test.cpp)
     target_link_libraries(${t}_test dc_bridge_core)
     ament_target_dependencies(${t}_test dc_common)
