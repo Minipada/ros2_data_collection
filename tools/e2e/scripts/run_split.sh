@@ -17,11 +17,14 @@
 #   DC_E2E_SPLIT_STEADY_STATE_SECONDS      warmup before the outage (default 15)
 #   DC_E2E_SPLIT_OUTAGE_SECONDS            outage duration (default 60)
 #   DC_E2E_SPLIT_DRAIN_SECONDS             settle time before verifying (default 30)
-#   DC_E2E_SPLIT_QUEUE_DRAIN_TIMEOUT_SECONDS bound for the upload intent queue to drain
-#                                          after the drain window, before the check
-#                                          fails (default 120 — the uploader's
-#                                          exponential retry backoff can outlast
-#                                          DC_E2E_SPLIT_DRAIN_SECONDS; see the check)
+#   DC_E2E_SPLIT_QUEUE_DRAIN_TIMEOUT_SECONDS bound for the two settle waits after the
+#                                          drain window — the Shipper's Record buffer
+#                                          flushing into Postgres and the upload intent
+#                                          queue emptying — before the check fails
+#                                          (default 120 — Vector's reconnect and the
+#                                          uploader's exponential retry backoff can both
+#                                          outlast DC_E2E_SPLIT_DRAIN_SECONDS; see the
+#                                          checks)
 #   DC_E2E_KEEP                            "true" to leave the stack up on failure
 #   DC_E2E_IMAGE / DC_WORKSPACE_IMAGE      same meaning as run.sh
 #
@@ -157,6 +160,38 @@ log "stopping the workload so counts settle before verification"
 podman stop "$DC_ROS_C" >/dev/null
 sleep 5
 
+# --- the Shipper's Record buffer has to be in Postgres before vector is stopped -------
+# The workload is stopped, so dc_records only grows while vector is still flushing its
+# disk buffer (the outage backlog plus the post-restart tail). The fixed DRAIN_SECONDS
+# window above is how long we *give* that flush, not proof it happened — and vector's
+# buffer lives on a compose named volume that `compose down --volumes` deletes, so
+# stopping vector with a non-empty buffer is data loss the verifier would rightly
+# report. Wait for the count to stop growing, bounded; if it never settles the verify
+# below still hard-fails on whatever didn't land, so this only ever buys time, never
+# tolerance.
+log "waiting for the Shipper's buffer to flush into Postgres (dc_records stops growing)"
+RECORDS_STABLE_SECONDS=6
+FLUSH_DEADLINE=$(( $(date +%s) + QUEUE_DRAIN_TIMEOUT_SECONDS ))
+LAST_COUNT="$(pg_exec 'SELECT count(*) FROM dc_records' 2>/dev/null || echo 0)"
+STABLE_SINCE="$(date +%s)"
+while :; do
+  sleep 2
+  COUNT="$(pg_exec 'SELECT count(*) FROM dc_records' 2>/dev/null || echo 0)"
+  if [ "$COUNT" = "$LAST_COUNT" ]; then
+    if [ $(( $(date +%s) - STABLE_SINCE )) -ge "$RECORDS_STABLE_SECONDS" ]; then
+      break
+    fi
+  else
+    LAST_COUNT="$COUNT"
+    STABLE_SINCE="$(date +%s)"
+  fi
+  if [ "$(date +%s)" -ge "$FLUSH_DEADLINE" ]; then
+    log "WARN: dc_records still at ${COUNT} row(s) after ${QUEUE_DRAIN_TIMEOUT_SECONDS}s — verifying anyway"
+    break
+  fi
+done
+log "PASS: Shipper buffer flushed (dc_records stable at ${LAST_COUNT})"
+
 # --- durable upload intent queue (#265) — same standard as run.sh ---------------------
 # The uploader retries a failed intent on an exponential backoff (5s base, doubling,
 # capped high — dc_bridge's intent_queue.hpp). In this split topology the uploader
@@ -182,7 +217,7 @@ while :; do
 done
 log "PASS: upload intent queue empty (0 orphaned intents)"
 
-log "stopping dc-uploader and vector (queue drained, nothing left in flight)"
+log "stopping dc-uploader and vector (Records flushed, queue drained, nothing left in flight)"
 podman stop "$UPLOADER_C" "$VECTOR_C" >/dev/null
 
 # --- verify -----------------------------------------------------------------------
