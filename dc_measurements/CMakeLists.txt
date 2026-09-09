@@ -100,171 +100,124 @@ include_directories(
   ${UUID_INCLUDE_DIRS}
 )
 
-# Condition plugins
-add_library(dc_compare_condition SHARED plugins/conditions/compare.cpp)
-list(APPEND dc_condition_plugin_libs dc_compare_condition)
-
-add_library(dc_moving_condition SHARED plugins/conditions/moving.cpp)
-list(APPEND dc_condition_plugin_libs dc_moving_condition)
-
-add_library(dc_same_as_previous_condition SHARED plugins/conditions/same_as_previous.cpp)
-list(APPEND dc_condition_plugin_libs dc_same_as_previous_condition)
-
-# Measurement plugins
-add_library(dc_battery_measurement SHARED plugins/measurements/battery.cpp)
-list(APPEND dc_measurement_plugin_libs dc_battery_measurement)
-
-add_library(dc_camera_measurement SHARED plugins/measurements/camera.cpp)
-list(APPEND dc_measurement_plugin_libs dc_camera_measurement)
-
-add_library(dc_cmd_vel_measurement SHARED plugins/measurements/cmd_vel.cpp)
-list(APPEND dc_measurement_plugin_libs dc_cmd_vel_measurement)
-
-add_library(dc_cpu_measurement SHARED
-  plugins/measurements/cpu.cpp
-  plugins/measurements/system/linux_parser.cpp
-  plugins/measurements/system/process.cpp
-  plugins/measurements/system/processor.cpp
-  plugins/measurements/system/system.cpp
-)
-list(APPEND dc_measurement_plugin_libs dc_cpu_measurement)
-
-add_library(dc_diagnostics_measurement SHARED plugins/measurements/diagnostics.cpp)
-list(APPEND dc_measurement_plugin_libs dc_diagnostics_measurement)
-
-add_library(dc_dummy_measurement SHARED plugins/measurements/dummy.cpp)
-list(APPEND dc_measurement_plugin_libs dc_dummy_measurement)
-
-add_library(dc_distance_traveled_measurement SHARED plugins/measurements/distance_traveled.cpp)
-list(APPEND dc_measurement_plugin_libs dc_distance_traveled_measurement)
-
-add_library(dc_fault_measurement SHARED plugins/measurements/fault.cpp)
-list(APPEND dc_measurement_plugin_libs dc_fault_measurement)
-
-if(fastdds_statistics_backend_FOUND)
-  add_library(dc_fastdds_stats_measurement SHARED plugins/measurements/fastdds_stats.cpp)
-  list(APPEND dc_measurement_plugin_libs dc_fastdds_stats_measurement)
-endif()
-
-add_library(dc_driving_type_measurement SHARED plugins/measurements/driving_type.cpp)
-list(APPEND dc_measurement_plugin_libs dc_driving_type_measurement)
-
-add_library(dc_intervention_measurement SHARED plugins/measurements/intervention.cpp)
-list(APPEND dc_measurement_plugin_libs dc_intervention_measurement)
-
-add_library(dc_ip_camera_measurement SHARED plugins/measurements/ip_camera.cpp)
-list(APPEND dc_measurement_plugin_libs dc_ip_camera_measurement)
-
-add_library(dc_manipulation_measurement SHARED plugins/measurements/manipulation.cpp)
-list(APPEND dc_measurement_plugin_libs dc_manipulation_measurement)
-
-add_library(dc_map_measurement SHARED plugins/measurements/map.cpp)
-list(APPEND dc_measurement_plugin_libs dc_map_measurement)
-
-add_library(dc_mission_nav2_measurement SHARED plugins/measurements/mission_nav2.cpp)
-list(APPEND dc_measurement_plugin_libs dc_mission_nav2_measurement)
-
-add_library(dc_mission_nav2_follow_waypoints_measurement SHARED plugins/measurements/mission_nav2_follow_waypoints.cpp)
-list(APPEND dc_measurement_plugin_libs dc_mission_nav2_follow_waypoints_measurement)
-
-add_library(dc_mission_nav2_through_poses_measurement SHARED plugins/measurements/mission_nav2_through_poses.cpp)
-list(APPEND dc_measurement_plugin_libs dc_mission_nav2_through_poses_measurement)
-
-add_library(dc_mission_open_rmf_measurement SHARED plugins/measurements/mission_open_rmf.cpp)
-list(APPEND dc_measurement_plugin_libs dc_mission_open_rmf_measurement)
-
-add_library(dc_memory_measurement SHARED
-  plugins/measurements/memory.cpp
-  plugins/measurements/system/linux_parser.cpp
-  plugins/measurements/system/process.cpp
-  plugins/measurements/system/processor.cpp
-  plugins/measurements/system/system.cpp
-)
-list(APPEND dc_measurement_plugin_libs dc_memory_measurement)
-
-add_library(dc_network_measurement SHARED plugins/measurements/network.cpp)
-list(APPEND dc_measurement_plugin_libs dc_network_measurement)
-
-add_library(dc_os_measurement SHARED
-  plugins/measurements/os.cpp
-  plugins/measurements/system/linux_parser.cpp
-  plugins/measurements/system/process.cpp
-  plugins/measurements/system/processor.cpp
-  plugins/measurements/system/system.cpp
-)
-list(APPEND dc_measurement_plugin_libs dc_os_measurement)
-
-add_library(dc_permissions_measurement SHARED plugins/measurements/permissions.cpp)
-list(APPEND dc_measurement_plugin_libs dc_permissions_measurement)
-
-add_library(dc_position_measurement SHARED plugins/measurements/position.cpp)
-list(APPEND dc_measurement_plugin_libs dc_position_measurement)
-
-add_library(dc_random_measurement SHARED plugins/measurements/random.cpp)
-list(APPEND dc_measurement_plugin_libs dc_random_measurement)
-
-add_library(dc_ros2_control_status_measurement SHARED plugins/measurements/ros2_control_status.cpp)
-list(APPEND dc_measurement_plugin_libs dc_ros2_control_status_measurement)
-
-add_library(dc_serial_interface_measurement SHARED plugins/measurements/serial_interface.cpp)
-list(APPEND dc_measurement_plugin_libs dc_serial_interface_measurement)
-
-add_library(dc_slam_toolbox_quality_measurement SHARED plugins/measurements/slam_toolbox_quality.cpp)
-list(APPEND dc_measurement_plugin_libs dc_slam_toolbox_quality_measurement)
-
-add_library(dc_speed_measurement SHARED plugins/measurements/speed.cpp)
-list(APPEND dc_measurement_plugin_libs dc_speed_measurement)
-
-add_library(dc_storage_measurement SHARED plugins/measurements/storage.cpp)
-list(APPEND dc_measurement_plugin_libs dc_storage_measurement)
-
-add_library(dc_string_stamped_measurement SHARED plugins/measurements/string_stamped.cpp)
-list(APPEND dc_measurement_plugin_libs dc_string_stamped_measurement)
-
-add_library(dc_tcp_health_measurement SHARED plugins/measurements/tcp_health.cpp)
-list(APPEND dc_measurement_plugin_libs dc_tcp_health_measurement)
-
-add_library(dc_thermal_measurement SHARED plugins/measurements/thermal.cpp)
-list(APPEND dc_measurement_plugin_libs dc_thermal_measurement)
-
-add_library(dc_uptime_measurement SHARED
-  plugins/measurements/uptime.cpp
-  plugins/measurements/system/linux_parser.cpp
-  plugins/measurements/system/process.cpp
-  plugins/measurements/system/processor.cpp
-  plugins/measurements/system/system.cpp
-)
-list(APPEND dc_measurement_plugin_libs dc_uptime_measurement)
-
-foreach(measurement_plugin ${dc_measurement_plugin_libs})
-  ament_target_dependencies(${measurement_plugin} ${dependencies})
-  target_link_libraries(
-    ${measurement_plugin}
+# Plugin registration
+# One call per plugin owns the registration rules (#485): library target, plugin-libs entry,
+# ament deps, link set and export define. DEPS appends plugin-specific libraries.
+function(dc_add_measurement_plugin name)
+  cmake_parse_arguments(PARSE_ARGV 1 ARG "" "" "SOURCES;DEPS")
+  if(ARG_UNPARSED_ARGUMENTS)
+    message(FATAL_ERROR "dc_add_measurement_plugin(${name}): unparsed arguments: ${ARG_UNPARSED_ARGUMENTS}")
+  endif()
+  add_library(${name} SHARED ${ARG_SOURCES})
+  list(APPEND dc_measurement_plugin_libs ${name})
+  set(dc_measurement_plugin_libs ${dc_measurement_plugin_libs} PARENT_SCOPE)
+  ament_target_dependencies(${name} ${dependencies})
+  target_link_libraries(${name}
     nlohmann_json::nlohmann_json
     nlohmann_json_schema_validator
     yaml-cpp::yaml-cpp
     ${UUID_LIBRARIES}
+    ${ARG_DEPS}
   )
-  target_compile_definitions(${measurement_plugin} PRIVATE BT_PLUGIN_EXPORT)
-endforeach()
-target_link_libraries(dc_camera_measurement ZXing::ZXing opencv_calib3d)
-target_include_directories(dc_ip_camera_measurement PRIVATE ${AVFORMAT_INCLUDE_DIRS} ${AVUTIL_INCLUDE_DIRS})
-target_link_directories(dc_ip_camera_measurement PRIVATE ${AVFORMAT_LIBRARY_DIRS} ${AVUTIL_LIBRARY_DIRS})
-target_link_libraries(dc_ip_camera_measurement ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES})
+  target_compile_definitions(${name} PRIVATE BT_PLUGIN_EXPORT)
+endfunction()
+
+# Conditions link no Record-side libraries; everything else matches the Measurement rule.
+function(dc_add_condition_plugin name)
+  cmake_parse_arguments(PARSE_ARGV 1 ARG "" "" "SOURCES")
+  if(ARG_UNPARSED_ARGUMENTS)
+    message(FATAL_ERROR "dc_add_condition_plugin(${name}): unparsed arguments: ${ARG_UNPARSED_ARGUMENTS}")
+  endif()
+  add_library(${name} SHARED ${ARG_SOURCES})
+  list(APPEND dc_condition_plugin_libs ${name})
+  set(dc_condition_plugin_libs ${dc_condition_plugin_libs} PARENT_SCOPE)
+  ament_target_dependencies(${name} ${dependencies})
+  target_compile_definitions(${name} PRIVATE BT_PLUGIN_EXPORT)
+endfunction()
+
+# Shared by the cpu/memory/os/uptime plugins.
+set(system_sources
+  plugins/measurements/system/linux_parser.cpp
+  plugins/measurements/system/process.cpp
+  plugins/measurements/system/processor.cpp
+  plugins/measurements/system/system.cpp
+)
+
+
+# Condition plugins
+dc_add_condition_plugin(dc_compare_condition SOURCES plugins/conditions/compare.cpp)
+dc_add_condition_plugin(dc_moving_condition SOURCES plugins/conditions/moving.cpp)
+dc_add_condition_plugin(dc_same_as_previous_condition SOURCES plugins/conditions/same_as_previous.cpp)
+
+# Measurement plugins
+dc_add_measurement_plugin(dc_battery_measurement SOURCES plugins/measurements/battery.cpp)
+# barcode/QR reading (#123) + cv::solvePnP's calib3d (#48); found and explained above.
+dc_add_measurement_plugin(dc_camera_measurement
+  SOURCES plugins/measurements/camera.cpp
+  DEPS ZXing::ZXing opencv_calib3d
+)
+dc_add_measurement_plugin(dc_cmd_vel_measurement SOURCES plugins/measurements/cmd_vel.cpp)
+dc_add_measurement_plugin(dc_cpu_measurement
+  SOURCES plugins/measurements/cpu.cpp ${system_sources}
+)
+dc_add_measurement_plugin(dc_diagnostics_measurement SOURCES plugins/measurements/diagnostics.cpp)
+dc_add_measurement_plugin(dc_dummy_measurement SOURCES plugins/measurements/dummy.cpp)
+dc_add_measurement_plugin(dc_distance_traveled_measurement SOURCES plugins/measurements/distance_traveled.cpp)
+dc_add_measurement_plugin(dc_fault_measurement SOURCES plugins/measurements/fault.cpp)
+
 if(fastdds_statistics_backend_FOUND)
-  target_link_libraries(dc_fastdds_stats_measurement fastdds_statistics_backend)
+  dc_add_measurement_plugin(dc_fastdds_stats_measurement
+    SOURCES plugins/measurements/fastdds_stats.cpp
+    DEPS fastdds_statistics_backend
+  )
 endif()
-# dc_common::WebSocketJsonClient (#390) uses std::thread; linked explicitly rather than relying on
-# it coming in transitively, same reasoning as dc_common's own websocket_json_client_test.
-target_link_libraries(dc_mission_open_rmf_measurement Threads::Threads)
-foreach(condition_plugin ${dc_condition_plugin_libs})
-  ament_target_dependencies(${condition_plugin} ${dependencies})
-  target_compile_definitions(${condition_plugin} PRIVATE BT_PLUGIN_EXPORT)
-endforeach()
-foreach(condition_plugin ${dc_condition_plugin_libs})
-  ament_target_dependencies(${condition_plugin} ${dependencies})
-  target_compile_definitions(${condition_plugin} PRIVATE BT_PLUGIN_EXPORT)
-endforeach()
+
+dc_add_measurement_plugin(dc_driving_type_measurement SOURCES plugins/measurements/driving_type.cpp)
+dc_add_measurement_plugin(dc_intervention_measurement SOURCES plugins/measurements/intervention.cpp)
+dc_add_measurement_plugin(dc_ip_camera_measurement
+  SOURCES plugins/measurements/ip_camera.cpp
+  DEPS ${AVFORMAT_LIBRARIES} ${AVUTIL_LIBRARIES}
+)
+# libav has no CMake target (see the pkg_search_module above), so its dirs are wired by hand.
+target_include_directories(dc_ip_camera_measurement PRIVATE
+  ${AVFORMAT_INCLUDE_DIRS} ${AVUTIL_INCLUDE_DIRS}
+)
+target_link_directories(dc_ip_camera_measurement PRIVATE
+  ${AVFORMAT_LIBRARY_DIRS} ${AVUTIL_LIBRARY_DIRS}
+)
+
+dc_add_measurement_plugin(dc_manipulation_measurement SOURCES plugins/measurements/manipulation.cpp)
+dc_add_measurement_plugin(dc_map_measurement SOURCES plugins/measurements/map.cpp)
+dc_add_measurement_plugin(dc_mission_nav2_measurement SOURCES plugins/measurements/mission_nav2.cpp)
+dc_add_measurement_plugin(dc_mission_nav2_follow_waypoints_measurement SOURCES plugins/measurements/mission_nav2_follow_waypoints.cpp)
+dc_add_measurement_plugin(dc_mission_nav2_through_poses_measurement SOURCES plugins/measurements/mission_nav2_through_poses.cpp)
+# WebSocketJsonClient (#390) uses std::thread; linked explicitly rather than relying on it
+# coming in transitively, same reasoning as dc_common's own websocket_json_client_test.
+dc_add_measurement_plugin(dc_mission_open_rmf_measurement
+  SOURCES plugins/measurements/mission_open_rmf.cpp
+  DEPS Threads::Threads
+)
+dc_add_measurement_plugin(dc_memory_measurement
+  SOURCES plugins/measurements/memory.cpp ${system_sources}
+)
+dc_add_measurement_plugin(dc_network_measurement SOURCES plugins/measurements/network.cpp)
+dc_add_measurement_plugin(dc_os_measurement
+  SOURCES plugins/measurements/os.cpp ${system_sources}
+)
+dc_add_measurement_plugin(dc_permissions_measurement SOURCES plugins/measurements/permissions.cpp)
+dc_add_measurement_plugin(dc_position_measurement SOURCES plugins/measurements/position.cpp)
+dc_add_measurement_plugin(dc_random_measurement SOURCES plugins/measurements/random.cpp)
+dc_add_measurement_plugin(dc_ros2_control_status_measurement SOURCES plugins/measurements/ros2_control_status.cpp)
+dc_add_measurement_plugin(dc_serial_interface_measurement SOURCES plugins/measurements/serial_interface.cpp)
+dc_add_measurement_plugin(dc_slam_toolbox_quality_measurement SOURCES plugins/measurements/slam_toolbox_quality.cpp)
+dc_add_measurement_plugin(dc_speed_measurement SOURCES plugins/measurements/speed.cpp)
+dc_add_measurement_plugin(dc_storage_measurement SOURCES plugins/measurements/storage.cpp)
+dc_add_measurement_plugin(dc_string_stamped_measurement SOURCES plugins/measurements/string_stamped.cpp)
+dc_add_measurement_plugin(dc_tcp_health_measurement SOURCES plugins/measurements/tcp_health.cpp)
+dc_add_measurement_plugin(dc_thermal_measurement SOURCES plugins/measurements/thermal.cpp)
+dc_add_measurement_plugin(dc_uptime_measurement
+  SOURCES plugins/measurements/uptime.cpp ${system_sources}
+)
 
 pluginlib_export_plugin_description_file(dc_core measurement_plugin.xml)
 pluginlib_export_plugin_description_file(dc_core condition_plugin.xml)
