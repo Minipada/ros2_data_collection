@@ -383,3 +383,8 @@ def test_unknown_policy_falls_back_to_drop(harness):
     group.publish(0, {"used": 12.0})
     group.spin_for(4 * SYNC_TIMEOUT)
     assert group.records == []
+
+
+def test_group_measurement_plugins_is_read_as_a_value(harness):
+    """The flag reaches the merge as a bool, not as the always-truthy `Parameter` (#508)."""
+    assert harness().server.group_measurement_plugins is True

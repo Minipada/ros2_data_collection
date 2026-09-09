@@ -109,13 +109,17 @@ def test_merge_does_not_mutate_the_payloads_it_is_given():
         (["a", "b.free"], set()),
         # The prefix has no key boundary: `a.cpu` also catches `a.cpuload`.
         (["a.c"], {"ab.used", "b.free"}),
-        # `*` in an entry matches when every `*`-separated fragment appears in the key.
+        # An entry holding `*` is a glob over the flattened key, anchored at both ends.
         (["a.*"], {"ab.used", "b.free"}),
         (["*load"], {"a.cpu", "ab.used", "b.free"}),
         (["*.*"], set()),
         (["*"], set()),
-        # The `b.` fragment lives inside the member named `ab`, so it takes that one too.
-        (["a.*", "b.*"], set()),
+        # A glob has a key boundary the prefix form lacks: `b.*` leaves `ab.used` alone.
+        (["b.*"], {"a.cpu", "a.cpuload", "ab.used"}),
+        (["a.*", "b.*"], {"ab.used"}),
+        # `?` and `[seq]` are glob syntax too, so they no longer match literally.
+        (["a.?pu"], {"a.cpuload", "ab.used", "b.free"}),
+        (["a.cp[u]load"], {"a.cpu", "ab.used", "b.free"}),
     ],
 )
 def test_exclude_keys_filters_flattened_keys(exclude_keys, kept):
@@ -130,12 +134,13 @@ def test_exclude_keys_filters_flattened_keys(exclude_keys, kept):
     assert set(record) == kept | {"tags", "name"}
 
 
-def test_exclude_keys_glob_is_substring_matching_not_a_glob():
-    # Pinning current behaviour: the `*` branch splits and checks substrings, so a
-    # fragment matches anywhere in the key, in any position a glob would not allow.
+def test_exclude_keys_star_entry_is_a_glob_not_a_substring_match():
+    # Was pinned as substring matching: a `u*d` fragment took `a.used` down with it, though a
+    # glob has to start with a `u`. Fixed in #508 — the key survives, and so does its member.
     record = merge([payload("a", {"used": 1.0})], exclude_keys=["u*d"])
 
-    assert set(record) == {"tags", "name"}
+    assert record["a"] == {"used": 1.0}
+    assert set(record) == {"a", "tags", "name"}
 
 
 def test_apply_exclude_keys_returns_the_flattened_keys():
@@ -414,10 +419,21 @@ def test_unflatten_requires_a_flat_dictionary():
         unflatten({"a": [1, 2]}, separator=SEPARATOR)
 
 
-def test_unflatten_silently_drops_a_key_nested_under_another():
-    # Pinning current behaviour: a scalar sitting at a prefix of another key is assumed to
-    # be an artifact and skipped, so `a` disappears from the Record.
-    assert unflatten({"a": 1, "a.b": 2}, separator=SEPARATOR) == {"a": {"b": 2}}
+def test_unflatten_keeps_a_scalar_whose_key_prefixes_another():
+    # Was pinned as a silent drop: `a` vanished from the Record because `a.b` nested under it.
+    # A key that is also a prefix of another has no nested form — both cannot sit under it — so
+    # the deeper key keeps its literal dotted key instead and nothing is dropped (#508).
+    assert unflatten({"a": 1, "a.b": 2}, separator=SEPARATOR) == {"a": 1, "a.b": 2}
+
+
+def test_unflatten_keeps_every_scalar_of_a_deeper_collision():
+    # The rule holds all the way down: once `a.b` is a literal key, `a.b.c` cannot nest
+    # under the scalar it holds either.
+    assert unflatten({"a": 1, "a.b": 2, "a.b.c": 3}, separator=SEPARATOR) == {
+        "a": 1,
+        "a.b": 2,
+        "a.b.c": 3,
+    }
 
 
 def test_unflatten_list_rebuilds_lists_from_consecutive_indices():
@@ -444,19 +460,34 @@ def test_unflatten_list_of_an_empty_dict_is_empty():
     assert unflatten_list({}, separator=SEPARATOR) == {}
 
 
-def test_unflatten_list_crashes_on_a_zero_padded_index():
-    # Pinning current behaviour: `00` is recognised as index 0 but then read back as the
-    # string `"0"`, so the round trip raises. A Measurement nesting a zero-padded key under
-    # a dict takes the Group node down with it.
-    with pytest.raises(KeyError):
-        unflatten_list({"a.00": 1}, separator=SEPARATOR)
+def test_unflatten_list_keeps_a_zero_padded_index_as_a_dict():
+    # Was pinned as a KeyError: `00` is recognised as the index 0 but read back as the string
+    # `"0"`. A list needs the canonical `0`..`n-1` keys, so the dict is left as it unflattened
+    # — reshaped, not raised — and the Group node keeps its Record (#508).
+    assert unflatten_list({"a.00": 1}, separator=SEPARATOR) == {"a": {"00": 1}}
 
 
-def test_unflatten_list_crashes_on_a_top_level_list():
-    # Pinning current behaviour: only nested lists are rebuilt — the root has no parent to
-    # replace the list in, so the conversion raises instead.
-    with pytest.raises(TypeError):
-        unflatten_list({"0.a": 1, "1.b": 2}, separator=SEPARATOR)
+def test_unflatten_list_rebuilds_a_top_level_list():
+    # Was pinned as a TypeError: only nested lists were rebuilt, the root having no parent to
+    # replace the list in. The root is converted like any other level now (#508).
+    assert unflatten_list({"0.a": 1, "1.b": 2}, separator=SEPARATOR) == [{"a": 1}, {"b": 2}]
+
+
+def test_a_record_whose_group_keys_are_all_numeric_stays_an_object():
+    # Numeric group_keys would unflatten the merged Record into a JSON array. A Record is an
+    # object — `tags`, `incident_id` and `plugins` are top-level keys, which is all a `postgres`
+    # sink maps onto columns — so the members stay nested under their group_key instead (#508).
+    record = merge([payload("0", {"used": 1.0}), payload("1", {"free": 2.0})])
+
+    assert record == {"0": {"used": 1.0}, "1": {"free": 2.0}, "tags": ["dc"], "name": GROUP}
+
+
+def test_a_record_with_a_numeric_and_a_named_member_is_nested_normally():
+    # A single numeric group_key among named ones is not enough to make the Record a list.
+    record = merge([payload("0", {"used": 1.0}), payload("cpu", {"free": 2.0})])
+
+    assert record["0"] == {"used": 1.0}
+    assert record["cpu"] == {"free": 2.0}
 
 
 def test_check_if_numbers_are_consecutive():

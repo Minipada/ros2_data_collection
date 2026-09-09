@@ -29,9 +29,10 @@ the `ApproximateTimeSynchronizer` is straightforward there and awkward in C++.
 
 ## Node parameters
 
-| Parameter | Description      | Type        | Default |
-| --------- | ---------------- | ----------- | ------- |
-| groups    | Groups to enable | list\[str\] | N/A     |
+| Parameter                 | Description                                                                        | Type        | Default |
+|----------------------------|-------------------------------------------------------------------------------------|--------------|----------|
+| groups                    | Groups to enable                                                                   | list\[str\] | N/A     |
+| group_measurement_plugins | Collect the members' `plugin` fields into the merged Record's `plugins` list       | bool        | true    |
 
 ## Group parameters
 
@@ -44,7 +45,7 @@ the `ApproximateTimeSynchronizer` is straightforward there and awkward in C++.
 | on_sync_timeout    | What to do with an incomplete set once `sync_timeout` elapses: `drop`/`emit_partial` | str         | "drop"              |
 | sync_timeout_log_throttle | Seconds between two sync-timeout warnings for this group. 0.0 logs every one  | float       | 60.0                |
 | group_key          | Dictionary key under which data is grouped                                          | str         | {group_name}        |
-| exclude_keys       | List of keys to exclude from the published data. Data depth is separated by a dot   | list\[str\] | N/A                 |
+| exclude_keys       | List of keys to exclude from the published data. Data depth is separated by a dot. An entry holding glob syntax (`*`, `?`, `[seq]`) is a glob over the flattened key, one without is a key prefix | list\[str\] | N/A                 |
 | nested_data        | Whether measurements are nested dictionaries or flat                                | bool        | true                |
 | include_group_name | Include group name in the JSON as key="name" and value=<group_key>                  | bool        | true                |
 

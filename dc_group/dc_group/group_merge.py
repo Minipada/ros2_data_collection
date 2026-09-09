@@ -8,9 +8,14 @@ at the edges and hands over already-parsed payloads, so these rules are testable
 ROS install.
 """
 
-from .flatten import flatten, unflatten_list
+from fnmatch import fnmatchcase
+
+from .flatten import flatten, unflatten, unflatten_list
 
 SEPARATOR = "."
+
+# An entry holding any of these is a glob over the flattened key; anything else is a prefix.
+_GLOB_SPECIALS = "*?["
 
 
 def apply_exclude_keys(data_dict: dict, exclude_keys: list) -> dict:
@@ -19,8 +24,8 @@ def apply_exclude_keys(data_dict: dict, exclude_keys: list) -> dict:
     Args:
         data_dict (dict): Flattened Record, filtered in place of being copied
         exclude_keys (list): Patterns applied in order, each narrowing the Record further.
-            A `*`-free entry is a key prefix; an entry holding `*` matches when every
-            `*`-separated fragment appears in the key
+            An entry holding no glob syntax is a key prefix; otherwise it is a glob over the
+            whole flattened key (`fnmatch` syntax, case-sensitive, anchored at both ends)
 
     Returns:
         dict: The Record minus the excluded keys
@@ -28,14 +33,10 @@ def apply_exclude_keys(data_dict: dict, exclude_keys: list) -> dict:
     for exclude_key in exclude_keys:
         if exclude_key == "":
             continue
-        if "*" not in exclude_key:
+        if not any(char in exclude_key for char in _GLOB_SPECIALS):
             data_dict = {k: v for k, v in data_dict.items() if not k.startswith(exclude_key)}
         else:
-            data_dict = {
-                k: v
-                for k, v in data_dict.items()
-                if not all(x in k for x in exclude_key.split("*"))
-            }
+            data_dict = {k: v for k, v in data_dict.items() if not fnmatchcase(k, exclude_key)}
     return data_dict
 
 
@@ -88,7 +89,15 @@ def merge_records(
 
     data_dict = apply_exclude_keys(data_dict, group_cfg["exclude_keys"])
     if group_cfg["nested_data"]:
+        flat_data = data_dict
         data_dict = unflatten_list(flat_dict=data_dict, separator=SEPARATOR)
+        if not isinstance(data_dict, dict):
+            # Every group_key is numeric, so the merged Record unflattened into a JSON array.
+            # A Record is an object: its envelope (`tags`, `incident_id`, `plugins`) is made of
+            # top-level keys, and a top-level key is all a `postgres` sink maps onto a column,
+            # so an array would land in no column at all. The members stay nested under their
+            # numeric group_key instead, keeping the rest of the Record intact.
+            data_dict = unflatten(flat_data, separator=SEPARATOR)
     # A member's own Tags are dropped above: the Record carries the group's.
     data_dict["tags"] = group_cfg["tags"]
     # Only when a member actually carried one: a Record collected outside an incident must

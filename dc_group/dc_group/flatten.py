@@ -1,6 +1,14 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
+"""Flatten a nested payload to `{key: scalar}` and back (#508).
+
+`GroupServer` calls these from a synchroniser callback, where an exception takes the node
+down, so both directions are total: no payload a Measurement publishes makes them raise, and
+no shape they cannot express silently drops a value — a key that cannot be nested keeps its
+scalar and the key under it keeps its literal dotted key.
+"""
+
 from collections.abc import Iterable
 
 
@@ -108,6 +116,11 @@ def flatten(
 def unflatten(flat_dict: dict, separator: str | None = "_") -> dict:
     """Creates a hierarchical dictionary from a flattened dictionary, assume no lists are present.
 
+    A key that is also a *prefix* of another one has no nested form: `{"a": 1, "a.b": 2}`
+    cannot put both a scalar and a dict under `a`. Rather than dropping the scalar, the deeper
+    key is kept as its literal dotted key, so the round trip loses nothing — Postgres holds the
+    result in one `jsonb` column, which accepts either shape.
+
     Args:
         flat_dict (dict): a dictionary with no hierarchy
         separator (str, optional): a string that separates keys. Defaults to "_".
@@ -117,27 +130,24 @@ def unflatten(flat_dict: dict, separator: str | None = "_") -> dict:
     """
     _unflatten_asserts(flat_dict, separator)
 
-    # This global dictionary is mutated and returned
+    # This dictionary is mutated and returned
     unflattened_dict = {}
 
-    def _unflatten(dic, keys, value):
-        for key in keys[:-1]:
-            dic = dic.setdefault(key, {})
-
-        dic[keys[-1]] = value
-
-    list_keys = sorted(flat_dict.keys())
-    for i, item in enumerate(list_keys):
-        if i != len(list_keys) - 1:
-            split_key = item.split(separator)
-            next_split_key = list_keys[i + 1].split(separator)
-            if not split_key == next_split_key[:-1]:
-                _unflatten(unflattened_dict, item.split(separator), flat_dict[item])
-            else:
-                pass  # if key contained in next key, json will be invalid.
+    for key in sorted(flat_dict):
+        dic = unflattened_dict
+        segments = key.split(separator)
+        for depth, segment in enumerate(segments[:-1]):
+            if segment not in dic:
+                dic[segment] = {}
+            child = dic[segment]
+            if not isinstance(child, dict):
+                # A scalar holds the prefix: nesting here would drop it, so the rest of the
+                # path stays a literal key and both values survive.
+                dic[separator.join(segments[depth:])] = flat_dict[key]
+                break
+            dic = child
         else:
-            #  last element
-            _unflatten(unflattened_dict, item.split(separator), flat_dict[item])
+            dic[segments[-1]] = flat_dict[key]
     return unflattened_dict
 
 
@@ -156,58 +166,51 @@ def check_if_numbers_are_consecutive(list_: list) -> bool:
     )
 
 
-def unflatten_list(flat_dict: dict, separator="_") -> dict:
+def _list_indices(object_) -> list:
+    """Returns the indices `object_` needs to become a list, empty if it is not shaped like one."""
+    try:
+        indices = sorted(int(key) for key in object_)
+    except (ValueError, TypeError):
+        return []
+    # Read back through the canonical `str(index)` form: `00` parses as the index 0 but is not
+    # the key `0`, so a zero-padded index keeps the dict it unflattened to rather than raising
+    # on a key that is not there.
+    if set(object_) != {str(index) for index in indices}:
+        return []
+    return indices
+
+
+def _convert_dict_to_list(object_):
+    """Returns `object_` with every dict of consecutive indices inside it rebuilt as a list."""
+    if not isinstance(object_, dict):
+        return object_
+    # Children first, so a list nested inside a list member is rebuilt too
+    # https://github.com/amirziai/flatten/issues/15
+    for key, value in object_.items():
+        object_[key] = _convert_dict_to_list(value)
+    indices = _list_indices(object_)
+    if indices and indices[0] == 0 and check_if_numbers_are_consecutive(indices):
+        return [object_[str(index)] for index in indices]
+    return object_
+
+
+def unflatten_list(flat_dict: dict, separator="_") -> dict | list:
     """Unflatten a dictionary, first assuming no lists exist and then tries to
-    identify lists and replaces them
-    This is probably not very efficient and has not been tested extensively
-    Feel free to add test cases or rewrite the logic
-    Issues that stand out to me:
-    - Sorting all the keys in the dictionary, which specially for the root
-    dictionary can be a lot of keys
-    - Checking that numbers are consecutive is O(N) in number of keys
+    identify lists and replaces them.
+
+    A dict is read as a list only when its keys are exactly the canonical indices `0` to
+    `n - 1`, at the root as well as deeper: `{"0.a": 1, "1.b": 2}` comes back as
+    `[{"a": 1}, {"b": 2}]`. Anything else stays the dict it unflattened to, so a payload a
+    Measurement publishes can only ever reshape, never raise.
 
     Args:
         flat_dict (dict): dictionary with no hierarchy
         separator (str, optional): a string that separates keys. Defaults to "_".
 
     Returns:
-        dict: a dictionary with hierarchy
+        dict: a dictionary with hierarchy, or a list if the root itself is index-keyed
     """
     _unflatten_asserts(flat_dict, separator)
 
     # First unflatten the dictionary assuming no lists exist
-    unflattened_dict = unflatten(flat_dict, separator)
-
-    def _convert_dict_to_list(object_, parent_object, parent_object_key):
-        if isinstance(object_, dict):
-            for key in object_:
-                if isinstance(object_[key], dict):
-                    _convert_dict_to_list(object_[key], object_, key)
-            try:
-                keys = [int(key) for key in object_]
-                keys.sort()
-            except (ValueError, TypeError):
-                keys = []
-            keys_len = len(keys)
-
-            if (
-                keys_len > 0
-                and sum(keys) == int(((keys_len - 1) * keys_len) / 2)
-                and keys[0] == 0
-                and keys[-1] == keys_len - 1
-                and check_if_numbers_are_consecutive(keys)
-            ):
-                # The dictionary looks like a list so we're going to replace it
-                parent_object[parent_object_key] = []
-                for key_index, key in enumerate(keys):
-                    parent_object[parent_object_key].append(object_[str(key)])
-                    # The list item we just added might be a list itself
-                    # https://github.com/amirziai/flatten/issues/15
-                    _convert_dict_to_list(
-                        parent_object[parent_object_key][-1],
-                        parent_object[parent_object_key],
-                        key_index,
-                    )
-
-    _convert_dict_to_list(unflattened_dict, None, None)
-    return unflattened_dict
+    return _convert_dict_to_list(unflatten(flat_dict, separator))

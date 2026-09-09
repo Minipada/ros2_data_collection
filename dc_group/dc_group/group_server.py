@@ -78,15 +78,12 @@ class GroupServer(Node):
                 {"group_key": measurement_dict["group_key"], "data": json.loads(measurement.data)}
             )
 
-        # `group_measurement_plugins` is stored as a Parameter, and a Parameter is always
-        # truthy, so `bool()` is what the merge used to test inline — the flag's value is
-        # still ignored today. Passing `.value` would be a behaviour change, not a move.
         data_dict = merge_records(
             parsed_payloads,
             group,
             self.params[group],
             missing_inputs=missing_inputs,
-            collect_plugins=bool(self.group_measurement_plugins),
+            collect_plugins=self.group_measurement_plugins,
         )
 
         msg = StringStamped()
@@ -100,7 +97,9 @@ class GroupServer(Node):
         # Jazzy, rclpy overwrites a descriptor's `type` with the type inferred from the
         # default value, so the descriptor form raises on a parameter that has no default.
         self.declare_parameter("groups", Parameter.Type.STRING_ARRAY)
-        self.group_measurement_plugins = self.declare_parameter("group_measurement_plugins", True)
+        self.group_measurement_plugins = self.declare_parameter(
+            "group_measurement_plugins", True
+        ).value
         try:
             self.params["groups"] = (
                 self.get_parameter("groups").get_parameter_value().string_array_value
