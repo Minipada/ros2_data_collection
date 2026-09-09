@@ -4,41 +4,59 @@
 #ifndef DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__MISSION_NAV2_FOLLOW_WAYPOINTS_HPP_
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__MISSION_NAV2_FOLLOW_WAYPOINTS_HPP_
 
-#include <mutex>
-#include <optional>
-#include <set>
 #include <string>
 #include <vector>
 
-#include "action_msgs/msg/goal_status.hpp"
-#include "action_msgs/msg/goal_status_array.hpp"
-#include "dc_core/measurement.hpp"
-#include "dc_measurements/measurement.hpp"
-#include "dc_measurements/mission_record_json.hpp"
-#include "dc_measurements/pending_record_queue.hpp"
+#include "dc_measurements/mission_action_watcher.hpp"
+#include "dc_measurements/mission_uuid.hpp"
 #include "dc_measurements/plugins/measurements/mission_follow_waypoints_tracker.hpp"
-#include "dc_util/node_utils.hpp"
 #include "nav2_msgs/action/follow_waypoints.hpp"
-#include "rclcpp/rclcpp.hpp"
-#include "unique_identifier_msgs/msg/uuid.hpp"
+#include "nav2_msgs/msg/missed_waypoint.hpp"
 
 namespace dc_measurements
 {
 
+/// What FollowWaypoints (#389) contributes to the shared action-lifecycle adapter: the
+/// MissionFollowWaypointsTracker outcome core, the missed-waypoint list carried from the terminal
+/// Result onto the mission_end Record (its Feedback has no recovery count to watch), and the same
+/// dashed goal-id mission_id format as #387.
+struct MissionNav2FollowWaypointsPolicy
+  : SingleGoalMissionPolicy<nav2_msgs::action::FollowWaypoints, MissionFollowWaypointsTracker,
+                            std::vector<WaypointOutcome>>
+{
+  static constexpr const char* kMissionType = "follow_waypoints";
+  static constexpr const char* kDefaultActionName = "follow_waypoints";
+  static constexpr bool kWatchFeedback = false;
+  static constexpr bool kRetryResultFetch = true;
+  static constexpr const char* kCleanupStill = "active";
+  static constexpr const char* kCleanupConsequence = "no closing Record will be published";
+
+  static std::string goalKeyOf(const unique_identifier_msgs::msg::UUID& uuid)
+  {
+    return missionGoalIdDashed(uuid);
+  }
+
+  static void enrichRecord(json& data, const MissionEndFact& fact)
+  {
+    json missed_json = json::array();
+    for (const auto& waypoint : fact.missed_waypoints)
+    {
+      missed_json.push_back({ { "index", waypoint.index }, { "error_code", waypoint.error_code } });
+    }
+    data["missed_waypoints"] = missed_json;
+  }
+};
+
 /**
  * @class dc_measurements::MissionNav2FollowWaypoints
  * @brief The FollowWaypoints sibling of #387's nav2 Mission Measurement, reusing its
- * mission_start/mission_end Record schema and mission_id/sequence conventions.
+ * mission_start/mission_end Record schema and mission_id/sequence conventions. The action-lifecycle
+ * wiring is shared with the other nav2 Mission variants through MissionActionWatcher (#503).
  *
  * A passive watcher, not a commander: nav2's WaypointFollower action is driven by whatever already
  * dispatches missions on the robot (nav2_simple_commander, a WMS integration, ...) -- DC never
  * sends a FollowWaypoints goal of its own, matching every other Measurement's read-only relationship
- * to the systems it observes. That rules out `rclcpp_action::Client`'s typed goal-tracking API,
- * which only reports on goals the client itself sent: this subscribes directly to the action's
- * `_action/status` topic (`action_msgs/msg/GoalStatusArray`, the same type for every action) for
- * accept/terminal-state boundaries, and calls its `_action/get_result` service directly for the
- * terminal Result once a goal it is following reaches one -- both public, standard parts of the
- * ROS 2 action wire protocol that any client may use, sender or not.
+ * to the systems it observes.
  *
  * One consequence: `number_of_loops` (#389's acceptance criteria) is a Goal-only field. ROS 2's
  * action protocol never re-publishes the Goal anywhere a third party can observe it -- only the
@@ -46,42 +64,9 @@ namespace dc_measurements
  * goal it did not send in order to read it back either. It is therefore not present on the Records
  * this plugin emits; see doc/src/dc/measurements/mission_nav2_follow_waypoints.md.
  */
-class MissionNav2FollowWaypoints : public dc_measurements::Measurement
+class MissionNav2FollowWaypoints
+  : public MissionActionWatcher<nav2_msgs::action::FollowWaypoints, MissionNav2FollowWaypointsPolicy>
 {
-public:
-  using GetResultService = nav2_msgs::action::FollowWaypoints::Impl::GetResultService;
-
-  MissionNav2FollowWaypoints();
-  ~MissionNav2FollowWaypoints() override;
-  dc_interfaces::msg::StringStamped collect() override;
-
-private:
-  void statusCb(const action_msgs::msg::GoalStatusArray& msg);
-  void requestResult(const unique_identifier_msgs::msg::UUID& uuid, const std::string& goal_id,
-                     const rclcpp::Time& terminal_at);
-  void handleResultResponse(const std::string& goal_id, const rclcpp::Time& terminal_at,
-                            const GetResultService::Response::SharedPtr& response);
-  // Caller holds mutex_.
-  void enqueue(json data, const rclcpp::Time& stamp);
-
-  std::string action_name_;
-  rclcpp::Subscription<action_msgs::msg::GoalStatusArray>::SharedPtr status_sub_;
-  rclcpp::Client<GetResultService>::SharedPtr result_client_;
-
-  // The status callback and the get_result response callback run on different callback groups
-  // than the polling timer under a multi-threaded executor, so everything they share is guarded.
-  mutable std::mutex mutex_;
-  std::optional<MissionFollowWaypointsTracker> tracker_;
-  // Which goal_ids a get_result request is already in flight for, so a terminal status repeated
-  // across several status-array publishes doesn't fire the service call more than once.
-  std::set<std::string> result_requested_;
-  // Records wait here for a poll to carry them out, one per poll, so they travel the same publish
-  // path (Conditions, buffering, Group) as every other Record.
-  PendingRecordQueue pending_records_;
-
-protected:
-  void onConfigure() override;
-  void onCleanup() override;
 };
 
 }  // namespace dc_measurements
