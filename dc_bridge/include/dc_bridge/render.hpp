@@ -19,6 +19,10 @@
 // the flat, stringly-typed values ROS parameters give into validated typed config (this
 // is where invalid-parameter rejection lives); render() turns already-validated typed
 // config into Vector TOML text.
+//
+// The launch path renders through this module too (#495): the ROS-free `dc_render` CLI
+// (src/render_main.cpp) exposes route_output_for_topic, socket_sink_toml and stage_action
+// to `ros2 launch`, which wires processes only and re-derives no config fact.
 #ifndef DC_BRIDGE__RENDER_HPP_
 #define DC_BRIDGE__RENDER_HPP_
 
@@ -52,6 +56,13 @@ std::string route_output_for_tag(const std::string& tag);
 /// prefix branch is what lets those later Tags reach a Destination without re-rendering
 /// and restarting the Shipper.
 std::string route_output_for_tag_prefix(const std::string& prefix);
+
+/// The public Shipper route the Records of one ROS topic are exposed under: the Tag the
+/// Bridge itself derives for that topic (TopicConfig::derive_tag) under the route
+/// transform's `dc.` prefix. One call for the whole ADR-0003 topic→route contract, so
+/// code that emits passthrough sinks for topics (the launch-time `dc_render` CLI) hands
+/// the render module the topic and re-derives neither half of it.
+std::string route_output_for_topic(const std::string& topic);
 
 /// How a Destination's normalized time field is written.
 ///
@@ -268,6 +279,43 @@ struct CustomConfigFile
 /// valid TOML, define ≥1 component, and claim no component id owned by the rendered
 /// config or another snippet. Throws RenderError naming the offending file.
 void validate_custom_config_files(const RenderConfig& config, const std::vector<CustomConfigFile>& files);
+
+/// One passthrough *socket* sink (ADR-0009's `dc_mcap_writer` shape): a Vector `socket`
+/// sink streaming newline-delimited JSON to an external consumer listening on host:port,
+/// fed by the public `dc.<tag>` routes of `input_topics`. The one Vector sink DC renders
+/// for a non-blessed Destination — everything else about such a Destination arrives as
+/// hand-written passthrough TOML.
+struct SocketSinkParams
+{
+  std::string sink_id;                    ///< Vector component id, e.g. `dc_mcap_writer`.
+  std::vector<std::string> input_topics;  ///< ROS topics; each contributes its `dc.<tag>` route.
+  std::string host;
+  std::uint16_t port;
+  std::string origin;  ///< provenance comment emitted above the table ("" = none).
+};
+
+/// Renders `params` as one self-contained passthrough snippet (a `[sinks.<sink_id>]`
+/// table) for `custom_config_files`, with the same disk buffer every blessed sink gets —
+/// Vector's floor, MIN_DISK_BUFFER_BYTES: a recorded stream must survive a slow or absent
+/// listener the way a delivered one does. Routes are sorted+unique like every rendered
+/// array. Pure. Throws RenderError on an unusable sink id, topic list or port.
+std::string socket_sink_toml(const SocketSinkParams& params);
+
+/// What the launch-time staging of one `custom_config_files` entry should do.
+enum class StageAction
+{
+  Copy,  ///< stage the recipe over whatever the path holds — copy-forward
+  Skip,  ///< stage nothing: leave the path alone, even when it holds nothing
+};
+
+/// The staging rule for passthrough recipes (ADR-0003): copy-forward. A corrected recipe
+/// must win over an already-staged copy, or the first launch freezes whatever the recipe
+/// said that day and a later fix never reaches an existing deployment (#495 — staging
+/// used to copy only if the path was empty, so a stale hand-edited sink beat the recipe
+/// forever). No recipe → Skip, whatever the path holds: an unresolvable entry is the
+/// Bridge's own loud "failed to read custom config file" error, and a container bind
+/// mount is left alone.
+StageAction stage_action(bool recipe_exists, bool staged_exists);
 
 /// Merges validated `custom_config_files` snippets into `rendered` (the already-rendered
 /// config text) so the whole pipeline lives in one self-contained file. Vector natively

@@ -225,11 +225,11 @@ toml::array sink_inputs(const Destination& dest)
   return inputs;
 }
 
-toml::table disk_buffer(const RenderConfig& config)
+toml::table disk_buffer(std::uint64_t max_bytes)
 {
   toml::table buffer;
   buffer.insert("type", "disk");
-  buffer.insert("max_size", static_cast<std::int64_t>(config.buffer_max_bytes));
+  buffer.insert("max_size", static_cast<std::int64_t>(max_bytes));
   return buffer;
 }
 
@@ -250,13 +250,13 @@ toml::table render_sink(const RenderConfig& config, const Destination& dest)
     sink.insert("type", "file");
     sink.insert("path", file->path);
     sink.insert("encoding", json_encoding());
-    sink.insert("buffer", disk_buffer(config));
+    sink.insert("buffer", disk_buffer(config.buffer_max_bytes));
   }
   else if (const auto* vec = std::get_if<VectorParams>(&dest.kind))
   {
     sink.insert("type", "vector");
     sink.insert("address", vec->host + ":" + std::to_string(vec->port));
-    sink.insert("buffer", disk_buffer(config));
+    sink.insert("buffer", disk_buffer(config.buffer_max_bytes));
   }
   else
   {
@@ -379,6 +379,11 @@ std::string route_output_for_tag(const std::string& tag)
 std::string route_output_for_tag_prefix(const std::string& prefix)
 {
   return std::string(ROUTE_TRANSFORM_ID) + "." + route_branch_for_tag_prefix(prefix);
+}
+
+std::string route_output_for_topic(const std::string& topic)
+{
+  return route_output_for_tag(TopicConfig::derive_tag(topic));
 }
 
 S3Params s3_from_raw(const std::string& name, const RawDestinationParams& raw)
@@ -647,6 +652,84 @@ void validate_custom_config_files(const RenderConfig& config, const std::vector<
       owners.emplace(id, file.path);
     }
   }
+}
+
+std::string socket_sink_toml(const SocketSinkParams& params)
+{
+  if (params.sink_id.empty())
+  {
+    throw RenderError(RenderErrorKind::MissingField, "socket sink: missing required field `sink_id`", "", "sink_id");
+  }
+  if (params.input_topics.empty())
+  {
+    throw RenderError(RenderErrorKind::EmptyInputs,
+                      "socket sink '" + params.sink_id + "': `input_topics` must not be empty", params.sink_id);
+  }
+  if (params.host.empty())
+  {
+    throw RenderError(RenderErrorKind::MissingField,
+                      "socket sink '" + params.sink_id + "': missing required field `host`", params.sink_id, "host");
+  }
+  // std::uint16_t can only be out of range as 0; the string a caller parsed it from is
+  // that caller's problem (dc_render rejects anything but 1-65535 before it gets here).
+  if (params.port == 0)
+  {
+    throw RenderError(RenderErrorKind::InvalidPort,
+                      "socket sink '" + params.sink_id + "': port " + std::to_string(params.port) +
+                          " is out of range (expected 1-65535)",
+                      params.sink_id, "", params.port);
+  }
+
+  std::set<std::string> routes;
+  for (const auto& topic : params.input_topics)
+  {
+    routes.insert(route_output_for_topic(topic));
+  }
+  toml::array inputs;
+  for (const auto& route : routes)
+  {
+    inputs.push_back(route);
+  }
+
+  toml::table framing;
+  framing.insert("method", "newline_delimited");
+
+  toml::table sink;
+  sink.insert("type", "socket");
+  sink.insert("inputs", std::move(inputs));
+  sink.insert("mode", "tcp");
+  sink.insert("address", params.host + ":" + std::to_string(params.port));
+  sink.insert("encoding", json_encoding());
+  sink.insert("framing", std::move(framing));
+  sink.insert("buffer", disk_buffer(MIN_DISK_BUFFER_BYTES));
+
+  // Under a real `sinks.<id>` path, not printed bare: a table serialized on its own has
+  // no name to put in its (and its sub-tables') headers, so `[buffer]` would land at the
+  // top level of the snippet instead of `[sinks.<id>.buffer]`.
+  toml::table sinks;
+  sinks.insert(params.sink_id, std::move(sink));
+  toml::table root;
+  root.insert("sinks", std::move(sinks));
+
+  std::stringstream ss;
+  if (!params.origin.empty())
+  {
+    ss << "# " << params.origin << "\n";
+  }
+  ss << root;
+  std::string out = ss.str();
+  if (out.back() != '\n')
+  {
+    out.push_back('\n');
+  }
+  return out;
+}
+
+StageAction stage_action(bool recipe_exists, bool staged_exists)
+{
+  // staged_exists is deliberately unused: copy-forward ignores what the path holds.
+  (void)staged_exists;
+  return recipe_exists ? StageAction::Copy : StageAction::Skip;
 }
 
 std::string merge_custom_config_files(const std::string& rendered, const std::vector<CustomConfigFile>& files)
