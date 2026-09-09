@@ -64,7 +64,17 @@ protected:
     std::string data_str = msg.data.c_str();
     boost::replace_all(data_str, "'", "\"");
     RCLCPP_INFO_STREAM(ms_node_->get_logger(), "Value: " << data_str);
-    data_json_ = nlohmann::json::parse(data_str);
+    nlohmann::json data_json = nlohmann::json::parse(data_str);
+    // The first successful transform lookup reports the origin distance; every later poll
+    // reports 0.0 (the pose didn't move between polls). Records from several polls can be
+    // queued by the time PublishesDistanceFromOriginOnFirstFix's loop spins them, so the newest
+    // one is not necessarily the origin one -- latch the first key-bearing value here, where
+    // each Record is still the only one the loop has seen from its poll.
+    if (!first_distance_observed_ && data_json.contains("distance_traveled"))
+    {
+      first_distance_ = data_json["distance_traveled"].get<double>();
+      first_distance_observed_ = true;
+    }
     callback_active_ = true;
   }
 
@@ -101,7 +111,8 @@ protected:
   std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
   rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
-  nlohmann::json data_json_;
+  double first_distance_{ 0.0 };
+  bool first_distance_observed_{ false };
 
 public:
   bool callback_active_{ false };
@@ -115,35 +126,26 @@ TEST_F(MeasurementDistanceTraveledTest, PublishesDistanceFromOriginOnFirstFix)
   startLifecycleNode();
 
   // last_x_/last_y_ start at (0, 0), so the first successful transform lookup reports the
-  // straight-line distance from the origin. Wait for the first Record carrying
-  // "distance_traveled" and assert on *that* one: with a static pose every later cycle reports
-  // 0.0 from the previous fix, and a loaded runner can let a second cycle queue up before the
-  // spin_some below runs, so the latest Record is not necessarily the one under test (#519).
-  // tf2_ros::TransformListener spins on its own background thread (MeasurementServer never passed
-  // it an explicit node/executor, so it defaults to one); a short sleep between spins here gives
-  // that thread real scheduling opportunities instead of this loop busy-spinning a core out from
-  // under it.
-  bool got_distance = false;
-  double first_distance = 0.0;
+  // straight-line distance from the origin, and every later poll reports 0.0 (static pose).
+  // Assert on the value distanceDataCallback() latched: several polls' Records can sit in the
+  // subscription queue by the time this loop spins them, so the newest message is not
+  // necessarily the origin one. tf2_ros::TransformListener spins on its own background thread
+  // (MeasurementServer never passed it an explicit node/executor, so it defaults to one); a
+  // short sleep between spins here gives that thread real scheduling opportunities instead of
+  // this loop busy-spinning a core out from under it.
   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-  while (!got_distance)
+  while (!first_distance_observed_)
   {
     ASSERT_LT(std::chrono::steady_clock::now(), deadline)
         << "never observed a Record with \"distance_traveled\" -- tf broadcast likely never "
            "reached the buffer";
     broadcastMapToBaseLink(3.0, 4.0);
-    callback_active_ = false;
     rclcpp::spin_some(ms_node_->get_node_base_interface());
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    if (callback_active_ && data_json_.contains("distance_traveled"))
-    {
-      first_distance = data_json_["distance_traveled"].get<double>();
-      got_distance = true;
-    }
   }
 
   // sqrt(3^2 + 4^2)
-  EXPECT_NEAR(first_distance, 5.0, 1e-2);
+  EXPECT_NEAR(first_distance_, 5.0, 1e-2);
 }
 
 TEST_F(MeasurementDistanceTraveledTest, NoTransformProducesNoPublish)
