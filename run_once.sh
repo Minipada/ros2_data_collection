@@ -10,9 +10,10 @@ ISSUE_ARG="${RUN_ONCE_ISSUE:-}"
 ISSUE_ARG="${ISSUE_ARG#\#}"
 
 usage() {
-	echo "Usage: $0 [--agent claude|codex] [--issue N]"
+	echo "Usage: $0 [--agent claude|codex|zai] [--issue N]"
 	echo "Example: $0"
 	echo "Example: $0 --agent codex"
+	echo "Example: $0 --agent zai"
 	echo "Example: $0 --issue 249"
 	echo "Example: $0 249 codex"
 	echo "Example: RUN_ONCE_AGENT=codex RUN_ONCE_ISSUE=249 $0"
@@ -29,7 +30,7 @@ while [[ $# -gt 0 ]]; do
 	case "$1" in
 	--agent)
 		if [[ -z "${2:-}" ]]; then
-			echo "ERROR: --agent requires claude or codex"
+			echo "ERROR: --agent requires claude, codex or zai"
 			exit 1
 		fi
 		AGENT="$2"
@@ -56,7 +57,7 @@ while [[ $# -gt 0 ]]; do
 		usage
 		exit 0
 		;;
-	claude | codex)
+	claude | codex | zai)
 		AGENT="$1"
 		shift
 		;;
@@ -72,9 +73,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$AGENT" in
-claude | codex) ;;
+claude | codex | zai) ;;
 *)
-	echo "ERROR: Unsupported agent '${AGENT}'. Expected claude or codex."
+	echo "ERROR: Unsupported agent '${AGENT}'. Expected claude, codex or zai."
 	exit 1
 	;;
 esac
@@ -400,5 +401,15 @@ claude)
 	;;
 codex)
 	codex "$PROMPT"
+	;;
+zai)
+	# zai_auth lives in ~/.zshrc. Source it in a non-interactive zsh so its
+	# exports reach the claude process. Pass the instruction text as
+	# RUN_ONCE_PROMPT: sourcing the zshrc overwrites $PROMPT (zsh's prompt
+	# variable), so it must not carry the agent instructions.
+	CLAUDE_NAME="#${ISSUE_NUMBER} - ${ISSUE_TITLE}" \
+		RUN_ONCE_PROMPT="$PROMPT" \
+		AGENT_COLOR="$AGENT_COLOR" \
+		zsh -c 'source ~/.zshrc; zai_auth && exec claude --model=glm-5.3-flash --name "$CLAUDE_NAME" --agent-color "$AGENT_COLOR" --permission-mode acceptEdits "$RUN_ONCE_PROMPT"'
 	;;
 esac
