@@ -236,6 +236,16 @@ public:
     return out;
   }
 
+  // The schema file a plugin type validates against by default, relative to the registering
+  // package's plugins/measurements/json directory. Only the type after the '/' is converted:
+  // the package part is not a CamelCase word.
+  static std::string defaultSchemaFile(const std::string& plugin_lookup_name)
+  {
+    const size_t sep = plugin_lookup_name.find('/');
+    const std::string& plugin_type = sep == std::string::npos ? plugin_lookup_name : plugin_lookup_name.substr(sep + 1);
+    return snakeCase(plugin_type) + ".json";
+  }
+
   // The schema a Measurement validates against when json_schema_path is unset: one file per
   // plugin type, named after it, shipped by the package registering the plugin
   // (dc_measurements/Camera -> dc_measurements/plugins/measurements/json/camera.json).
@@ -246,9 +256,7 @@ public:
     const size_t sep = measurement_plugin_.find('/');
     const std::string package =
         sep == std::string::npos ? std::string("dc_measurements") : measurement_plugin_.substr(0, sep);
-    const std::string plugin_type =
-        sep == std::string::npos ? measurement_plugin_ : measurement_plugin_.substr(sep + 1);
-    validateSchema(package, snakeCase(plugin_type) + ".json");
+    validateSchema(package, defaultSchemaFile(measurement_plugin_));
   }
 
   // Current state of one of the configured Conditions, as dc_core::ConditionSet asks for it.
