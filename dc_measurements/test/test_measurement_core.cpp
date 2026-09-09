@@ -179,7 +179,9 @@ TEST_F(MeasurementCoreTest, GateLatchesOpenAndStopsConsultingTheCondition)
 {
   Captured captured;
   MeasurementCore core;
-  core.configure(baseConfig(), captured.publishFn(), captured.failureFn(), captured.logFn());
+  auto config = baseConfig();
+  config.gate_condition = "go";
+  core.configure(config, captured.publishFn(), captured.failureFn(), captured.logFn());
 
   FakeConditions gate;  // the gate condition reads false to start with
   const auto publish_once = [&](const MeasurementCore::TimePoint& now) {
@@ -208,7 +210,9 @@ TEST_F(MeasurementCoreTest, UnknownGateConditionHoldsAllCollectionBack)
 {
   Captured captured;
   MeasurementCore core;
-  core.configure(baseConfig(), captured.publishFn(), captured.failureFn(), captured.logFn());
+  auto config = baseConfig();
+  config.gate_condition = "go";
+  core.configure(config, captured.publishFn(), captured.failureFn(), captured.logFn());
 
   // What the driver's lookup does for a gate_condition naming no configured Condition: report
   // false, so the gate never opens.
