@@ -1039,6 +1039,8 @@ jobs:
         with:
           name: e2e-harness-logs
           path: tools/e2e/.run/**
+          # .run/ is hidden — upload-artifact skips hidden dirs by default (#517)
+          include-hidden-files: true
 
   e2e-split:
     needs: [build-workspace, build-e2e-image]
@@ -1085,3 +1087,5 @@ jobs:
         with:
           name: e2e-split-harness-logs
           path: tools/e2e/.run/**
+          # .run/ is hidden — upload-artifact skips hidden dirs by default (#517)
+          include-hidden-files: true
