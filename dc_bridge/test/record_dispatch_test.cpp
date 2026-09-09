@@ -7,6 +7,7 @@
 #include "dc_bridge/record_dispatch.hpp"
 
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <gtest/gtest.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -69,25 +70,24 @@ std::string expected_event_time_bytes(std::uint32_t secs, std::uint32_t nanos)
   return out;
 }
 
-// A loopback peer: binds port 0, accepts one connection in a background thread, and
-// captures the first frame's bytes. Bounded timeouts, so a test whose dispatch never
-// sends still tears down.
+// A loopback peer: binds port 0 and, once the Forwarder has connected, reads the first
+// frame off the connection. Deliberately no background thread and no blocking syscall:
+// accept() runs after dispatch(), when the connection is already pending, and both fds
+// are non-blocking under a poll loop — a blocking peer is what a timeout cannot bound
+// (the kernel rejects SO_RCVTIMEO whose tv_usec is >= 1s, and the test hangs instead).
 struct CapturedFrame
 {
   int listen_fd{ -1 };
+  int conn_fd{ -1 };
   std::uint16_t port{ 0 };
-  timeval rcv_timeout{ 0, 2000000 };  // 2s — also bounds accept() on Linux
   std::string bytes;
-  std::mutex mutex;
-  std::atomic<bool> got_frame{ false };
-  std::thread thread;
 
   CapturedFrame()
   {
     listen_fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    ::fcntl(listen_fd, F_SETFL, ::fcntl(listen_fd, F_GETFL) | O_NONBLOCK);
     int one = 1;
     ::setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-    ::setsockopt(listen_fd, SOL_SOCKET, SO_RCVTIMEO, &rcv_timeout, sizeof(rcv_timeout));
     sockaddr_in sa{};
     sa.sin_family = AF_INET;
     sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -97,35 +97,46 @@ struct CapturedFrame
     socklen_t len = sizeof(sa);
     ::getsockname(listen_fd, reinterpret_cast<sockaddr*>(&sa), &len);
     port = ntohs(sa.sin_port);
-
-    thread = std::thread([this]() {
-      int fd = ::accept(listen_fd, nullptr, nullptr);
-      if (fd < 0)
-      {
-        return;
-      }
-      ::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &rcv_timeout, sizeof(rcv_timeout));
-      char buf[8192];
-      ssize_t n = ::recv(fd, buf, sizeof(buf), 0);
-      if (n > 0)
-      {
-        std::lock_guard<std::mutex> lock(mutex);
-        bytes.assign(buf, static_cast<std::size_t>(n));
-        got_frame.store(true);
-      }
-      ::close(fd);
-    });
   }
   ~CapturedFrame()
   {
-    thread.join();
+    if (conn_fd >= 0)
+      ::close(conn_fd);
     if (listen_fd >= 0)
       ::close(listen_fd);
   }
 
-  std::string frame()
+  /// Waits up to `budget` for the Forwarder's connection and its first frame.
+  bool read_frame(std::chrono::milliseconds budget)
   {
-    std::lock_guard<std::mutex> lock(mutex);
+    const auto deadline = std::chrono::steady_clock::now() + budget;
+    while (std::chrono::steady_clock::now() < deadline)
+    {
+      if (conn_fd < 0)
+      {
+        conn_fd = ::accept(listen_fd, nullptr, nullptr);
+        if (conn_fd < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
+        {
+          return false;
+        }
+      }
+      if (conn_fd >= 0)
+      {
+        char buf[8192];
+        const ssize_t n = ::recv(conn_fd, buf, sizeof(buf), MSG_DONTWAIT);
+        if (n > 0)
+        {
+          bytes.assign(buf, static_cast<std::size_t>(n));
+          return true;
+        }
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    return false;
+  }
+
+  const std::string& frame() const
+  {
     return bytes;
   }
 };
@@ -173,30 +184,6 @@ const msgpack::object* wire_message_value(const msgpack::object& record)
     return nullptr;
   }
   return &record.via.map.ptr[0].val;
-}
-
-// The peer thread reads concurrently with send(): poll for the frame rather than
-// assuming it was observed the instant dispatch() returned.
-bool frame_arrived_within(CapturedFrame& peer, std::chrono::milliseconds budget)
-{
-  const auto deadline = std::chrono::steady_clock::now() + budget;
-  while (!peer.got_frame.load() && std::chrono::steady_clock::now() < deadline)
-  {
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-  }
-  return peer.got_frame.load();
-}
-
-bool wait_for_frame(CapturedFrame& peer)
-{
-  return frame_arrived_within(peer, std::chrono::seconds(2));
-}
-
-// Inverted, for the "dispatch() sent nothing" assertions: a bounded window in which a
-// frame it did put on the wire would already have been observed.
-bool no_frame_within(CapturedFrame& peer)
-{
-  return !frame_arrived_within(peer, std::chrono::milliseconds(200));
 }
 
 // A dispatcher over a real intent queue and a real Forwarder. `want_peer` decides whether
@@ -280,9 +267,9 @@ TEST(RecordDispatch, FilesTopicRecordIsEnqueuedAndNotForwarded)
   EXPECT_EQ(intent.tag, "dc.camera.image");
   EXPECT_EQ(intent.payload, json::parse(R"({"path": "/files/img.jpg"})"));
 
-  // dispatch() is synchronous, so a frame it did send would be observed within this
-  // window; nothing was.
-  EXPECT_TRUE(no_frame_within(*h.peer));
+  // dispatch() is synchronous, so a frame it did send would land inside this budget;
+  // nothing was.
+  EXPECT_FALSE(h.peer->read_frame(std::chrono::milliseconds(200)));
   EXPECT_FALSE(h.forwarder->is_connected());
   EXPECT_TRUE(h.warnings.empty());
 }
@@ -297,7 +284,7 @@ TEST(RecordDispatch, RecordsTopicRecordIsForwardedAndNotEnqueued)
 
   EXPECT_EQ(h.queue->size(), 0u);
   EXPECT_TRUE(h.warnings.empty());
-  ASSERT_TRUE(wait_for_frame(*h.peer));
+  ASSERT_TRUE(h.peer->read_frame(std::chrono::seconds(2)));
 
   const std::string frame = h.peer->frame();
   EXPECT_EQ(wire_tag(frame), "dc.measurement.uptime");
@@ -328,7 +315,7 @@ TEST(RecordDispatch, TopicInBothListsIsEnqueuedAndForwarded)
   h.dispatcher->dispatch(make_incoming("/dc/both", R"({"name": "both"})"));
 
   EXPECT_EQ(h.queue->size(), 1u);
-  ASSERT_TRUE(wait_for_frame(*h.peer));
+  ASSERT_TRUE(h.peer->read_frame(std::chrono::seconds(2)));
   EXPECT_EQ(wire_tag(h.peer->frame()), "dc.both");
 }
 
@@ -351,7 +338,7 @@ TEST(RecordDispatch, NonJsonPayloadIsLeftForPackRecordMapToWrap)
 
   h.dispatcher->dispatch(make_incoming("/dc/measurement/raw", "not json at all"));
 
-  ASSERT_TRUE(wait_for_frame(*h.peer));
+  ASSERT_TRUE(h.peer->read_frame(std::chrono::seconds(2)));
   msgpack::object_handle oh = unpack_frame(h.peer->frame());
   const msgpack::object* message = wire_message_value(wire_record_map(oh.get()));
   ASSERT_NE(message, nullptr);
@@ -368,7 +355,7 @@ TEST(RecordDispatch, NonJsonAndJsonStringPayloadsLandTheSameWay)
   // same wire record — the parse-or-wrap step adds no second wrapping of its own.
   h.dispatcher->dispatch(make_incoming("/dc/measurement/raw", "\"not json at all\""));
 
-  ASSERT_TRUE(wait_for_frame(*h.peer));
+  ASSERT_TRUE(h.peer->read_frame(std::chrono::seconds(2)));
   msgpack::object_handle oh = unpack_frame(h.peer->frame());
   const msgpack::object* message = wire_message_value(wire_record_map(oh.get()));
   ASSERT_NE(message, nullptr);
@@ -383,7 +370,7 @@ TEST(RecordDispatch, ArrayPayloadIsNotCoercedIntoAnObject)
 
   h.dispatcher->dispatch(make_incoming("/dc/measurement/array", "[1, 2, 3]"));
 
-  ASSERT_TRUE(wait_for_frame(*h.peer));
+  ASSERT_TRUE(h.peer->read_frame(std::chrono::seconds(2)));
   msgpack::object_handle oh = unpack_frame(h.peer->frame());
   const msgpack::object* message = wire_message_value(wire_record_map(oh.get()));
   ASSERT_NE(message, nullptr);
@@ -400,7 +387,7 @@ TEST(RecordDispatch, NegativeStampSecondsClampToZeroAndNanosecondsSurvive)
 
   h.dispatcher->dispatch(make_incoming("/dc/measurement/clock", "{}", -5, 42));
 
-  ASSERT_TRUE(wait_for_frame(*h.peer));
+  ASSERT_TRUE(h.peer->read_frame(std::chrono::seconds(2)));
   EXPECT_EQ(wire_event_time(h.peer->frame()), expected_event_time_bytes(0, 42));
 }
 
