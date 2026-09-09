@@ -323,6 +323,8 @@ set(tests
   test_measurement_tcp_health
   test_measurement_thermal
   test_measurement_uptime
+  test_publish_gate
+  test_record_enricher
   mission_follow_waypoints_tracker_test
   mission_nav2_tracker_test
   test_mission_nav2_through_poses_core

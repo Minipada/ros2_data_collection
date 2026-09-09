@@ -28,6 +28,8 @@
 #include "dc_interfaces/msg/flush_event.hpp"
 #include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/incident_releaser.hpp"
+#include "dc_measurements/publish_gate.hpp"
+#include "dc_measurements/record_enricher.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/create_timer_ros.h"
@@ -265,7 +267,8 @@ public:
   // consulted again, even if it later becomes false again.
   bool isGateArmed(const dc_interfaces::msg::StringStamped& msg)
   {
-    if (gate_condition_.empty() || gate_armed_)
+    // An open gate -- no gate_condition configured, or already latched -- is never re-consulted.
+    if (publish_gate_.gateOpen())
     {
       return true;
     }
@@ -278,164 +281,27 @@ public:
       return false;
     }
 
-    gate_armed_ = condition_it->second->getState(msg);
-    if (gate_armed_)
+    const bool open = publish_gate_.openGate(condition_it->second->getState(msg));
+    if (open)
     {
       RCLCPP_INFO_STREAM(logger_, "Measurement " << measurement_name_ << ": gate_condition '" << gate_condition_
                                                  << "' became true, collection will proceed normally from now on.");
     }
-    return gate_armed_;
+    return open;
   }
 
-  void addTags(dc_interfaces::msg::StringStamped& msg)
-  {
-    // Only put the tags in if the conditions are ok. This way, we still publish the data
-    // and can check in conditions but with no tags, this is not received by the Bridge
-    if (!tags_.empty())
-    {
-      try
-      {
-        json data_json = json::parse(msg.data);
-        data_json["tags"] = tags_;
-        msg.data = data_json.dump(-1, ' ', true);
-      }
-      catch (json::parse_error& e)
-      {
-        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding tags: " << msg.data);
-      }
-    }
-  }
-
-  void addRunId(dc_interfaces::msg::StringStamped& msg)
-  {
-    if (run_id_enabled_)
-    {
-      try
-      {
-        json data_json = json::parse(msg.data);
-        data_json["run_id"] = run_id_;
-        msg.data = data_json.dump(-1, ' ', true);
-      }
-      catch (json::parse_error& e)
-      {
-        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding tags: " << msg.data);
-      }
-    }
-  }
-
-  void addMeasurementName(dc_interfaces::msg::StringStamped& msg)
-  {
-    // Only put the tags in if the conditions are ok. This way, we still publish the data
-    // and can check in conditions but with no tags, this is not received by the Bridge
-    if (include_measurement_name_)
-    {
-      try
-      {
-        json data_json = json::parse(msg.data);
-        data_json["name"] = measurement_name_;
-        msg.data = data_json.dump(-1, ' ', true);
-      }
-      catch (json::parse_error& e)
-      {
-        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding measurement name " << measurement_name_
-                                                                                        << " to data " << msg.data);
-      }
-    }
-  }
-
-  void addMeasurementPluginName(dc_interfaces::msg::StringStamped& msg)
-  {
-    // Only put the tags in if the conditions are ok. This way, we still publish the data
-    // and can check in conditions but with no tags, this is not received by the Bridge
-    if (include_measurement_plugin_)
-    {
-      try
-      {
-        json data_json = json::parse(msg.data);
-        data_json["plugin"] = measurement_plugin_;
-        msg.data = data_json.dump(-1, ' ', true);
-      }
-      catch (json::parse_error& e)
-      {
-        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding measurement plugin " << measurement_plugin_
-                                                                                          << "to data " << msg.data);
-      }
-    }
-  }
-
-  void nestedSample(dc_interfaces::msg::StringStamped& msg)
+  // The validation step of the enrichment pipeline: a Record the schema rejects is logged and
+  // handed to the plugin hook, but still published, exactly as this chain always did.
+  void validateJSON(const json& data_json)
   {
     try
     {
-      json nested_json = json::parse(msg.data);
-      json data_json;
-
-      if (nested_)
-      {
-        data_json[measurement_name_] = nested_json;
-        msg.data = data_json.dump(-1, ' ', true);
-      }
+      validator_.validate(data_json);
     }
-    catch (json::parse_error& e)
+    catch (const std::exception& e)
     {
-      RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when making it nested: " << msg.data);
-    }
-  }
-
-  void flattenSample(dc_interfaces::msg::StringStamped& msg)
-  {
-    try
-    {
-      json data_json = json::parse(msg.data);
-      json new_json;
-      if (flatten_)
-      {
-        new_json = data_json.flatten();
-        new_json["flattened"] = true;
-      }
-      else
-      {
-        new_json = data_json;
-        new_json["flattened"] = false;
-      }
-
-      if (nested_)
-      {
-        new_json["nested"] = true;
-      }
-      else
-      {
-        new_json["nested"] = false;
-      }
-      msg.data = new_json.dump(-1, ' ', true);
-    }
-    catch (json::parse_error& e)
-    {
-      RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when flattening it: " << msg.data);
-    }
-  }
-
-  void validateJSON(dc_interfaces::msg::StringStamped& msg)
-  {
-    if (enable_validator_)
-    {
-      try
-      {
-        auto json_data = json::parse(msg.data);
-        try
-        {
-          validator_.validate(json_data);
-        }
-        catch (const std::exception& e)
-        {
-          RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what() << "data=" << json_data.dump());
-          onFailedValidation(json_data);
-        }
-      }
-      catch (json::parse_error& e)
-      {
-        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when publishing: " << msg.data);
-      }
+      RCLCPP_ERROR_STREAM(logger_, "Validation failed: " << e.what() << "data=" << data_json.dump());
+      onFailedValidation(data_json);
     }
   }
 
@@ -443,17 +309,10 @@ public:
   // flattening, run_id, tags, measurement name/plugin, custom keys) without publishing --
   // shared by publish() and bufferSample() so a Record released later from the ring buffer
   // looks identical to one published live, modulo the incident_id onFlushEvent() adds (#287).
+  // One parse, one dump: the steps themselves live in RecordEnricher (#482).
   void enrichMsg(dc_interfaces::msg::StringStamped& msg)
   {
-    // TODO pass the json, not the msg
-    validateJSON(msg);
-    nestedSample(msg);
-    flattenSample(msg);
-    addRunId(msg);
-    addTags(msg);
-    addMeasurementName(msg);
-    addMeasurementPluginName(msg);
-    addCustomKeys(msg);
+    msg.data = record_enricher_.enrich(msg.data);
   }
 
   void publish(dc_interfaces::msg::StringStamped msg)
@@ -472,36 +331,12 @@ public:
         return;
       }
 
-      // Init publish
-      if (init_max_measurements_ != -1 &&
-          (init_max_measurements_ == 0 || init_counter_published_ < init_max_measurements_))
+      if (publish_gate_.offer(isAnyConditionSet() && isConditionOn(msg_copy)))
       {
         data_pub_->publish(msg);
-        init_counter_published_++;
-      }
-      // Infinite measurements on condition
-      else if (isAnyConditionSet() && isConditionOn(msg_copy) && condition_max_measurements_ == 0)
-      {
-        data_pub_->publish(msg);
-      }
-      // Trigger publish with maximum
-      else if (isAnyConditionSet() && isConditionOn(msg_copy) &&
-               condition_counter_published_ < condition_max_measurements_)
-      {
-        RCLCPP_DEBUG_STREAM(logger_, "condition_counter_published_=" << condition_counter_published_
-                                                                     << ", condition_max_measurements_="
-                                                                     << condition_max_measurements_);
-        data_pub_->publish(msg);
-        condition_counter_published_++;
-      }
-      // Not publish, reset Condition counter
-      else if (isAnyConditionSet() && !isConditionOn(msg_copy))
-      {
-        condition_counter_published_ = 0;
       }
 
-      if (init_max_measurements_ != 0 && init_max_measurements_ != -1 && condition_max_measurements_ < 0 &&
-          init_max_measurements_ == init_counter_published_)
+      if (publish_gate_.collectionFinished())
       {
         collect_timer_.reset();
       }
@@ -524,40 +359,6 @@ public:
     if (enabled_)
     {
       publish(msg);
-    }
-  }
-
-  void addCustomKeys(dc_interfaces::msg::StringStamped& msg)
-  {
-    if (!custom_keys_.empty() && (!msg.data.empty() && msg.data != "null"))
-    {
-      json data;
-      try
-      {
-        data = json::parse(msg.data);
-      }
-      catch (json::parse_error& e)
-      {
-        RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON when adding custom keys: " << data.dump());
-      }
-      json declared = json::array();
-      for (auto& param : custom_keys_)
-      {
-        auto key = param["key"].get<std::string>();
-        auto value = param["value"].get<std::string>();
-        auto override_value = param["override"].get<bool>();
-        if (!data.contains(key) || (data.contains(key) && override_value))
-        {
-          json data_custom = { { key, value } };
-          data.update(data_custom);
-        }
-        declared.push_back(key);
-      }
-      // Names the keys that are this Measurement's labelling rather than its data, so the
-      // Bridge's Uploader can carry them onto the File metadata Records too (#419) — it
-      // has no other way to tell `site` from a measured field.
-      data["custom_keys"] = std::move(declared);
-      msg.data = data.dump(-1, ' ', true);
     }
   }
 
@@ -793,30 +594,45 @@ public:
     enable_validator_ = config.enable_validator;
     json_schema_path_ = config.json_schema_path;
     group_key_ = config.group_key;
-    tags_ = config.tags;
     init_collect_ = config.init_collect;
-    init_max_measurements_ = config.init_max_measurements;
-    include_measurement_name_ = config.include_measurement_name;
-    include_measurement_plugin_ = config.include_measurement_plugin;
     remote_keys_ = config.remote_keys;
     remote_prefixes_ = config.remote_prefixes;
-    nested_ = config.nested;
-    flatten_ = config.flatten;
     all_base_path_ = config.all_base_path;
     all_base_path_expanded_ = config.all_base_path_expanded;
     save_local_base_path_ = config.save_local_base_path;
     save_local_base_path_expanded_ = config.save_local_base_path_expanded;
-    run_id_ = config.run_id;
-    run_id_enabled_ = config.run_id_enabled;
-    custom_keys_ = config.custom_keys;
 
-    condition_max_measurements_ = config.condition_max_measurements;
     condition_set_ =
         dc_core::ConditionSet(config.if_all_conditions, config.if_any_conditions, config.if_none_conditions);
 
     gate_condition_ = config.gate_condition;
-    // No gate configured means collection is never held back.
-    gate_armed_ = gate_condition_.empty();
+
+    // The publish decision -- gate latch, init quota, condition cap -- is state the ROS layer
+    // only feeds and reads back (#482).
+    PublishGate::Config gate_config;
+    gate_config.init_max = config.init_max_measurements;
+    gate_config.condition_max = config.condition_max_measurements;
+    gate_config.has_conditions = !condition_set_.empty();
+    gate_config.gate_enabled = !gate_condition_.empty();
+    publish_gate_ = PublishGate(gate_config);
+
+    RecordEnricher::Config enricher_config;
+    enricher_config.measurement_name = measurement_name_;
+    enricher_config.measurement_plugin = measurement_plugin_;
+    enricher_config.nested = config.nested;
+    enricher_config.flatten = config.flatten;
+    enricher_config.run_id_enabled = config.run_id_enabled;
+    enricher_config.run_id = config.run_id;
+    enricher_config.include_measurement_name = config.include_measurement_name;
+    enricher_config.include_measurement_plugin = config.include_measurement_plugin;
+    enricher_config.tags = config.tags;
+    enricher_config.custom_keys = config.custom_keys;
+    enricher_config.enable_validator = config.enable_validator;
+    record_enricher_ = RecordEnricher(
+        enricher_config, [this](const json& data_json) { validateJSON(data_json); },
+        [this](const std::string& data) {
+          RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON while enriching: " << data);
+        });
 
     if (topic_output_.empty())
     {
@@ -946,39 +762,24 @@ protected:
   std::string topic_output_;
   std::string group_key_;
 
-  // Run Id
-  bool run_id_enabled_;
-  std::string run_id_;
-
-  // Custom keys
-  std::vector<json> custom_keys_;
-
   // Parameters
   bool init_collect_;
-  bool include_measurement_name_;
-  bool include_measurement_plugin_;
   std::vector<std::string> remote_keys_;
   std::vector<std::string> remote_prefixes_;
-  bool nested_;
-  bool flatten_;
   std::string all_base_path_;
   std::string all_base_path_expanded_;
   std::string save_local_base_path_;
   std::string save_local_base_path_expanded_;
 
-  // Counters
-  int init_counter_published_ = 0;
-  int init_max_measurements_;
-
   // Conditions
   std::map<std::string, std::shared_ptr<dc_core::Condition>> conditions_;
   dc_core::ConditionSet condition_set_;
-  int condition_max_measurements_;
-  int condition_counter_published_ = 0;
-
-  // Gate: one-shot arming latch, distinct from if_all/if_any/if_none above.
   std::string gate_condition_;
-  bool gate_armed_{ true };
+
+  // The publish decision (gate latch, init quota, condition cap) and the Record shaping,
+  // both ROS-free and directly tested (#482).
+  PublishGate publish_gate_;
+  RecordEnricher record_enricher_{ RecordEnricher::Config{}, {}, {} };
 
   // Logger
   rclcpp::Logger logger_{ rclcpp::get_logger("dc_measurements") };
@@ -988,9 +789,6 @@ protected:
   std::string json_schema_path_;
   json_validator validator_;
   json schema_;
-
-  // Tags
-  std::vector<std::string> tags_;
 
   // Incident capture: pre-event circular-buffer capture (#287) driven by the IncidentReleaser
   // state machine (#288). releaser_ is only created when buffer_duration_sec_ > 0; while it
