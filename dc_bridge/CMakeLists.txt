@@ -106,7 +106,15 @@ add_executable(dc_uploader
   src/uploader/s3_object_store.cpp)
 target_link_libraries(dc_uploader dc_bridge_core ${AWSSDK_LINK_LIBRARIES})
 
-install(TARGETS dc_bridge dc_uploader DESTINATION lib/${PROJECT_NAME})
+# dc_render (#495): the ROS-free CLI over the render module that `ros2 launch` runs to
+# emit and stage Shipper config snippets, so launch code wires processes only and no
+# config fact (the `dc.<tag>` route rule, the passthrough socket-sink block, the staging
+# rule) lives in two languages. Core-only link: no ROS, no AWS SDK.
+add_executable(dc_render
+  src/render_main.cpp)
+target_link_libraries(dc_render dc_bridge_core)
+
+install(TARGETS dc_bridge dc_uploader dc_render DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
