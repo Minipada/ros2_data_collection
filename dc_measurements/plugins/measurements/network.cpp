@@ -57,14 +57,6 @@ void Network::onConfigure()
   setsockopt(skt_, IPPROTO_IP, IP_TTL, (char*)&ttl_, sizeof(ttl_));
 }
 
-void Network::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "network.json");
-  }
-}
-
 Network::~Network() = default;
 
 bool Network::ping()

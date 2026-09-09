@@ -39,7 +39,6 @@ protected:
    * @brief Configuration of behavior action
    */
   void onConfigure() override;
-  void setValidationSchema() override;
 };
 
 }  // namespace dc_measurements

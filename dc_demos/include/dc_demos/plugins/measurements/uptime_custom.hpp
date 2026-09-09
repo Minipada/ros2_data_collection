@@ -18,7 +18,6 @@ class UptimeCustom : public dc_measurements::Uptime
 {
 protected:
   void onFailedValidation(json data_json) override;
-  void setValidationSchema() override;
 };
 
 }  // namespace dc_demos

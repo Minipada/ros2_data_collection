@@ -42,14 +42,6 @@ void MissionNav2ThroughPoses::onCleanup()
   }
 }
 
-void MissionNav2ThroughPoses::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "mission_nav2_through_poses.json");
-  }
-}
-
 void MissionNav2ThroughPoses::emit(json data, const rclcpp::Time& stamp)
 {
   // One Record leaves per poll, so missions starting/ending far faster than the polling interval

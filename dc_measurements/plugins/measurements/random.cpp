@@ -12,14 +12,6 @@ Random::Random() : dc_measurements::Measurement()
 
 Random::~Random() = default;
 
-void Random::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "random.json");
-  }
-}
-
 void Random::onConfigure()
 {
   auto node = getNode();

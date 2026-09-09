@@ -13,14 +13,6 @@ OS::OS() : dc_measurements::Measurement()
 
 OS::~OS() = default;
 
-void OS::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "os.json");
-  }
-}
-
 unsigned long long OS::getTotalSystemMemory()
 {
   long pages = sysconf(_SC_PHYS_PAGES);

@@ -25,14 +25,6 @@ void Storage::onConfigure()
   else {}
 }
 
-void Storage::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "storage.json");
-  }
-}
-
 Storage::~Storage() = default;
 
 dc_interfaces::msg::StringStamped Storage::collect()

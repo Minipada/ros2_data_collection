@@ -76,14 +76,6 @@ void Fault::onCleanup()
   }
 }
 
-void Fault::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "fault.json");
-  }
-}
-
 bool Fault::isWatched(const std::string& name) const
 {
   return names_.empty() || std::find(names_.begin(), names_.end(), name) != names_.end();

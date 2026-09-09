@@ -68,14 +68,6 @@ void MissionNav2::onCleanup()
   result_client_.reset();
 }
 
-void MissionNav2::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "mission_nav2.json");
-  }
-}
-
 void MissionNav2::enqueue(json data, const rclcpp::Time& stamp)
 {
   // One Record leaves per poll, so missions starting/ending far faster than the polling interval

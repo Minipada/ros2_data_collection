@@ -88,14 +88,6 @@ void Manipulation::onCleanup()
   }
 }
 
-void Manipulation::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "manipulation.json");
-  }
-}
-
 void Manipulation::statusCb(const action_msgs::msg::GoalStatusArray& msg)
 {
   const rclcpp::Time stamp = getNode()->get_clock()->now();

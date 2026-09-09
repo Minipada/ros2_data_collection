@@ -35,14 +35,6 @@ void CmdVel::onConfigure()
       cmd_vel_topic_, 10, std::bind(&CmdVel::cmdVelCb, this, std::placeholders::_1));
 }
 
-void CmdVel::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "cmd_vel.json");
-  }
-}
-
 dc_interfaces::msg::StringStamped CmdVel::collect()
 {
   dc_interfaces::msg::StringStamped msg = last_data_;

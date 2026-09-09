@@ -54,7 +54,6 @@ class UptimeCustom : public dc_measurements::Uptime
 {
 protected:
   void onFailedValidation(json data_json) override;
-  void setValidationSchema() override;
 };
 
 }  // namespace dc_demos
@@ -84,21 +83,18 @@ void UptimeCustom::onFailedValidation(json data_json)
   RCLCPP_INFO(logger_, "Callback! Validation failed for uptime custom");
 }
 
-void UptimeCustom::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_demos", "uptime_custom.json");
-  }
-}
-
 }  // namespace dc_demos
 
 #include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(dc_demos::UptimeCustom, dc_core::Measurement)
 ```
 
-We include the uptime_custom file header. Then, define the onFailedValidation function (triggered when validation fails) and the setValidationSchema function which sets the json with the new json schema
+We include the uptime_custom file header. Then, define the onFailedValidation function (triggered when validation fails).
+
+The schema is picked up without any code: a Measurement validates against
+`plugins/measurements/json/<plugin type>.json` from the package registering it, so `dc_demos/UptimeCustom`
+reads `dc_demos/plugins/measurements/json/uptime_custom.json`. Set `json_schema_path` to point elsewhere, or
+`enable_validator: false` to turn validation off.
 
 ```admonish info
 Do not forget to include the pluginlib statements at the end to export the plugin class.

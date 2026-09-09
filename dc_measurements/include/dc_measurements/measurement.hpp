@@ -6,6 +6,7 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <ctime>
@@ -95,18 +96,6 @@ public:
   }
 
   ~Measurement() override = default;
-
-  // an opportunity for derived classes to set the validation schema
-  // if they chose
-  virtual void setValidationSchema() = 0;
-
-  void setValidationSchemaFromPath(const std::string& json_schema_path)
-  {
-    if (enable_validator_)
-    {
-      validateSchema(json_schema_path);
-    }
-  }
 
   // an opportunity for derived classes to do something on configuration
   // if they chose
@@ -224,6 +213,42 @@ public:
     {
       RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON file json_schema_path: " << json_schema_path);
     }
+  }
+
+  // CamelCase to snake_case, keeping an acronym run together with the word it precedes:
+  // TCPHealth -> tcp_health, Ros2ControlStatus -> ros2_control_status, OS -> os.
+  static std::string snakeCase(const std::string& camel)
+  {
+    std::string out;
+    for (size_t i = 0; i < camel.size(); i++)
+    {
+      const unsigned char c = static_cast<unsigned char>(camel[i]);
+      const unsigned char prev = i > 0 ? static_cast<unsigned char>(camel[i - 1]) : 0;
+      const unsigned char next = i + 1 < camel.size() ? static_cast<unsigned char>(camel[i + 1]) : 0;
+      const bool boundary = i > 0 && std::isupper(c) &&
+                            ((std::islower(prev) || std::isdigit(prev)) || (std::isupper(prev) && std::islower(next)));
+      if (boundary)
+      {
+        out += '_';
+      }
+      out += static_cast<char>(std::tolower(c));
+    }
+    return out;
+  }
+
+  // The schema a Measurement validates against when json_schema_path is unset: one file per
+  // plugin type, named after it, shipped by the package registering the plugin
+  // (dc_measurements/Camera -> dc_measurements/plugins/measurements/json/camera.json).
+  // Derived from the plugin type rather than the measurement name so an instance id like
+  // right_camera still finds the Camera schema.
+  void validateDefaultSchema()
+  {
+    const size_t sep = measurement_plugin_.find('/');
+    const std::string package =
+        sep == std::string::npos ? std::string("dc_measurements") : measurement_plugin_.substr(0, sep);
+    const std::string plugin_type =
+        sep == std::string::npos ? measurement_plugin_ : measurement_plugin_.substr(sep + 1);
+    validateSchema(package, snakeCase(plugin_type) + ".json");
   }
 
   // Current state of one of the configured Conditions, as dc_core::ConditionSet asks for it.
@@ -678,13 +703,16 @@ public:
 
     RCLCPP_INFO(logger_, "Done configuring %s", measurement_name_.c_str());
 
-    if (json_schema_path_.empty())
+    if (enable_validator_)
     {
-      setValidationSchema();
-    }
-    else
-    {
-      setValidationSchemaFromPath(json_schema_path_);
+      if (json_schema_path_.empty())
+      {
+        validateDefaultSchema();
+      }
+      else
+      {
+        validateSchema(json_schema_path_);
+      }
     }
     // If error during measurement initialization, stop it from publishing
     try

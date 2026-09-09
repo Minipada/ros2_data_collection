@@ -315,6 +315,7 @@ set(tests
   test_measurement_random
   test_measurement_ros2_control_status
   test_measurement_same_as_previous
+  test_measurement_schema
   test_measurement_serial_interface
   test_measurement_shared_flush
   test_measurement_slam_toolbox_quality

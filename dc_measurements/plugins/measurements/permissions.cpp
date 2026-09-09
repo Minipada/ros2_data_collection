@@ -30,14 +30,6 @@ void Permissions::onConfigure()
   }
 }
 
-void Permissions::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "permissions.json");
-  }
-}
-
 struct stat Permissions::getOwner(const std::string& path)
 {
   struct stat info;

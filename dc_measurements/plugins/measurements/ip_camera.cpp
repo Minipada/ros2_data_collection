@@ -119,14 +119,6 @@ void IpCamera::onConfigure()
   ffmpeg_thread_.detach();
 }
 
-void IpCamera::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "ip_camera.json");
-  }
-}
-
 dc_interfaces::msg::StringStamped IpCamera::collect()
 {
   auto node = getNode();

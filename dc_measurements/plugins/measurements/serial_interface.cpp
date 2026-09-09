@@ -99,14 +99,6 @@ void SerialInterface::onConfigure()
   // instead, so activation always succeeds and reconnection happens automatically.
 }
 
-void SerialInterface::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "serial_interface.json");
-  }
-}
-
 void SerialInterface::onCleanup()
 {
   closePort();

@@ -31,7 +31,6 @@ public:
 protected:
   void onConfigure() override;
   void onCleanup() override;
-  void setValidationSchema() override;
 
 private:
   uint32_t domain_id_{ 0 };

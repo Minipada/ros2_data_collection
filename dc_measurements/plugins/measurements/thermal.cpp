@@ -56,14 +56,6 @@ void Thermal::onConfigure()
   // on every poll instead, and simply reports whatever zones it can currently read.
 }
 
-void Thermal::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "thermal.json");
-  }
-}
-
 std::vector<std::string> Thermal::discoverZones()
 {
   std::vector<std::string> zones;

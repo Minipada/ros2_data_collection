@@ -20,14 +20,6 @@ void Cpu::onConfigure()
   cpu_min_ = dc_util::get_double_type_param(node, measurement_name_, "cpu_min", 5.0);
 }
 
-void Cpu::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "cpu.json");
-  }
-}
-
 void Cpu::setAverageCpu(json& data_json)
 {
   std::vector<float> values;

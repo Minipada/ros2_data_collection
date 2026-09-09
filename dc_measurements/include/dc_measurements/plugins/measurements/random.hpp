@@ -26,7 +26,6 @@ protected:
   /**
    * @brief Set validation schema used to confirm data before collecting it
    */
-  void setValidationSchema() override;
   void onConfigure() override;
 
   std::string value_type_;

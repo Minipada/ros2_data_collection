@@ -24,7 +24,6 @@ protected:
    * @brief Configuration of behavior action
    */
   void onConfigure() override;
-  void setValidationSchema() override;
 
   std::string global_frame_;
   std::string robot_base_frame_;

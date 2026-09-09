@@ -17,14 +17,6 @@ void DrivingType::onConfigure()
   mode_source_.configure(getNode(), measurement_name_, logger_);
 }
 
-void DrivingType::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "driving_type.json");
-  }
-}
-
 dc_interfaces::msg::StringStamped DrivingType::collect()
 {
   json data_json;
