@@ -8,6 +8,8 @@
 #include <cerrno>
 #include <cstring>
 
+#include "dc_measurements/measurement_config.hpp"
+
 namespace measurement_server
 {
 
@@ -207,34 +209,6 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
   tf_->setCreateTimerInterface(timer_interface);
   transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_);
 
-  measurement_types_.resize(measurement_ids_.size());
-  measurement_topic_outputs_.resize(measurement_ids_.size());
-  measurement_polling_interval_.resize(measurement_ids_.size());
-  measurement_debug_.resize(measurement_ids_.size());
-  measurement_enable_validator_.resize(measurement_ids_.size());
-  measurement_json_schema_path_.resize(measurement_ids_.size());
-  measurement_group_key_.resize(measurement_ids_.size());
-  measurement_tags_.resize(measurement_ids_.size());
-  measurement_init_collect_.resize(measurement_ids_.size());
-  measurement_init_max_measurements_.resize(measurement_ids_.size());
-  measurement_include_measurement_name_.resize(measurement_ids_.size());
-  measurement_include_measurement_plugin_.resize(measurement_ids_.size());
-  measurement_remote_keys_.resize(measurement_ids_.size());
-  measurement_remote_prefixes_.resize(measurement_ids_.size());
-  measurement_nested_.resize(measurement_ids_.size());
-  measurement_flatten_.resize(measurement_ids_.size());
-  measurement_buffer_duration_sec_.resize(measurement_ids_.size());
-  measurement_post_roll_duration_sec_.resize(measurement_ids_.size());
-  measurement_cooldown_sec_.resize(measurement_ids_.size());
-  measurement_max_flush_rate_hz_.resize(measurement_ids_.size());
-  measurement_flush_topic_.resize(measurement_ids_.size());
-
-  measurement_if_all_conditions_.resize(measurement_ids_.size());
-  measurement_if_any_conditions_.resize(measurement_ids_.size());
-  measurement_if_none_conditions_.resize(measurement_ids_.size());
-  measurement_gate_condition_.resize(measurement_ids_.size());
-  measurement_condition_max_measurements_.resize(measurement_ids_.size());
-
   condition_types_.resize(condition_ids_.size());
 
   if (!loadConditionPlugins())
@@ -283,101 +257,49 @@ bool MeasurementServer::loadMeasurementPlugins()
 
   for (size_t i = 0; i != measurement_ids_.size(); i++)
   {
-    // Mandatory parameters
-    measurement_types_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "plugin");
+    dc_core::MeasurementConfig config = dc_measurements::read_measurement_config(node, measurement_ids_[i]);
 
-    // Optional parameters
-    measurement_group_key_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "group_key", "");
-    measurement_topic_outputs_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "topic_output",
-                                                                std::string("/dc/measurement/") + measurement_ids_[i]);
-    measurement_polling_interval_[i] = dc_util::get_int_type_param(node, measurement_ids_[i], "polling_interval", 1000);
-    measurement_debug_[i] = dc_util::get_bool_type_param(node, measurement_ids_[i], "debug", false);
-    measurement_enable_validator_[i] =
-        dc_util::get_bool_type_param(node, measurement_ids_[i], "enable_validator", true);
-    measurement_json_schema_path_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "json_schema_path", "");
-    measurement_tags_[i] =
-        dc_util::get_str_array_type_param(node, measurement_ids_[i], "tags", std::vector<std::string>());
-    measurement_init_collect_[i] = dc_util::get_bool_type_param(node, measurement_ids_[i], "init_collect", true);
-    measurement_init_max_measurements_[i] =
-        dc_util::get_int_type_param(node, measurement_ids_[i], "init_max_measurements", 0);
-    measurement_include_measurement_name_[i] =
-        dc_util::get_bool_type_param(node, measurement_ids_[i], "include_measurement_name", true);
-    measurement_include_measurement_plugin_[i] =
-        dc_util::get_bool_type_param(node, measurement_ids_[i], "include_measurement_plugin", false);
-    measurement_remote_keys_[i] =
-        dc_util::get_str_array_type_param(node, measurement_ids_[i], "remote_keys", std::vector<std::string>());
-    measurement_remote_prefixes_[i] =
-        dc_util::get_str_array_type_param(node, measurement_ids_[i], "remote_prefixes", std::vector<std::string>());
-    measurement_nested_[i] = dc_util::get_bool_type_param(node, measurement_ids_[i], "nested", false);
-    measurement_flatten_[i] = dc_util::get_bool_type_param(node, measurement_ids_[i], "flatten", false);
-    measurement_buffer_duration_sec_[i] =
-        dc_util::get_double_type_param(node, measurement_ids_[i], "buffer_duration_sec", 0.0);
-    measurement_post_roll_duration_sec_[i] =
-        dc_util::get_double_type_param(node, measurement_ids_[i], "post_roll_duration_sec", 0.0);
-    measurement_cooldown_sec_[i] = dc_util::get_double_type_param(node, measurement_ids_[i], "cooldown_sec", 0.0);
-    measurement_max_flush_rate_hz_[i] =
-        dc_util::get_double_type_param(node, measurement_ids_[i], "max_flush_rate_hz", 0.0);
-    measurement_flush_topic_[i] =
-        dc_util::get_str_type_param(node, measurement_ids_[i], "flush_topic", std::string("/dc/flush"));
-
-    measurement_if_all_conditions_[i] =
-        dc_util::get_str_array_type_param(node, measurement_ids_[i], "if_all_conditions", std::vector<std::string>());
-    measurement_if_any_conditions_[i] =
-        dc_util::get_str_array_type_param(node, measurement_ids_[i], "if_any_conditions", std::vector<std::string>());
-    measurement_if_none_conditions_[i] =
-        dc_util::get_str_array_type_param(node, measurement_ids_[i], "if_none_conditions", std::vector<std::string>());
-    measurement_gate_condition_[i] = dc_util::get_str_type_param(node, measurement_ids_[i], "gate_condition", "");
-    measurement_condition_max_measurements_[i] =
-        dc_util::get_int_type_param(node, measurement_ids_[i], "condition_max_measurements", 0);
+    // Server-level settings, shared by every Measurement
+    config.save_local_base_path = save_local_base_path_;
+    config.save_local_base_path_expanded = save_local_base_path_expanded_;
+    config.all_base_path = all_base_path_;
+    config.all_base_path_expanded = all_base_path_expanded_;
+    config.run_id = run_id_;
+    config.run_id_enabled = run_id_enabled_;
+    config.custom_keys = custom_keys_;
 
     try
     {
-      RCLCPP_INFO_STREAM(get_logger(),
-                         "Creating measurement plugin "
-                             << measurement_ids_[i].c_str() << ": Type " << measurement_types_[i].c_str()
-                             << ", Group key: " << measurement_group_key_[i] << ", Polling interval: "
-                             << measurement_polling_interval_[i] << ", Debug: " << (int)measurement_debug_[i]
-                             << ", Validator enabled: " << (int)measurement_enable_validator_[i]
-                             << ", Schema path: " << measurement_json_schema_path_[i].c_str() << ", Tags: ["
-                             << dc_util::join(measurement_tags_[i], ",")
-                             << "], Init collect: " << (int)measurement_init_collect_[i]
-                             << ", Init Max measurement: " << measurement_init_max_measurements_[i]
-                             << ", Include measurement name: " << measurement_include_measurement_name_[i]
-                             << ", Include measurement plugin name: " << measurement_include_measurement_plugin_[i]
-                             << ", Remote keys: " << dc_util::join(measurement_remote_keys_[i])
-                             << ", Remote prefixes: " << dc_util::join(measurement_remote_prefixes_[i]) << ", Nest: "
-                             << (int)measurement_nested_[i] << ", Flatten: " << (int)measurement_flatten_[i]
-                             << ", Include measurement plugin name: " << measurement_include_measurement_plugin_[i]
-                             << ", Max measurement on condition: " << measurement_condition_max_measurements_[i]
-                             << ", If all condition: " << dc_util::join(measurement_if_all_conditions_[i], ",")
-                             << ", If any condition: " << dc_util::join(measurement_if_any_conditions_[i], ",")
-                             << ", If none condition: " << dc_util::join(measurement_if_none_conditions_[i], ",")
-                             << ", Gate condition: " << measurement_gate_condition_[i]
-                             << ", Buffer duration sec: " << measurement_buffer_duration_sec_[i]
-                             << ", Post roll duration sec: " << measurement_post_roll_duration_sec_[i]
-                             << ", Cooldown sec: " << measurement_cooldown_sec_[i] << ", Max flush rate hz: "
-                             << measurement_max_flush_rate_hz_[i] << ", Flush topic: " << measurement_flush_topic_[i]);
+      RCLCPP_INFO_STREAM(
+          get_logger(),
+          "Creating measurement plugin "
+              << measurement_ids_[i].c_str() << ": Type " << config.measurement_plugin.c_str()
+              << ", Group key: " << config.group_key << ", Polling interval: " << config.polling_interval
+              << ", Debug: " << (int)config.debug << ", Validator enabled: " << (int)config.enable_validator
+              << ", Schema path: " << config.json_schema_path.c_str() << ", Tags: [" << dc_util::join(config.tags, ",")
+              << "], Init collect: " << (int)config.init_collect << ", Init Max measurement: "
+              << config.init_max_measurements << ", Include measurement name: " << config.include_measurement_name
+              << ", Include measurement plugin name: " << config.include_measurement_plugin << ", Remote keys: "
+              << dc_util::join(config.remote_keys) << ", Remote prefixes: " << dc_util::join(config.remote_prefixes)
+              << ", Nest: " << (int)config.nested << ", Flatten: " << (int)config.flatten
+              << ", Include measurement plugin name: " << config.include_measurement_plugin
+              << ", Max measurement on condition: " << config.condition_max_measurements
+              << ", If all condition: " << dc_util::join(config.if_all_conditions, ",")
+              << ", If any condition: " << dc_util::join(config.if_any_conditions, ",") << ", If none condition: "
+              << dc_util::join(config.if_none_conditions, ",") << ", Gate condition: " << config.gate_condition
+              << ", Buffer duration sec: " << config.buffer_duration_sec << ", Post roll duration sec: "
+              << config.post_roll_duration_sec << ", Cooldown sec: " << config.cooldown_sec
+              << ", Max flush rate hz: " << config.max_flush_rate_hz << ", Flush topic: " << config.flush_topic);
 
-      measurements_.push_back(measurement_plugin_loader_.createUniqueInstance(measurement_types_[i]));
-      measurements_.back()->configure(
-          node, measurement_ids_[i], conditions_, tf_, measurement_types_[i], measurement_group_key_[i],
-          measurement_topic_outputs_[i], measurement_polling_interval_[i], measurement_debug_[i],
-          measurement_enable_validator_[i], measurement_json_schema_path_[i], measurement_tags_[i],
-          measurement_init_collect_[i], measurement_init_max_measurements_[i], measurement_include_measurement_name_[i],
-          measurement_include_measurement_plugin_[i], measurement_condition_max_measurements_[i],
-          measurement_if_all_conditions_[i], measurement_if_any_conditions_[i], measurement_if_none_conditions_[i],
-          measurement_gate_condition_[i], measurement_remote_keys_[i], measurement_remote_prefixes_[i],
-          measurement_nested_[i], measurement_flatten_[i], save_local_base_path_, all_base_path_,
-          all_base_path_expanded_, save_local_base_path_expanded_, run_id_, run_id_enabled_, custom_keys_,
-          measurement_buffer_duration_sec_[i], measurement_post_roll_duration_sec_[i], measurement_cooldown_sec_[i],
-          measurement_max_flush_rate_hz_[i], measurement_flush_topic_[i]);
+      measurements_.push_back(measurement_plugin_loader_.createUniqueInstance(config.measurement_plugin));
+      measurements_.back()->configure(node, measurement_ids_[i], conditions_, tf_, config);
     }
     catch (const pluginlib::PluginlibException& ex)
     {
       RCLCPP_FATAL(get_logger(),
                    "Failed to create measurement %s of type %s."
                    " Exception: %s",
-                   measurement_ids_[i].c_str(), measurement_types_[i].c_str(), ex.what());
+                   measurement_ids_[i].c_str(), config.measurement_plugin.c_str(), ex.what());
       return false;
     }
   }
@@ -428,36 +350,6 @@ nav2_util::CallbackReturn MeasurementServer::on_shutdown(const rclcpp_lifecycle:
 {
   RCLCPP_INFO(get_logger(), "Shutting down");
   return nav2_util::CallbackReturn::SUCCESS;
-}
-
-std::vector<std::string> MeasurementServer::getMeasurementPlugins()
-{
-  return measurement_ids_;
-}
-
-std::vector<std::string> MeasurementServer::getMeasurementTypes()
-{
-  return measurement_types_;
-}
-
-std::vector<std::string> MeasurementServer::getMeasurementGroupKeys()
-{
-  return measurement_group_key_;
-}
-
-std::vector<std::string> MeasurementServer::getMeasurementTopicOutput()
-{
-  return measurement_topic_outputs_;
-}
-
-std::vector<int> MeasurementServer::getMeasurementPollingInterval()
-{
-  return measurement_polling_interval_;
-}
-
-std::vector<bool> MeasurementServer::getMeasurementInitCollect()
-{
-  return measurement_init_collect_;
 }
 
 }  // end namespace measurement_server

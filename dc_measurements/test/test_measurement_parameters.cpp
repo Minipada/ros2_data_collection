@@ -84,19 +84,12 @@ TEST_F(MeasurementOSTest, PollingIntervalOneMeasurementOnePercentError)
   startLifecycleNode();
 
   // Verify parameters are set properly
-  std::vector<std::string> ms_plugins_desired = { "os" };
-  std::vector<std::string> ms_types_desired = { "dc_measurements/OS" };
-  std::vector<std::string> ms_group_key_desired = { "os" };
-  std::vector<std::string> ms_topic_output_desired = { "/dc/measurement/os" };
-  std::vector<int> ms_polling_interval_desired = { polling_interval };
-  std::vector<bool> ms_init_collect_desired = { false };
-
-  EXPECT_EQ(ms_plugins_desired, ms_node_->getMeasurementPlugins());
-  EXPECT_EQ(ms_types_desired, ms_node_->getMeasurementTypes());
-  EXPECT_EQ(ms_group_key_desired, ms_node_->getMeasurementGroupKeys());
-  EXPECT_EQ(ms_topic_output_desired, ms_node_->getMeasurementTopicOutput());
-  EXPECT_EQ(ms_polling_interval_desired, ms_node_->getMeasurementPollingInterval());
-  EXPECT_EQ(ms_init_collect_desired, ms_node_->getMeasurementInitCollect());
+  EXPECT_EQ(std::vector<std::string>({ "os" }), ms_node_->get_parameter("measurement_plugins").as_string_array());
+  EXPECT_EQ("dc_measurements/OS", ms_node_->get_parameter("os.plugin").as_string());
+  EXPECT_EQ("os", ms_node_->get_parameter("os.group_key").as_string());
+  EXPECT_EQ("/dc/measurement/os", ms_node_->get_parameter("os.topic_output").as_string());
+  EXPECT_EQ(polling_interval, static_cast<int>(ms_node_->get_parameter("os.polling_interval").as_int()));
+  EXPECT_FALSE(ms_node_->get_parameter("os.init_collect").as_bool());
 
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
 
