@@ -19,7 +19,7 @@
 #include "dc_measurements/measurement.hpp"
 #include "dc_measurements/mission_outcome.hpp"
 #include "dc_measurements/mission_record_json.hpp"
-#include "dc_measurements/pending_record_queue.hpp"
+#include "dc_measurements/source_adapter.hpp"
 #include "dc_util/node_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "unique_identifier_msgs/msg/uuid.hpp"
@@ -182,7 +182,7 @@ private:
  * #389's three hand-copied shells collapsed into one body, parameterized by action type and
  * outcome-core policy. Watches an action's `_action/status` (and, when the policy says so,
  * `_action/feedback`) topics and calls its `_action/get_result` service for the terminal Result,
- * emitting mission_start/mission_end Records (#305/ADR-0010) via PendingRecordQueue -- one Record
+ * emitting mission_start/mission_end Records (#305/ADR-0010) via SourceAdapter -- one Record
  * leaves per poll, the same publish path (Conditions, buffering, Group) as every other Record.
  *
  * A passive watcher, not a commander: the action is driven by whatever already dispatches missions
@@ -233,7 +233,7 @@ private:
   // guarded.
   mutable std::mutex mutex_;
   PolicyT policy_;
-  PendingRecordQueue pending_records_;
+  SourceAdapter<std::pair<json, rclcpp::Time>> pending_records_{ 64 };
 };
 
 template <typename ActionT, typename PolicyT>
@@ -280,7 +280,7 @@ void MissionActionWatcher<ActionT, PolicyT>::enqueue(json data, const rclcpp::Ti
   // One Record leaves per poll, so missions starting/ending far faster than the polling interval
   // would otherwise queue without bound. The oldest goes first: the recent boundaries are the ones
   // still worth reporting.
-  if (pending_records_.push(std::move(data), stamp))
+  if (pending_records_.push({ std::move(data), stamp }))
   {
     RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
                                 "Measurement " << measurement_name_
@@ -380,14 +380,13 @@ dc_interfaces::msg::StringStamped MissionActionWatcher<ActionT, PolicyT>::collec
   dc_interfaces::msg::StringStamped msg;
   msg.group_key = group_key_;
 
-  const std::lock_guard<std::mutex> lock(mutex_);
-  if (pending_records_.empty())
+  const auto record = pending_records_.pop();
+  if (!record)
   {
     return msg;
   }
-  auto record = pending_records_.pop();
-  msg.header.stamp = record.second;
-  msg.data = record.first.dump(-1, ' ', true);
+  msg.header.stamp = record->second;
+  msg.data = record->first.dump(-1, ' ', true);
   return msg;
 }
 

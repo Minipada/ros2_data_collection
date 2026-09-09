@@ -7,8 +7,10 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "dc_measurements/source_adapter.hpp"
 #include "dc_util/node_utils.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
@@ -89,20 +91,20 @@ public:
    */
   std::string mode()
   {
+    const auto latest = mode_observations_.latest();
+    if (!latest)
+    {
+      return "unknown";
+    }
     if (!velocity_subscriptions_.empty())
     {
-      bool stale = true;
-      if (velocity_observed_)
+      const int64_t now_ns = clock_->now().nanoseconds();
+      if (static_cast<double>(now_ns - latest->second) / 1e9 > velocity_timeout_s_)
       {
-        const int64_t now_ns = clock_->now().nanoseconds();
-        stale = static_cast<double>(now_ns - last_velocity_time_ns_) / 1e9 > velocity_timeout_s_;
-      }
-      if (stale)
-      {
-        current_mode_ = "unknown";
+        return "unknown";
       }
     }
-    return current_mode_;
+    return latest->first;
   }
 
 private:
@@ -138,10 +140,10 @@ private:
           if (it == value_mapping_.end())
           {
             RCLCPP_DEBUG_STREAM(logger, measurement_name << ": no mapping for raw mode value '" << msg.data
-                                                         << "', keeping current mode '" << current_mode_ << "'");
+                                                         << "', keeping the last observed mode");
             return;
           }
-          current_mode_ = it->second;
+          mode_observations_.push({ it->second, clock_->now().nanoseconds() });
         });
   }
 
@@ -168,9 +170,7 @@ private:
       const std::string mode = velocity_modes_[i];
       velocity_subscriptions_.push_back(node->create_subscription<geometry_msgs::msg::Twist>(
           velocity_topics_[i], rclcpp::SystemDefaultsQoS(), [this, mode](const geometry_msgs::msg::Twist&) {
-            current_mode_ = mode;
-            velocity_observed_ = true;
-            last_velocity_time_ns_ = clock_->now().nanoseconds();
+            mode_observations_.push({ mode, clock_->now().nanoseconds() });
           }));
     }
   }
@@ -191,12 +191,13 @@ private:
   std::vector<std::string> velocity_topics_;
   std::vector<std::string> velocity_modes_;
   double velocity_timeout_s_{ 1.0 };
-  bool velocity_observed_{ false };
-  int64_t last_velocity_time_ns_{ 0 };
 
-  // No mode has been observed yet: report "unknown" rather than nothing, so a consumer can tell
-  // "not yet known" apart from "no data collected at all".
-  std::string current_mode_{ "unknown" };
+  // The one piece of shared state: which mode was observed last, and when. The subscription
+  // callbacks write through the adapter, the polling timer reads in mode() -- different callback
+  // groups under a multi-threaded executor, so the handoff is the adapter's (#502). Nothing
+  // observed yet reads back "unknown", so a consumer can tell "not yet known" apart from "no
+  // data collected at all".
+  SourceAdapter<std::pair<std::string, int64_t>> mode_observations_{ 1 };
 };
 
 }  // namespace dc_measurements

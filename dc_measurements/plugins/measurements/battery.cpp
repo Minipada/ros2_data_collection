@@ -10,8 +10,6 @@ namespace dc_measurements
 
 namespace
 {
-constexpr size_t kMaxPendingEvents = 64;
-
 // sensor_msgs/BatteryState leaves most fields optional and signals "unmeasured" with NaN, so a
 // field the hardware doesn't fill is left out of the Record rather than written as null.
 void setIfMeasured(json& data, const std::string& key, float value)
@@ -122,10 +120,6 @@ void Battery::batteryStateCb(const sensor_msgs::msg::BatteryState& msg)
   const auto now = getNode()->get_clock()->now();
   const auto stamp = dc_common::BatteryCycleAccumulator::TimePoint(std::chrono::nanoseconds(now.nanoseconds()));
 
-  const std::lock_guard<std::mutex> lock(mutex_);
-  last_msg_ = msg;
-  has_sample_ = true;
-
   std::optional<double> percentage;
   if (!std::isnan(msg.percentage))
   {
@@ -135,6 +129,24 @@ void Battery::batteryStateCb(const sensor_msgs::msg::BatteryState& msg)
   const auto update =
       accumulator_.update(percentage, static_cast<dc_common::PowerSupplyStatus>(msg.power_supply_status), stamp);
 
+  // Sampled, not drained: re-reported on every poll until a newer BatteryState lands. Decoding
+  // here, against the accumulator state this very update produced, is what the poll used to
+  // re-derive from the cached message under a lock.
+  sample_.push(sampleRecord(msg));
+
+  // One event leaves per poll, so a pack whose status flaps far faster than the polling interval
+  // would otherwise queue without bound. The oldest goes first: the recent boundaries are the
+  // ones still worth reporting.
+  const auto enqueue_event = [this, &now](json event) {
+    if (pending_events_.push({ std::move(event), now }))
+    {
+      RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
+                                  "Measurement " << measurement_name_
+                                                 << ": charging session boundaries are arriving faster than the "
+                                                    "polling interval can report them; dropping the oldest.");
+    }
+  };
+
   if (update.started)
   {
     const auto& session = *update.started;
@@ -143,7 +155,7 @@ void Battery::batteryStateCb(const sensor_msgs::msg::BatteryState& msg)
     event["session_id"] = session.sequence;
     event["discharge_depth_percent"] = session.preceding_discharge_depth;
     setIfPresent(event, "percentage", session.start_percentage);
-    pending_events_.emplace_back(std::move(event), now);
+    enqueue_event(std::move(event));
   }
   if (update.ended)
   {
@@ -158,61 +170,49 @@ void Battery::batteryStateCb(const sensor_msgs::msg::BatteryState& msg)
     {
       event["charged_percent"] = *session.end_percentage - *session.start_percentage;
     }
-    pending_events_.emplace_back(std::move(event), now);
-  }
-
-  // One event leaves per poll, so a pack whose status flaps far faster than the polling interval
-  // would otherwise queue without bound. The oldest goes first: the recent boundaries are the
-  // ones still worth reporting.
-  while (pending_events_.size() > kMaxPendingEvents)
-  {
-    pending_events_.pop_front();
-    RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
-                                "Measurement " << measurement_name_
-                                               << ": charging session boundaries are arriving faster than the "
-                                                  "polling interval can report them; dropping the oldest.");
+    enqueue_event(std::move(event));
   }
 }
 
-json Battery::sampleRecord() const
+json Battery::sampleRecord(const sensor_msgs::msg::BatteryState& msg) const
 {
   json data;
   data["event"] = "sample";
-  data["power_supply_status"] = statusName(last_msg_.power_supply_status);
-  data["present"] = last_msg_.present;
+  data["power_supply_status"] = statusName(msg.power_supply_status);
+  data["present"] = msg.present;
 
-  if (!std::isnan(last_msg_.percentage))
+  if (!std::isnan(msg.percentage))
   {
-    data["percentage"] = last_msg_.percentage * percentage_scale_;
+    data["percentage"] = msg.percentage * percentage_scale_;
   }
-  setIfMeasured(data, "voltage", last_msg_.voltage);
-  setIfMeasured(data, "current", last_msg_.current);
-  setIfMeasured(data, "charge", last_msg_.charge);
-  setIfMeasured(data, "capacity", last_msg_.capacity);
-  setIfMeasured(data, "design_capacity", last_msg_.design_capacity);
-  setIfMeasured(data, "temperature", last_msg_.temperature);
+  setIfMeasured(data, "voltage", msg.voltage);
+  setIfMeasured(data, "current", msg.current);
+  setIfMeasured(data, "charge", msg.charge);
+  setIfMeasured(data, "capacity", msg.capacity);
+  setIfMeasured(data, "design_capacity", msg.design_capacity);
+  setIfMeasured(data, "temperature", msg.temperature);
 
-  if (last_msg_.power_supply_health != sensor_msgs::msg::BatteryState::POWER_SUPPLY_HEALTH_UNKNOWN)
+  if (msg.power_supply_health != sensor_msgs::msg::BatteryState::POWER_SUPPLY_HEALTH_UNKNOWN)
   {
-    data["power_supply_health"] = healthName(last_msg_.power_supply_health);
+    data["power_supply_health"] = healthName(msg.power_supply_health);
   }
-  if (last_msg_.power_supply_technology != sensor_msgs::msg::BatteryState::POWER_SUPPLY_TECHNOLOGY_UNKNOWN)
+  if (msg.power_supply_technology != sensor_msgs::msg::BatteryState::POWER_SUPPLY_TECHNOLOGY_UNKNOWN)
   {
-    data["power_supply_technology"] = technologyName(last_msg_.power_supply_technology);
+    data["power_supply_technology"] = technologyName(msg.power_supply_technology);
   }
   // State of health: what the pack still holds against what it was built to hold. Only the
   // hardware reporting both capacities can answer it.
-  if (!std::isnan(last_msg_.capacity) && !std::isnan(last_msg_.design_capacity) && last_msg_.design_capacity > 0.0F)
+  if (!std::isnan(msg.capacity) && !std::isnan(msg.design_capacity) && msg.design_capacity > 0.0F)
   {
-    data["health_percentage"] = 100.0 * last_msg_.capacity / last_msg_.design_capacity;
+    data["health_percentage"] = 100.0 * msg.capacity / msg.design_capacity;
   }
-  if (!last_msg_.location.empty())
+  if (!msg.location.empty())
   {
-    data["location"] = last_msg_.location;
+    data["location"] = msg.location;
   }
-  if (!last_msg_.serial_number.empty())
+  if (!msg.serial_number.empty())
   {
-    data["serial_number"] = last_msg_.serial_number;
+    data["serial_number"] = msg.serial_number;
   }
 
   data["completed_cycles"] = accumulator_.completedCycles();
@@ -229,27 +229,24 @@ dc_interfaces::msg::StringStamped Battery::collect()
   dc_interfaces::msg::StringStamped msg;
   msg.group_key = group_key_;
 
-  const std::lock_guard<std::mutex> lock(mutex_);
-
   // A session boundary takes the poll it lands on: it is a fact about a moment, so it keeps the
   // timestamp of that moment rather than this poll's.
-  if (!pending_events_.empty())
+  if (const auto event = pending_events_.pop())
   {
-    auto event = std::move(pending_events_.front());
-    pending_events_.pop_front();
-    msg.header.stamp = event.second;
-    msg.data = event.first.dump(-1, ' ', true);
+    msg.header.stamp = event->second;
+    msg.data = event->first.dump(-1, ' ', true);
     return msg;
   }
 
   // Nothing on the topic yet: report nothing rather than a Record full of absent fields.
-  if (!has_sample_)
+  const auto sample = sample_.latest();
+  if (!sample)
   {
     return msg;
   }
 
   msg.header.stamp = node->get_clock()->now();
-  msg.data = sampleRecord().dump(-1, ' ', true);
+  msg.data = sample->dump(-1, ' ', true);
   return msg;
 }
 

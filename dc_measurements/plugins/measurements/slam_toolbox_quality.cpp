@@ -6,11 +6,6 @@
 namespace dc_measurements
 {
 
-namespace
-{
-constexpr size_t kMaxPendingLoopClosures = 64;
-}  // namespace
-
 SlamToolboxQuality::SlamToolboxQuality() : dc_measurements::Measurement()
 {
 }
@@ -80,9 +75,8 @@ void SlamToolboxQuality::tryCreateLoopClosureSubscription()
 
 void SlamToolboxQuality::poseCb(const geometry_msgs::msg::PoseWithCovarianceStamped& msg)
 {
-  const std::lock_guard<std::mutex> lock(mutex_);
-  last_pose_ = msg;
-  has_pose_ = true;
+  // Sampled, not drained: re-reported on every poll until a newer /pose lands.
+  pose_sample_.push(sampleRecord(msg));
 }
 
 void SlamToolboxQuality::loopClosureCb(std::shared_ptr<const rclcpp::SerializedMessage> msg)
@@ -94,15 +88,13 @@ void SlamToolboxQuality::loopClosureCb(std::shared_ptr<const rclcpp::SerializedM
   (void)msg;
   const auto now = getNode()->get_clock()->now();
 
-  const std::lock_guard<std::mutex> lock(mutex_);
-  pending_loop_closures_.push_back(now);
-
   // One event leaves per poll, so loop closures arriving far faster than the polling interval
   // would otherwise queue without bound. The oldest goes first: the recent ones are the ones
   // still worth reporting.
-  while (pending_loop_closures_.size() > kMaxPendingLoopClosures)
+  json event;
+  event["event"] = "loop_closure";
+  if (pending_loop_closures_.push({ std::move(event), now }))
   {
-    pending_loop_closures_.pop_front();
     RCLCPP_WARN_STREAM_THROTTLE(logger_, *getNode()->get_clock(), 10000,
                                 "Measurement " << measurement_name_
                                                << ": loop closures are arriving faster than the polling interval "
@@ -110,15 +102,15 @@ void SlamToolboxQuality::loopClosureCb(std::shared_ptr<const rclcpp::SerializedM
   }
 }
 
-json SlamToolboxQuality::sampleRecord() const
+json SlamToolboxQuality::sampleRecord(const geometry_msgs::msg::PoseWithCovarianceStamped& pose)
 {
   json data;
   data["event"] = "sample";
-  data["x"] = last_pose_.pose.pose.position.x;
-  data["y"] = last_pose_.pose.pose.position.y;
+  data["x"] = pose.pose.pose.position.x;
+  data["y"] = pose.pose.pose.position.y;
 
-  tf2::Quaternion q(last_pose_.pose.pose.orientation.x, last_pose_.pose.pose.orientation.y,
-                    last_pose_.pose.pose.orientation.z, last_pose_.pose.pose.orientation.w);
+  tf2::Quaternion q(pose.pose.pose.orientation.x, pose.pose.pose.orientation.y, pose.pose.pose.orientation.z,
+                    pose.pose.pose.orientation.w);
   tf2::Matrix3x3 m(q);
   double roll, pitch, yaw;
   m.getRPY(roll, pitch, yaw);
@@ -127,9 +119,9 @@ json SlamToolboxQuality::sampleRecord() const
   // PoseWithCovariance's 6x6 row-major covariance: index 0 is x-x, 7 is y-y, 35 is yaw-yaw --
   // the diagonal terms that read as localization confidence on their own axis, the same ones
   // AMCL/robot_localization dashboards already chart.
-  data["covariance_x"] = last_pose_.pose.covariance[0];
-  data["covariance_y"] = last_pose_.pose.covariance[7];
-  data["covariance_yaw"] = last_pose_.pose.covariance[35];
+  data["covariance_x"] = pose.pose.covariance[0];
+  data["covariance_y"] = pose.pose.covariance[7];
+  data["covariance_yaw"] = pose.pose.covariance[35];
   return data;
 }
 
@@ -139,29 +131,24 @@ dc_interfaces::msg::StringStamped SlamToolboxQuality::collect()
   dc_interfaces::msg::StringStamped msg;
   msg.group_key = group_key_;
 
-  const std::lock_guard<std::mutex> lock(mutex_);
-
   // A loop closure takes the poll it lands on: it is a fact about a moment, so it keeps the
   // timestamp of that moment rather than this poll's.
-  if (!pending_loop_closures_.empty())
+  if (const auto closure = pending_loop_closures_.pop())
   {
-    const auto stamp = pending_loop_closures_.front();
-    pending_loop_closures_.pop_front();
-    msg.header.stamp = stamp;
-    json event;
-    event["event"] = "loop_closure";
-    msg.data = event.dump(-1, ' ', true);
+    msg.header.stamp = closure->second;
+    msg.data = closure->first.dump(-1, ' ', true);
     return msg;
   }
 
   // Nothing on /pose yet: report nothing rather than a Record with no localization data.
-  if (!has_pose_)
+  const auto sample = pose_sample_.latest();
+  if (!sample)
   {
     return msg;
   }
 
   msg.header.stamp = node->get_clock()->now();
-  msg.data = sampleRecord().dump(-1, ' ', true);
+  msg.data = sample->dump(-1, ' ', true);
   return msg;
 }
 

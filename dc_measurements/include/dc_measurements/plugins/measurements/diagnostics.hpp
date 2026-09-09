@@ -9,6 +9,7 @@
 
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_measurements/source_adapter.hpp"
 #include "dc_util/node_utils.hpp"
 #include "diagnostic_msgs/msg/diagnostic_array.hpp"
 #include "diagnostic_msgs/msg/diagnostic_status.hpp"
@@ -28,7 +29,8 @@ private:
   uint8_t levelThresholdFromString(const std::string& level_threshold);
 
   rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr subscription_;
-  dc_interfaces::msg::StringStamped last_data_;
+  // The latest decoded status set, displaced by every newer one and drained one per poll (#502).
+  SourceAdapter<std::pair<json, rclcpp::Time>> latest_statuses_{ 1 };
   std::string topic_;
   std::string level_threshold_str_;
   uint8_t level_threshold_{ 0 };

@@ -98,13 +98,14 @@ void Camera::onConfigure()
 
 void Camera::cameraCb(const sensor_msgs::msg::Image& msg)
 {
-  last_data_ = msg;
+  // Keep-only-the-latest is the shape here, so a displaced frame is by design, not a drop to
+  // warn about.
+  last_frame_.push(msg);
 }
 
 void Camera::cameraInfoCb(const sensor_msgs::msg::CameraInfo& msg)
 {
-  last_camera_info_ = msg;
-  camera_info_received_ = true;
+  camera_info_.push(msg);
 }
 
 void Camera::saveRemoteKeys(json& data_json, const std::string& key, const std::string& relative_path,
@@ -153,9 +154,10 @@ void Camera::rotateImage(cv_bridge::CvImagePtr& cv_ptr)
   }
 }
 
-void Camera::addCodePose(json& barcode_json, const ZXing::Position& position, const cv::Size& raw_size)
+void Camera::addCodePose(json& barcode_json, const ZXing::Position& position, const cv::Size& raw_size,
+                         const sensor_msgs::msg::Image& frame, const sensor_msgs::msg::CameraInfo* camera_info)
 {
-  if (!camera_info_received_)
+  if (camera_info == nullptr)
   {
     RCLCPP_WARN_THROTTLE(logger_, *getNode()->get_clock(), 5000, "No CameraInfo received on %s yet, skipping pose",
                          camera_info_topic_.c_str());
@@ -174,8 +176,8 @@ void Camera::addCodePose(json& barcode_json, const ZXing::Position& position, co
                   rotation_angle_, raw_size.width, raw_size.height)
   };
 
-  const std::vector<double> distortion(last_camera_info_.d.begin(), last_camera_info_.d.end());
-  auto pose = estimateSquareCodePose(corners, code_size_, last_camera_info_.k, distortion);
+  const std::vector<double> distortion(camera_info->d.begin(), camera_info->d.end());
+  auto pose = estimateSquareCodePose(corners, code_size_, camera_info->k, distortion);
   if (!pose.has_value())
   {
     RCLCPP_WARN(logger_, "Could not estimate a pose for the detected code");
@@ -184,8 +186,8 @@ void Camera::addCodePose(json& barcode_json, const ZXing::Position& position, co
 
   geometry_msgs::msg::PoseStamped pose_stamped;
   pose_stamped.header.frame_id =
-      last_camera_info_.header.frame_id.empty() ? last_data_.header.frame_id : last_camera_info_.header.frame_id;
-  pose_stamped.header.stamp = last_data_.header.stamp;
+      camera_info->header.frame_id.empty() ? frame.header.frame_id : camera_info->header.frame_id;
+  pose_stamped.header.stamp = frame.header.stamp;
   pose_stamped.pose = pose.value();
 
   if (!pose_frame_.empty() && pose_frame_ != pose_stamped.header.frame_id)
@@ -227,14 +229,18 @@ dc_interfaces::msg::StringStamped Camera::collect()
   auto node = getNode();
   auto now = node->get_clock()->now();
 
+  // Sampled, not drained: the frame is re-reported on every poll until a newer one lands.
+  const auto frame = last_frame_.latest();
+  const auto camera_info = camera_info_.latest();
+
   json data_json;
-  if (std::size(last_data_.data) != 0)
+  if (frame && std::size(frame->data) != 0)
   {
     // Transform image in cv frame
     cv_bridge::CvImagePtr cv_ptr;
     try
     {
-      cv_ptr = cv_bridge::toCvCopy(last_data_, "bgr8");
+      cv_ptr = cv_bridge::toCvCopy(*frame, "bgr8");
     }
     catch (cv_bridge::Exception& e)
     {
@@ -386,7 +392,7 @@ dc_interfaces::msg::StringStamped Camera::collect()
         barcode_json["height"] = height;
         if (estimate_pose_)
         {
-          addCodePose(barcode_json, barcode.position(), raw_size);
+          addCodePose(barcode_json, barcode.position(), raw_size, *frame, camera_info ? &*camera_info : nullptr);
         }
         data_json["inspected"]["barcode"].push_back(barcode_json);
       }

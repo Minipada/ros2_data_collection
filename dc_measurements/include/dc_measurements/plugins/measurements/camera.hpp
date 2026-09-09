@@ -15,6 +15,7 @@
 #include "dc_interfaces/srv/draw_image.hpp"
 #include "dc_measurements/code_pose.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_measurements/source_adapter.hpp"
 #include "dc_util/base64.hpp"
 #include "dc_util/image_utils.hpp"
 #include "dc_util/json_utils.hpp"
@@ -37,11 +38,13 @@ public:
 
 private:
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;
-  sensor_msgs::msg::Image last_data_;
+  // The latest frame, displaced by every newer one and re-read on every poll (#502): the frame
+  // is a sample, not an event, and the decode (cv_bridge, files, barcodes) needs the poll-time
+  // save paths, so the raw message is what the adapter caches.
+  SourceAdapter<sensor_msgs::msg::Image> last_frame_{ 1 };
   void cameraCb(const sensor_msgs::msg::Image& msg);
   rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_subscription_;
-  sensor_msgs::msg::CameraInfo last_camera_info_;
-  bool camera_info_received_{ false };
+  SourceAdapter<sensor_msgs::msg::CameraInfo> camera_info_{ 1 };
   void cameraInfoCb(const sensor_msgs::msg::CameraInfo& msg);
 
 protected:
@@ -53,7 +56,8 @@ protected:
   std::string getLocalPath(const std::string& param_reference, const rclcpp::Time& now);
   void saveRemoteKeys(json& data_json, const std::string& key, const std::string& relative_path,
                       const rclcpp::Time& now);
-  void addCodePose(json& barcode_json, const ZXing::Position& position, const cv::Size& raw_size);
+  void addCodePose(json& barcode_json, const ZXing::Position& position, const cv::Size& raw_size,
+                   const sensor_msgs::msg::Image& frame, const sensor_msgs::msg::CameraInfo* camera_info);
 
   std::string cam_name_;
   bool draw_det_barcodes_;

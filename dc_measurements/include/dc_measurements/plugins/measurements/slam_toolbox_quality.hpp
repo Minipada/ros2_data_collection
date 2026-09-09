@@ -4,12 +4,11 @@
 #ifndef DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__SLAM_TOOLBOX_QUALITY_HPP_
 #define DC_MEASUREMENTS__PLUGINS__MEASUREMENTS__SLAM_TOOLBOX_QUALITY_HPP_
 
-#include <deque>
-#include <mutex>
 #include <string>
 
 #include "dc_core/measurement.hpp"
 #include "dc_measurements/measurement.hpp"
+#include "dc_measurements/source_adapter.hpp"
 #include "dc_util/node_utils.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "rclcpp/generic_subscription.hpp"
@@ -56,7 +55,7 @@ private:
   // Retried on discovery_timer_ until it succeeds, so startup order with slam_toolbox
   // doesn't matter.
   void tryCreateLoopClosureSubscription();
-  json sampleRecord() const;
+  static json sampleRecord(const geometry_msgs::msg::PoseWithCovarianceStamped& pose);
 
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_subscription_;
   rclcpp::GenericSubscription::SharedPtr loop_closure_subscription_;
@@ -64,14 +63,12 @@ private:
   std::string pose_topic_;
   std::string loop_closure_topic_;
 
-  // The pose/loop-closure callbacks and the polling timer run in different callback groups
-  // under a multi-threaded executor, so everything they share is guarded.
-  mutable std::mutex mutex_;
-  geometry_msgs::msg::PoseWithCovarianceStamped last_pose_;
-  bool has_pose_{ false };
+  // The decoded sample, re-read on every poll until a newer /pose lands -- a sample source,
+  // not an event one (#502).
+  SourceAdapter<json> pose_sample_{ 1 };
   // Loop closures wait here for a poll to carry them out, one Record per poll, so they travel
   // the same publish path (Conditions, buffering, Group) as every other Record.
-  std::deque<rclcpp::Time> pending_loop_closures_;
+  SourceAdapter<std::pair<json, rclcpp::Time>> pending_loop_closures_{ 64 };
 
 protected:
   /**
