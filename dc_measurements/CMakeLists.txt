@@ -6,6 +6,7 @@ project(dc_measurements)
 
 set(dependencies
   action_msgs
+  ament_index_cpp
   controller_manager_msgs
   cv_bridge
   dc_common
@@ -113,6 +114,7 @@ function(dc_add_measurement_plugin name)
   set(dc_measurement_plugin_libs ${dc_measurement_plugin_libs} PARENT_SCOPE)
   ament_target_dependencies(${name} ${dependencies})
   target_link_libraries(${name}
+    dc_measurement_core
     nlohmann_json::nlohmann_json
     nlohmann_json_schema_validator
     yaml-cpp::yaml-cpp
@@ -141,6 +143,25 @@ set(system_sources
   plugins/measurements/system/process.cpp
   plugins/measurements/system/processor.cpp
   plugins/measurements/system/system.cpp
+)
+
+# The ROS-free Measurement pipeline (#499): one compiled framework shared by every plugin .so,
+# instead of a private header-only copy in each. The ROS wiring stays in the header-only
+# dc_measurements::Measurement (measurement.hpp); everything decidable without ROS is here.
+add_library(dc_measurement_core SHARED
+  src/measurement_core.cpp
+)
+
+ament_target_dependencies(dc_measurement_core
+  ament_index_cpp
+  dc_common
+  dc_core
+)
+
+target_link_libraries(
+  dc_measurement_core
+  nlohmann_json::nlohmann_json
+  nlohmann_json_schema_validator
 )
 
 
@@ -254,7 +275,8 @@ ament_target_dependencies(${executable_name}
 
 rclcpp_components_register_nodes(${library_name} "measurement_server::MeasurementServer")
 
-install(TARGETS ${library_name}
+install(TARGETS dc_measurement_core
+                ${library_name}
                 ${dc_measurement_plugin_libs}
                 ${dc_condition_plugin_libs}
   ARCHIVE DESTINATION lib
@@ -291,6 +313,7 @@ set(tests
   test_measurement_camera
   test_measurement_cmd_vel
   test_measurement_compare
+  test_measurement_core
   test_measurement_diagnostics
   test_measurement_distance_traveled
   test_measurement_driving_type
@@ -351,6 +374,7 @@ if(BUILD_TESTING)
     )
     target_link_libraries(
       ${PROJECT_NAME}_${test}
+      dc_measurement_core
       nlohmann_json::nlohmann_json
       nlohmann_json_schema_validator
       opencv_calib3d
@@ -367,7 +391,8 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_include_directories(include)
-ament_export_libraries(${library_name}
+ament_export_libraries(dc_measurement_core
+  ${library_name}
   ${dc_measurement_plugin_libs}
   ${dc_condition_plugin_libs}
 )
