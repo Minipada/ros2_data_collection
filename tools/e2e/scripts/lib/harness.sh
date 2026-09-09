@@ -135,6 +135,20 @@ harness_rm_networks() {
   done
 }
 
+# On a failed run, the reload/error tail of each captured container goes to stdout too:
+# CI's artifact upload can't see the run dir (a hidden directory), so the job log is the
+# only copy of the failure's evidence that survives.
+harness_failure_excerpts() {
+  local pair container
+  for pair in "${HARNESS_LOG_CAPTURES[@]}"; do
+    container="${pair%%:*}"
+    if podman container exists "$container"; then
+      log "--- $container: reload/error tail"
+      podman logs "$container" 2>&1 | grep -iE "reload|error|fatal" | tail -30 || true
+    fi
+  done
+}
+
 # Podman logs for every --log-captures pair, into the manifest's run dir.
 harness_capture_logs() {
   local pair container
@@ -161,6 +175,9 @@ harness_cleanup() {
   local exit_code=$?
   if [ -n "$HARNESS_STATS_PID" ] && kill -0 "$HARNESS_STATS_PID" 2>/dev/null; then
     kill "$HARNESS_STATS_PID"
+  fi
+  if [ "$exit_code" -ne 0 ]; then
+    harness_failure_excerpts
   fi
   if [ "$exit_code" -ne 0 ] && [ "${DC_E2E_KEEP:-false}" = "true" ]; then
     log "FAILED (exit $exit_code) — leaving the stack up (DC_E2E_KEEP=true) for debugging"
