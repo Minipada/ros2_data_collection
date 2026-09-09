@@ -134,9 +134,10 @@ TEST(RecordEnricherTest, CustomKeysRunLastOnTheShapedRecord)
   auto cfg = config();
   cfg.flatten = true;
   cfg.custom_keys = { json{ { "key", "site" }, { "value", "north" }, { "override", false } } };
-  // After flattening the custom key is a pointer at the top level, like every other added key.
+  // The step runs after flattening, so unlike the collected fields a custom key is a plain
+  // top-level key, not a JSON pointer.
   EXPECT_EQ(parse(makeEnricher(cfg).enrich("{\"a\":1}")), (json{ { "/a", 1 },
-                                                                 { "/site", "north" },
+                                                                 { "site", "north" },
                                                                  { "custom_keys", json::array({ "site" }) },
                                                                  { "flattened", true },
                                                                  { "nested", false } }));
@@ -159,6 +160,7 @@ TEST(RecordEnricherTest, ValidationSeesTheParsedRecordBeforeAnyShaping)
 TEST(RecordEnricherTest, ARecordTheValidatorRejectedIsStillShapedAndPublished)
 {
   auto cfg = config();
+  cfg.include_measurement_name = true;
   cfg.enable_validator = true;
   // The injected callback owns the failure: it reports and returns, like the Measurement's
   // validateJSON() logs and calls the plugin hook without stopping publication.
@@ -188,16 +190,17 @@ TEST(RecordEnricherTest, UnparsableDataWithCustomKeysIsRebuiltAsTheOldChainRebui
   cfg.custom_keys = { json{ { "key", "site" }, { "value", "north" }, { "override", false } } };
   std::vector<std::string> parse_errors;
   // The per-step chain left the data alone and let the last step (custom keys) rebuild it from
-  // an empty object; the one-parse pipeline keeps that output byte-for-byte.
+  // an empty object: the keys themselves plus their declaration, nothing else. The one-parse
+  // pipeline keeps that output byte-for-byte.
   EXPECT_EQ(parse(makeEnricher(cfg, &parse_errors).enrich("not json")),
-            (json{ { "custom_keys", json::array({ "site" }) } }));
+            (json{ { "site", "north" }, { "custom_keys", json::array({ "site" }) } }));
   EXPECT_EQ(parse_errors.size(), 1u);
 }
 
 TEST(RecordEnricherTest, DumpsCompactAndEnsureAsciiLikeTheStackAlwaysHas)
 {
   const std::string out = makeEnricher(config()).enrich("{\"city\":\"é\"}");
-  EXPECT_EQ(out, "{\"city\":\"\\u00e9\"}");
+  EXPECT_EQ(out, "{\"city\":\"\\u00e9\",\"flattened\":false,\"nested\":false}");
 }
 
 int main(int argc, char** argv)
