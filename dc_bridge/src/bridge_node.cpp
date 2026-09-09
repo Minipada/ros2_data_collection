@@ -224,6 +224,9 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
       records_destinations.push_back(std::move(d));
     }
   }
+  // Where the rest of the Destination rules live (render.hpp's validation) — not only in
+  // dc_bringup's launch translation, which is what enforced this before (#505).
+  validate_files_destinations(files_destinations);
 
   // --- raw / generic-subscription mode (#227) ---
   // Declared before render() below, because enabling it adds a routed Tag namespace to
@@ -303,10 +306,9 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions& options) : rclcpp::Node("dc_br
 
     // The durable intent queue (#265/#446): the Bridge writes an intent for every Record
     // a files-Destination's subscription receives and never reads it back — a separate
-    // dc_uploader process owns replay, backoff, and acking. Its own directory
-    // (uploader.data_dir's multipart-resume state) is dc_uploader's concern now, not the
-    // Bridge's.
-    intent_queue_ = std::make_unique<uploader::IntentQueue>(uploader_data_dir + "/queue/upload");
+    // dc_uploader process owns replay, backoff, and acking. Only the write half is
+    // constructed: no backlog scan, no payloads held, no read API to call by accident.
+    intent_queue_ = std::make_unique<uploader::IntentQueueWriter>(uploader::intent_queue_dir(uploader_data_dir));
   }
 
   RenderConfig render_config;

@@ -50,8 +50,9 @@ public:
   /// caller doesn't have can stay unset.
   struct Deps
   {
-    /// The durable upload intent queue; must be set whenever Topics::files is non-empty.
-    uploader::IntentQueue* intent_queue{ nullptr };
+    /// The durable upload intent queue's write half; must be set whenever Topics::files
+    /// is non-empty. Dispatch only ever appends, so the read half isn't visible here.
+    uploader::IntentWriter* intent_queue{ nullptr };
     Forwarder* forwarder{ nullptr };
     /// The Bridge's Forwarder lock, shared with the prober thread's poll() and raw mode's
     /// send() — the Forwarder itself is not thread-safe.

@@ -54,6 +54,13 @@ VectorParams vector_kind()
   return VectorParams{ "dc-e2e-limits-agg", 6000 };
 }
 
+Destination files_destination(const std::string& name)
+{
+  Destination d = make_destination(name, {}, TimeFormat::EpochNanos, S3Params{});
+  d.receives = Receives::Files;
+  return d;
+}
+
 SocketSinkParams mcap_like_sink()
 {
   SocketSinkParams params;
@@ -529,6 +536,30 @@ TEST(Render, RejectsFilesDestinationReachingShipperConfig)
   {
     EXPECT_EQ(e.kind(), RenderErrorKind::FilesDestinationInShipperConfig);
   }
+}
+
+// #505: the intent queue is one store behind one dc_uploader process — the second
+// `receives: files` Destination is rejected where Destinations are validated, not only by
+// dc_bringup's launch translation.
+TEST(Render, RejectsTwoFilesDestinations)
+{
+  const std::vector<Destination> files{ files_destination("minio_a"), files_destination("minio_b") };
+  try
+  {
+    validate_files_destinations(files);
+    FAIL();
+  }
+  catch (const RenderError& e)
+  {
+    EXPECT_EQ(e.kind(), RenderErrorKind::TooManyFilesDestinations);
+    EXPECT_EQ(e.arg0(), "minio_a, minio_b");
+  }
+}
+
+TEST(Render, AcceptsZeroOrOneFilesDestination)
+{
+  EXPECT_NO_THROW(validate_files_destinations({}));
+  EXPECT_NO_THROW(validate_files_destinations({ files_destination("minio") }));
 }
 
 TEST(Render, ExtraTagsAreRoutedNormalizedAndConsumed)

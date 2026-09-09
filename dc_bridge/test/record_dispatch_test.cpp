@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
 // The per-Record dispatch (#494): the enqueue-vs-forward decision, the parse-or-wrap
-// rule, and the stamp/envelope assembly, against a real IntentQueue and a loopback
-// shipper ingest protocol peer — no ROS node.
+// rule, and the stamp/envelope assembly, against a real intent-queue writer (the Bridge's
+// write half) and a loopback shipper ingest protocol peer — no ROS node.
 #include "dc_bridge/record_dispatch.hpp"
 
 #include <arpa/inet.h>
@@ -185,13 +185,13 @@ const msgpack::object* wire_message_value(const msgpack::object& record)
   return &record.via.map.ptr[0].val;
 }
 
-// A dispatcher over a real intent queue and a real Forwarder. `want_peer` decides whether
-// the Shipper is a listening loopback peer or a port nothing accepts on, so both
+// A dispatcher over a real intent-queue writer and a real Forwarder. `want_peer` decides
+// whether the Shipper is a listening loopback peer or a port nothing accepts on, so both
 // "nothing was sent" and "the send failed" are observable.
 struct Harness
 {
   std::filesystem::path queue_dir;
-  std::unique_ptr<IntentQueue> queue;
+  std::unique_ptr<IntentQueueWriter> queue;
   std::unique_ptr<CapturedFrame> peer;
   std::unique_ptr<Forwarder> forwarder;
   std::mutex forwarder_mutex;
@@ -203,7 +203,7 @@ struct Harness
     if (want_queue)
     {
       std::filesystem::create_directories(queue_dir);
-      queue = std::make_unique<IntentQueue>(queue_dir.string());
+      queue = std::make_unique<IntentQueueWriter>(queue_dir.string());
     }
 
     ForwarderConfig fcfg;
@@ -262,7 +262,10 @@ TEST(RecordDispatch, FilesTopicRecordIsEnqueuedAndNotForwarded)
   h.dispatcher->dispatch(make_incoming("/dc/camera/image", R"({"path": "/files/img.jpg"})"));
 
   ASSERT_EQ(h.queue->size(), 1u);
-  const Intent intent = h.queue->pending().at(0);
+  // The writer half only appends, so the payload is read back through the reader half —
+  // the same hand-off the separate dc_uploader process makes.
+  IntentQueue reader(h.queue_dir.string());
+  const Intent intent = reader.pending().at(0);
   EXPECT_EQ(intent.tag, "dc.camera.image");
   EXPECT_EQ(intent.payload, json::parse(R"({"path": "/files/img.jpg"})"));
 

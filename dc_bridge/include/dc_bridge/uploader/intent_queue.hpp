@@ -1,22 +1,11 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-// A disk-backed durable intent queue for the Uploader (ADR-0005 follow-up, #265):
-// Humble's embedded Fluent Bit made ingestion and durable buffering atomic (`in_ros2`
-// wrote straight into FLB's own filesystem chunks; chunk retry was the durable upload
-// state). The Bridge/Shipper split broke that for the File pipeline — an in-memory
-// queue forgets every pending upload on a Bridge restart, silently orphaning Files that
-// will never upload, report, or clean up. This restores that durability: every Record a
-// files-Destination's subscription receives is written to disk as one intent file before
-// it's ever handed to the Uploader, and it leaves the queue only via ack() after
-// processing actually succeeds — no cap, no drop-oldest, no dead-letter. An upload
-// intent and its Files live and die together.
-//
-// This directory is the crash-recovery state, not a notification channel: on startup
-// every unacked intent left over from a previous run is replayed, oldest-first, alongside
-// live traffic. Since #446 split the Uploader into its own process, there is no
-// in-process wake-up signal at all — a Bridge process enqueues and a separate dc_uploader
-// process discovers new intents purely by polling rescan() (see that method below).
+// The durable upload intent queue (ADR-0005/#265, ADR-0014): one intent file on disk per
+// Record a files-Destination receives, removed only by ack() after processing succeeds —
+// no cap, no drop-oldest, no dead-letter. Two classes over one store: IntentQueueWriter
+// is the Bridge's write half, IntentQueue is dc_uploader's read half — the queue *is* the
+// interface, and each process now holds only its own half of it.
 #ifndef DC_BRIDGE__UPLOADER__INTENT_QUEUE_HPP_
 #define DC_BRIDGE__UPLOADER__INTENT_QUEUE_HPP_
 
@@ -49,12 +38,57 @@ struct Intent
 inline constexpr std::chrono::milliseconds DEFAULT_BASE_BACKOFF{ 5000 };
 inline constexpr std::chrono::milliseconds DEFAULT_MAX_BACKOFF{ 2000000 };
 
-/// A crash-atomic, disk-backed FIFO of upload intents with oldest-first scheduling and
-/// per-entry exponential backoff, so one permanently-failing intent can't starve the
-/// rest of the backlog behind it. Thread-safe: enqueue() is expected to run on the
-/// subscription callback's thread while next_ready()/ack()/record_failure() run on the
-/// uploader worker thread.
-class IntentQueue
+/// `<uploader.data_dir>/queue/upload` — the one C++ derivation of the queue path
+/// (ADR-0014: both processes derive it from the same `uploader.data_dir`; dc_bringup hands
+/// the result to dc_uploader as DC_UPLOADER_QUEUE_DIR).
+std::string intent_queue_dir(const std::string& uploader_data_dir);
+
+/// The queue's write half — what the Bridge sees. Append an intent, count the backlog;
+/// nothing else. replay/backoff/ack/rescan are the reader's half, so they aren't on this
+/// type and writer-side code cannot call them.
+class IntentWriter
+{
+public:
+  virtual ~IntentWriter() = default;
+
+  /// Writes one intent — `{version: 1, tag, timestamp, payload}` — to disk via tmp+write
+  /// +rename (crash-atomic; no fsync, matching FLB's `storage.sync normal`) and returns
+  /// its id. Durable before this returns, and visible to a reader's rescan() — there is
+  /// no in-process wake-up across the process boundary (#446).
+  virtual std::string enqueue(const std::string& tag, const nlohmann::json& payload) = 0;
+
+  /// Number of intents currently in the queue.
+  virtual std::size_t size() const = 0;
+};
+
+/// A writer over the store holding none of the reader's in-memory state: the constructor
+/// scans nothing and keeps nothing but `dir` (the Bridge used to construct a full queue
+/// and load every pending intent's payload it would never read back). `size()` therefore
+/// counts the `*.json` files on disk — the only depth a writer-side caller can observe
+/// truthfully anyway, since acks happen in the reader's address space.
+class IntentQueueWriter final : public IntentWriter
+{
+public:
+  /// `dir` is created if missing; anything already in it is left for the reader.
+  explicit IntentQueueWriter(std::string dir);
+
+  std::string enqueue(const std::string& tag, const nlohmann::json& payload) override;
+
+  std::size_t size() const override;
+
+private:
+  std::string dir_;
+  std::mutex mutex_;  ///< guards seq_ (enqueue may run on several subscription threads).
+  std::uint64_t seq_{ 0 };
+};
+
+/// The queue's read half (dc_uploader's), plus the full queue for a single-process
+/// deployment: oldest-first scheduling with per-entry exponential backoff, so one
+/// permanently-failing intent can't starve the backlog behind it, and replay of every
+/// unacked intent a previous run left behind. Thread-safe: enqueue() is expected to run
+/// on the subscription callback's thread while next_ready()/ack()/record_failure() run on
+/// the uploader worker thread.
+class IntentQueue final : public IntentWriter
 {
 public:
   /// `dir` is created if missing. Every `*.json` file already there — a previous run's
@@ -64,10 +98,7 @@ public:
   explicit IntentQueue(std::string dir, std::chrono::milliseconds base_backoff = DEFAULT_BASE_BACKOFF,
                        std::chrono::milliseconds max_backoff = DEFAULT_MAX_BACKOFF);
 
-  /// Writes one intent — `{version: 1, tag, timestamp, payload}` — to disk via tmp+write
-  /// +rename (crash-atomic; no fsync, matching FLB's `storage.sync normal`) and makes it
-  /// immediately eligible for next_ready(). Returns its id.
-  std::string enqueue(const std::string& tag, const nlohmann::json& payload);
+  std::string enqueue(const std::string& tag, const nlohmann::json& payload) override;
 
   /// Unlinks the intent's file and drops it from scheduling. Idempotent: acking an id
   /// that's already gone (or was never known) is a no-op, never a thrown error.
@@ -91,18 +122,18 @@ public:
   std::vector<Intent> pending() const;
 
   /// Number of intents currently pending on disk (ready or backing off).
-  std::size_t size() const;
+  std::size_t size() const override;
   bool empty() const;
 
   /// Picks up any `*.json` file that exists on disk but isn't yet known to this
   /// instance — the multi-process split (#446): a Bridge process enqueues intents while a
   /// separate Uploader process holds the read side (next_ready()/ack()/record_failure()),
-  /// each with its own IntentQueue instance over the same directory. enqueue() only
-  /// updates its own caller's in-memory view, so the Uploader's instance never otherwise
-  /// learns about an intent a different process wrote; this is what closes that gap.
-  /// Already-known entries are left untouched (so in-flight backoff state survives);
-  /// returns the number of newly discovered intents. Safe to call from the same loop that
-  /// already polls for next_ready(), same cost as the constructor's initial scan.
+  /// each with its own instance over the same directory. enqueue() only updates its own
+  /// caller's in-memory view, so the Uploader's instance never otherwise learns about an
+  /// intent a different process wrote; this is what closes that gap. Already-known
+  /// entries are left untouched (so in-flight backoff state survives); returns the number
+  /// of newly discovered intents. Safe to call from the same loop that already polls for
+  /// next_ready(), same cost as the constructor's initial scan.
   std::size_t rescan();
 
 private:
@@ -117,9 +148,6 @@ private:
   };
 
   std::string path_for(const std::string& id) const;
-  /// Every "*.json" filename currently on disk under `dir`, sorted oldest-first (ids sort
-  /// lexicographically in enqueue order — see intent_queue.cpp's make_id()).
-  static std::vector<std::string> list_json_names(const std::string& dir);
   /// Parses one intent file's body into an Entry, or nullopt if it can't be read/parsed (a
   /// "final" .json file should always be complete, since rename is atomic).
   static std::optional<Entry> load_entry(const std::string& dir, const std::string& name);

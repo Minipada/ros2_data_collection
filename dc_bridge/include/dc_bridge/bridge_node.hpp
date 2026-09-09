@@ -81,10 +81,10 @@ private:
 
   // The durable upload intent queue (ADR-0005/#265) — created only when a `receives:
   // files` destination is configured. Records on files-destination topics are enqueued
-  // here so they survive a Bridge crash/restart. The Bridge only writes; a separate
-  // dc_uploader process (#446) owns reading, replaying, uploading, and emitting status
-  // Records — see docs/adr/0014-uploader-runs-as-its-own-process.md.
-  std::unique_ptr<uploader::IntentQueue> intent_queue_;
+  // here so they survive a Bridge crash/restart. The Bridge holds only the queue's write
+  // half; a separate dc_uploader process (#446) owns reading, replaying, uploading, and
+  // emitting status Records — see docs/adr/0014-uploader-runs-as-its-own-process.md.
+  std::unique_ptr<uploader::IntentQueueWriter> intent_queue_;
 
   // Per-Record dispatch (enqueue vs. forward, per topic). Borrows intent_queue_, the
   // Forwarder and its mutex above; declared after them so it dies first.
