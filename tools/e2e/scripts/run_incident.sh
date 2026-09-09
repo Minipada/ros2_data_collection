@@ -39,7 +39,9 @@
 #
 # The shared harness skeleton (image resolution, cleanup trap, Postgres bring-up and its
 # init.sql-aware readiness wait) lives in lib/harness.sh. No RustFS here: both Measurements
-# route to Postgres only.
+# route to Postgres only. Every Record assertion lives in verify_zero_loss.py's `incident`
+# profile (#496) — this script's own jobs are the topology, the FlushEvent, and the two
+# bounded waits those assertions sit on the far side of.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -60,27 +62,20 @@ LIVE_TAG="dc.measurement.memory"
 PG_C=dc_e2e_inc_postgres
 DC_C=dc_e2e_inc_dc
 VOLUMES=(dc_e2e_inc_pgdata dc_e2e_inc_buffer dc_e2e_inc_data)
-# shellcheck disable=SC2034  # consumed by lib/harness.sh
-HARNESS_TAG=e2e-incident
 
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/harness.sh"
 
-mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
 
-remove_stack() {
-  podman rm -f --ignore "$DC_C" "$PG_C" >/dev/null
-  for v in "${VOLUMES[@]}"; do
-    if podman volume exists "$v"; then
-      podman volume rm "$v" >/dev/null
-    fi
-  done
-}
-
-# shellcheck disable=SC2034  # consumed by lib/harness.sh's teardown
-HARNESS_LOG_CAPTURES=("$DC_C:dc_incident.log")
-trap harness_cleanup EXIT
+harness_init \
+  --tag e2e-incident \
+  --run-dir "$RUN_DIR" \
+  --network host \
+  --containers "$DC_C" "$PG_C" \
+  --volumes "${VOLUMES[*]}" \
+  --log-captures "$DC_C:dc_incident.log" \
+  --pg-container "$PG_C"
 
 # --- obtain the DC stack image (shared with run.sh — see its header) ------------------
 DC_IMAGE="" # set by resolve_image
@@ -93,15 +88,6 @@ log "starting Postgres (sql/init.sql — dc_records has the incident_id column u
 start_postgres dc_e2e_inc_pgdata
 wait_postgres_ready
 
-# The column has to be a column. A table without it would make every assertion below fail
-# for a reason that has nothing to do with the pipeline, so say so here instead.
-COLUMN_TYPE="$(pg_exec "SELECT data_type FROM information_schema.columns WHERE table_name = 'dc_records' AND column_name = 'incident_id'" | tr -d '[:space:]')"
-if [ "$COLUMN_TYPE" != "text" ]; then
-  log "FAIL: dc_records has no text incident_id column (got '${COLUMN_TYPE:-none}') — check sql/init.sql"
-  exit 1
-fi
-log "PASS: dc_records.incident_id exists as a text column"
-
 # --- DC stack --------------------------------------------------------------------------
 log "starting the DC stack (uptime armed with buffer_duration_sec, memory collecting live)"
 podman run -d --network host --name "$DC_C" \
@@ -111,38 +97,19 @@ podman run -d --network host --name "$DC_C" \
   -v "$E2E_DIR/params/e2e_incident_pgsql_sink.toml:/opt/e2e/e2e_incident_pgsql_sink.toml:ro" \
   "$DC_IMAGE" >/dev/null
 
-# A count query that reads 0 rather than aborting the run while Postgres/the table is still
-# settling — every call site is inside a deadline loop that fails loudly on its own.
-pg_count() {
-  pg_exec "$1" 2>/dev/null | tr -d '[:space:]' || true
-}
-
 # --- 1. armed means silent, live means flowing -------------------------------------------
-log "waiting up to ${LIVE_TIMEOUT_SECONDS}s for the live Measurement's first rows"
-DEADLINE=$(( $(date +%s) + LIVE_TIMEOUT_SECONDS ))
-LIVE_COUNT=0
-while [ "$(date +%s)" -lt "$DEADLINE" ]; do
-  LIVE_COUNT="$(pg_count "SELECT count(*) FROM dc_records WHERE tag = '$LIVE_TAG'")"
-  # Several rows, not one: enough collection has gone by that an unarmed Measurement would
-  # have shipped several Records too, which is what makes the armed one's silence meaningful.
-  if [ "${LIVE_COUNT:-0}" -ge 5 ] 2>/dev/null; then
-    break
-  fi
-  sleep 2
-done
-
-if [ "${LIVE_COUNT:-0}" -lt 5 ] 2>/dev/null; then
-  log "FAIL: the live Measurement produced only ${LIVE_COUNT:-0} rows in ${LIVE_TIMEOUT_SECONDS}s — the pipeline is not running"
-  exit 1
-fi
-log "PASS: ${LIVE_COUNT} live rows — the pipeline is delivering to Postgres"
-
-BUFFERED_COUNT="$(pg_count "SELECT count(*) FROM dc_records WHERE tag = '$BUFFERED_TAG'")"
-if [ "${BUFFERED_COUNT:-0}" -ne 0 ] 2>/dev/null; then
-  log "FAIL: the armed Measurement shipped ${BUFFERED_COUNT} rows before any FlushEvent — it is not buffering"
-  exit 1
-fi
-log "PASS: the armed Measurement shipped nothing while buffering"
+# Also where dc_records.incident_id is asserted to be a column at all: without it, nothing
+# below could mean what it claims to.
+log "waiting up to ${LIVE_TIMEOUT_SECONDS}s for the live Measurement's first rows, then asserting the armed one shipped nothing"
+python3 "$SCRIPT_DIR/verify_zero_loss.py" \
+  --postgres-container "$PG_C" \
+  --profile incident \
+  --stage armed \
+  --incident-id "$INCIDENT_ID" \
+  --live-tag "$LIVE_TAG" \
+  --buffered-tag "$BUFFERED_TAG" \
+  --timeout-seconds "$LIVE_TIMEOUT_SECONDS" \
+  --report "$RUN_DIR/verification_report_incident_armed.json"
 
 # --- 2. one FlushEvent, then the window is queryable by column ---------------------------
 log "publishing one FlushEvent on /dc/flush with incident_id='$INCIDENT_ID'"
@@ -161,43 +128,17 @@ if ! timeout 90 podman exec "$DC_C" bash -lc "
   exit 1
 fi
 
+# --- 3. the window is queryable by column, and by nothing else ----------------------------
+# The assertion this whole scenario exists for: a column predicate, not a payload match.
 log "waiting up to ${INCIDENT_TIMEOUT_SECONDS}s for the released window to reach Postgres"
-DEADLINE=$(( $(date +%s) + INCIDENT_TIMEOUT_SECONDS ))
-INCIDENT_COUNT=0
-while [ "$(date +%s)" -lt "$DEADLINE" ]; do
-  # The assertion this whole scenario exists for: a column predicate, not a payload match.
-  INCIDENT_COUNT="$(pg_count "SELECT count(*) FROM dc_records WHERE incident_id = '$INCIDENT_ID'")"
-  if [ "${INCIDENT_COUNT:-0}" -ge 2 ] 2>/dev/null; then
-    break
-  fi
-  sleep 2
-done
-
-if [ "${INCIDENT_COUNT:-0}" -lt 2 ] 2>/dev/null; then
-  log "FAIL: only ${INCIDENT_COUNT:-0} row(s) matched WHERE incident_id = '$INCIDENT_ID' within ${INCIDENT_TIMEOUT_SECONDS}s"
-  log "      (a released *window* is several Records; 0 means the id never became a column value at all)"
-  exit 1
-fi
-log "PASS: ${INCIDENT_COUNT} rows are queryable as WHERE incident_id = '$INCIDENT_ID' — a column, not payload text"
-
-# --- 3. the id marks the incident and nothing else ----------------------------------------
-WRONG_TAG="$(pg_count "SELECT count(*) FROM dc_records WHERE incident_id = '$INCIDENT_ID' AND tag <> '$BUFFERED_TAG'")"
-if [ "${WRONG_TAG:-0}" -ne 0 ] 2>/dev/null; then
-  log "FAIL: ${WRONG_TAG} incident row(s) came from a Measurement other than $BUFFERED_TAG"
-  exit 1
-fi
-
-OTHER_IDS="$(pg_count "SELECT count(*) FROM dc_records WHERE incident_id IS NOT NULL AND incident_id <> '$INCIDENT_ID'")"
-if [ "${OTHER_IDS:-0}" -ne 0 ] 2>/dev/null; then
-  log "FAIL: ${OTHER_IDS} row(s) carry an incident_id other than the one the FlushEvent minted"
-  exit 1
-fi
-
-LIVE_TAGGED="$(pg_count "SELECT count(*) FROM dc_records WHERE tag = '$LIVE_TAG' AND incident_id IS NOT NULL")"
-if [ "${LIVE_TAGGED:-0}" -ne 0 ] 2>/dev/null; then
-  log "FAIL: ${LIVE_TAGGED} row(s) from the never-armed Measurement carry an incident_id"
-  exit 1
-fi
-log "PASS: the incident_id is on the released window only — the live Measurement's rows stay NULL"
+python3 "$SCRIPT_DIR/verify_zero_loss.py" \
+  --postgres-container "$PG_C" \
+  --profile incident \
+  --stage released \
+  --incident-id "$INCIDENT_ID" \
+  --live-tag "$LIVE_TAG" \
+  --buffered-tag "$BUFFERED_TAG" \
+  --timeout-seconds "$INCIDENT_TIMEOUT_SECONDS" \
+  --report "$RUN_DIR/verification_report_incident_released.json"
 
 log "PASS: incident_id E2E scenario (#291)"

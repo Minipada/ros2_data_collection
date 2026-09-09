@@ -57,6 +57,24 @@ Checks:
    standard as the NDJSON passthrough above, via a JSON summary of its `.mcap` capture
    (scripts/mcap_summary.py, which needs the `mcap` library and so runs inside the DC
    image via run.sh, not on the CI host runner).
+
+Profiles (#496). `--profile` selects which set of checks runs, so a scenario's Record
+assertions all live here instead of as inline SQL in its bash script:
+
+  - `zero-loss` (the default): the checks above, as run.sh and its siblings invoke them.
+  - `incident`: run_incident.sh's assertions (#291) — that `incident_id` really is a
+    column, that a Measurement armed with `buffer_duration_sec` ships nothing while a
+    live one flows, and that after one FlushEvent the released window is queryable by
+    column and carries no other Measurement's rows. Two stages, because a FlushEvent is
+    published between them: `--stage armed`, then `--stage released`.
+  - `retention`: run_retention.sh's assertions (#267) — that a File is shed without upload
+    once the pool exceeds `files.retention.max_bytes` against a down store, and that a
+    later File uploads normally once the store is back. One stage per half, `--stage
+    shed` then `--stage uploaded`; the shed File's absence *on disk* stays in bash, which
+    is where the volume mount is.
+
+Every check is still a hard assertion, in every profile: a query that can't run is a
+FAIL, not a skip.
 """
 
 import argparse
@@ -64,6 +82,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 
 import raw_volume
 
@@ -293,6 +312,193 @@ def check_files(pg_container: str, violations: list, notes: list, details: dict)
             f"files: {dup_uploaded} local_path(s) have more than one 'uploaded' status row "
             "(at-least-once outage-boundary re-send; deduped on read)"
         )
+
+
+# --- incident profile (#291) -------------------------------------------------------------
+
+# "Armed means silent" is only meaningful against a pipeline known to be delivering: the
+# live Measurement has to have shipped several Records first, enough that an unarmed one
+# would have shipped several too.
+MIN_LIVE_ROWS = 5
+
+# A released *window* is several Records (the pre-event buffer plus the post-roll), so
+# one row would not prove a window came out at all.
+MIN_INCIDENT_ROWS = 2
+
+INCIDENT_STAGE_ARMED = "armed"
+INCIDENT_STAGE_RELEASED = "released"
+INCIDENT_STAGES = (INCIDENT_STAGE_ARMED, INCIDENT_STAGE_RELEASED)
+
+RETENTION_STAGE_SHED = "shed"
+RETENTION_STAGE_UPLOADED = "uploaded"
+RETENTION_STAGES = (RETENTION_STAGE_SHED, RETENTION_STAGE_UPLOADED)
+
+
+def check_incident_column(column_type: str, violations: list, details: dict) -> None:
+    """Assert dc_records.incident_id is a column, before anything queries it.
+
+    The point of #291 is that a released window is reachable by *column* predicate. A
+    table without the column would make every later assertion fail for a reason that has
+    nothing to do with the pipeline, so say so instead.
+
+    Args:
+        column_type: information_schema's data_type for the column, "" if absent.
+        violations: hard failures, appended to in place.
+        details: counters for the JSON report, populated in place.
+    """
+    details["incident_id_column"] = {"data_type": column_type or None}
+    if column_type != "text":
+        violations.append(
+            f"incident: dc_records has no text incident_id column (got "
+            f"'{column_type or 'none'}') — check sql/init.sql"
+        )
+
+
+def check_live_flowing(
+    live_count: int,
+    live_tag: str,
+    timeout_s: int,
+    violations: list,
+    details: dict,
+) -> None:
+    """Assert the never-armed Measurement delivered enough to make silence meaningful."""
+    details["live_measurement"] = {"tag": live_tag, "rows": live_count}
+    if live_count < MIN_LIVE_ROWS:
+        violations.append(
+            f"incident: the live Measurement produced only {live_count} row(s) in "
+            f"{timeout_s}s — the pipeline is not running"
+        )
+
+
+def check_armed_silent(
+    buffered_count: int, buffered_tag: str, violations: list, details: dict
+) -> None:
+    """Assert a Measurement armed with buffer_duration_sec shipped nothing pre-event."""
+    details["armed_measurement"] = {"tag": buffered_tag, "rows": buffered_count}
+    if buffered_count != 0:
+        violations.append(
+            f"incident: the armed Measurement shipped {buffered_count} row(s) before any "
+            "FlushEvent — it is not buffering"
+        )
+
+
+def check_released_window(
+    pg_container: str,
+    incident_id: str,
+    buffered_tag: str,
+    live_tag: str,
+    incident_count: int,
+    violations: list,
+    details: dict,
+) -> None:
+    """Assert one FlushEvent's window is queryable by column, and by nothing else.
+
+    Args:
+        pg_container: name of the Postgres container to query via podman exec.
+        incident_id: the id the FlushEvent carried.
+        buffered_tag: Tag of the armed Measurement the window must have come from.
+        live_tag: Tag of the never-armed Measurement, whose rows must stay NULL.
+        incident_count: rows already known to match WHERE incident_id = <id>.
+        violations: hard failures, appended to in place.
+        details: counters for the JSON report, populated in place.
+    """
+    wrong_tag = scalar_int(
+        pg_container,
+        f"SELECT count(*) FROM dc_records WHERE incident_id = '{incident_id}' "
+        f"AND tag <> '{buffered_tag}'",
+    )
+    other_ids = scalar_int(
+        pg_container,
+        f"SELECT count(*) FROM dc_records WHERE incident_id IS NOT NULL "
+        f"AND incident_id <> '{incident_id}'",
+    )
+    live_tagged = scalar_int(
+        pg_container,
+        f"SELECT count(*) FROM dc_records WHERE tag = '{live_tag}' AND incident_id IS NOT NULL",
+    )
+    details["released_window"] = {
+        "incident_id": incident_id,
+        "rows": incident_count,
+        "rows_from_another_measurement": wrong_tag,
+        "rows_with_another_incident_id": other_ids,
+        "live_measurement_rows_tagged": live_tagged,
+    }
+
+    if incident_count < MIN_INCIDENT_ROWS:
+        violations.append(
+            f"incident: only {incident_count} row(s) matched WHERE incident_id = "
+            f"'{incident_id}' (a released *window* is several Records; 0 means the id "
+            "never became a column value at all)"
+        )
+    if wrong_tag:
+        violations.append(
+            f"incident: {wrong_tag} row(s) of the window came from a Measurement other "
+            f"than {buffered_tag}"
+        )
+    if other_ids:
+        violations.append(
+            f"incident: {other_ids} row(s) carry an incident_id other than the one the "
+            "FlushEvent minted"
+        )
+    if live_tagged:
+        violations.append(
+            f"incident: {live_tagged} row(s) from the never-armed Measurement carry an "
+            "incident_id — the id marks the incident, it is not stamped on everything"
+        )
+
+
+# --- retention profile (#267) -------------------------------------------------------------
+
+
+def check_shed_row(shed_count: int, timeout_s: int, violations: list, details: dict) -> None:
+    """Assert a File was shed without upload while the object store was unreachable."""
+    details["shed"] = {"deleted_without_upload_rows": shed_count, "wait_seconds": timeout_s}
+    if shed_count == 0:
+        violations.append(
+            f"retention: no shed-without-upload audit row (deleted=true, uploaded=false) "
+            f"landed within {timeout_s}s"
+        )
+
+
+def check_uploaded_row(
+    uploaded_count: int, timeout_s: int, violations: list, details: dict
+) -> None:
+    """Assert a File uploaded and verified normally once the store came back."""
+    details["uploaded"] = {"uploaded_rows": uploaded_count, "wait_seconds": timeout_s}
+    if uploaded_count == 0:
+        violations.append(
+            f"retention: no File uploaded/verified within {timeout_s}s of the store coming back"
+        )
+
+
+def wait_for_count(
+    pg_container: str, query: str, minimum: int, timeout_s: int, poll_seconds: float = 2.0
+) -> int:
+    """Poll a scalar count until it reaches `minimum` or the deadline passes.
+
+    The bounded waits the incident/retention scenario scripts used to carry inline, next
+    to the verdicts they feed: the count is only ever *checked* after the wait, so a wait
+    that expires returns the last observed count and the caller's check fails on it.
+
+    Args:
+        pg_container: name of the Postgres container to query via podman exec.
+        query: scalar SQL statement to poll.
+        minimum: count that ends the wait early.
+        timeout_s: how long to keep polling.
+        poll_seconds: interval between polls.
+
+    Returns:
+        int: the last count seen, whether or not it reached `minimum`.
+    """
+    deadline = time.monotonic() + timeout_s
+    count = 0
+    while True:
+        count = scalar_int(pg_container, query)
+        if count >= minimum:
+            return count
+        if time.monotonic() >= deadline:
+            return count
+        time.sleep(poll_seconds)
 
 
 # The Measurement configured above 1 Hz in params/e2e_params.yaml. It is the only topic
@@ -756,6 +962,123 @@ def check_mcap_passthrough(
             )
 
 
+def verify_zero_loss(args, violations: list, notes: list, details: dict) -> None:
+    """The checks the zero-loss harness has always run, in the order it always ran them."""
+    pg = args.postgres_container
+    published = read_ledger(args.ledger_file)
+    boundaries = read_boundaries(args.ledger_file)
+    for i in range(args.num_synth_topics):
+        name = f"synth{i:02d}"
+        check_synth_topic(
+            pg,
+            name,
+            published.get(name, set()),
+            boundaries.get(name, set()),
+            violations,
+            notes,
+            details,
+        )
+    for tag in REAL_TAGS:
+        check_real_tag(pg, tag, violations, notes, details)
+    check_files(pg, violations, notes, details)
+    check_timestamp_resolution(pg, FAST_TAG, violations, notes, details)
+    if args.passthrough_file is not None:
+        check_passthrough(args.passthrough_file, published, boundaries, violations, notes, details)
+    if args.mcap_summary_file is not None:
+        check_mcap_passthrough(
+            args.mcap_summary_file, published, boundaries, violations, notes, details
+        )
+    if args.raw_file is not None:
+        check_raw(args.raw_file, boundaries, violations, notes, details)
+
+
+def verify_incident(args, violations: list, notes: list, details: dict) -> None:
+    """run_incident.sh's assertions, one stage per invocation (a FlushEvent is published
+    between them, which is an action for the scenario script, not a check of ours)."""
+    pg = args.postgres_container
+
+    if args.stage == INCIDENT_STAGE_ARMED:
+        column_type = psql(
+            pg,
+            "SELECT data_type FROM information_schema.columns "
+            "WHERE table_name = 'dc_records' AND column_name = 'incident_id'",
+        )
+        check_incident_column(column_type, violations, details)
+        if violations:
+            return
+        live_count = wait_for_count(
+            pg,
+            f"SELECT count(*) FROM dc_records WHERE tag = '{args.live_tag}'",
+            MIN_LIVE_ROWS,
+            args.timeout_seconds,
+        )
+        check_live_flowing(live_count, args.live_tag, args.timeout_seconds, violations, details)
+        buffered_count = scalar_int(
+            pg, f"SELECT count(*) FROM dc_records WHERE tag = '{args.buffered_tag}'"
+        )
+        check_armed_silent(buffered_count, args.buffered_tag, violations, details)
+        return
+
+    incident_count = wait_for_count(
+        pg,
+        f"SELECT count(*) FROM dc_records WHERE incident_id = '{args.incident_id}'",
+        MIN_INCIDENT_ROWS,
+        args.timeout_seconds,
+    )
+    check_released_window(
+        pg,
+        args.incident_id,
+        args.buffered_tag,
+        args.live_tag,
+        incident_count,
+        violations,
+        details,
+    )
+
+
+def verify_retention(args, violations: list, notes: list, details: dict) -> None:
+    """run_retention.sh's assertions, one stage per invocation (the store comes up between
+    them, and the shed File's absence on disk is the scenario script's volume mount)."""
+    pg = args.postgres_container
+    if args.stage == RETENTION_STAGE_SHED:
+        query = "SELECT count(*) FROM dc_files WHERE deleted = true AND uploaded = false"
+        check_shed_row(
+            wait_for_count(pg, query, 1, args.timeout_seconds),
+            args.timeout_seconds,
+            violations,
+            details,
+        )
+        return
+    query = "SELECT count(*) FROM dc_files WHERE uploaded = true"
+    check_uploaded_row(
+        wait_for_count(pg, query, 1, args.timeout_seconds),
+        args.timeout_seconds,
+        violations,
+        details,
+    )
+
+
+PROFILE_STAGES = {
+    "zero-loss": (),
+    "incident": INCIDENT_STAGES,
+    "retention": RETENTION_STAGES,
+}
+
+PROFILE_LABELS = {
+    "zero-loss": "ZERO-LOSS",
+    "incident": "INCIDENT",
+    "retention": "RETENTION",
+}
+
+# The unit the pass line counts: the zero-loss profile checks per-source detail blocks,
+# the other two run a handful of assertions over one table.
+PROFILE_COUNT_NOUN = {
+    "zero-loss": "sources checked",
+    "incident": "checks run",
+    "retention": "checks run",
+}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -763,11 +1086,56 @@ def main() -> int:
         default="dc_e2e_postgres",
         help="name of the running Postgres container to query via podman exec",
     )
+    parser.add_argument(
+        "--exec-sql",
+        default=None,
+        help="run one SQL statement against the Postgres container, print the result and "
+        "exit. lib/harness.sh's pg_exec() shells out to this: the module is the only SQL "
+        "author in the e2e tree, so there is one psql seam, not one implementation in bash "
+        "and another here",
+    )
+    parser.add_argument(
+        "--profile",
+        choices=sorted(PROFILE_STAGES),
+        default="zero-loss",
+        help="which set of checks to run (see the module docstring): the zero-loss harness's "
+        "own, run_incident.sh's (#291) or run_retention.sh's (#267)",
+    )
+    parser.add_argument(
+        "--stage",
+        default=None,
+        help="which half of an incident/retention run to verify — armed/released for "
+        "--profile incident, shed/uploaded for --profile retention. A FlushEvent is "
+        "published (or the store brought up) between the two halves, so no single "
+        "invocation can cover both",
+    )
+    parser.add_argument(
+        "--timeout-seconds",
+        type=int,
+        default=None,
+        help="bound for the one wait the incident/retention stage polls under",
+    )
+    parser.add_argument(
+        "--incident-id",
+        default=None,
+        help="the incident_id the FlushEvent carried (--profile incident)",
+    )
+    parser.add_argument(
+        "--live-tag",
+        default=None,
+        help="Tag of the Measurement that is never armed (--profile incident)",
+    )
+    parser.add_argument(
+        "--buffered-tag",
+        default=None,
+        help="Tag of the Measurement armed with buffer_duration_sec (--profile incident)",
+    )
     parser.add_argument("--num-synth-topics", type=int, default=14)
     parser.add_argument(
         "--ledger-file",
-        required=True,
-        help="workload ledger extracted from the dc_e2e_data volume (what was published)",
+        default=None,
+        help="workload ledger extracted from the dc_e2e_data volume (what was published); "
+        "required by --profile zero-loss, unused by the others",
     )
     parser.add_argument(
         "--passthrough-file",
@@ -800,38 +1168,45 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    pg = args.postgres_container
+    if args.exec_sql is not None:
+        print(psql(args.postgres_container, args.exec_sql))
+        return 0
+
+    stages = PROFILE_STAGES[args.profile]
+    if stages:
+        if args.stage not in stages:
+            parser.error(f"--profile {args.profile} needs --stage {'|'.join(stages)}")
+        if args.timeout_seconds is None:
+            parser.error(f"--profile {args.profile} needs --timeout-seconds")
+        if args.profile == "incident":
+            for name in ("incident-id", "live-tag", "buffered-tag"):
+                if getattr(args, name.replace("-", "_")) is None:
+                    parser.error(f"--profile incident needs --{name}")
+    elif args.stage is not None:
+        parser.error("--stage only applies to --profile incident/--profile retention")
+    elif args.ledger_file is None:
+        parser.error("--profile zero-loss needs --ledger-file")
+
     violations: list = []
     notes: list = []
     details: dict = {}
+    if args.profile == "zero-loss":
+        verify_zero_loss(args, violations, notes, details)
+    elif args.profile == "incident":
+        verify_incident(args, violations, notes, details)
+    else:
+        verify_retention(args, violations, notes, details)
 
-    published = read_ledger(args.ledger_file)
-    boundaries = read_boundaries(args.ledger_file)
-    for i in range(args.num_synth_topics):
-        name = f"synth{i:02d}"
-        check_synth_topic(
-            pg,
-            name,
-            published.get(name, set()),
-            boundaries.get(name, set()),
-            violations,
-            notes,
-            details,
-        )
-    for tag in REAL_TAGS:
-        check_real_tag(pg, tag, violations, notes, details)
-    check_files(pg, violations, notes, details)
-    check_timestamp_resolution(pg, FAST_TAG, violations, notes, details)
-    if args.passthrough_file is not None:
-        check_passthrough(args.passthrough_file, published, boundaries, violations, notes, details)
-    if args.mcap_summary_file is not None:
-        check_mcap_passthrough(
-            args.mcap_summary_file, published, boundaries, violations, notes, details
-        )
-    if args.raw_file is not None:
-        check_raw(args.raw_file, boundaries, violations, notes, details)
-
-    report = {"pass": not violations, "violations": violations, "notes": notes, "details": details}
+    label = PROFILE_LABELS[args.profile]
+    stage = f", stage={args.stage}" if args.stage else ""
+    report = {
+        "profile": args.profile,
+        "stage": args.stage,
+        "pass": not violations,
+        "violations": violations,
+        "notes": notes,
+        "details": details,
+    }
     if args.conditions_file:
         with open(args.conditions_file) as f:
             report["conditions"] = json.load(f)
@@ -840,19 +1215,22 @@ def main() -> int:
             json.dump(report, f, indent=2)
 
     # Notes (at-least-once boundary re-sends) print in both the pass and fail paths — they
-    # are expected and never affect the exit status; only violations (loss) do.
+    # are expected and never affect the exit status; only violations do.
     if notes:
         print(f"NOTES ({len(notes)} at-least-once duplicate(s), deduped on read):")
         for n in notes:
             print(f"  - {n}")
 
     if violations:
-        print("ZERO-LOSS VERIFICATION FAILED:", file=sys.stderr)
+        print(f"{label} VERIFICATION FAILED{stage}:", file=sys.stderr)
         for v in violations:
             print(f"  - {v}", file=sys.stderr)
         return 1
 
-    print(f"ZERO-LOSS VERIFICATION PASSED ({len(details)} sources checked, 0 violations)")
+    print(
+        f"{label} VERIFICATION PASSED{stage} "
+        f"({len(details)} {PROFILE_COUNT_NOUN[args.profile]}, 0 violations)"
+    )
     return 0
 
 

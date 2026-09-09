@@ -784,7 +784,17 @@ Not wired into `ci.yaml`, same as every scenario above.
 - `scripts/run.sh` — the one-command harness orchestrator described above. Builds the
   workspace + `dc-e2e` images locally, or runs a prebuilt `dc-e2e` image when handed one
   via `DC_E2E_IMAGE` (as CI's `e2e` job does).
+- `scripts/lib/harness.sh` — the shared skeleton every `run_*.sh` sources (#496): image
+  resolution, the cleanup trap, destination bring-up and readiness waits, volume
+  extraction, teardown. A scenario declares its topology once, to `harness_init`
+  (container/volume/network names, log captures, optionally a compose file), and the
+  harness does the rest — so a new scenario is a manifest plus its verify invocation.
 - `scripts/verify_zero_loss.py` — the hard-failing Postgres + passthrough verification.
+  `--profile` selects which scenario's verdicts it owns: `zero-loss` (default, the
+  checks below), `incident` (#291's, staged `armed`/`released` around the FlushEvent) or
+  `retention` (#267's, staged `shed`/`uploaded` around the store coming up). `--exec-sql`
+  runs one statement — `lib/harness.sh`'s `pg_exec()` shells out to it, so the module is
+  the only SQL author in the tree.
 - `scripts/measure_resources.sh` — the informational resource sampler.
 - `params/e2e_retention_params.yaml` / `scripts/run_retention.sh` — the files retention
   scenario (#267) described above; a separate, narrower harness reusing the same

@@ -51,10 +51,6 @@ RUSTFS_C=dc_e2e_split_rustfs
 DC_ROS_C=dc_e2e_split_dc_ros
 UPLOADER_C=dc_e2e_split_dc_uploader
 VECTOR_C=dc_e2e_split_vector
-# shellcheck disable=SC2034  # consumed by lib/harness.sh
-HARNESS_TAG=e2e-split
-# shellcheck disable=SC2034
-HARNESS_NETWORK=dc_e2e_split_net
 
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/harness.sh"
@@ -65,18 +61,22 @@ source "$SCRIPT_DIR/lib/harness.sh"
 VECTOR_VERSION="$(vector_version)"
 export VECTOR_VERSION
 
-mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
 
 compose() { podman compose -f "$COMPOSE_FILE" "$@"; }
 
-remove_stack() {
-  compose down --volumes --remove-orphans >/dev/null 2>&1 || true
-}
-
-# shellcheck disable=SC2034  # consumed by lib/harness.sh's teardown
-HARNESS_LOG_CAPTURES=("$DC_ROS_C:dc-ros.log" "$UPLOADER_C:dc-uploader.log" "$VECTOR_C:vector.log")
-trap harness_cleanup EXIT
+# compose.split.yaml *is* the manifest here — its services and named volumes are exactly
+# what comes down, so `down --volumes --remove-orphans` is the whole teardown and the
+# container list is only a backstop for a compose provider that failed to run.
+harness_init \
+  --tag e2e-split \
+  --run-dir "$RUN_DIR" \
+  --network dc_e2e_split_net \
+  --compose "$COMPOSE_FILE" \
+  --containers "$DC_ROS_C" "$UPLOADER_C" "$VECTOR_C" "$PG_C" "$RUSTFS_C" \
+  --log-captures "$DC_ROS_C:dc-ros.log" "$UPLOADER_C:dc-uploader.log" "$VECTOR_C:vector.log" \
+  --pg-container "$PG_C" \
+  --rustfs-container "$RUSTFS_C"
 
 # --- obtain the DC stack image (same logic as run.sh) --------------------------------
 DC_IMAGE="" # set by resolve_image
@@ -115,21 +115,8 @@ log "starting vector (the Shipper), ${VECTOR_DELAY_SECONDS}s after dc-ros — me
 VECTOR_START_TS=$(date +%s.%N)
 compose up -d vector
 
-FIRST_RECORD_LATENCY=""
-DEADLINE=$(echo "$VECTOR_START_TS + $RECOVERY_TIMEOUT_SECONDS" | bc)
-while (( $(echo "$(date +%s.%N) < $DEADLINE" | bc) )); do
-  COUNT="$(pg_exec 'SELECT count(*) FROM dc_records' 2>/dev/null || echo 0)"
-  if [ "${COUNT:-0}" -gt 0 ] 2>/dev/null; then
-    FIRST_RECORD_LATENCY=$(echo "$(date +%s.%N) - $VECTOR_START_TS" | bc)
-    break
-  fi
-  sleep 0.2
-done
-
-if [ -z "$FIRST_RECORD_LATENCY" ]; then
-  log "FAIL: no Record landed in Postgres within ${RECOVERY_TIMEOUT_SECONDS}s of starting vector — dc-ros did not recover from the Shipper starting late"
-  exit 1
-fi
+FIRST_RECORD_LATENCY="$(wait_first_record "$RECOVERY_TIMEOUT_SECONDS" "$VECTOR_START_TS" \
+  "of starting vector — dc-ros did not recover from the Shipper starting late")"
 log "PASS: dc-ros recovered on its own (first Record ${FIRST_RECORD_LATENCY}s after vector started, no restart needed)"
 
 # dc-uploader's own independent-restart proof (#447's per-container restart

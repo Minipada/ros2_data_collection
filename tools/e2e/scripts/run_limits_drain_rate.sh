@@ -72,7 +72,6 @@ RATE_HZ="${DC_E2E_DRAIN_RATE_HZ:-10}"
 OUTAGE_LENGTHS="${DC_E2E_DRAIN_OUTAGE_LENGTHS:-30,60}"
 POLL_INTERVAL_SECONDS="${DC_E2E_DRAIN_POLL_INTERVAL_SECONDS:-5}"
 MAX_WAIT_SECONDS="${DC_E2E_DRAIN_MAX_WAIT_SECONDS:-120}"
-KEEP="${DC_E2E_KEEP:-false}"
 
 # A dedicated bridge network, not --network host (unlike run.sh et al.): this scenario's
 # RustFS never needs to be host-reachable at all (only the Shipper talks to it, over
@@ -94,39 +93,32 @@ METRICS_PORT="${DC_E2E_DRAIN_METRICS_PORT:-9648}"
 BUFFER_ID=to_object_storage
 BUCKET=dc-e2e
 
-mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
 
-log() { echo "[e2e-drain-rate $(date -u +%H:%M:%S)] $*"; }
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/harness.sh"
 
-remove_stack() {
-  podman rm -f --ignore "$SHIPPER_C" "$RUSTFS_C" >/dev/null
-  if podman volume exists dc_e2e_drain_rustfs_data; then
-    podman volume rm dc_e2e_drain_rustfs_data >/dev/null
-  fi
-  podman network rm "$NET" >/dev/null 2>&1 || true
-}
+harness_init \
+  --tag e2e-drain-rate \
+  --run-dir "$RUN_DIR" \
+  --network "$NET" \
+  --containers "$SHIPPER_C" "$RUSTFS_C" \
+  --volumes dc_e2e_drain_rustfs_data \
+  --teardown-networks "$NET" \
+  --log-captures "$SHIPPER_C:shipper.log" \
+  --rustfs-container "$RUSTFS_C"
 
-cleanup() {
-  local exit_code=$?
-  if [ "$exit_code" -ne 0 ] && [ "$KEEP" = "true" ]; then
-    log "FAILED (exit $exit_code) — leaving the stack up (DC_E2E_KEEP=true) for debugging"
-    exit "$exit_code"
-  fi
-  log "tearing down"
-  if podman container exists "$SHIPPER_C"; then
-    podman logs "$SHIPPER_C" > "$RUN_DIR/shipper.log" 2>&1 || true
-  fi
-  remove_stack
-  exit "$exit_code"
+# This scenario has no DC image at all (a bare Vector Shipper under test is the whole
+# stack), so the harness's own DC-image-based RustFS probe can't run here — probe from
+# the Vector image instead, the way this script always did.
+harness_rustfs_probe() {
+  podman run --rm --network "$NET" --entrypoint bash "$VECTOR_IMAGE" \
+    -c "exec 3<>/dev/tcp/$RUSTFS_C/9000" >/dev/null 2>&1
 }
-trap cleanup EXIT
 
 # The exact Vector version dc_bridge is built and tested against, same as
 # run_limits_two_tier.sh / run_load_driver_shipper_test.sh — resolved from the .repos
 # pin by lib/version.sh (#484), not duplicated as a second source of truth.
-# shellcheck disable=SC1091
-source "$SCRIPT_DIR/lib/version.sh"
 VECTOR_VERSION="$(vector_version)"
 VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
 
@@ -137,22 +129,13 @@ podman network create "$NET" >/dev/null
 
 # --- RustFS: the Destination this scenario induces an outage on, internal-only --------
 log "starting RustFS on $NET (no host port published)"
-podman run -d --network "$NET" --name "$RUSTFS_C" \
-  -v dc_e2e_drain_rustfs_data:/data \
-  docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c >/dev/null
+start_rustfs dc_e2e_drain_rustfs_data
+wait_rustfs_ready
 
-log "waiting for RustFS to accept TCP connections on $NET"
-timeout 60 bash -c "
-  until podman run --rm --network $NET --entrypoint bash '$VECTOR_IMAGE' -c 'exec 3<>/dev/tcp/$RUSTFS_C/9000' >/dev/null 2>&1; do
-    sleep 1
-  done
-" || { log "FAIL: RustFS never became reachable on $NET"; exit 1; }
-
+# Same bucket name the harness creates everywhere (dc-e2e) — the Shipper config below
+# reads it from $BUCKET.
 log "creating the RustFS bucket"
-podman run --rm --network "$NET" \
-  -e AWS_ACCESS_KEY_ID=rustfsadmin -e AWS_SECRET_ACCESS_KEY=rustfsadmin -e AWS_DEFAULT_REGION=us-east-1 \
-  docker.io/amazon/aws-cli:latest \
-  --endpoint-url "http://$RUSTFS_C:9000" s3 mb "s3://$BUCKET"
+create_rustfs_bucket "http://$RUSTFS_C:9000"
 
 # --- Shipper under test: bare Vector, fluent source + aws_s3 sink with a disk buffer ---
 log "rendering the Shipper-under-test's Vector config"

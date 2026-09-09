@@ -90,30 +90,22 @@ PG_C=dc_e2e_deg_postgres
 RUSTFS_C=dc_e2e_deg_rustfs
 DC_C=dc_e2e_deg_dc
 VOLUMES=(dc_e2e_deg_pgdata dc_e2e_deg_rustfs_data dc_e2e_deg_buffer dc_e2e_deg_data)
-# shellcheck disable=SC2034  # consumed by lib/harness.sh
-HARNESS_TAG=e2e-degraded
-# shellcheck disable=SC2034
-HARNESS_NETWORK="$NET"
 
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/harness.sh"
 
-mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
 
-remove_stack() {
-  podman rm -f --ignore "$DC_C" "$PG_C" "$RUSTFS_C" >/dev/null
-  for v in "${VOLUMES[@]}"; do
-    if podman volume exists "$v"; then
-      podman volume rm "$v" >/dev/null
-    fi
-  done
-  podman network rm "$NET" >/dev/null 2>&1 || true
-}
-
-# shellcheck disable=SC2034  # consumed by lib/harness.sh's teardown
-HARNESS_LOG_CAPTURES=("$DC_C:dc_degraded.log")
-trap harness_cleanup EXIT
+harness_init \
+  --tag e2e-degraded \
+  --run-dir "$RUN_DIR" \
+  --network "$NET" \
+  --containers "$DC_C" "$PG_C" "$RUSTFS_C" \
+  --volumes "${VOLUMES[*]}" \
+  --teardown-networks "$NET" \
+  --log-captures "$DC_C:dc_degraded.log" \
+  --pg-container "$PG_C" \
+  --rustfs-container "$RUSTFS_C"
 
 # --- resolve the network profile (scripts/network_profiles.py — one declarative place) --
 log "resolving network profile '$PROFILE_NAME'"
@@ -255,21 +247,8 @@ podman run -d --network "$NET" --name "$DC_C" \
   -v "$E2E_DIR/params/e2e_degraded_pgsql_sink.toml:/opt/e2e/e2e_degraded_pgsql_sink.toml:ro" \
   "$DC_IMAGE" >/dev/null
 
-FIRST_RECORD_LATENCY=""
-DEADLINE=$(echo "$START_TS + $STARTUP_TIMEOUT_SECONDS + 5" | bc)
-while (( $(echo "$(date +%s.%N) < $DEADLINE" | bc) )); do
-  COUNT="$(pg_exec 'SELECT count(*) FROM dc_records' 2>/dev/null || echo 0)"
-  if [ "${COUNT:-0}" -gt 0 ] 2>/dev/null; then
-    FIRST_RECORD_LATENCY=$(echo "$(date +%s.%N) - $START_TS" | bc)
-    break
-  fi
-  sleep 0.2
-done
-
-if [ -z "$FIRST_RECORD_LATENCY" ]; then
-  log "FAIL: no Record landed in Postgres within $((STARTUP_TIMEOUT_SECONDS + 5))s of starting the stack"
-  exit 1
-fi
+FIRST_RECORD_LATENCY="$(wait_first_record \
+  "$((STARTUP_TIMEOUT_SECONDS + 5))" "$START_TS" "of starting the stack")"
 log "first Record landed after ${FIRST_RECORD_LATENCY}s"
 if (( $(echo "$FIRST_RECORD_LATENCY > $STARTUP_TIMEOUT_SECONDS" | bc) )); then
   log "FAIL: startup latency ${FIRST_RECORD_LATENCY}s exceeds the ${STARTUP_TIMEOUT_SECONDS}s gate"
