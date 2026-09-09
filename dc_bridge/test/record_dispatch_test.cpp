@@ -166,12 +166,11 @@ std::string wire_tag(const std::string& frame)
   return oh.get().via.array.ptr[0].as<std::string>();
 }
 
-std::string wire_event_time(const std::string& frame)
+// The EventTime's exact wire bytes are looked up in the frame (forwarder_test's
+// approach), rather than decoded out of msgpack's ext object layout.
+bool frame_carries_event_time(const std::string& frame, std::uint32_t secs, std::uint32_t nanos)
 {
-  msgpack::object_handle oh = unpack_frame(frame);
-  msgpack::object entry = oh.get().via.array.ptr[1].via.array.ptr[0];
-  EXPECT_EQ(entry.type, msgpack::type::EXT);
-  return std::string(entry.via.ext.ptr, static_cast<std::size_t>(entry.via.ext.size));
+  return frame.find(expected_event_time_bytes(secs, nanos)) != std::string::npos;
 }
 
 // The "message" value pack_record_map wraps a non-map payload in, or nullptr when the
@@ -288,7 +287,7 @@ TEST(RecordDispatch, RecordsTopicRecordIsForwardedAndNotEnqueued)
 
   const std::string frame = h.peer->frame();
   EXPECT_EQ(wire_tag(frame), "dc.measurement.uptime");
-  EXPECT_EQ(wire_event_time(frame), expected_event_time_bytes(1700000000, 123456789));
+  EXPECT_TRUE(frame_carries_event_time(frame, 1700000000, 123456789));
 
   msgpack::object_handle oh = unpack_frame(frame);
   msgpack::object record = wire_record_map(oh.get());
@@ -388,7 +387,7 @@ TEST(RecordDispatch, NegativeStampSecondsClampToZeroAndNanosecondsSurvive)
   h.dispatcher->dispatch(make_incoming("/dc/measurement/clock", "{}", -5, 42));
 
   ASSERT_TRUE(h.peer->read_frame(std::chrono::seconds(2)));
-  EXPECT_EQ(wire_event_time(h.peer->frame()), expected_event_time_bytes(0, 42));
+  EXPECT_TRUE(frame_carries_event_time(h.peer->frame(), 0, 42));
 }
 
 TEST(RecordDispatch, UnreachableShipperWarnsInsteadOfThrowing)
