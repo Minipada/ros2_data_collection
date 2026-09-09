@@ -38,7 +38,7 @@ std::vector<std::string> registeredPluginTypes()
 std::string schemaPath(const std::string& plugin_type)
 {
   return ament_index_cpp::get_package_share_directory("dc_measurements") + "/plugins/measurements/json/" +
-         dc_measurements::Measurement::snakeCase(plugin_type) + ".json";
+         dc_measurements::Measurement::defaultSchemaFile(plugin_type);
 }
 
 TEST(MeasurementSchemaTest, SnakeCaseKeepsAcronymsWithTheWordTheyPrecede)
@@ -49,6 +49,15 @@ TEST(MeasurementSchemaTest, SnakeCaseKeepsAcronymsWithTheWordTheyPrecede)
   EXPECT_EQ(dc_measurements::Measurement::snakeCase("Ros2ControlStatus"), "ros2_control_status");
   EXPECT_EQ(dc_measurements::Measurement::snakeCase("MissionNav2ThroughPoses"), "mission_nav2_through_poses");
   EXPECT_EQ(dc_measurements::Measurement::snakeCase("StringStamped"), "string_stamped");
+}
+
+TEST(MeasurementSchemaTest, DefaultSchemaFileTakesTheTypeNotTheWholeLookupName)
+{
+  // The package part is not a CamelCase word: converting the whole lookup name would nest it
+  // under json/ as a directory, where nothing is installed.
+  EXPECT_EQ(dc_measurements::Measurement::defaultSchemaFile("dc_measurements/Battery"), "battery.json");
+  EXPECT_EQ(dc_measurements::Measurement::defaultSchemaFile("dc_measurements/TCPHealth"), "tcp_health.json");
+  EXPECT_EQ(dc_measurements::Measurement::defaultSchemaFile("dc_demos/UptimeCustom"), "uptime_custom.json");
 }
 
 TEST(MeasurementSchemaTest, EveryRegisteredPluginHasItsOwnSchemaFile)
@@ -72,7 +81,7 @@ TEST(MeasurementSchemaTest, EveryRegisteredPluginHasItsOwnSchemaFile)
     }
     EXPECT_TRUE(std::filesystem::exists(schemaPath(type)))
         << type << " derives a default schema of " << schemaPath(type) << ", which is not installed";
-    schema_names.insert(dc_measurements::Measurement::snakeCase(type));
+    schema_names.insert(dc_measurements::Measurement::defaultSchemaFile(type));
   }
 
   // Two plugins deriving the same file name would make one of them validate against a schema
