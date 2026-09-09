@@ -14,7 +14,7 @@ from rclpy_message_converter import message_converter
 
 from dc_interfaces.msg import StringStamped
 
-from .flatten import flatten, unflatten_list
+from .group_merge import merge_records
 
 # Values accepted by the per-group `on_sync_timeout` parameter. `message_filters` has no
 # timeout of its own, so DC runs a timer alongside the synchroniser (see
@@ -69,69 +69,25 @@ class GroupServer(Node):
             missing_inputs (list): Input topics that contributed no Record. Empty for a
                 complete Record, non-empty for a partial one
         """
-        data_dict = {}
-        plugins_list = []
-        incident_id = None
         collected_time = self.get_clock().now()
+        parsed_payloads = []
         for measurement in measurements:
             # https://github.com/ros2/rosidl_python/blob/0f5c8f360be92566ad86f4b29f3db1febfca2242/rosidl_generator_py/resource/_msg.py.em#L187-L189
             measurement_dict = message_converter.convert_ros_message_to_dictionary(measurement)
-            m_data = json.loads(measurement.data)
-            m_data.pop("tags", None)
-            # `incident_id` is an envelope field, not measurement data (#291): merged under a
-            # member's `group_key` it would become `<group_key>.incident_id`, which is no
-            # column any Destination table has and so is silently dropped by the Postgres
-            # sink. Lifted to the merged Record's top level instead, the same way `tags` is,
-            # so a grouped incident stays queryable as `WHERE incident_id = ...`. One
-            # FlushEvent mints one id for every Measurement listening, so the members of a
-            # released window all carry the same one — first non-null wins, and a partial
-            # Record built from a mix of released and live members still carries it.
-            member_incident_id = m_data.pop("incident_id", None)
-            if incident_id is None:
-                incident_id = member_incident_id
-            if self.group_measurement_plugins:
-                if "plugin" in m_data:
-                    plugins_list.append(m_data["plugin"])
-            tmp_data_dict = flatten(
-                nested_dict={measurement_dict["group_key"]: m_data}, separator="."
+            parsed_payloads.append(
+                {"group_key": measurement_dict["group_key"], "data": json.loads(measurement.data)}
             )
-            data_dict = data_dict | tmp_data_dict
 
-        for exclude_key in self.params[group]["exclude_keys"]:
-            if exclude_key != "":
-                if "*" not in exclude_key:
-                    data_dict = {
-                        k: v for k, v in data_dict.items() if not k.startswith(exclude_key)
-                    }
-                else:
-                    # Split by *
-                    data_dict = {
-                        k: v
-                        for k, v in data_dict.items()
-                        if not all(x in k for x in exclude_key.split("*"))
-                    }
-        if self.params[group]["nested_data"]:
-            data_dict = unflatten_list(flat_dict=data_dict, separator=".")
-        data_dict["tags"] = self.params[group]["tags"]
-        # Only when a member actually carried one: a Record collected outside an incident must
-        # leave the column NULL rather than write an explicit null into every grouped Record.
-        if incident_id is not None:
-            data_dict["incident_id"] = incident_id
-        if self.group_measurement_plugins and plugins_list:
-            data_dict["plugins"] = plugins_list
-
-        if self.params[group]["include_group_name"]:
-            data_dict["name"] = group
-
-        # A Record assembled by the sync timeout rather than by the synchroniser is marked
-        # so consumers can tell it apart. A complete Record carries neither key, keeping its
-        # shape identical to what DC published before the timeout existed. The keys of the
-        # inputs that never showed up are simply absent: the Group node only knows a missing
-        # input's *topic*, never its `group_key` or its fields (both come from the Record
-        # itself), so it cannot synthesise a correctly shaped null placeholder for it.
-        if missing_inputs:
-            data_dict["partial"] = True
-            data_dict["missing_inputs"] = list(missing_inputs)
+        # `group_measurement_plugins` is stored as a Parameter, and a Parameter is always
+        # truthy, so `bool()` is what the merge used to test inline — the flag's value is
+        # still ignored today. Passing `.value` would be a behaviour change, not a move.
+        data_dict = merge_records(
+            parsed_payloads,
+            group,
+            self.params[group],
+            missing_inputs=missing_inputs,
+            collect_plugins=bool(self.group_measurement_plugins),
+        )
 
         msg = StringStamped()
         msg.data = json.dumps(data_dict)
