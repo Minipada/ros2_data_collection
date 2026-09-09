@@ -52,6 +52,7 @@ protected:
   {
     (void)measurement;
     received_.push_back(msg.data);
+    incident_ids_.push_back(msg.incident_id);
     // When each Record actually landed, for the rate-limited release (#289).
     arrivals_.push_back(std::chrono::steady_clock::now());
   }
@@ -74,14 +75,13 @@ protected:
     flush_pub_->publish(flush_msg);
   }
 
-  // How many received Records carry this incident_id.
+  // How many received Records carry this incident_id on the envelope.
   int countTaggedWith(const std::string& incident_id) const
   {
     int count = 0;
-    for (const auto& data : received_)
+    for (const auto& id : incident_ids_)
     {
-      json data_json = json::parse(data);
-      if (data_json.contains("incident_id") && data_json["incident_id"] == incident_id)
+      if (id == incident_id)
       {
         count++;
       }
@@ -156,6 +156,7 @@ protected:
 
 public:
   std::vector<std::string> received_;
+  std::vector<std::string> incident_ids_;
   std::vector<std::chrono::steady_clock::time_point> arrivals_;
 };
 
@@ -169,6 +170,8 @@ TEST_F(MeasurementBufferingTest, ZeroBufferDurationPublishesLiveAsBefore)
 
   ASSERT_TRUE(spinUntil([this] { return !received_.empty(); }, 5000)) << "no Record was ever published";
 
+  // Outside an incident the envelope field stays empty, and the payload carries no copy of it.
+  EXPECT_TRUE(incident_ids_.front().empty());
   json data_json = json::parse(received_.front());
   EXPECT_FALSE(data_json.contains("incident_id"));
 }

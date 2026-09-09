@@ -317,7 +317,9 @@ TEST_F(MeasurementCoreTest, IncidentBufferReleasesOnFlush)
   for (const RecordOut& out : captured.records)
   {
     const json record = json::parse(out.data);
-    EXPECT_EQ(record["incident_id"], "inc-1");
+    // The Incident rides the typed envelope field (#506); the payload carries no such key.
+    EXPECT_EQ(out.incident_id, "inc-1");
+    EXPECT_FALSE(record.contains("incident_id"));
     EXPECT_EQ(out.group_key, "gk");
     // Released Records are stamped with when they were collected, not when they were released.
     EXPECT_NE(out.stamp_ns, std::chrono::duration_cast<std::chrono::nanoseconds>(at(102.0).time_since_epoch()).count());
@@ -345,7 +347,8 @@ TEST_F(MeasurementCoreTest, PostRollPublishesLiveThenReArms)
   ASSERT_EQ(captured.records.size(), 1u);
   const json record = json::parse(captured.records[0].data);
   EXPECT_EQ(record["message"], "live");
-  EXPECT_EQ(record["incident_id"], "inc-1");
+  EXPECT_EQ(captured.records[0].incident_id, "inc-1");
+  EXPECT_FALSE(record.contains("incident_id"));
 
   // Past the post-roll deadline the next sample buffers again.
   core.offerSample(R"({"message":"buffered"})", at(131.0));

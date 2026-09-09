@@ -930,8 +930,8 @@ TEST(Uploader, IncidentReleasedScratchFilesAreIngestedUnmodified)
   const auto collected_at = std::chrono::system_clock::now() - std::chrono::minutes(5);
   auto staged = ring.stage(produced, collected_at);
   auto payload = camera_payload(staged.string(), { "minio" });
-  // What measurement.hpp's publishIncidentRecord() adds on the way out; nothing in the Files
-  // pipeline knows or cares about it.
+  // What the Bridge's dispatch lifts off the StringStamped envelope (#506); nothing in the
+  // Files pipeline knows or cares about it.
   payload["incident_id"] = "incident-42";
   // Releasing hands the staged copies to the Bridge: the ring stops tracking them, so its rolling
   // eviction can no longer delete one out from under an upload in flight.

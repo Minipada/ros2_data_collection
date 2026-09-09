@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 """Tests for the Group node's sync-timeout drop/emit_partial behaviour (#126), plus the
-envelope fields a merged Record has to carry through at top level (`incident_id`, #291).
+envelope fields a merged Record has to carry through (`incident_id`, #291/#506).
 
 Every test drives a real `GroupServer` through a real executor against real DDS topics —
 `message_filters` has no timeout of its own, so what is under test is precisely the
@@ -113,10 +113,11 @@ class GroupHarness:
         )
         assert matched, "the Group node's subscriptions/publisher never matched the test node"
 
-    def publish(self, index, data):
+    def publish(self, index, data, incident_id=""):
         msg = StringStamped()
         msg.data = json.dumps(data)
         msg.group_key = self.inputs[index].rsplit("/", 1)[-1]
+        msg.incident_id = incident_id
         msg.header.stamp = self.server.get_clock().now().to_msg()
         self.input_publishers[index].publish(msg)
 
@@ -337,42 +338,44 @@ def test_throttle_of_zero_logs_every_timeout(harness):
     assert len(group.sync_timeout_warnings()) == len(group.records)
 
 
-def test_incident_id_is_lifted_to_the_merged_records_top_level(harness):
-    """#291: a released member's incident_id survives merging as a first-class field."""
-    # Nested under the member's `group_key` it would be `<group_key>.incident_id`, which no
-    # Destination table has a column for and the Postgres sink therefore drops.
+def test_incident_id_is_carried_from_the_member_envelopes(harness):
+    """#291: a released member's incident_id survives merging as the output's envelope field."""
+    # One FlushEvent mints one id for every Measurement listening, so the members of a
+    # released window all carry the same one on their `StringStamped` envelope (#506).
     group = harness(sync_timeout=SYNC_TIMEOUT, on_sync_timeout="emit_partial")
-    group.publish(0, {"used": 12.0, "incident_id": "incident-42"})
-    group.publish(1, {"free": 34.0, "incident_id": "incident-42"})
+    group.publish(0, {"used": 12.0}, incident_id="incident-42")
+    group.publish(1, {"free": 34.0}, incident_id="incident-42")
 
     assert group.wait_for_records(1), "no Record published for a complete set"
+    record = group.records[0]
     payload = group.payloads()[0]
 
-    assert payload["incident_id"] == "incident-42"
-    # Lifted, not copied: it must not also stay behind inside the members' own data.
+    assert record.incident_id == "incident-42"
+    # The payload carries no copy of it: the id lives on the envelope alone.
     assert payload["a"] == {"used": 12.0}
     assert payload["b"] == {"free": 34.0}
+    assert "incident_id" not in payload
 
 
-def test_incident_id_is_absent_when_no_member_carries_one(harness):
+def test_incident_id_is_empty_when_no_member_carries_one(harness):
     """A Record collected outside an incident leaves the column NULL, not empty-string."""
     group = harness(sync_timeout=SYNC_TIMEOUT, on_sync_timeout="emit_partial")
     group.publish(0, {"used": 12.0})
     group.publish(1, {"free": 34.0})
 
     assert group.wait_for_records(1), "no Record published for a complete set"
-    assert "incident_id" not in group.payloads()[0]
+    assert group.records[0].incident_id == ""
 
 
 def test_partial_record_keeps_the_incident_id_of_the_member_that_arrived(harness):
     """A window released by one Measurement while another is silent is still an incident."""
     group = harness(sync_timeout=SYNC_TIMEOUT, on_sync_timeout="emit_partial")
-    group.publish(0, {"used": 12.0, "incident_id": "incident-7"})
+    group.publish(0, {"used": 12.0}, incident_id="incident-7")
 
     assert group.wait_for_records(1), "no partial Record published for the incomplete set"
     payload = group.payloads()[0]
 
-    assert payload["incident_id"] == "incident-7"
+    assert group.records[0].incident_id == "incident-7"
     assert payload["partial"] is True
 
 

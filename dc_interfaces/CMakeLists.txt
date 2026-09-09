@@ -6,7 +6,6 @@ project(dc_interfaces)
 
 
 set(dependencies
-  builtin_interfaces
   rosidl_default_generators
   sensor_msgs
   std_msgs
