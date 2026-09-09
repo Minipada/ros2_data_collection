@@ -207,9 +207,10 @@ The destination's own column type can truncate independently of `time_format`. A
 ### `incident_id`
 
 A Measurement configured for [incident capture](./measurements.md) tags every Record it
-releases with the `incident_id` of the `FlushEvent` that released it. That field is part
-of the Record envelope, so it is already a top-level key of the JSON every Destination
-receives — no Bridge-side templating is needed to expose it. A `postgres` sink (via the
+releases with the `incident_id` of the `FlushEvent` that released it. That field is typed on
+the `StringStamped` Record envelope (#506), and the Bridge lifts it into a top-level key of
+the payload JSON before handing a Record to its Destinations — no per-Destination
+configuration is needed to expose it. A `postgres` sink (via the
 [passthrough recipe](#recipes-postgres-s3-console-via-passthrough) below) can therefore
 write it straight into its own **`incident_id` column** with no extra mapping —
 "everything from this one event" is a plain `WHERE incident_id = '…'` query — since
@@ -222,7 +223,8 @@ and `tools/infrastructure/docker/config/postgresql/init.sql` both carry it):
 ALTER TABLE dc ADD COLUMN incident_id text;
 ```
 
-Records collected outside an incident have no `incident_id` and leave the column NULL.
+Records collected outside an incident carry an empty `incident_id`, and an empty envelope
+field is never lifted, leaving the column NULL.
 
 ```admonish note
 Through [#471](https://github.com/minipada/ros2_data_collection/issues/471), the blessed

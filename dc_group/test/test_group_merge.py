@@ -144,14 +144,12 @@ def test_a_non_object_member_carries_no_envelope_field():
     record = merge(
         [
             payload("a", "hi"),
-            payload("b", {"plugin": "memory", "free": 1.0, "incident_id": "incident-42"}),
+            payload("b", {"plugin": "memory", "free": 1.0}),
         ]
     )
 
-    # Nothing to lift off a scalar: no plugin of its own in the list, and the incident id
-    # comes from the member that actually carried one.
+    # Nothing to lift off a scalar: no plugin of its own in the list.
     assert record["plugins"] == ["memory"]
-    assert record["incident_id"] == "incident-42"
 
 
 def test_merge_does_not_mutate_a_non_object_payload():
@@ -308,59 +306,24 @@ def test_tags_key_is_present_even_when_the_group_declares_none():
 
 
 # --- incident_id ----------------------------------------------------------------------------
+# `incident_id` rides the StringStamped envelope (#506), not the payload: GroupServer lifts
+# it from the members' envelopes, and the merge neither sees nor lifts a payload key of that
+# name — one inside a member's data is measurement data like any other.
 
 
-def test_incident_id_is_lifted_to_the_records_top_level():
-    # Nested under the member's `group_key` it would become `a.incident_id`, which is no
-    # column any Destination table has — the Postgres sink drops it silently (#291).
+def test_a_payload_level_incident_id_is_member_data_not_envelope():
+    # Was lifted to the Record's top level when it lived inside the payload (#291); the
+    # envelope field never enters the merge, so a key of that name in a member's data stays
+    # under the member's group_key.
     record = merge(
         [
             payload("a", {"used": 12.0, "incident_id": "incident-42"}),
-            payload("b", {"free": 34.0, "incident_id": "incident-42"}),
+            payload("b", {"free": 34.0}),
         ]
     )
 
-    assert record["incident_id"] == "incident-42"
-    # Lifted, not copied: it must not also stay behind inside the members' own data.
-    assert record["a"] == {"used": 12.0}
-    assert record["b"] == {"free": 34.0}
-
-
-@pytest.mark.parametrize(
-    ("member_ids", "expected"),
-    [
-        # One FlushEvent mints one id for every Measurement listening: all agree.
-        (["incident-42", "incident-42"], "incident-42"),
-        # First non-null wins, so a partial Record built from a mix of released and live
-        # members still carries the id of the one that arrived.
-        ([None, "incident-42"], "incident-42"),
-        (["incident-42", None], "incident-42"),
-    ],
-)
-def test_first_non_null_incident_id_wins(member_ids, expected):
-    payloads = [
-        payload(group_key, {"incident_id": incident_id} if incident_id else {})
-        for group_key, incident_id in zip(["a", "b"], member_ids, strict=True)
-    ]
-
-    assert merge(payloads)["incident_id"] == expected
-
-
-def test_incident_id_is_absent_when_no_member_carries_one():
-    # A Record collected outside an incident leaves the column NULL, not empty or null.
-    record = merge([payload("a", {"used": 12.0}), payload("b", {"free": 34.0})])
-
+    assert record["a"] == {"used": 12.0, "incident_id": "incident-42"}
     assert "incident_id" not in record
-
-
-def test_an_empty_string_incident_id_is_still_lifted():
-    # Pinning current behaviour: the lift is on `is None`, so an empty string counts as an
-    # id and shadows a real one arriving from a later member.
-    record = merge(
-        [payload("a", {"incident_id": ""}), payload("b", {"incident_id": "incident-42"})]
-    )
-
-    assert record["incident_id"] == ""
 
 
 # --- the envelope ---------------------------------------------------------------------------
@@ -432,8 +395,9 @@ def test_serialized_record_is_stable():
     )
 
     assert json.dumps(record) == (
-        '{"a": {"plugin": "cpu", "used": 12.0}, "b": {"free": 34.0}, "tags": ["robot-7"], '
-        '"incident_id": "incident-42", "plugins": ["cpu"], "name": "test_group"}'
+        '{"a": {"incident_id": "incident-42", "plugin": "cpu", "used": 12.0}, '
+        '"b": {"free": 34.0, "incident_id": "incident-42"}, "tags": ["robot-7"], '
+        '"plugins": ["cpu"], "name": "test_group"}'
     )
 
 
@@ -546,8 +510,8 @@ def test_unflatten_list_rebuilds_a_top_level_list():
 
 def test_a_record_whose_group_keys_are_all_numeric_stays_an_object():
     # Numeric group_keys would unflatten the merged Record into a JSON array. A Record is an
-    # object — `tags`, `incident_id` and `plugins` are top-level keys, which is all a `postgres`
-    # sink maps onto columns — so the members stay nested under their group_key instead (#508).
+    # object — `tags` and `plugins` are top-level keys, which is all a `postgres` sink maps
+    # onto columns — so the members stay nested under their group_key instead (#508).
     record = merge([payload("0", {"used": 1.0}), payload("1", {"free": 2.0})])
 
     assert record == {"0": {"used": 1.0}, "1": {"free": 2.0}, "tags": ["dc"], "name": GROUP}

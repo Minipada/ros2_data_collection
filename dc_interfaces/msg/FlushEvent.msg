@@ -3,4 +3,3 @@
 # SPDX-License-Identifier: MPL-2.0
 
 string incident_id
-builtin_interfaces/Time stamp

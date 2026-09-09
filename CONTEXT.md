@@ -33,9 +33,10 @@ _Avoid_: flush signal, flush command
 
 **Incident**:
 One flush cycle: the pre-event window a FlushEvent released, plus the post-roll collected
-after it. Every Record and File of one cycle carries that event's `incident_id` — a top-level
-field of the Record envelope beside Tags, and its own column in a PostgreSQL Destination — so
-"everything from this one event" is a query, not a timestamp range reconstructed by hand.
+after it. Every Record and File of one cycle carries that event's `incident_id` — a typed
+field of the StringStamped Record envelope beside `group_key`, lifted into the payload's top
+level by the Bridge, and its own column in a PostgreSQL Destination — so "everything from
+this one event" is a query, not a timestamp range reconstructed by hand.
 _Avoid_: event (a Record is not an event), alert, incident report
 
 **Manipulation**:

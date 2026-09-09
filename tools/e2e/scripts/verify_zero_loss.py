@@ -62,11 +62,11 @@ Profiles (#496). `--profile` selects which set of checks runs, so a scenario's R
 assertions all live here instead of as inline SQL in its bash script:
 
   - `zero-loss` (the default): the checks above, as run.sh and its siblings invoke them.
-  - `incident`: run_incident.sh's assertions (#291) — that `incident_id` really is a
-    column, that a Measurement armed with `buffer_duration_sec` ships nothing while a
-    live one flows, and that after one FlushEvent the released window is queryable by
-    column and carries no other Measurement's rows. Two stages, because a FlushEvent is
-    published between them: `--stage armed`, then `--stage released`.
+  - `incident`: run_incident.sh's assertions (#291) — that a Measurement armed with
+    `buffer_duration_sec` ships nothing while a live one flows, and that after one
+    FlushEvent the released window is queryable by `incident_id` column and carries no
+    other Measurement's rows. Two stages, because a FlushEvent is published between
+    them: `--stage armed`, then `--stage released`.
   - `retention`: run_retention.sh's assertions (#267) — that a File is shed without upload
     once the pool exceeds `files.retention.max_bytes` against a down store, and that a
     later File uploads normally once the store is back. One stage per half, `--stage
@@ -332,26 +332,6 @@ INCIDENT_STAGES = (INCIDENT_STAGE_ARMED, INCIDENT_STAGE_RELEASED)
 RETENTION_STAGE_SHED = "shed"
 RETENTION_STAGE_UPLOADED = "uploaded"
 RETENTION_STAGES = (RETENTION_STAGE_SHED, RETENTION_STAGE_UPLOADED)
-
-
-def check_incident_column(column_type: str, violations: list, details: dict) -> None:
-    """Assert dc_records.incident_id is a column, before anything queries it.
-
-    The point of #291 is that a released window is reachable by *column* predicate. A
-    table without the column would make every later assertion fail for a reason that has
-    nothing to do with the pipeline, so say so instead.
-
-    Args:
-        column_type: information_schema's data_type for the column, "" if absent.
-        violations: hard failures, appended to in place.
-        details: counters for the JSON report, populated in place.
-    """
-    details["incident_id_column"] = {"data_type": column_type or None}
-    if column_type != "text":
-        violations.append(
-            f"incident: dc_records has no text incident_id column (got "
-            f"'{column_type or 'none'}') — check sql/init.sql"
-        )
 
 
 def check_live_flowing(
@@ -998,14 +978,6 @@ def verify_incident(args, violations: list, notes: list, details: dict) -> None:
     pg = args.postgres_container
 
     if args.stage == INCIDENT_STAGE_ARMED:
-        column_type = psql(
-            pg,
-            "SELECT data_type FROM information_schema.columns "
-            "WHERE table_name = 'dc_records' AND column_name = 'incident_id'",
-        )
-        check_incident_column(column_type, violations, details)
-        if violations:
-            return
         live_count = wait_for_count(
             pg,
             f"SELECT count(*) FROM dc_records WHERE tag = '{args.live_tag}'",

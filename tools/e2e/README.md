@@ -172,12 +172,12 @@ Same `dc-e2e` image and env vars again, this time against
 `params/e2e_incident_params.yaml`: an `uptime` Measurement armed with
 `buffer_duration_sec` beside a `memory` Measurement collecting live, both routed to one
 `postgres` Destination. The scenario publishes a single `FlushEvent` onto `/dc/flush`
-with a known id and asserts: (1) `dc_records.incident_id` exists as a real `text`
-column; (2) while armed, the buffered Measurement ships *nothing* while the live one
-keeps landing rows; (3) after the event, the released window is reachable as `WHERE
-incident_id = '…'` — a column predicate, which is the whole point of #291, since the
-same data buried in the JSON payload would not be; (4) the id is on the released window
-only, and the never-armed Measurement's rows keep `incident_id IS NULL`.
+with a known id and asserts: (1) while armed, the buffered Measurement ships *nothing*
+while the live one keeps landing rows; (2) after the event, the released window is
+reachable as `WHERE incident_id = '…'` — a column predicate, which is the whole point
+of #291, since the same data buried in the JSON payload would not be; (3) the id is on
+the released window only, and the never-armed Measurement's rows keep
+`incident_id IS NULL`.
 
 The `FlushEvent` is published with `ros2 topic pub` rather than by a `dc_triggers`
 broadcast node: that topic is the contract Measurements subscribe to, `dc_triggers` has
