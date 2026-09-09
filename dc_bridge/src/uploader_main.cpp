@@ -47,10 +47,8 @@ std::optional<std::string> real_getenv(const std::string& name)
   return std::string(v);
 }
 
-// Stamps a Bridge/Uploader-generated Record with the current time, split into the
-// seconds/nanoseconds pair the ingest protocol's EventTime carries — mirrors
-// bridge_node.cpp's stamp_now(), duplicated rather than shared since the two processes no
-// longer share a translation unit.
+// Stamps an Uploader-generated Record with the current time, split into the
+// seconds/nanoseconds pair the ingest protocol's EventTime carries.
 void stamp_now(dc_bridge::Record& record)
 {
   const auto since_epoch = std::chrono::system_clock::now().time_since_epoch();
