@@ -1,58 +1,23 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
-
-#include <chrono>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <fstream>
 #include <functional>
 #include <nlohmann/json-schema.hpp>
-#include <string>
-#include <thread>
 #include <vector>
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
-#include "diagnostic_msgs/msg/diagnostic_array.hpp"
-#include "diagnostic_msgs/msg/diagnostic_status.hpp"
+#include "measurement_test_bench.hpp"
 
-class MeasurementFaultTest : public ::testing::Test
+class MeasurementFaultTest : public MeasurementBench
 {
 protected:
-  MeasurementFaultTest()
+  MeasurementFaultTest() : MeasurementBench("fault")
   {
-    SetUp();
-  }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "fault" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/fault", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementFaultTest::dataCallback, this, std::placeholders::_1));
     diag_pub_ = ms_node_->create_publisher<diagnostic_msgs::msg::DiagnosticArray>("/test/diagnostics",
                                                                                   rclcpp::SystemDefaultsQoS());
-  }
-
-  void TearDown() override
-  {
-    stopCollection();
-  }
-
-  // Idempotent: one test stops collection mid-fault on purpose, and TearDown must not then drive
-  // the lifecycle node through a transition it is no longer in a state for.
-  void stopCollection()
-  {
-    if (stopped_)
-    {
-      return;
-    }
-    stopped_ = true;
-    ms_node_->deactivate();
-    ms_node_->cleanup();
   }
 
   void declareCommonParameters()
@@ -63,20 +28,6 @@ protected:
     ms_node_->declare_parameter("fault.topic", std::string("/test/diagnostics"));
     ms_node_->declare_parameter("fault.polling_interval", 50);
     ms_node_->declare_parameter("fault.init_collect", false);
-  }
-
-  void startLifecycleNode()
-  {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void dataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    records_.push_back(nlohmann::json::parse(data_str));
-    callback_active_ = true;
   }
 
   static diagnostic_msgs::msg::DiagnosticStatus makeStatus(const std::string& name, uint8_t level,
@@ -97,24 +48,6 @@ protected:
     diag_pub_->publish(msg);
   }
 
-  void spinFor(std::chrono::milliseconds duration)
-  {
-    auto deadline = std::chrono::steady_clock::now() + duration;
-    while (std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-  }
-
-  void waitForSubscriber(const std::string& topic)
-  {
-    while (ms_node_->count_subscribers(topic) == 0)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-    }
-  }
-
   // The detector treats a component's very first observed sample as a baseline, not a transition
   // (matching every other StateTransitionDetector consumer): no Record comes out of it, and the
   // level it carries never fires again since nothing is left to compare against. Every test that
@@ -122,7 +55,7 @@ protected:
   void establishOkBaseline(const std::string& name)
   {
     publishDiagnostics(makeStatus(name, diagnostic_msgs::msg::DiagnosticStatus::OK, "nominal"));
-    spinFor(std::chrono::milliseconds(100));
+    spinFor(100);
   }
 
   // Republishes `status` until a *new* Record matching `predicate` shows up, so a best-effort
@@ -131,10 +64,11 @@ protected:
                                     const std::function<bool(const nlohmann::json&)>& predicate)
   {
     const size_t first_new = records_.size();
-    for (int i = 0; i < 400; ++i)
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(4);
+    while (std::chrono::steady_clock::now() < deadline)
     {
       publishDiagnostics(status);
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
+      spinOnce();
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       for (size_t r = first_new; r < records_.size(); ++r)
       {
@@ -166,15 +100,7 @@ protected:
     EXPECT_NO_THROW(validator.validate(record)) << record.dump();
   }
 
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diag_pub_;
-  std::vector<nlohmann::json> records_;
-
-  bool stopped_{ false };
-
-public:
-  bool callback_active_{ false };
 };
 
 TEST_F(MeasurementFaultTest, LevelChangeRaisesAnOpenFaultRecord)
@@ -186,7 +112,7 @@ TEST_F(MeasurementFaultTest, LevelChangeRaisesAnOpenFaultRecord)
   // Staying OK must not produce a Record.
   const auto ok = makeStatus("motor_driver", diagnostic_msgs::msg::DiagnosticStatus::OK, "Motor nominal");
   publishDiagnostics(ok);
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
   ASSERT_TRUE(records_.empty()) << "A component that stays put must not produce a Record";
 
   const auto error = makeStatus("motor_driver", diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Motor fault");
@@ -292,7 +218,7 @@ TEST_F(MeasurementFaultTest, FaultOpenAtShutdownStaysOpenAndReportsNoDuration)
 
   // Collection stops with the fault still open.
   stopCollection();
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
 
   ASSERT_EQ(records_.size(), 1u) << "Shutdown must not invent a clearing Record";
   EXPECT_EQ(records_.back()["state"], "open");
@@ -300,17 +226,4 @@ TEST_F(MeasurementFaultTest, FaultOpenAtShutdownStaysOpenAndReportsNoDuration)
       << "An unterminated fault must not report a duration that could be read as a zero-length outage";
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

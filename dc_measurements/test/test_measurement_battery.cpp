@@ -1,52 +1,23 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
-
-#include <chrono>
-#include <cmath>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <fstream>
 #include <functional>
 #include <limits>
 #include <map>
 #include <nlohmann/json-schema.hpp>
-#include <string>
-#include <thread>
-#include <vector>
+#include <sensor_msgs/msg/battery_state.hpp>
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
-#include "sensor_msgs/msg/battery_state.hpp"
+#include "measurement_test_bench.hpp"
 
-class MeasurementBatteryTest : public ::testing::Test
+class MeasurementBatteryTest : public MeasurementBench
 {
 protected:
-  MeasurementBatteryTest()
+  MeasurementBatteryTest() : MeasurementBench("battery")
   {
-    SetUp();
-  }
-
-  ~MeasurementBatteryTest() override
-  {
-  }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "battery" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/battery", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementBatteryTest::dataCallback, this, std::placeholders::_1));
     battery_pub_ =
         ms_node_->create_publisher<sensor_msgs::msg::BatteryState>("/test/battery_state", rclcpp::SensorDataQoS());
-  }
-
-  void TearDown() override
-  {
-    ms_node_->deactivate();
-    ms_node_->cleanup();
   }
 
   void declareCommonParameters()
@@ -57,19 +28,6 @@ protected:
     ms_node_->declare_parameter("battery.topic", std::string("/test/battery_state"));
     ms_node_->declare_parameter("battery.polling_interval", 50);
     ms_node_->declare_parameter("battery.init_collect", false);
-  }
-
-  void startLifecycleNode()
-  {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void dataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    records_.push_back(nlohmann::json::parse(data_str));
   }
 
   // An "unmeasured" pack: sensor_msgs/BatteryState signals every optional field with NaN.
@@ -91,24 +49,6 @@ protected:
     return msg;
   }
 
-  void spinFor(std::chrono::milliseconds duration)
-  {
-    auto deadline = std::chrono::steady_clock::now() + duration;
-    while (std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-  }
-
-  void waitForSubscriber(const std::string& topic)
-  {
-    while (ms_node_->count_subscribers(topic) == 0)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-    }
-  }
-
   // Republishes `msg` until a *new* Record matching `predicate` shows up, so a best-effort sample
   // lost before the plugin subscribed doesn't make the test flaky, and an earlier Record of the
   // same shape isn't mistaken for the one this step is waiting on.
@@ -116,10 +56,11 @@ protected:
                                     const std::function<bool(const nlohmann::json&)>& predicate)
   {
     const size_t first_new = records_.size();
-    for (int i = 0; i < 400; ++i)
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(4);
+    while (std::chrono::steady_clock::now() < deadline)
     {
       battery_pub_->publish(msg);
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
+      spinOnce();
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       for (size_t r = first_new; r < records_.size(); ++r)
       {
@@ -151,10 +92,7 @@ protected:
     EXPECT_NO_THROW(validator.validate(record)) << record.dump();
   }
 
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   rclcpp::Publisher<sensor_msgs::msg::BatteryState>::SharedPtr battery_pub_;
-  std::vector<nlohmann::json> records_;
 };
 
 TEST_F(MeasurementBatteryTest, ReportsPercentageVoltageAndCurrentOnThePollingInterval)
@@ -194,7 +132,7 @@ TEST_F(MeasurementBatteryTest, ReportsNothingWhileTheTopicNeverPublishes)
 
   // Several polling intervals with nothing on the input topic: no Record at all beats a Record
   // of absent fields.
-  spinFor(std::chrono::milliseconds(500));
+  spinFor(500);
 
   EXPECT_TRUE(records_.empty()) << records_.size() << " Record(s) published without any BatteryState";
 }
@@ -268,13 +206,11 @@ TEST_F(MeasurementBatteryTest, MarksTheStartAndTheEndOfAChargingSession)
 }
 
 // A robot with two packs runs one Measurement per pack, each on its own input topic.
-class MeasurementTwoBatteriesTest : public ::testing::Test
+class MeasurementTwoBatteriesTest : public MeasurementBench
 {
 protected:
-  void SetUp() override
+  MeasurementTwoBatteriesTest() : MeasurementBench(std::vector<std::string>{ "battery_left", "battery_right" })
   {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(
-        rclcpp::NodeOptions(), std::vector<std::string>{ "battery_left", "battery_right" });
     for (const auto& pack : { "left", "right" })
     {
       const std::string name = std::string("battery_") + pack;
@@ -285,28 +221,21 @@ protected:
       ms_node_->declare_parameter(name + ".polling_interval", 50);
       ms_node_->declare_parameter(name + ".init_collect", false);
 
-      subs_.push_back(ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-          "/dc/measurement/" + name, rclcpp::SystemDefaultsQoS(),
-          [this, name](const dc_interfaces::msg::StringStamped& msg) {
-            std::string data_str = msg.data.c_str();
-            boost::replace_all(data_str, "'", "\"");
-            records_[name].push_back(nlohmann::json::parse(data_str));
-          }));
       pubs_.push_back(
           ms_node_->create_publisher<sensor_msgs::msg::BatteryState>("/test/" + name, rclcpp::SensorDataQoS()));
     }
   }
 
-  void TearDown() override
+  // Each pack's Records bucketed by its Measurement's name, so the test can tell them apart.
+  void onRecord(const std::string& measurement, const dc_interfaces::msg::StringStamped& msg) override
   {
-    ms_node_->deactivate();
-    ms_node_->cleanup();
+    records_by_measurement_[measurement].push_back(parseRecord(msg));
   }
 
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  std::vector<rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr> subs_;
   std::vector<rclcpp::Publisher<sensor_msgs::msg::BatteryState>::SharedPtr> pubs_;
-  std::map<std::string, std::vector<nlohmann::json>> records_;
+
+public:
+  std::map<std::string, std::vector<nlohmann::json>> records_by_measurement_;
 };
 
 TEST_F(MeasurementTwoBatteriesTest, EachPackReportsItsOwnRecords)
@@ -314,11 +243,9 @@ TEST_F(MeasurementTwoBatteriesTest, EachPackReportsItsOwnRecords)
   ms_node_->configure();
   ms_node_->activate();
 
-  while (ms_node_->count_subscribers("/test/battery_left") == 0 ||
-         ms_node_->count_subscribers("/test/battery_right") == 0)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+  // The plugins' subscriptions on their input topics only exist once activated.
+  waitForSubscriber("/test/battery_left");
+  waitForSubscriber("/test/battery_right");
 
   sensor_msgs::msg::BatteryState left;
   left.percentage = 0.20F;
@@ -328,33 +255,21 @@ TEST_F(MeasurementTwoBatteriesTest, EachPackReportsItsOwnRecords)
   right.percentage = 0.80F;
   right.serial_number = "PACK-RIGHT";
 
-  for (int i = 0; i < 400 && (records_["battery_left"].empty() || records_["battery_right"].empty()); ++i)
-  {
-    pubs_[0]->publish(left);
-    pubs_[1]->publish(right);
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  }
+  ASSERT_TRUE(spinUntil(
+      [&] {
+        pubs_[0]->publish(left);
+        pubs_[1]->publish(right);
+        return !records_by_measurement_["battery_left"].empty() && !records_by_measurement_["battery_right"].empty();
+      },
+      5000))
+      << "no Record ever arrived for both packs";
 
-  ASSERT_FALSE(records_["battery_left"].empty());
-  ASSERT_FALSE(records_["battery_right"].empty());
-  EXPECT_EQ(records_["battery_left"].back()["serial_number"], "PACK-LEFT");
-  EXPECT_NEAR(records_["battery_left"].back()["percentage"].get<double>(), 20.0, 1e-4);
-  EXPECT_EQ(records_["battery_right"].back()["serial_number"], "PACK-RIGHT");
-  EXPECT_NEAR(records_["battery_right"].back()["percentage"].get<double>(), 80.0, 1e-4);
+  const auto& left_records = records_by_measurement_["battery_left"];
+  const auto& right_records = records_by_measurement_["battery_right"];
+  EXPECT_EQ(left_records.back()["serial_number"], "PACK-LEFT");
+  EXPECT_NEAR(left_records.back()["percentage"].get<double>(), 20.0, 1e-4);
+  EXPECT_EQ(right_records.back()["serial_number"], "PACK-RIGHT");
+  EXPECT_NEAR(right_records.back()["percentage"].get<double>(), 80.0, 1e-4);
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

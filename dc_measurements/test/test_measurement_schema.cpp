@@ -1,9 +1,6 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
-
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -12,9 +9,8 @@
 #include <vector>
 
 #include "ament_index_cpp/get_package_share_directory.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement.hpp"
-#include "dc_measurements/measurement_server.hpp"
+#include "measurement_test_bench.hpp"
 
 // The schema a Measurement validates against defaults to one file per plugin type, named after
 // it (#498). Every plugin the package registers therefore needs a matching file installed, or
@@ -91,33 +87,21 @@ TEST(MeasurementSchemaTest, EveryRegisteredPluginHasItsOwnSchemaFile)
 
 // The schema follows the plugin type, not the instance id: a Measurement may be named whatever
 // the deployment likes and still find its plugin's schema.
-class MeasurementAliasedSchemaTest : public ::testing::Test
+class MeasurementAliasedSchemaTest : public MeasurementBench
 {
 protected:
-  void SetUp() override
+  MeasurementAliasedSchemaTest() : MeasurementBench("mem_alias")
   {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "mem_alias" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/mem_alias", rclcpp::SystemDefaultsQoS(), [this](const dc_interfaces::msg::StringStamped& msg) {
-          nlohmann::json data_json = nlohmann::json::parse(msg.data);
-          used_ = data_json["used"];
-          callback_ = true;
-        });
   }
 
-  void TearDown() override
+  void onRecord(const std::string& measurement, const dc_interfaces::msg::StringStamped& msg) override
   {
-    ms_node_->deactivate();
-    ms_node_->cleanup();
+    (void)measurement;
+    used_ = parseRecord(msg)["used"];
+    callback_active_ = true;
   }
 
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   float used_{ 0.0 };
-
-public:
-  bool callback_{ false };
 };
 
 TEST_F(MeasurementAliasedSchemaTest, ConfiguresAndPublishesWithTheDefaultSchema)
@@ -127,29 +111,12 @@ TEST_F(MeasurementAliasedSchemaTest, ConfiguresAndPublishesWithTheDefaultSchema)
   // enable_validator is left at its default of true: configuring at all is what proves the
   // schema was found.
 
-  ms_node_->configure();
-  ms_node_->activate();
+  startLifecycleNode();
 
-  const auto start = std::chrono::steady_clock::now();
-  while (!callback_ && std::chrono::steady_clock::now() - start < std::chrono::seconds(10))
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+  ASSERT_TRUE(spinUntil([this] { return callback_active_; }, 10000)) << "no Record was ever published";
 
-  EXPECT_TRUE(callback_);
   EXPECT_GE(used_, 0.0);
   EXPECT_LE(used_, 100.0);
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

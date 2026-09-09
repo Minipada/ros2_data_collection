@@ -1,32 +1,22 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
-
-#include <chrono>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <fstream>
 #include <functional>
 #include <memory>
+#include <moveit_msgs/action/move_group.hpp>
 #include <mutex>
 #include <nlohmann/json-schema.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
 #include <string>
 #include <thread>
 #include <vector>
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
-#include "moveit_msgs/action/move_group.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
+#include "measurement_test_bench.hpp"
 
 using MoveGroup = moveit_msgs::action::MoveGroup;
 
-// A minimal action-server stub standing in for MoveIt's move_group, matching #387's precedent for
-// testing this repo's first action-client-backed Measurement: it accepts every goal it receives
-// and executes it, but never completes one on its own -- the test drives completion explicitly
-// with a chosen error_code/planning_time, exactly like flipping a fault or a battery pack's
-// reported status.
 class FakeMoveGroupServer
 {
 public:
@@ -91,43 +81,14 @@ private:
   std::shared_ptr<rclcpp_action::ServerGoalHandle<MoveGroup>> pending_handle_;
 };
 
-class MeasurementManipulationTest : public ::testing::Test
+class MeasurementManipulationTest : public MeasurementBench
 {
 protected:
-  MeasurementManipulationTest()
+  MeasurementManipulationTest() : MeasurementBench("manipulation")
   {
-    SetUp();
-  }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "manipulation" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/manipulation", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementManipulationTest::dataCallback, this, std::placeholders::_1));
-
     helper_node_ = std::make_shared<rclcpp::Node>("manipulation_test_helper");
     fake_server_ = std::make_unique<FakeMoveGroupServer>(helper_node_, kActionName);
     goal_client_ = rclcpp_action::create_client<MoveGroup>(helper_node_, kActionName);
-  }
-
-  void TearDown() override
-  {
-    stopCollection();
-  }
-
-  // Idempotent: one test stops collection with a goal still open on purpose, and TearDown must
-  // not then drive the lifecycle node through a transition it is no longer in a state for.
-  void stopCollection()
-  {
-    if (stopped_)
-    {
-      return;
-    }
-    stopped_ = true;
-    ms_node_->deactivate();
-    ms_node_->cleanup();
   }
 
   void declareCommonParameters()
@@ -141,46 +102,17 @@ protected:
     ms_node_->declare_parameter("manipulation.init_collect", false);
   }
 
-  void startLifecycleNode()
+  // The fake action server lives on its own node, which the bench's waits spin alongside the
+  // MeasurementServer.
+  void spinExtra() override
   {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void dataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    records_.push_back(nlohmann::json::parse(data_str));
-  }
-
-  void spinFor(std::chrono::milliseconds duration)
-  {
-    auto deadline = std::chrono::steady_clock::now() + duration;
-    while (std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      rclcpp::spin_some(helper_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-  }
-
-  // Spins both nodes until `predicate` is true or the timeout elapses.
-  void spinUntil(const std::function<bool()>& predicate, std::chrono::milliseconds timeout)
-  {
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (!predicate() && std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      rclcpp::spin_some(helper_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
+    rclcpp::spin_some(helper_node_->get_node_base_interface());
   }
 
   void waitForActionServer()
   {
-    spinUntil([this] { return goal_client_->action_server_is_ready(); }, std::chrono::milliseconds(2000));
-    ASSERT_TRUE(goal_client_->action_server_is_ready()) << "Manipulation never subscribed to the status topic";
+    ASSERT_TRUE(spinUntil([this] { return goal_client_->action_server_is_ready(); }, 2000))
+        << "Manipulation never subscribed to the status topic";
   }
 
   // Sends a default-constructed goal (this Measurement never reads the goal's own fields -- its
@@ -194,30 +126,17 @@ protected:
 
     spinUntil(
         [this, first_new] {
-          if (!fake_server_->hasPendingGoal())
-          {
-            return false;
-          }
-          for (size_t r = first_new; r < records_.size(); ++r)
-          {
-            if (records_[r].value("event", "") == "manipulation_start")
-            {
-              return true;
-            }
-          }
-          return false;
+          return fake_server_->hasPendingGoal() && findRecord(first_new, "manipulation_start") != nullptr;
         },
-        std::chrono::milliseconds(4000));
+        4000);
 
-    for (size_t r = first_new; r < records_.size(); ++r)
+    auto record = findRecord(first_new, "manipulation_start");
+    if (record == nullptr)
     {
-      if (records_[r].value("event", "") == "manipulation_start")
-      {
-        return records_[r];
-      }
+      ADD_FAILURE() << "No manipulation_start Record within the timeout";
+      return nlohmann::json{};
     }
-    ADD_FAILURE() << "No manipulation_start Record within the timeout";
-    return nlohmann::json{};
+    return *record;
   }
 
   nlohmann::json completeGoalAndWaitForEnd(FakeMoveGroupServer::Terminal terminal, int32_t error_code,
@@ -226,28 +145,28 @@ protected:
     const size_t first_new = records_.size();
     fake_server_->completeGoal(terminal, error_code, planning_time);
 
-    spinUntil(
-        [this, first_new] {
-          for (size_t r = first_new; r < records_.size(); ++r)
-          {
-            if (records_[r].value("event", "") == "manipulation_end")
-            {
-              return true;
-            }
-          }
-          return false;
-        },
-        std::chrono::milliseconds(4000));
+    spinUntil([this, first_new] { return findRecord(first_new, "manipulation_end") != nullptr; }, 4000);
 
+    auto record = findRecord(first_new, "manipulation_end");
+    if (record == nullptr)
+    {
+      ADD_FAILURE() << "No manipulation_end Record within the timeout";
+      return nlohmann::json{};
+    }
+    return *record;
+  }
+
+  // The first Record from `first_new` on whose "event" is `event`, or nullptr.
+  const nlohmann::json* findRecord(size_t first_new, const char* event)
+  {
     for (size_t r = first_new; r < records_.size(); ++r)
     {
-      if (records_[r].value("event", "") == "manipulation_end")
+      if (records_[r].value("event", "") == event)
       {
-        return records_[r];
+        return &records_[r];
       }
     }
-    ADD_FAILURE() << "No manipulation_end Record within the timeout";
-    return nlohmann::json{};
+    return nullptr;
   }
 
   static void expectValidatesAgainstSchema(const nlohmann::json& record)
@@ -263,14 +182,9 @@ protected:
 
   static constexpr const char* kActionName = "/test/move_action";
 
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   rclcpp::Node::SharedPtr helper_node_;
   std::unique_ptr<FakeMoveGroupServer> fake_server_;
   rclcpp_action::Client<MoveGroup>::SharedPtr goal_client_;
-  std::vector<nlohmann::json> records_;
-
-  bool stopped_{ false };
 };
 
 TEST_F(MeasurementManipulationTest, GoalAcceptedProducesAManipulationStartRecord)
@@ -348,7 +262,7 @@ TEST_F(MeasurementManipulationTest, NoGoalSentProducesNoRecords)
   startLifecycleNode();
   waitForActionServer();
 
-  spinFor(std::chrono::milliseconds(300));
+  spinFor(300);
 
   EXPECT_TRUE(records_.empty()) << records_.size() << " Record(s) published without any goal";
 }
@@ -363,23 +277,10 @@ TEST_F(MeasurementManipulationTest, GoalOpenAtShutdownGetsNoEndRecord)
 
   // Collection stops with the goal still executing.
   stopCollection();
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
 
   ASSERT_EQ(records_.size(), 1u) << "Shutdown must not invent a manipulation_end Record";
   EXPECT_EQ(records_.back()["event"], "manipulation_start");
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

@@ -1,22 +1,15 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
-
-#include <chrono>
-#include <fstream>
 #include <functional>
 #include <memory>
 #include <nlohmann/json-schema.hpp>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "ament_index_cpp/get_package_share_directory.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
+#include "measurement_test_bench.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 
@@ -27,22 +20,11 @@ using NavigateToPoseGoalHandle = rclcpp_action::ServerGoalHandle<NavigateToPose>
 // command, ...) really are: a real rclcpp_action::Server the plugin under test watches, and a real
 // rclcpp_action::Client that drives it, completely independent of dc_measurements::MissionNav2 --
 // exactly the passive-watcher relationship the plugin has to the real thing.
-class MeasurementMissionNav2Test : public ::testing::Test
+class MeasurementMissionNav2Test : public MeasurementBench
 {
 protected:
-  MeasurementMissionNav2Test()
+  MeasurementMissionNav2Test() : MeasurementBench("mission")
   {
-    SetUp();
-  }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "mission" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/mission", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementMissionNav2Test::dataCallback, this, std::placeholders::_1));
-
     server_node_ = std::make_shared<rclcpp::Node>("fake_nav2_" + std::to_string(instance_++));
     action_server_ = rclcpp_action::create_server<NavigateToPose>(
         server_node_, kActionName,
@@ -56,23 +38,6 @@ protected:
     commander_client_ = rclcpp_action::create_client<NavigateToPose>(commander_node_, kActionName);
   }
 
-  void TearDown() override
-  {
-    stopCollection();
-  }
-
-  // Idempotent: one test stops collection mid-mission on purpose.
-  void stopCollection()
-  {
-    if (stopped_)
-    {
-      return;
-    }
-    stopped_ = true;
-    ms_node_->deactivate();
-    ms_node_->cleanup();
-  }
-
   void declareCommonParameters()
   {
     ms_node_->declare_parameter("mission.plugin", std::string("dc_measurements/MissionNav2"));
@@ -83,34 +48,12 @@ protected:
     ms_node_->declare_parameter("mission.init_collect", false);
   }
 
-  void startLifecycleNode()
+  // The fake nav2 server and commander live on their own nodes, which the bench's waits spin
+  // alongside the MeasurementServer.
+  void spinExtra() override
   {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void dataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    records_.push_back(nlohmann::json::parse(data_str));
-  }
-
-  void spinAll()
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-    rclcpp::spin_some(server_node_);
-    rclcpp::spin_some(commander_node_);
-  }
-
-  void spinFor(std::chrono::milliseconds duration)
-  {
-    auto deadline = std::chrono::steady_clock::now() + duration;
-    while (std::chrono::steady_clock::now() < deadline)
-    {
-      spinAll();
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
+    rclcpp::spin_some(server_node_->get_node_base_interface());
+    rclcpp::spin_some(commander_node_->get_node_base_interface());
   }
 
   // Sends a goal through the fake commander and spins until the fake server's handle_accepted has
@@ -120,12 +63,8 @@ protected:
     ASSERT_TRUE(commander_client_->wait_for_action_server(std::chrono::seconds(5)));
     NavigateToPose::Goal goal;
     client_goal_handle_future_ = commander_client_->async_send_goal(goal);
-    for (int i = 0; i < 400 && !goal_handle_; ++i)
-    {
-      spinAll();
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    ASSERT_TRUE(goal_handle_) << "Fake nav2 action server never reported the goal as accepted";
+    ASSERT_TRUE(spinUntil([this] { return goal_handle_ != nullptr; }, 4000))
+        << "Fake nav2 action server never reported the goal as accepted";
   }
 
   // Drives a real cancel request through the commander so the server-side goal handle legally
@@ -133,20 +72,13 @@ protected:
   // from EXECUTING, but canceled() is only a legal transition out of CANCELING.
   void requestCancelAndWaitForCanceling()
   {
-    for (int i = 0;
-         i < 400 && client_goal_handle_future_.wait_for(std::chrono::seconds(0)) != std::future_status::ready; ++i)
-    {
-      spinAll();
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    ASSERT_EQ(client_goal_handle_future_.wait_for(std::chrono::seconds(0)), std::future_status::ready);
+    ASSERT_TRUE(spinUntil(
+        [this] { return client_goal_handle_future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready; },
+        4000))
+        << "the goal response never arrived";
     commander_client_->async_cancel_goal(client_goal_handle_future_.get());
-    for (int i = 0; i < 400 && !goal_handle_->is_canceling(); ++i)
-    {
-      spinAll();
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    ASSERT_TRUE(goal_handle_->is_canceling());
+    ASSERT_TRUE(spinUntil([this] { return goal_handle_->is_canceling(); }, 4000))
+        << "the goal handle never reached CANCELING";
   }
 
   void publishFeedback(int16_t recoveries)
@@ -159,20 +91,25 @@ protected:
   nlohmann::json waitForRecord(const std::function<bool(const nlohmann::json&)>& predicate)
   {
     const size_t first_new = records_.size();
-    for (int i = 0; i < 600; ++i)
+    nlohmann::json matched;
+    if (!spinUntil(
+            [&] {
+              for (size_t r = first_new; r < records_.size(); ++r)
+              {
+                if (predicate(records_[r]))
+                {
+                  matched = records_[r];
+                  return true;
+                }
+              }
+              return false;
+            },
+            6000))
     {
-      spinAll();
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      for (size_t r = first_new; r < records_.size(); ++r)
-      {
-        if (predicate(records_[r]))
-        {
-          return records_[r];
-        }
-      }
+      ADD_FAILURE() << "No matching Record within the timeout";
+      return nlohmann::json{};
     }
-    ADD_FAILURE() << "No matching Record within the timeout";
-    return nlohmann::json{};
+    return matched;
   }
 
   static std::function<bool(const nlohmann::json&)> isEvent(const std::string& event)
@@ -198,9 +135,6 @@ protected:
   static constexpr const char* kActionName = "/test/navigate_to_pose";
   static int instance_;
 
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
-
   rclcpp::Node::SharedPtr server_node_;
   rclcpp_action::Server<NavigateToPose>::SharedPtr action_server_;
   std::shared_ptr<NavigateToPoseGoalHandle> goal_handle_;
@@ -208,9 +142,6 @@ protected:
   rclcpp::Node::SharedPtr commander_node_;
   rclcpp_action::Client<NavigateToPose>::SharedPtr commander_client_;
   std::shared_future<rclcpp_action::ClientGoalHandle<NavigateToPose>::SharedPtr> client_goal_handle_future_;
-
-  std::vector<nlohmann::json> records_;
-  bool stopped_{ false };
 };
 
 int MeasurementMissionNav2Test::instance_ = 0;
@@ -313,7 +244,7 @@ TEST_F(MeasurementMissionNav2Test, RecoveriesFromFeedbackAreCarriedOntoMissionEn
   waitForRecord(isEvent("mission_start"));
 
   publishFeedback(3);
-  spinFor(std::chrono::milliseconds(100));
+  spinFor(100);
 
   auto result = std::make_shared<NavigateToPose::Result>();
   goal_handle_->succeed(result);
@@ -332,21 +263,10 @@ TEST_F(MeasurementMissionNav2Test, MissionOpenAtShutdownGetsNoClosingRecord)
   waitForRecord(isEvent("mission_start"));
 
   stopCollection();
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
 
   ASSERT_EQ(records_.size(), 1u) << "Shutdown must not invent a closing Record";
   EXPECT_EQ(records_.back()["event"], "mission_start");
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

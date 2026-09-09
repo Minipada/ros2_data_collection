@@ -1,56 +1,20 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
-
-#include <chrono>
-#include <functional>
-#include <string>
-#include <thread>
 #include <vector>
 
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "measurement_test_bench.hpp"
 
-class MeasurementInterventionTest : public ::testing::Test
+class MeasurementInterventionTest : public MeasurementBench
 {
 protected:
-  MeasurementInterventionTest()
+  MeasurementInterventionTest() : MeasurementBench("intervention")
   {
-    SetUp();
-  }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "intervention" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/intervention", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementInterventionTest::dataCallback, this, std::placeholders::_1));
     autonomous_vel_pub_ =
         ms_node_->create_publisher<geometry_msgs::msg::Twist>("/autonomy/cmd_vel", rclcpp::SystemDefaultsQoS());
     teleop_vel_pub_ =
         ms_node_->create_publisher<geometry_msgs::msg::Twist>("/teleop/cmd_vel", rclcpp::SystemDefaultsQoS());
-  }
-
-  void TearDown() override
-  {
-    stopCollection();
-  }
-
-  // Idempotent: one test stops collection mid-takeover on purpose, and TearDown must not then
-  // drive the lifecycle node through a transition it is no longer in a state for.
-  void stopCollection()
-  {
-    if (stopped_)
-    {
-      return;
-    }
-    stopped_ = true;
-    ms_node_->deactivate();
-    ms_node_->cleanup();
   }
 
   void declareCommonParameters()
@@ -69,39 +33,6 @@ protected:
     ms_node_->declare_parameter("intervention.velocity_timeout_s", 30.0);
   }
 
-  void startLifecycleNode()
-  {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void dataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    data_json_ = nlohmann::json::parse(data_str);
-    records_.push_back(data_json_);
-    callback_active_ = true;
-  }
-
-  void spinFor(std::chrono::milliseconds duration)
-  {
-    auto deadline = std::chrono::steady_clock::now() + duration;
-    while (std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-  }
-
-  void waitForSubscriber(const std::string& topic)
-  {
-    while (ms_node_->count_subscribers(topic) == 0)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-    }
-  }
-
   // Keeps a velocity source active long enough for the plugin to poll it at least once, so the
   // mode it implies is what the next poll compares against.
   void driveOn(const rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr& pub, std::chrono::milliseconds duration)
@@ -111,7 +42,7 @@ protected:
     while (std::chrono::steady_clock::now() < deadline)
     {
       pub->publish(twist);
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
+      spinOnce();
       std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
   }
@@ -122,26 +53,18 @@ protected:
   {
     callback_active_ = false;
     geometry_msgs::msg::Twist twist;
-    for (int i = 0; i < 2000 && !callback_active_; ++i)
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (!callback_active_ && std::chrono::steady_clock::now() < deadline)
     {
       pub->publish(twist);
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
+      spinOnce();
       std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     ASSERT_TRUE(callback_active_) << "No intervention Record was published within the timeout";
   }
 
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr autonomous_vel_pub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr teleop_vel_pub_;
-  nlohmann::json data_json_;
-  std::vector<nlohmann::json> records_;
-
-  bool stopped_{ false };
-
-public:
-  bool callback_active_{ false };
 };
 
 TEST_F(MeasurementInterventionTest, TakeoverProducesAStartThenAnEndRecord)
@@ -200,7 +123,7 @@ TEST_F(MeasurementInterventionTest, InterventionOpenAtShutdownGetsNoClosingRecor
 
   // Collection stops with the human still driving.
   stopCollection();
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
 
   ASSERT_EQ(records_.size(), 1u) << "Shutdown must not invent a closing Record";
   EXPECT_EQ(records_.back()["event"], "start");
@@ -216,23 +139,10 @@ TEST_F(MeasurementInterventionTest, ModeSignalThatNeverArrivesProducesNoRecords)
   ms_node_->declare_parameter("intervention.velocity_timeout_s", 30.0);
 
   startLifecycleNode();
-  spinFor(std::chrono::milliseconds(500));
+  spinFor(500);
 
   EXPECT_FALSE(callback_active_) << "An unknown mode is not a takeover";
   EXPECT_TRUE(records_.empty());
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

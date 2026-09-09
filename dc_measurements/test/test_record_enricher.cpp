@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "dc_measurements/record_enricher.hpp"
+#include "measurement_test_bench.hpp"
 
 using dc_measurements::RecordEnricher;
 using json = nlohmann::json;
@@ -203,8 +204,4 @@ TEST(RecordEnricherTest, DumpsCompactAndEnsureAsciiLikeTheStackAlwaysHas)
   EXPECT_EQ(out, "{\"city\":\"\\u00e9\",\"flattened\":false,\"nested\":false}");
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+DC_MEASUREMENT_TEST_MAIN()

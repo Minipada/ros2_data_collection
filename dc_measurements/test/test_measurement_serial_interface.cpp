@@ -2,22 +2,17 @@
 // SPDX-License-Identifier: MPL-2.0
 
 #include <fcntl.h>
-#include <gtest/gtest.h>
 #include <signal.h>
 #include <spawn.h>
-#include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include <chrono>
-#include <cstdio>
 #include <functional>
 #include <string>
 #include <thread>
 
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
+#include "measurement_test_bench.hpp"
 
 extern char** environ;
 
@@ -206,52 +201,27 @@ private:
   int master_fd_{ -1 };
 };
 
-class MeasurementSerialInterfaceTest : public ::testing::Test
+class MeasurementSerialInterfaceTest : public MeasurementBench
 {
 protected:
-  MeasurementSerialInterfaceTest()
-  {
-    SetUp();
-  }
-
-  ~MeasurementSerialInterfaceTest() override
-  {
-  }
-
-  void SetUp() override
+  MeasurementSerialInterfaceTest() : MeasurementBench("serial")
   {
     std::string suffix = std::to_string(::getpid());
     dev_path_ = "/tmp/dc_test_serial_dev_" + suffix;
     peer_path_ = "/tmp/dc_test_serial_peer_" + suffix;
-
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "serial" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/serial", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementSerialInterfaceTest::dataCallback, this, std::placeholders::_1));
   }
 
-  void TearDown() override
+  void declareCommonParameters()
   {
-    ms_node_->deactivate();
-    ms_node_->cleanup();
+    ms_node_->declare_parameter("serial.plugin", std::string("dc_measurements/SerialInterface"));
+    ms_node_->declare_parameter("serial.group_key", std::string("serial"));
+    ms_node_->declare_parameter("serial.topic_output", std::string("/dc/measurement/serial"));
+    ms_node_->declare_parameter("serial.polling_interval", 30);
+    ms_node_->declare_parameter("serial.init_collect", false);
   }
 
-  void startLifecycleNode()
-  {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void dataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    RCLCPP_INFO_STREAM(ms_node_->get_logger(), "Value: " << data_str);
-    data_json_ = nlohmann::json::parse(data_str);
-    callback_active_ = true;
-  }
-
+  // Keeps writing `line` to `path_to_write` (and spinning) until a Record shows up, so a write
+  // that lands before the Measurement opened its end of the pty is retried rather than lost.
   void spinUntilCallback(const std::string& path_to_write, const std::string& line)
   {
     spinUntilCallback([&] { writeLine(path_to_write, line); });
@@ -259,44 +229,28 @@ protected:
 
   void spinUntilCallback(const std::function<void()>& write_fn)
   {
-    // Bounded, not a plain `while (!callback_active_)`: fail fast with a clear message
-    // instead of running until the test binary's own external timeout.
-    for (int i = 0; i < 500 && !callback_active_; ++i)
-    {
-      write_fn();
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    }
-    ASSERT_TRUE(callback_active_) << "No Record received within the timeout";
+    ASSERT_TRUE(spinUntil(
+        [&] {
+          write_fn();
+          return callback_active_;
+        },
+        10000))
+        << "No Record received within the timeout";
   }
 
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
-  nlohmann::json data_json_;
   std::string dev_path_;
   std::string peer_path_;
-
-public:
-  bool callback_active_{ false };
 };
 
 TEST_F(MeasurementSerialInterfaceTest, ActivatesSuccessfullyWithMissingPort)
 {
-  ms_node_->declare_parameter("serial.plugin", std::string("dc_measurements/SerialInterface"));
-  ms_node_->declare_parameter("serial.group_key", std::string("serial"));
-  ms_node_->declare_parameter("serial.topic_output", std::string("/dc/measurement/serial"));
+  declareCommonParameters();
   ms_node_->declare_parameter("serial.port", std::string("/tmp/dc_test_serial_does_not_exist"));
-  ms_node_->declare_parameter("serial.polling_interval", 30);
-  ms_node_->declare_parameter("serial.init_collect", false);
 
   // Must not throw: an unplugged/missing device should not fail activation.
   ASSERT_NO_THROW(startLifecycleNode());
 
-  for (int i = 0; i < 5; ++i)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-  }
+  spinFor(100);
 
   SUCCEED();
 }
@@ -306,12 +260,8 @@ TEST_F(MeasurementSerialInterfaceTest, DelimiterParsingProducesNamedFields)
   SocatPtyPair pty(dev_path_, peer_path_);
   ASSERT_TRUE(pty.start()) << "socat is required to run this test (virtual pty pair)";
 
-  ms_node_->declare_parameter("serial.plugin", std::string("dc_measurements/SerialInterface"));
-  ms_node_->declare_parameter("serial.group_key", std::string("serial"));
-  ms_node_->declare_parameter("serial.topic_output", std::string("/dc/measurement/serial"));
+  declareCommonParameters();
   ms_node_->declare_parameter("serial.port", pty.devPath());
-  ms_node_->declare_parameter("serial.polling_interval", 30);
-  ms_node_->declare_parameter("serial.init_collect", false);
   ms_node_->declare_parameter("serial.parsing_type", std::string("delimiter"));
   ms_node_->declare_parameter("serial.delimiter", std::string(","));
   ms_node_->declare_parameter("serial.fields", std::vector<std::string>{ "temperature", "humidity" });
@@ -330,12 +280,8 @@ TEST_F(MeasurementSerialInterfaceTest, RegexParsingProducesNamedFields)
   SocatPtyPair pty(dev_path_, peer_path_);
   ASSERT_TRUE(pty.start()) << "socat is required to run this test (virtual pty pair)";
 
-  ms_node_->declare_parameter("serial.plugin", std::string("dc_measurements/SerialInterface"));
-  ms_node_->declare_parameter("serial.group_key", std::string("serial"));
-  ms_node_->declare_parameter("serial.topic_output", std::string("/dc/measurement/serial"));
+  declareCommonParameters();
   ms_node_->declare_parameter("serial.port", pty.devPath());
-  ms_node_->declare_parameter("serial.polling_interval", 30);
-  ms_node_->declare_parameter("serial.init_collect", false);
   ms_node_->declare_parameter("serial.parsing_type", std::string("regex"));
   ms_node_->declare_parameter("serial.regex", std::string("^T:(\\d+\\.\\d+) H:(\\d+)$"));
   ms_node_->declare_parameter("serial.fields", std::vector<std::string>{ "temperature", "humidity" });
@@ -356,12 +302,8 @@ TEST_F(MeasurementSerialInterfaceTest, ReconnectsAfterDisconnect)
   DirectPty pty(dev_path_);
   ASSERT_TRUE(pty.open()) << "failed to allocate a virtual pty";
 
-  ms_node_->declare_parameter("serial.plugin", std::string("dc_measurements/SerialInterface"));
-  ms_node_->declare_parameter("serial.group_key", std::string("serial"));
-  ms_node_->declare_parameter("serial.topic_output", std::string("/dc/measurement/serial"));
+  declareCommonParameters();
   ms_node_->declare_parameter("serial.port", dev_path_);
-  ms_node_->declare_parameter("serial.polling_interval", 30);
-  ms_node_->declare_parameter("serial.init_collect", false);
   ms_node_->declare_parameter("serial.parsing_type", std::string("delimiter"));
   ms_node_->declare_parameter("serial.delimiter", std::string(","));
   ms_node_->declare_parameter("serial.fields", std::vector<std::string>{ "value" });
@@ -376,11 +318,7 @@ TEST_F(MeasurementSerialInterfaceTest, ReconnectsAfterDisconnect)
   // condition a real USB-serial adapter unplug produces.
   pty.teardown();
 
-  for (int i = 0; i < 20; ++i)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-    std::this_thread::sleep_for(std::chrono::milliseconds(30));
-  }
+  spinFor(600);
 
   // Simulate a replug: a fresh pty allocated and symlinked at the exact same path.
   ASSERT_TRUE(pty.open()) << "failed to reallocate the virtual pty";
@@ -391,17 +329,4 @@ TEST_F(MeasurementSerialInterfaceTest, ReconnectsAfterDisconnect)
   EXPECT_EQ(data_json_["fields"]["value"], "2");
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

@@ -1,20 +1,15 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
 #include <unistd.h>
 
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json-schema.hpp>
 #include <string>
-#include <thread>
 
 #include "ament_index_cpp/get_package_share_directory.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
+#include "measurement_test_bench.hpp"
 
 // Runs a Record through the Measurement's own installed schema, the same file and validator
 // `Measurement::validateJSON()` loads when `enable_validator` is on.
@@ -84,31 +79,11 @@ private:
   std::filesystem::path root_;
 };
 
-class MeasurementThermalTest : public ::testing::Test
+class MeasurementThermalTest : public MeasurementBench
 {
 protected:
-  MeasurementThermalTest()
+  MeasurementThermalTest() : MeasurementBench("thermal")
   {
-    SetUp();
-  }
-
-  ~MeasurementThermalTest() override
-  {
-  }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "thermal" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/thermal", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementThermalTest::dataCallback, this, std::placeholders::_1));
-  }
-
-  void TearDown() override
-  {
-    ms_node_->deactivate();
-    ms_node_->cleanup();
   }
 
   void declareCommonParameters()
@@ -118,37 +93,10 @@ protected:
     ms_node_->declare_parameter("thermal.topic_output", std::string("/dc/measurement/thermal"));
   }
 
-  void startLifecycleNode()
-  {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void dataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    RCLCPP_INFO_STREAM(ms_node_->get_logger(), "Value: " << data_str);
-    data_json_ = nlohmann::json::parse(data_str);
-    callback_active_ = true;
-  }
-
   void spinUntilCallback()
   {
-    for (int i = 0; i < 500 && !callback_active_; ++i)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    }
-    ASSERT_TRUE(callback_active_) << "No Record received within the timeout";
+    ASSERT_TRUE(spinUntil([this] { return callback_active_; }, 10000)) << "No Record received within the timeout";
   }
-
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
-  nlohmann::json data_json_;
-
-public:
-  bool callback_active_{ false };
 };
 
 TEST_F(MeasurementThermalTest, AutoDiscoversZonesKeyedByType)
@@ -193,14 +141,10 @@ TEST_F(MeasurementThermalTest, ActivatesSuccessfullyWithMissingBasePath)
 
   // Must not throw: a missing/unreadable /sys/class/thermal should not fail activation. No
   // zone can be read, so (like SerialInterface with no port) nothing is published either --
-  // this loop just proves the node keeps spinning without crashing.
+  // this just proves the node keeps spinning without crashing.
   ASSERT_NO_THROW(startLifecycleNode());
 
-  for (int i = 0; i < 5; ++i)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-  }
+  spinFor(100);
 
   EXPECT_FALSE(callback_active_);
   SUCCEED();
@@ -266,17 +210,4 @@ TEST_F(MeasurementThermalTest, PublishesTheSameRecordWithTheValidatorOff)
   EXPECT_DOUBLE_EQ(data_json_["cpu-thermal"].get<double>(), 45.123);
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

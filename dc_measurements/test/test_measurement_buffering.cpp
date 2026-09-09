@@ -1,11 +1,9 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
 #include <unistd.h>
 
 #include <algorithm>
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -14,46 +12,28 @@
 #include <vector>
 
 #include "dc_interfaces/msg/flush_event.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
+#include "measurement_test_bench.hpp"
 
 using json = nlohmann::json;
 
 // Stands in for the bytes a File-producing Measurement (camera, map, ...) writes out.
 const char* const kProducedContents = "fake-jpeg-body";
 
-class MeasurementBufferingTest : public ::testing::Test
+class MeasurementBufferingTest : public MeasurementBench
 {
 protected:
-  MeasurementBufferingTest()
+  MeasurementBufferingTest() : MeasurementBench("dummy")
   {
-    // Before SetUp(), which the constructor calls itself: the paths are what the parameters
-    // declared there point at.
+    // The paths are what the parameters declared below point at.
     tmp_ = std::filesystem::temp_directory_path() / ("dc_measurement_buffering_test_" + std::to_string(::getpid()));
     produced_file_ = tmp_ / "produced" / "frame.jpg";
     // Where measurement.hpp's scratchDir() puts this Measurement's staged Files, given
     // save_local_base_path below (no strftime token in it, so it is used as-is).
     scratch_dir_ = tmp_ / ".dc_incident_scratch" / "dummy";
-    SetUp();
-  }
-
-  ~MeasurementBufferingTest() override
-  {
-    std::error_code ec;
-    std::filesystem::remove_all(tmp_, ec);
-  }
-
-  void SetUp() override
-  {
     std::filesystem::create_directories(produced_file_.parent_path());
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "dummy" });
     // Keep the Files this test stages (and the scratch tree beside them) inside the fixture's
     // tmp directory instead of the default $HOME/ros2/data.
     ms_node_->declare_parameter("save_local_base_path", tmp_.string());
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/dummy", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementBufferingTest::dummyDataCallback, this, std::placeholders::_1));
     flush_pub_ = ms_node_->create_publisher<dc_interfaces::msg::FlushEvent>("/dc/flush", rclcpp::QoS(10));
 
     ms_node_->declare_parameter("dummy.plugin", std::string("dc_measurements/Dummy"));
@@ -62,20 +42,15 @@ protected:
     ms_node_->declare_parameter("dummy.polling_interval", polling_interval_);
   }
 
-  void TearDown() override
+  ~MeasurementBufferingTest() override
   {
-    ms_node_->deactivate();
-    ms_node_->cleanup();
+    std::error_code ec;
+    std::filesystem::remove_all(tmp_, ec);
   }
 
-  void startLifecycleNode()
+  void onRecord(const std::string& measurement, const dc_interfaces::msg::StringStamped& msg) override
   {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void dummyDataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
+    (void)measurement;
     received_.push_back(msg.data);
     // When each Record actually landed, for the rate-limited release (#289).
     arrivals_.push_back(std::chrono::steady_clock::now());
@@ -132,8 +107,8 @@ protected:
 
   // Spin while a File-producing Measurement keeps producing: the File is put back as soon as the
   // Measurement has consumed it, the way a real one writes a fresh File on every collection. The
-  // Measurement's polling timer runs inside spin_some() on this thread, so there is no race --
-  // the File is always back in place before the next collection, and still there when the spin
+  // Measurement's polling timer runs inside the bench's spin on this thread, so there is no race
+  // -- the File is always back in place before the next collection, and still there when the spin
   // returns.
   void spinProducing(int milliseconds)
   {
@@ -143,24 +118,15 @@ protected:
   // spinUntil()'s producing counterpart; returns whether `done` held before `timeout_ms`.
   bool spinProducingUntil(const std::function<bool()>& done, int timeout_ms)
   {
-    std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
-    while (true)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      if (!std::filesystem::exists(produced_file_))
-      {
-        writeProducedFile();
-      }
-      if (done())
-      {
-        return true;
-      }
-      if ((std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time))
-              .count() >= timeout_ms)
-      {
-        return false;
-      }
-    }
+    return spinUntil(
+        [&] {
+          if (!std::filesystem::exists(produced_file_))
+          {
+            writeProducedFile();
+          }
+          return done();
+        },
+        timeout_ms);
   }
 
   // Names of the Files currently staged in this Measurement's scratch directory.
@@ -182,36 +148,6 @@ protected:
     return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
   }
 
-  void spinFor(int milliseconds)
-  {
-    std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
-    while (
-        (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time)).count() <
-        milliseconds)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-    }
-  }
-
-  // Spin until `done` holds, giving up after `timeout_ms` -- a bounded wait, so a behavior
-  // regression fails the test loudly instead of hanging until the suite times out.
-  bool spinUntil(const std::function<bool()>& done, int timeout_ms)
-  {
-    std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
-    while (!done())
-    {
-      if ((std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time))
-              .count() >= timeout_ms)
-      {
-        return false;
-      }
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-    }
-    return true;
-  }
-
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   rclcpp::Publisher<dc_interfaces::msg::FlushEvent>::SharedPtr flush_pub_;
   int polling_interval_{ 50 };
   std::filesystem::path tmp_;
@@ -231,12 +167,8 @@ TEST_F(MeasurementBufferingTest, ZeroBufferDurationPublishesLiveAsBefore)
 
   startLifecycleNode();
 
-  while (received_.empty())
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+  ASSERT_TRUE(spinUntil([this] { return !received_.empty(); }, 5000)) << "no Record was ever published";
 
-  EXPECT_FALSE(received_.empty());
   json data_json = json::parse(received_.front());
   EXPECT_FALSE(data_json.contains("incident_id"));
 }
@@ -275,7 +207,7 @@ TEST_F(MeasurementBufferingTest, FlushEventReleasesBufferedWindowThenReturnsToBu
   spinFor(polling_interval_ * 2);
 
   // Every Record released from the buffer carries the incident_id from the FlushEvent.
-  int released = static_cast<int>(received_.size());
+  const int released = static_cast<int>(received_.size());
   EXPECT_EQ(countTaggedWith("incident-42"), released);
 
   // Pre-roll only: no further Records once the window is out, since buffering resumed.
@@ -460,17 +392,4 @@ TEST_F(MeasurementBufferingTest, RollingEvictionDeletesAgedOutScratchFilesFromDi
   EXPECT_TRUE(received_.empty()) << "still armed: nothing should have been published";
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

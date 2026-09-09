@@ -1,15 +1,9 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
-
-#include <chrono>
-
 #include "dc_core/condition.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
+#include "measurement_test_bench.hpp"
 #include "pluginlib/class_loader.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
@@ -18,20 +12,15 @@
 // path a real Measurement uses. Given a fixed Record (the dummy Measurement's static "record"
 // JSON) and a condition config (key/comparison/value), assert whether collection is activated
 // or suppressed.
-class MeasurementCompareTest : public ::testing::Test
+class MeasurementCompareTest : public MeasurementBench
 {
 protected:
-  void SetUp() override
-  {
+  MeasurementCompareTest()
     // condition_plugins is declared by the constructor itself, so it must be supplied as a
     // parameter override rather than via ms_node_->declare_parameter afterwards.
-    auto options = rclcpp::NodeOptions().parameter_overrides(
-        { rclcpp::Parameter("condition_plugins", std::vector<std::string>{ "cmp" }) });
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(options, std::vector<std::string>{ "dummy" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/dummy", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementCompareTest::dummyDataCallback, this, std::placeholders::_1));
-
+    : MeasurementBench("dummy", rclcpp::NodeOptions().parameter_overrides(
+                                    { rclcpp::Parameter("condition_plugins", std::vector<std::string>{ "cmp" }) }))
+  {
     ms_node_->declare_parameter("dummy.plugin", std::string("dc_measurements/Dummy"));
     ms_node_->declare_parameter("dummy.topic_output", std::string("/dc/measurement/dummy"));
     ms_node_->declare_parameter("dummy.polling_interval", polling_interval_);
@@ -44,52 +33,20 @@ protected:
     ms_node_->declare_parameter("cmp.plugin", std::string("dc_conditions/Compare"));
   }
 
-  void TearDown() override
+  void onRecord(const std::string& measurement, const dc_interfaces::msg::StringStamped& msg) override
   {
-    ms_node_->deactivate();
-    ms_node_->cleanup();
-  }
-
-  void startLifecycleNode()
-  {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void dummyDataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
+    (void)measurement;
     (void)msg;
-    dummy_callback_count_++;
+    callback_count_++;
   }
 
-  // Bounded version of the unbounded spin-until-first-publish the per-plugin suites used: a
-  // condition that should activate but never does fails on the EXPECT instead of hanging CI.
+  // A condition that should activate but never does fails on the EXPECT instead of hanging CI.
   void awaitFirstPublish()
   {
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(5000);
-    while (dummy_callback_count_ == 0 && std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-    }
+    ASSERT_TRUE(spinUntil([this] { return callback_count_ > 0; }, 5000)) << "no Record was ever published";
   }
 
-  void spinFor(int milliseconds)
-  {
-    std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
-    while (
-        (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time)).count() <
-        milliseconds)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-    }
-  }
-
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   int polling_interval_{ 50 };
-
-public:
-  int dummy_callback_count_{ 0 };
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -106,7 +63,7 @@ TEST_F(MeasurementCompareTest, BoolEqValueEqualActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, BoolEqValueDifferingNeverActivates)
@@ -118,7 +75,7 @@ TEST_F(MeasurementCompareTest, BoolEqValueDifferingNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, BoolNeValueDifferingActivates)
@@ -130,7 +87,7 @@ TEST_F(MeasurementCompareTest, BoolNeValueDifferingActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, BoolNeValueEqualNeverActivates)
@@ -142,7 +99,7 @@ TEST_F(MeasurementCompareTest, BoolNeValueEqualNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -158,11 +115,11 @@ TEST_F(MeasurementCompareTest, DoubleEqValueEqualActivatesAndKeepsPublishing)
 
   startLifecycleNode();
   awaitFirstPublish();
-  int first_count = dummy_callback_count_;
+  int first_count = callback_count_;
 
   // if_all_conditions keeps being satisfied every poll since the Record never changes.
   spinFor(polling_interval_ * 3);
-  EXPECT_GT(dummy_callback_count_, first_count);
+  EXPECT_GT(callback_count_, first_count);
 }
 
 TEST_F(MeasurementCompareTest, DoubleEqValueDifferingNeverActivates)
@@ -174,7 +131,7 @@ TEST_F(MeasurementCompareTest, DoubleEqValueDifferingNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, DoubleEqMissingKeyNeverActivates)
@@ -186,7 +143,7 @@ TEST_F(MeasurementCompareTest, DoubleEqMissingKeyNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 // Gotcha: the comparison is type-strict, not just numeric. A Record field written as an integer
@@ -201,7 +158,7 @@ TEST_F(MeasurementCompareTest, DoubleEqIntegerLiteralInRecordNeverMatchesDespite
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, DoubleNeValueDifferingActivates)
@@ -213,7 +170,7 @@ TEST_F(MeasurementCompareTest, DoubleNeValueDifferingActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, DoubleNeValueEqualNeverActivates)
@@ -225,7 +182,7 @@ TEST_F(MeasurementCompareTest, DoubleNeValueEqualNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -241,10 +198,10 @@ TEST_F(MeasurementCompareTest, IntegerEqValueEqualActivatesAndKeepsPublishing)
 
   startLifecycleNode();
   awaitFirstPublish();
-  int first_count = dummy_callback_count_;
+  int first_count = callback_count_;
 
   spinFor(polling_interval_ * 3);
-  EXPECT_GT(dummy_callback_count_, first_count);
+  EXPECT_GT(callback_count_, first_count);
 }
 
 TEST_F(MeasurementCompareTest, IntegerEqValueDifferingNeverActivates)
@@ -256,7 +213,7 @@ TEST_F(MeasurementCompareTest, IntegerEqValueDifferingNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, IntegerEqMissingKeyNeverActivates)
@@ -268,7 +225,7 @@ TEST_F(MeasurementCompareTest, IntegerEqMissingKeyNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 // Gotcha (mirror of the double case): a Record field written as a float literal parses to
@@ -282,7 +239,7 @@ TEST_F(MeasurementCompareTest, IntegerEqDoubleLiteralInRecordNeverMatchesDespite
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, IntegerNeValueDifferingActivates)
@@ -294,7 +251,7 @@ TEST_F(MeasurementCompareTest, IntegerNeValueDifferingActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -310,7 +267,7 @@ TEST_F(MeasurementCompareTest, StringEqValueEqualActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, StringEqValueDifferingNeverActivates)
@@ -322,7 +279,7 @@ TEST_F(MeasurementCompareTest, StringEqValueDifferingNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, StringEqMissingKeyNeverActivates)
@@ -334,7 +291,7 @@ TEST_F(MeasurementCompareTest, StringEqMissingKeyNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, StringNeValueDifferingActivates)
@@ -346,7 +303,7 @@ TEST_F(MeasurementCompareTest, StringNeValueDifferingActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -363,7 +320,7 @@ TEST_F(MeasurementCompareTest, DoubleLeBelowConfiguredValueActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, DoubleLeAboveConfiguredValueNeverActivates)
@@ -375,7 +332,7 @@ TEST_F(MeasurementCompareTest, DoubleLeAboveConfiguredValueNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, DoubleLeBoundaryEqualActivates)
@@ -387,7 +344,7 @@ TEST_F(MeasurementCompareTest, DoubleLeBoundaryEqualActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, DoubleLtBoundaryEqualNeverActivates)
@@ -399,7 +356,7 @@ TEST_F(MeasurementCompareTest, DoubleLtBoundaryEqualNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, DoubleGeAboveConfiguredValueActivates)
@@ -411,7 +368,7 @@ TEST_F(MeasurementCompareTest, DoubleGeAboveConfiguredValueActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, DoubleGeBelowConfiguredValueNeverActivates)
@@ -423,7 +380,7 @@ TEST_F(MeasurementCompareTest, DoubleGeBelowConfiguredValueNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, DoubleGeBoundaryEqualActivates)
@@ -435,7 +392,7 @@ TEST_F(MeasurementCompareTest, DoubleGeBoundaryEqualActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, DoubleGtBoundaryEqualNeverActivates)
@@ -447,7 +404,7 @@ TEST_F(MeasurementCompareTest, DoubleGtBoundaryEqualNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -463,7 +420,7 @@ TEST_F(MeasurementCompareTest, IntegerLeBelowConfiguredValueActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, IntegerLeAboveConfiguredValueNeverActivates)
@@ -475,7 +432,7 @@ TEST_F(MeasurementCompareTest, IntegerLeAboveConfiguredValueNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, IntegerLeBoundaryEqualActivates)
@@ -487,7 +444,7 @@ TEST_F(MeasurementCompareTest, IntegerLeBoundaryEqualActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, IntegerLtBoundaryEqualNeverActivates)
@@ -499,7 +456,7 @@ TEST_F(MeasurementCompareTest, IntegerLtBoundaryEqualNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, IntegerGeAboveConfiguredValueActivates)
@@ -511,7 +468,7 @@ TEST_F(MeasurementCompareTest, IntegerGeAboveConfiguredValueActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, IntegerGeBelowConfiguredValueNeverActivates)
@@ -523,7 +480,7 @@ TEST_F(MeasurementCompareTest, IntegerGeBelowConfiguredValueNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, IntegerGeBoundaryEqualActivates)
@@ -535,7 +492,7 @@ TEST_F(MeasurementCompareTest, IntegerGeBoundaryEqualActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, IntegerGtBoundaryEqualNeverActivates)
@@ -547,7 +504,7 @@ TEST_F(MeasurementCompareTest, IntegerGtBoundaryEqualNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -564,7 +521,7 @@ TEST_F(MeasurementCompareTest, BoolArrayExactOrderedMatchActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, BoolArrayReorderedNeverActivatesWhenOrderMatters)
@@ -576,7 +533,7 @@ TEST_F(MeasurementCompareTest, BoolArrayReorderedNeverActivatesWhenOrderMatters)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, BoolArrayReorderedActivatesWhenOrderMattersFalse)
@@ -589,7 +546,7 @@ TEST_F(MeasurementCompareTest, BoolArrayReorderedActivatesWhenOrderMattersFalse)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, BoolArrayDifferentElementsNeverActivateWhenOrderMattersFalse)
@@ -602,7 +559,7 @@ TEST_F(MeasurementCompareTest, BoolArrayDifferentElementsNeverActivateWhenOrderM
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, BoolArrayOfIntegersNeverActivates)
@@ -614,7 +571,7 @@ TEST_F(MeasurementCompareTest, BoolArrayOfIntegersNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, DoubleArrayExactOrderedMatchActivates)
@@ -626,7 +583,7 @@ TEST_F(MeasurementCompareTest, DoubleArrayExactOrderedMatchActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, DoubleArrayReorderedNeverActivatesWhenOrderMatters)
@@ -638,7 +595,7 @@ TEST_F(MeasurementCompareTest, DoubleArrayReorderedNeverActivatesWhenOrderMatter
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, DoubleArrayReorderedActivatesWhenOrderMattersFalse)
@@ -651,7 +608,7 @@ TEST_F(MeasurementCompareTest, DoubleArrayReorderedActivatesWhenOrderMattersFals
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, DoubleArrayDifferentElementsNeverActivateWhenOrderMattersFalse)
@@ -664,7 +621,7 @@ TEST_F(MeasurementCompareTest, DoubleArrayDifferentElementsNeverActivateWhenOrde
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 // Mirror of the scalar type strictness: integer literals are not double elements.
@@ -677,7 +634,7 @@ TEST_F(MeasurementCompareTest, DoubleArrayOfIntegerLiteralsNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, IntegerArrayExactOrderedMatchActivates)
@@ -689,7 +646,7 @@ TEST_F(MeasurementCompareTest, IntegerArrayExactOrderedMatchActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, IntegerArrayReorderedNeverActivatesWhenOrderMatters)
@@ -701,7 +658,7 @@ TEST_F(MeasurementCompareTest, IntegerArrayReorderedNeverActivatesWhenOrderMatte
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, IntegerArrayReorderedActivatesWhenOrderMattersFalse)
@@ -714,7 +671,7 @@ TEST_F(MeasurementCompareTest, IntegerArrayReorderedActivatesWhenOrderMattersFal
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, IntegerArrayDifferentElementsNeverActivateWhenOrderMattersFalse)
@@ -727,7 +684,7 @@ TEST_F(MeasurementCompareTest, IntegerArrayDifferentElementsNeverActivateWhenOrd
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, IntegerArrayOfDoubleLiteralsNeverActivates)
@@ -739,7 +696,7 @@ TEST_F(MeasurementCompareTest, IntegerArrayOfDoubleLiteralsNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, StringArrayExactOrderedMatchActivates)
@@ -751,7 +708,7 @@ TEST_F(MeasurementCompareTest, StringArrayExactOrderedMatchActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, StringArrayReorderedNeverActivatesWhenOrderMatters)
@@ -763,7 +720,7 @@ TEST_F(MeasurementCompareTest, StringArrayReorderedNeverActivatesWhenOrderMatter
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, StringArrayReorderedActivatesWhenOrderMattersFalse)
@@ -776,7 +733,7 @@ TEST_F(MeasurementCompareTest, StringArrayReorderedActivatesWhenOrderMattersFals
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, StringArrayDifferentElementsNeverActivateWhenOrderMattersFalse)
@@ -789,7 +746,7 @@ TEST_F(MeasurementCompareTest, StringArrayDifferentElementsNeverActivateWhenOrde
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, ArrayScalarKeyNeverActivates)
@@ -801,7 +758,7 @@ TEST_F(MeasurementCompareTest, ArrayScalarKeyNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, ArrayMissingKeyNeverActivates)
@@ -813,7 +770,7 @@ TEST_F(MeasurementCompareTest, ArrayMissingKeyNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -829,7 +786,7 @@ TEST_F(MeasurementCompareTest, MatchRegexFullMatchActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 TEST_F(MeasurementCompareTest, MatchRegexNotMatchingNeverActivates)
@@ -841,7 +798,7 @@ TEST_F(MeasurementCompareTest, MatchRegexNotMatchingNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 // std::regex_match requires a *full* match, not a substring search.
@@ -854,7 +811,7 @@ TEST_F(MeasurementCompareTest, MatchPartialSubstringNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 TEST_F(MeasurementCompareTest, MatchMissingKeyNeverActivates)
@@ -866,7 +823,7 @@ TEST_F(MeasurementCompareTest, MatchMissingKeyNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -881,10 +838,10 @@ TEST_F(MeasurementCompareTest, ExistsKeyPresentActivatesAndKeepsPublishing)
 
   startLifecycleNode();
   awaitFirstPublish();
-  int first_count = dummy_callback_count_;
+  int first_count = callback_count_;
 
   spinFor(polling_interval_ * 3);
-  EXPECT_GT(dummy_callback_count_, first_count);
+  EXPECT_GT(callback_count_, first_count);
 }
 
 TEST_F(MeasurementCompareTest, ExistsKeyAbsentNeverActivates)
@@ -895,7 +852,7 @@ TEST_F(MeasurementCompareTest, ExistsKeyAbsentNeverActivates)
 
   startLifecycleNode();
   spinFor(polling_interval_ * 5);
-  EXPECT_EQ(dummy_callback_count_, 0);
+  EXPECT_EQ(callback_count_, 0);
 }
 
 // A nested key (found via the flattened "/parent/child" prefix match, not an exact top-level
@@ -908,7 +865,7 @@ TEST_F(MeasurementCompareTest, ExistsNestedKeyActivates)
 
   startLifecycleNode();
   awaitFirstPublish();
-  EXPECT_GE(dummy_callback_count_, 1);
+  EXPECT_GE(callback_count_, 1);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -981,17 +938,4 @@ TEST(CompareDirectTest, MissingValueThrowsOnConfigure)
   EXPECT_THROW(condition->configure(node, "cmp"), std::runtime_error);
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

@@ -1,42 +1,21 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
-
-#include <chrono>
 #include <fstream>
 #include <functional>
 #include <nlohmann/json-schema.hpp>
-#include <string>
-#include <thread>
 #include <vector>
 
 #include "ament_index_cpp/get_package_share_directory.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
+#include "measurement_test_bench.hpp"
 #include "std_msgs/msg/empty.hpp"
 
-class MeasurementSlamToolboxQualityTest : public ::testing::Test
+class MeasurementSlamToolboxQualityTest : public MeasurementBench
 {
 protected:
-  MeasurementSlamToolboxQualityTest()
+  MeasurementSlamToolboxQualityTest() : MeasurementBench("slam_quality")
   {
-    SetUp();
-  }
-
-  ~MeasurementSlamToolboxQualityTest() override
-  {
-  }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "slam_quality" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/slam_quality", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementSlamToolboxQualityTest::dataCallback, this, std::placeholders::_1));
     pose_pub_ = ms_node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/test/pose",
                                                                                           rclcpp::SensorDataQoS());
     // Stands in for whatever slam_toolbox itself eventually publishes: the plugin subscribes
@@ -44,12 +23,6 @@ protected:
     // real slam_toolbox one -- only its *arrival* is exercised.
     loop_closure_pub_ =
         ms_node_->create_publisher<std_msgs::msg::Empty>("/test/loop_closure_event", rclcpp::SystemDefaultsQoS());
-  }
-
-  void TearDown() override
-  {
-    ms_node_->deactivate();
-    ms_node_->cleanup();
   }
 
   void declareCommonParameters()
@@ -63,37 +36,6 @@ protected:
     ms_node_->declare_parameter("slam_quality.init_collect", false);
   }
 
-  void startLifecycleNode()
-  {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void dataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    records_.push_back(nlohmann::json::parse(data_str));
-  }
-
-  void spinFor(std::chrono::milliseconds duration)
-  {
-    auto deadline = std::chrono::steady_clock::now() + duration;
-    while (std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-  }
-
-  void waitForSubscriber(const std::string& topic)
-  {
-    while (ms_node_->count_subscribers(topic) == 0)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-    }
-  }
-
   static std::function<bool(const nlohmann::json&)> isEvent(const std::string& event)
   {
     return [event](const nlohmann::json& record) { return record.value("event", "") == event; };
@@ -105,21 +47,26 @@ protected:
                                     const std::function<bool(const nlohmann::json&)>& predicate)
   {
     const size_t first_new = records_.size();
-    for (int i = 0; i < 400; ++i)
+    nlohmann::json matched;
+    if (!spinUntil(
+            [&] {
+              pose_pub_->publish(msg);
+              for (size_t r = first_new; r < records_.size(); ++r)
+              {
+                if (predicate(records_[r]))
+                {
+                  matched = records_[r];
+                  return true;
+                }
+              }
+              return false;
+            },
+            4000))
     {
-      pose_pub_->publish(msg);
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      for (size_t r = first_new; r < records_.size(); ++r)
-      {
-        if (predicate(records_[r]))
-        {
-          return records_[r];
-        }
-      }
+      ADD_FAILURE() << "No matching Record within the timeout";
+      return nlohmann::json{};
     }
-    ADD_FAILURE() << "No matching Record within the timeout";
-    return nlohmann::json{};
+    return matched;
   }
 
   // A loop closure is single-shot: republishing it would report several occurrences instead of
@@ -128,20 +75,25 @@ protected:
   {
     const size_t first_new = records_.size();
     loop_closure_pub_->publish(std_msgs::msg::Empty());
-    for (int i = 0; i < 400; ++i)
+    nlohmann::json matched;
+    if (!spinUntil(
+            [&] {
+              for (size_t r = first_new; r < records_.size(); ++r)
+              {
+                if (isEvent("loop_closure")(records_[r]))
+                {
+                  matched = records_[r];
+                  return true;
+                }
+              }
+              return false;
+            },
+            4000))
     {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      for (size_t r = first_new; r < records_.size(); ++r)
-      {
-        if (isEvent("loop_closure")(records_[r]))
-        {
-          return records_[r];
-        }
-      }
+      ADD_FAILURE() << "No loop_closure Record within the timeout";
+      return nlohmann::json{};
     }
-    ADD_FAILURE() << "No loop_closure Record within the timeout";
-    return nlohmann::json{};
+    return matched;
   }
 
   // The schema the plugin itself validates against, applied here directly so a Record that only
@@ -157,11 +109,8 @@ protected:
     EXPECT_NO_THROW(validator.validate(record)) << record.dump();
   }
 
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_pub_;
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr loop_closure_pub_;
-  std::vector<nlohmann::json> records_;
 };
 
 TEST_F(MeasurementSlamToolboxQualityTest, ReportsPoseAndCovarianceOnThePollingInterval)
@@ -197,7 +146,7 @@ TEST_F(MeasurementSlamToolboxQualityTest, ReportsNothingWhilePoseNeverPublishes)
 
   // Several polling intervals with nothing on /pose: no Record at all beats a Record with no
   // localization data.
-  spinFor(std::chrono::milliseconds(500));
+  spinFor(500);
 
   EXPECT_TRUE(records_.empty()) << records_.size() << " Record(s) published without any pose";
 }
@@ -223,17 +172,4 @@ TEST_F(MeasurementSlamToolboxQualityTest, EmitsASingleShotRecordPerLoopClosure)
   expectValidatesAgainstSchema(record);
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

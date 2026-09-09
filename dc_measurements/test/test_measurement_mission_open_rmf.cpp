@@ -7,8 +7,6 @@
 // `websocket_url` would point at in a real deployment, and the plugin under test connects to it
 // through the real dc_common::WebSocketJsonClient (#390), same as it would in production.
 
-#include <gtest/gtest.h>
-
 #include <atomic>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/executor_work_guard.hpp>
@@ -17,10 +15,8 @@
 #include <boost/asio/post.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
-#include <chrono>
 #include <fstream>
 #include <functional>
-#include <future>
 #include <memory>
 #include <nlohmann/json-schema.hpp>
 #include <string>
@@ -28,10 +24,8 @@
 #include <vector>
 
 #include "ament_index_cpp/get_package_share_directory.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
+#include "measurement_test_bench.hpp"
 
 namespace
 {
@@ -103,7 +97,7 @@ public:
       acceptor_.close(ec);
       if (current_ws_ && current_ws_->is_open())
       {
-        beast::error_code wec;
+        boost::system::error_code wec;
         current_ws_->next_layer().close(wec);
       }
       work_guard_.reset();
@@ -166,39 +160,18 @@ nlohmann::json taskState(const std::string& id, const std::string& category, con
 
 }  // namespace
 
-class MeasurementMissionOpenRmfTest : public ::testing::Test
+class MeasurementMissionOpenRmfTest : public MeasurementBench
 {
 protected:
-  MeasurementMissionOpenRmfTest()
-  {
-    SetUp();
-  }
-
-  void SetUp() override
+  MeasurementMissionOpenRmfTest() : MeasurementBench("mission")
   {
     server_ = std::make_unique<PushServer>();
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "mission" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/mission", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementMissionOpenRmfTest::dataCallback, this, std::placeholders::_1));
   }
 
   void TearDown() override
   {
-    stopCollection();
+    MeasurementBench::TearDown();
     server_->stop();
-  }
-
-  void stopCollection()
-  {
-    if (stopped_)
-    {
-      return;
-    }
-    stopped_ = true;
-    ms_node_->deactivate();
-    ms_node_->cleanup();
   }
 
   void declareCommonParameters()
@@ -214,45 +187,31 @@ protected:
 
   void startLifecycleNode()
   {
-    ms_node_->configure();
-    ms_node_->activate();
+    MeasurementBench::startLifecycleNode();
     ASSERT_TRUE(server_->waitForConnection(std::chrono::seconds(10))) << "Plugin never connected to PushServer";
-  }
-
-  void dataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    records_.push_back(nlohmann::json::parse(data_str));
-  }
-
-  void spinFor(std::chrono::milliseconds duration)
-  {
-    auto deadline = std::chrono::steady_clock::now() + duration;
-    while (std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
   }
 
   nlohmann::json waitForRecord(const std::function<bool(const nlohmann::json&)>& predicate)
   {
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-    while (std::chrono::steady_clock::now() < deadline)
+    nlohmann::json matched;
+    if (!spinUntil(
+            [&] {
+              for (const auto& record : records_)
+              {
+                if (predicate(record))
+                {
+                  matched = record;
+                  return true;
+                }
+              }
+              return false;
+            },
+            10000))
     {
-      for (const auto& record : records_)
-      {
-        if (predicate(record))
-        {
-          return record;
-        }
-      }
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      ADD_FAILURE() << "No matching Record within the timeout";
+      return nlohmann::json{};
     }
-    ADD_FAILURE() << "No matching Record within the timeout";
-    return nlohmann::json{};
+    return matched;
   }
 
   static std::function<bool(const nlohmann::json&)> isEvent(const std::string& event)
@@ -276,11 +235,6 @@ protected:
   }
 
   std::unique_ptr<PushServer> server_;
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
-  std::vector<nlohmann::json> records_;
-
-  bool stopped_{ false };
 };
 
 TEST_F(MeasurementMissionOpenRmfTest, UnderwayEmitsAMissionStartRecord)
@@ -304,7 +258,7 @@ TEST_F(MeasurementMissionOpenRmfTest, QueuedAndStandbyEmitNoRecord)
 
   server_->send(taskState("delivery.dispatch-1", "delivery", "queued"));
   server_->send(taskState("delivery.dispatch-1", "delivery", "standby"));
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
 
   EXPECT_TRUE(records_.empty());
 }
@@ -413,7 +367,7 @@ TEST_F(MeasurementMissionOpenRmfTest, BlockedDoesNotEndTheMission)
   waitForRecord(isEvent("mission_start"));
 
   server_->send(taskState("delivery.dispatch-1", "delivery", "blocked"));
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
   EXPECT_EQ(records_.size(), 1u) << "blocked must not produce a mission_end Record";
 
   server_->send(taskState("delivery.dispatch-1", "delivery", "completed"));
@@ -427,20 +381,9 @@ TEST_F(MeasurementMissionOpenRmfTest, TerminalWithoutPriorActiveProducesNoRecord
   startLifecycleNode();
 
   server_->send(taskState("delivery.dispatch-1", "delivery", "completed"));
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
 
   EXPECT_TRUE(records_.empty());
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()
