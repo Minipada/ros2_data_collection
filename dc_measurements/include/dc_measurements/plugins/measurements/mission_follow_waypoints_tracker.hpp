@@ -17,15 +17,6 @@
 namespace dc_measurements
 {
 
-/// Terminal nav2 GoalStatus values relevant to a mission, expressed with no ROS dependency --
-/// ACCEPTED/EXECUTING/CANCELING never reach the tracker, only what a goal can end on.
-enum class MissionTerminalStatus
-{
-  Succeeded,
-  Canceled,
-  Aborted,
-};
-
 /// One entry of FollowWaypoints::Result.missed_waypoints (nav2_msgs/msg/MissedWaypoint on Jazzy),
 /// stripped of the goal pose -- not part of #389's schema. Jazzy's MissedWaypoint is just
 /// index/goal/error_code -- no per-waypoint status enum or error_msg the way an older/rolling nav2
