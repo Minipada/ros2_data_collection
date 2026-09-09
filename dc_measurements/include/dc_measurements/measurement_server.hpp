@@ -52,13 +52,6 @@ public:
    */
   bool loadConditionPlugins();
 
-  std::vector<std::string> getMeasurementPlugins();
-  std::vector<std::string> getMeasurementTypes();
-  std::vector<std::string> getMeasurementGroupKeys();
-  std::vector<std::string> getMeasurementTopicOutput();
-  std::vector<int> getMeasurementPollingInterval();
-  std::vector<bool> getMeasurementInitCollect();
-
 protected:
   /**
    * @brief Configure lifecycle server
@@ -107,32 +100,7 @@ protected:
   std::vector<json> custom_keys_;
 
   // std::vector<std::string> measurement_plugins_;
-  std::vector<std::string> measurement_group_key_;
   std::vector<std::string> measurement_ids_;
-  std::vector<int> measurement_polling_interval_;
-  std::vector<std::string> measurement_topic_outputs_;
-  std::vector<std::string> measurement_types_;
-  std::vector<bool> measurement_debug_;
-  std::vector<bool> measurement_enable_validator_;
-  std::vector<std::string> measurement_json_schema_path_;
-  std::vector<std::vector<std::string>> measurement_tags_;
-  std::vector<bool> measurement_init_collect_;
-  std::vector<int> measurement_init_max_measurements_;
-  std::vector<bool> measurement_include_measurement_name_;
-  std::vector<bool> measurement_include_measurement_plugin_;
-  std::vector<std::vector<std::string>> measurement_if_all_conditions_;
-  std::vector<std::vector<std::string>> measurement_if_any_conditions_;
-  std::vector<std::vector<std::string>> measurement_if_none_conditions_;
-  std::vector<std::string> measurement_gate_condition_;
-  std::vector<std::vector<std::string>> measurement_remote_keys_;
-  std::vector<std::vector<std::string>> measurement_remote_prefixes_;
-  std::vector<bool> measurement_nested_;
-  std::vector<bool> measurement_flatten_;
-  std::vector<double> measurement_buffer_duration_sec_;
-  std::vector<double> measurement_post_roll_duration_sec_;
-  std::vector<double> measurement_cooldown_sec_;
-  std::vector<double> measurement_max_flush_rate_hz_;
-  std::vector<std::string> measurement_flush_topic_;
   std::string save_local_base_path_;
   std::string save_local_base_path_expanded_;
   std::string all_base_path_;
@@ -146,7 +114,6 @@ protected:
   std::vector<std::string> condition_types_;
   pluginlib::ClassLoader<dc_core::Condition> condition_plugin_loader_;
   std::vector<std::string> condition_ids_;
-  std::vector<int> measurement_condition_max_measurements_;
 };
 
 }  // namespace measurement_server

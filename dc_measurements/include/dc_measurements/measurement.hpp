@@ -774,20 +774,7 @@ public:
   // configure the server on lifecycle setup
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
                  const std::map<std::string, std::shared_ptr<dc_core::Condition>>& conditions,
-                 std::shared_ptr<tf2_ros::Buffer> tf, const std::string& measurement_plugin,
-                 const std::string& group_key, const std::string& topic_output, const int& polling_interval,
-                 const bool& debug, const bool& enable_validator, const std::string& json_schema_path,
-                 const std::vector<std::string>& tags, const bool& init_collect, const int& init_max_measurements,
-                 const bool& include_measurement_name, const bool& include_measurement_plugin,
-                 const int& condition_max_measurements, const std::vector<std::string>& if_all_conditions,
-                 const std::vector<std::string>& if_any_conditions, const std::vector<std::string>& if_none_conditions,
-                 const std::string& gate_condition, const std::vector<std::string>& remote_keys,
-                 const std::vector<std::string>& remote_prefixes, const bool& nested, const bool& flatten,
-                 const std::string& save_local_base_path, const std::string& all_base_path,
-                 const std::string& all_base_path_expanded, const std::string& save_local_base_path_expanded,
-                 const std::string& run_id, const bool& run_id_enabled, const std::vector<json>& custom_keys,
-                 const double& buffer_duration_sec, const double& post_roll_duration_sec, const double& cooldown_sec,
-                 const double& max_flush_rate_hz, const std::string& flush_topic) override
+                 std::shared_ptr<tf2_ros::Buffer> tf, const dc_core::MeasurementConfig& config) override
   {
     node_ = parent;
     auto node = node_.lock();
@@ -796,37 +783,38 @@ public:
 
     RCLCPP_INFO(logger_, "Configuring %s", name.c_str());
 
-    measurement_plugin_ = measurement_plugin;
+    measurement_plugin_ = config.measurement_plugin;
     conditions_ = conditions;
     tf_ = tf;
     measurement_name_ = name;
-    topic_output_ = topic_output;
-    polling_interval_ = polling_interval;
-    debug_ = debug;
-    enable_validator_ = enable_validator;
-    json_schema_path_ = json_schema_path;
-    group_key_ = group_key;
-    tags_ = tags;
-    init_collect_ = init_collect;
-    init_max_measurements_ = init_max_measurements;
-    include_measurement_name_ = include_measurement_name;
-    include_measurement_plugin_ = include_measurement_plugin;
-    remote_keys_ = remote_keys;
-    remote_prefixes_ = remote_prefixes;
-    nested_ = nested;
-    flatten_ = flatten;
-    all_base_path_ = all_base_path;
-    all_base_path_expanded_ = all_base_path_expanded;
-    save_local_base_path_ = save_local_base_path;
-    save_local_base_path_expanded_ = save_local_base_path_expanded;
-    run_id_ = run_id;
-    run_id_enabled_ = run_id_enabled;
-    custom_keys_ = custom_keys;
+    topic_output_ = config.topic_output;
+    polling_interval_ = config.polling_interval;
+    debug_ = config.debug;
+    enable_validator_ = config.enable_validator;
+    json_schema_path_ = config.json_schema_path;
+    group_key_ = config.group_key;
+    tags_ = config.tags;
+    init_collect_ = config.init_collect;
+    init_max_measurements_ = config.init_max_measurements;
+    include_measurement_name_ = config.include_measurement_name;
+    include_measurement_plugin_ = config.include_measurement_plugin;
+    remote_keys_ = config.remote_keys;
+    remote_prefixes_ = config.remote_prefixes;
+    nested_ = config.nested;
+    flatten_ = config.flatten;
+    all_base_path_ = config.all_base_path;
+    all_base_path_expanded_ = config.all_base_path_expanded;
+    save_local_base_path_ = config.save_local_base_path;
+    save_local_base_path_expanded_ = config.save_local_base_path_expanded;
+    run_id_ = config.run_id;
+    run_id_enabled_ = config.run_id_enabled;
+    custom_keys_ = config.custom_keys;
 
-    condition_max_measurements_ = condition_max_measurements;
-    condition_set_ = dc_core::ConditionSet(if_all_conditions, if_any_conditions, if_none_conditions);
+    condition_max_measurements_ = config.condition_max_measurements;
+    condition_set_ =
+        dc_core::ConditionSet(config.if_all_conditions, config.if_any_conditions, config.if_none_conditions);
 
-    gate_condition_ = gate_condition;
+    gate_condition_ = config.gate_condition;
     // No gate configured means collection is never held back.
     gate_armed_ = gate_condition_.empty();
 
@@ -840,11 +828,11 @@ public:
     collect_timer_ = node->create_wall_timer(
         std::chrono::milliseconds(polling_interval_), [this] { collectAndPublish(); }, client_cb_group_);
 
-    buffer_duration_sec_ = buffer_duration_sec;
-    post_roll_duration_sec_ = post_roll_duration_sec;
-    cooldown_sec_ = cooldown_sec;
-    max_flush_rate_hz_ = max_flush_rate_hz;
-    flush_topic_ = flush_topic.empty() ? std::string("/dc/flush") : flush_topic;
+    buffer_duration_sec_ = config.buffer_duration_sec;
+    post_roll_duration_sec_ = config.post_roll_duration_sec;
+    cooldown_sec_ = config.cooldown_sec;
+    max_flush_rate_hz_ = config.max_flush_rate_hz;
+    flush_topic_ = config.flush_topic.empty() ? std::string("/dc/flush") : config.flush_topic;
     if (buffer_duration_sec_ > 0.0)
     {
       releaser_ = std::make_shared<IncidentReleaser>(
