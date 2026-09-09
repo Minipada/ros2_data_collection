@@ -40,10 +40,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 E2E_DIR="$(dirname "$SCRIPT_DIR")"
 RUN_DIR="$E2E_DIR/.run/limits_capacity_baseline"
 
-mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
 
-log() { echo "[e2e-baseline $(date -u +%H:%M:%S)] $*"; }
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/harness.sh"
+
+# No topology of its own — it sequences the four axis scripts and combines what they
+# already produce; the manifest is just its run dir (and the log prefix).
+harness_init --tag e2e-baseline --run-dir "$RUN_DIR"
 
 log "=== axis 1/4: Shipper fan-in (#382) ==="
 "$SCRIPT_DIR/run_limits_shipper_fanin.sh"

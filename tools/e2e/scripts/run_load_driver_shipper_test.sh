@@ -44,7 +44,6 @@ RATE_HZ="${DC_E2E_LOAD_DRIVER_RATE_HZ:-20}"
 DURATION_S="${DC_E2E_LOAD_DRIVER_DURATION_S:-3}"
 PORT="${DC_E2E_LOAD_DRIVER_PORT:-24224}"
 TAG="dc.e2e.load_driver_shipper_test"
-KEEP="${DC_E2E_KEEP:-false}"
 
 VECTOR_C=dc_e2e_ldtest_vector
 
@@ -53,29 +52,19 @@ VECTOR_C=dc_e2e_ldtest_vector
 # docs/adr/0002-vector-as-default-shipper.md) by lib/version.sh (#484), not duplicated
 # here as a second source of truth.
 # shellcheck disable=SC1091
-source "$SCRIPT_DIR/lib/version.sh"
+source "$SCRIPT_DIR/lib/harness.sh"
 VECTOR_VERSION="$(vector_version)"
 VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
 
-log() { echo "[load-driver-shipper-test $(date -u +%H:%M:%S)] $*"; }
-
-cleanup() {
-  local exit_code=$?
-  if [ "$exit_code" -ne 0 ] && [ "$KEEP" = "true" ]; then
-    log "FAILED (exit $exit_code) -- leaving the Vector container and $RUN_DIR up (DC_E2E_KEEP=true) for debugging"
-    exit "$exit_code"
-  fi
-  log "tearing down"
-  if podman container exists "$VECTOR_C"; then
-    podman logs "$VECTOR_C" > "$RUN_DIR/vector.log" 2>&1 || true
-  fi
-  podman rm -f --ignore "$VECTOR_C" >/dev/null
-  exit "$exit_code"
-}
-trap cleanup EXIT
-
 rm -rf "$RUN_DIR"
 mkdir -p "$RUN_DIR/output"
+
+harness_init \
+  --tag load-driver-shipper-test \
+  --run-dir "$RUN_DIR" \
+  --network host \
+  --containers "$VECTOR_C" \
+  --log-captures "$VECTOR_C:vector.log"
 
 cat > "$RUN_DIR/vector.toml" <<EOF
 data_dir = "/var/lib/vector"

@@ -33,7 +33,10 @@
 # DC_E2E_UPLOAD_TIMEOUT_SECONDS (default 60, once RustFS is up connections are fast).
 #
 # The shared harness skeleton (image resolution, cleanup trap, destination bring-up and
-# readiness waits) lives in lib/harness.sh.
+# readiness waits) lives in lib/harness.sh. The two dc_files assertions live in
+# verify_zero_loss.py's `retention` profile (#496); what stays here is the topology (a
+# store that only comes up halfway through), the shed File's absence *on disk*, and the
+# bounded waits those assertions sit on the far side of.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -47,27 +50,21 @@ PG_C=dc_e2e_ret_postgres
 RUSTFS_C=dc_e2e_ret_rustfs
 DC_C=dc_e2e_ret_dc
 VOLUMES=(dc_e2e_ret_pgdata dc_e2e_ret_rustfs_data dc_e2e_ret_buffer dc_e2e_ret_data)
-# shellcheck disable=SC2034  # consumed by lib/harness.sh
-HARNESS_TAG=e2e-retention
 
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/harness.sh"
 
-mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
 
-remove_stack() {
-  podman rm -f --ignore "$DC_C" "$PG_C" "$RUSTFS_C" >/dev/null
-  for v in "${VOLUMES[@]}"; do
-    if podman volume exists "$v"; then
-      podman volume rm "$v" >/dev/null
-    fi
-  done
-}
-
-# shellcheck disable=SC2034  # consumed by lib/harness.sh's teardown
-HARNESS_LOG_CAPTURES=("$DC_C:dc_retention.log")
-trap harness_cleanup EXIT
+harness_init \
+  --tag e2e-retention \
+  --run-dir "$RUN_DIR" \
+  --network host \
+  --containers "$DC_C" "$PG_C" "$RUSTFS_C" \
+  --volumes "${VOLUMES[*]}" \
+  --log-captures "$DC_C:dc_retention.log" \
+  --pg-container "$PG_C" \
+  --rustfs-container "$RUSTFS_C"
 
 # --- obtain the DC stack image (shared with run.sh — see its header) ----------------
 DC_IMAGE="" # set by resolve_image
@@ -91,21 +88,13 @@ podman run -d --network host --name "$DC_C" \
 
 # --- verify the shed happens while the store is down ---------------------------------
 log "waiting up to ${SHED_TIMEOUT_SECONDS}s for a shed audit row (deleted=true, uploaded=false) in dc_files"
-DEADLINE=$(( $(date +%s) + SHED_TIMEOUT_SECONDS ))
-SHED_COUNT=0
-while [ "$(date +%s)" -lt "$DEADLINE" ]; do
-  SHED_COUNT="$(pg_exec "SELECT count(*) FROM dc_files WHERE deleted = true AND uploaded = false" 2>/dev/null || echo 0)"
-  if [ "${SHED_COUNT:-0}" -gt 0 ] 2>/dev/null; then
-    break
-  fi
-  sleep 2
-done
-
-if [ "${SHED_COUNT:-0}" -eq 0 ]; then
-  log "FAIL: no shed-without-upload audit row landed within ${SHED_TIMEOUT_SECONDS}s"
-  exit 1
-fi
-log "PASS: ${SHED_COUNT} shed-without-upload audit row(s) — the oldest un-uploaded File(s) were shed while RustFS was down"
+python3 "$SCRIPT_DIR/verify_zero_loss.py" \
+  --postgres-container "$PG_C" \
+  --profile retention \
+  --stage shed \
+  --timeout-seconds "$SHED_TIMEOUT_SECONDS" \
+  --report "$RUN_DIR/verification_report_retention_shed.json"
+log "PASS: the oldest un-uploaded File(s) were shed while RustFS was down"
 
 # The shed local File must actually be gone (File+intent atomicity) — not just the row.
 SHED_LOCAL_PATH="$(pg_exec "SELECT local_path FROM dc_files WHERE deleted = true AND uploaded = false ORDER BY updated_at ASC LIMIT 1" 2>/dev/null || true)"
@@ -128,20 +117,12 @@ wait_rustfs_ready
 create_rustfs_bucket http://127.0.0.1:9000 >/dev/null
 
 log "waiting up to ${UPLOAD_TIMEOUT_SECONDS}s for a normal upload (uploaded=true) in dc_files now that RustFS is up"
-DEADLINE=$(( $(date +%s) + UPLOAD_TIMEOUT_SECONDS ))
-UPLOADED_COUNT=0
-while [ "$(date +%s)" -lt "$DEADLINE" ]; do
-  UPLOADED_COUNT="$(pg_exec "SELECT count(*) FROM dc_files WHERE uploaded = true" 2>/dev/null || echo 0)"
-  if [ "${UPLOADED_COUNT:-0}" -gt 0 ] 2>/dev/null; then
-    break
-  fi
-  sleep 2
-done
-
-if [ "${UPLOADED_COUNT:-0}" -eq 0 ]; then
-  log "FAIL: no File uploaded/verified within ${UPLOAD_TIMEOUT_SECONDS}s of RustFS coming up"
-  exit 1
-fi
-log "PASS: ${UPLOADED_COUNT} File(s) uploaded and verified normally once the store came back"
+python3 "$SCRIPT_DIR/verify_zero_loss.py" \
+  --postgres-container "$PG_C" \
+  --profile retention \
+  --stage uploaded \
+  --timeout-seconds "$UPLOAD_TIMEOUT_SECONDS" \
+  --report "$RUN_DIR/verification_report_retention_uploaded.json"
+log "PASS: File(s) uploaded and verified normally once the store came back"
 
 log "PASS: files retention E2E scenario (#267)"

@@ -69,7 +69,6 @@ SUB_WINDOWS_PER_LEVEL="${DC_E2E_FANIN_SUB_WINDOWS_PER_LEVEL:-5}"
 CONSTRAINED_CPUS="${DC_E2E_FANIN_CONSTRAINED_CPUS:-0.5}"
 CONSTRAINED_MEMORY="${DC_E2E_FANIN_CONSTRAINED_MEMORY:-256m}"
 CEILING_DROP_RATIO="${DC_E2E_FANIN_CEILING_DROP_RATIO:-0.5}"
-KEEP="${DC_E2E_KEEP:-false}"
 
 NET=dc-e2e-limits-net
 # Same names params/e2e_limits_params.yaml and params/e2e_limits_forward_sink.toml
@@ -82,124 +81,67 @@ AGG_FLUENT_PORT=24224
 STACK_PREFIX=dc-e2e-limits-stack-
 LEDGER_STACK_INDEX=0
 
-mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
 
-log() { echo "[e2e-fanin $(date -u +%H:%M:%S)] $*"; }
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/harness.sh"
 
 stack_name() { echo "${STACK_PREFIX}$1"; }
 
-all_stack_names() {
-  local i
-  for ((i = 0; i < REAL_STACKS; i++)); do
-    stack_name "$i"
-  done
-}
+STACKS=()
+STACK_VOLUMES=()
+STACK_LOG_CAPTURES=()
+i=0
+while [ "$i" -lt "$REAL_STACKS" ]; do
+  s="$(stack_name "$i")"
+  STACKS+=("$s")
+  STACK_VOLUMES+=("dc_e2e_limits_buffer_$i" "dc_e2e_limits_data_$i")
+  STACK_LOG_CAPTURES+=("$s:$s.log")
+  i=$((i + 1))
+done
 
+harness_init \
+  --tag e2e-fanin \
+  --run-dir "$RUN_DIR" \
+  --network "$NET" \
+  --containers "${STACKS[@]}" "$AGG_C" "$PG_C" "$RUSTFS_C" \
+  --volumes "${STACK_VOLUMES[*]}" dc_e2e_limits_pgdata dc_e2e_limits_rustfs_data \
+  --teardown-networks "$NET" \
+  --log-captures "${STACK_LOG_CAPTURES[@]}" "$AGG_C:agg.log" \
+  --pg-container "$PG_C" \
+  --rustfs-container "$RUSTFS_C"
+
+# remove_stack is the whole-stack teardown; the per-phase teardown between the two ramp
+# phases is the same blocks minus the shared stores and network.
 remove_phase_containers() {
-  # shellcheck disable=SC2046
-  podman rm -f --ignore $(all_stack_names) "$AGG_C" >/dev/null
-  local i v
-  for ((i = 0; i < REAL_STACKS; i++)); do
-    for v in "dc_e2e_limits_buffer_$i" "dc_e2e_limits_data_$i"; do
-      if podman volume exists "$v"; then
-        podman volume rm "$v" >/dev/null
-      fi
-    done
-  done
+  harness_rm_containers "${STACKS[@]}" "$AGG_C"
+  harness_rm_volumes "${STACK_VOLUMES[@]}"
 }
-
-remove_all() {
-  remove_phase_containers
-  podman rm -f --ignore "$PG_C" "$RUSTFS_C" >/dev/null
-  for v in dc_e2e_limits_pgdata dc_e2e_limits_rustfs_data; do
-    if podman volume exists "$v"; then
-      podman volume rm "$v" >/dev/null
-    fi
-  done
-  podman network rm "$NET" >/dev/null 2>&1 || true
-}
-
-cleanup() {
-  local exit_code=$?
-  if [ "$exit_code" -ne 0 ] && [ "$KEEP" = "true" ]; then
-    log "FAILED (exit $exit_code) — leaving the stack up (DC_E2E_KEEP=true) for debugging"
-    exit "$exit_code"
-  fi
-  log "tearing down"
-  local s
-  for s in $(all_stack_names); do
-    if podman container exists "$s"; then
-      podman logs "$s" > "$RUN_DIR/${s}.log" 2>&1
-    fi
-  done
-  if podman container exists "$AGG_C"; then
-    podman logs "$AGG_C" > "$RUN_DIR/agg.log" 2>&1
-  fi
-  remove_all
-  exit "$exit_code"
-}
-trap cleanup EXIT
 
 # --- obtain the DC stack image (shared with run.sh / run_limits_two_tier.sh) ------------
-if [ -n "${DC_E2E_IMAGE:-}" ]; then
-  log "using prebuilt E2E image: $DC_E2E_IMAGE (no build)"
-  podman image exists "$DC_E2E_IMAGE" || podman pull "$DC_E2E_IMAGE"
-  DC_IMAGE="$DC_E2E_IMAGE"
-else
-  if [ -n "${DC_WORKSPACE_IMAGE:-}" ]; then
-    log "using prebuilt DC workspace image: $DC_WORKSPACE_IMAGE (skipping build.sh)"
-    podman image exists "$DC_WORKSPACE_IMAGE" || podman pull "$DC_WORKSPACE_IMAGE"
-    WORKSPACE_IMAGE="$DC_WORKSPACE_IMAGE"
-  else
-    log "building the DC workspace image (tools/e2e/scripts/build.sh — the same build CI uses)"
-    "$SCRIPT_DIR/build.sh"
-    WORKSPACE_IMAGE="dc-workspace:latest"
-  fi
-  log "building the E2E image (Containerfile.e2e, FROM the workspace image)"
-  podman build --build-arg "BASE_IMAGE=$WORKSPACE_IMAGE" -t dc-e2e:latest -f Containerfile.e2e .
-  DC_IMAGE="dc-e2e:latest"
-fi
+DC_IMAGE="" # set by resolve_image
+resolve_image
 
 # Resolved from the .repos pin that fetches vector_vendor (its own repo as of #424's
-# follow-up split) by lib/version.sh (#484), not duplicated here as a second source
-# of truth.
-# shellcheck disable=SC1091
-source "$SCRIPT_DIR/lib/version.sh"
+# follow-up split) by lib/version.sh (#484, already sourced by lib/harness.sh), not
+# duplicated here as a second source of truth.
 VECTOR_VERSION="$(vector_version)"
 VECTOR_IMAGE="docker.io/timberio/vector:${VECTOR_VERSION}-debian"
 
-remove_all
+remove_stack
 
 # --- bridge network + shared destinations (kept up across both phases) ------------------
 log "creating the bridge network ($NET)"
 podman network create "$NET" >/dev/null
 
 log "starting the shared Postgres + RustFS on $NET"
-podman run -d --network "$NET" --name "$PG_C" \
-  -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
-  -v dc_e2e_limits_pgdata:/var/lib/postgresql/data \
-  -v "$E2E_DIR/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro" \
-  docker.io/library/postgres:13 >/dev/null
-podman run -d --network "$NET" --name "$RUSTFS_C" \
-  -v dc_e2e_limits_rustfs_data:/data \
-  docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c >/dev/null
-
-timeout 120 bash -c "until podman exec $PG_C psql -U dc -d dc -tAc \"SELECT to_regclass('public.dc_records')\" 2>/dev/null | grep -q dc_records; do sleep 2; done" \
-  || { log "FAIL: Postgres never came up with sql/init.sql applied"; exit 1; }
-
-log "waiting for RustFS to accept TCP connections on $NET"
-timeout 60 bash -c "
-  until podman run --rm --network $NET --entrypoint bash '$DC_IMAGE' -c 'exec 3<>/dev/tcp/$RUSTFS_C/9000' >/dev/null 2>&1; do
-    sleep 1
-  done
-" || { log "FAIL: RustFS never became reachable on $NET"; exit 1; }
+start_postgres dc_e2e_limits_pgdata
+start_rustfs dc_e2e_limits_rustfs_data
+wait_postgres_ready
+wait_rustfs_ready
 
 log "creating the RustFS bucket"
-podman run --rm --network "$NET" \
-  -e AWS_ACCESS_KEY_ID=rustfsadmin -e AWS_SECRET_ACCESS_KEY=rustfsadmin -e AWS_DEFAULT_REGION=us-east-1 \
-  docker.io/amazon/aws-cli:latest \
-  --endpoint-url "http://$RUSTFS_C:9000" s3 mb s3://dc-e2e
+create_rustfs_bucket "http://$RUSTFS_C:9000"
 
 # --- the aggregating Shipper's Vector config, rendered once and reused across both phases
 cat > "$RUN_DIR/aggregator_vector.toml" <<EOF
@@ -230,8 +172,6 @@ max_size = 268435488
 type = "blackhole"
 inputs = ["from_synth"]
 EOF
-
-pg_exec() { podman exec "$PG_C" psql -U dc -d dc -tAc "$1"; }
 
 truncate_records() {
   log "truncating dc_records/dc_files so the next phase starts from a clean baseline"
@@ -280,8 +220,7 @@ run_phase() {
   done
 
   log "waiting for the first Record to reach Postgres through the two-tier chain"
-  timeout 90 bash -c "until [ \"\$(podman exec $PG_C psql -U dc -d dc -tAc 'SELECT count(*) FROM dc_records' 2>/dev/null || echo 0)\" -gt 0 ] 2>/dev/null; do sleep 1; done" \
-    || { log "FAIL: no Record reached Postgres through the two-tier chain within 90s"; exit 1; }
+  wait_first_record 90 "$(date +%s.%N)" "through the two-tier chain" >/dev/null
   log "PASS: real-stack traffic is flowing through the aggregating Shipper — starting the ramp"
 
   local data_vol="dc_e2e_limits_data_${LEDGER_STACK_INDEX}"
@@ -307,7 +246,7 @@ run_phase() {
     | tee "$RUN_DIR/${label}_orchestrator.log"
 
   log "stopping $label's real DC stack(s)"
-  for s in $(all_stack_names); do
+  for s in "${STACKS[@]}"; do
     podman stop "$s" >/dev/null
   done
 
@@ -318,7 +257,7 @@ run_phase() {
 
 stop_phase() {
   local s
-  for s in $(all_stack_names); do
+  for s in "${STACKS[@]}"; do
     if podman container exists "$s"; then
       podman logs "$s" > "$RUN_DIR/${s}_$1.log" 2>&1
     fi

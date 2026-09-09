@@ -41,8 +41,8 @@
 #                                locally-built dc-e2e image (skips build.sh). Ignored when
 #                                DC_E2E_IMAGE is set. Unset: build.sh builds it.
 #
-# The shared harness skeleton (image resolution, cleanup trap, destination bring-up and
-# readiness waits, volume extraction) lives in lib/harness.sh.
+# The shared harness skeleton (lib/harness.sh) owns the image resolution, the cleanup
+# trap, destination bring-up and readiness waits, volume extraction and teardown.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -72,23 +72,17 @@ VOLUMES=(dc_e2e_pgdata dc_e2e_rustfs_data dc_e2e_buffer dc_e2e_uploader dc_e2e_d
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/harness.sh"
 
-mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
 
-remove_stack() {
-  # --ignore makes "no such container" a clean success while still surfacing real errors
-  # (a broken podman, a container that won't die); likewise only remove volumes that exist.
-  podman rm -f --ignore "$DC_C" "$PG_C" "$RUSTFS_C" >/dev/null
-  for v in "${VOLUMES[@]}"; do
-    if podman volume exists "$v"; then
-      podman volume rm "$v" >/dev/null
-    fi
-  done
-}
-
-# shellcheck disable=SC2034  # consumed by lib/harness.sh's teardown
-HARNESS_LOG_CAPTURES=("$DC_C:dc.log")
-trap harness_cleanup EXIT
+harness_init \
+  --tag e2e \
+  --run-dir "$RUN_DIR" \
+  --network host \
+  --containers "$DC_C" "$PG_C" "$RUSTFS_C" \
+  --volumes "${VOLUMES[*]}" \
+  --log-captures "$DC_C:dc.log" \
+  --pg-container "$PG_C" \
+  --rustfs-container "$RUSTFS_C"
 
 # --- obtain the DC stack image ------------------------------------------------------
 DC_IMAGE="" # set by resolve_image
@@ -110,7 +104,7 @@ create_rustfs_bucket http://127.0.0.1:9000
 # Resource usage (CPU/RSS) is informational per the PRD, not gating — sampled for the
 # whole run so tools/e2e/scripts/measure_resources.sh's summary covers steady state.
 "$SCRIPT_DIR/measure_resources.sh" "$RUN_DIR/resource_usage.csv" &
-STATS_PID=$!
+harness_stats_pid "$!"
 
 # --- start the DC stack, measure launch-to-first-Record -----------------------------
 log "starting the DC stack — measuring launch-to-first-Record latency"
@@ -121,21 +115,8 @@ podman run -d --network host --name "$DC_C" \
   -v dc_e2e_data:/root/.dc/e2e/data \
   "$DC_IMAGE" >/dev/null
 
-FIRST_RECORD_LATENCY=""
-DEADLINE=$(echo "$START_TS + $STARTUP_TIMEOUT_SECONDS + 5" | bc)
-while (( $(echo "$(date +%s.%N) < $DEADLINE" | bc) )); do
-  COUNT="$(pg_exec 'SELECT count(*) FROM dc_records' 2>/dev/null || echo 0)"
-  if [ "${COUNT:-0}" -gt 0 ] 2>/dev/null; then
-    FIRST_RECORD_LATENCY=$(echo "$(date +%s.%N) - $START_TS" | bc)
-    break
-  fi
-  sleep 0.2
-done
-
-if [ -z "$FIRST_RECORD_LATENCY" ]; then
-  log "FAIL: no Record landed in Postgres within $((STARTUP_TIMEOUT_SECONDS + 5))s of starting the stack"
-  exit 1
-fi
+FIRST_RECORD_LATENCY="$(wait_first_record \
+  "$((STARTUP_TIMEOUT_SECONDS + 5))" "$START_TS" "of starting the stack")"
 log "first Record landed after ${FIRST_RECORD_LATENCY}s"
 if (( $(echo "$FIRST_RECORD_LATENCY > $STARTUP_TIMEOUT_SECONDS" | bc) )); then
   log "FAIL: startup latency ${FIRST_RECORD_LATENCY}s exceeds the ${STARTUP_TIMEOUT_SECONDS}s gate"
@@ -165,10 +146,7 @@ log "stopping the workload so counts settle before verification"
 podman stop "$DC_C" >/dev/null
 sleep 5
 
-if [ -n "$STATS_PID" ] && kill -0 "$STATS_PID" 2>/dev/null; then
-  kill "$STATS_PID"
-fi
-STATS_PID=""
+harness_stats_pid ""
 
 # --- durable upload intent queue (#265) ----------------------------------------------
 # The outage+restart above is this harness's stand-in for #265's own e2e acceptance

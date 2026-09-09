@@ -53,7 +53,6 @@ LEVELS="${DC_E2E_UPLOAD_LEVELS:-1,2,4,8}"
 CAMERA_PERIOD_S="${DC_E2E_UPLOAD_CAMERA_PERIOD_S:-2}"
 STEADY_STATE_SECONDS="${DC_E2E_UPLOAD_STEADY_STATE_SECONDS:-60}"
 SAMPLE_INTERVAL_SECONDS="${DC_E2E_UPLOAD_SAMPLE_INTERVAL_SECONDS:-5}"
-KEEP="${DC_E2E_KEEP:-false}"
 
 # Hyphens, not underscores — same reasoning as run_limits_two_tier.sh's PG_C/RUSTFS_C:
 # these names are embedded in URLs (RustFS/Postgres endpoints), and aws-cli 2.36's
@@ -62,61 +61,27 @@ NET=dc-e2e-upload-net
 PG_C=dc-e2e-upload-postgres
 RUSTFS_C=dc-e2e-upload-rustfs
 
-mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
 
-log() { echo "[e2e-upload-axis $(date -u +%H:%M:%S)] $*"; }
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/harness.sh"
 
-remove_stack() {
-  # Any per-level Bridge containers/volumes are already cleaned up by
-  # run_upload_concurrency_axis.py's own driver as each level finishes — only the
-  # shared storage + network this script itself started remain here.
-  podman rm -f --ignore "$PG_C" "$RUSTFS_C" >/dev/null
-  for v in dc_e2e_upload_pgdata dc_e2e_upload_rustfs_data; do
-    if podman volume exists "$v"; then
-      podman volume rm "$v" >/dev/null
-    fi
-  done
-  podman network rm "$NET" >/dev/null 2>&1 || true
-}
-
-cleanup() {
-  local exit_code=$?
-  if [ "$exit_code" -ne 0 ] && [ "$KEEP" = "true" ]; then
-    log "FAILED (exit $exit_code) — leaving the shared storage up (DC_E2E_KEEP=true) for debugging"
-    exit "$exit_code"
-  fi
-  log "tearing down shared storage"
-  if podman container exists "$PG_C"; then
-    podman logs "$PG_C" > "$RUN_DIR/postgres.log" 2>&1
-  fi
-  if podman container exists "$RUSTFS_C"; then
-    podman logs "$RUSTFS_C" > "$RUN_DIR/rustfs.log" 2>&1
-  fi
-  remove_stack
-  exit "$exit_code"
-}
-trap cleanup EXIT
+# The per-level Bridge containers/volumes are run_upload_concurrency_axis.py's own driver's
+# to clean up as each level finishes — only the shared storage this script starts is ours.
+harness_init \
+  --tag e2e-upload-axis \
+  --run-dir "$RUN_DIR" \
+  --network "$NET" \
+  --containers "$PG_C" "$RUSTFS_C" \
+  --volumes dc_e2e_upload_pgdata dc_e2e_upload_rustfs_data \
+  --teardown-networks "$NET" \
+  --log-captures "$PG_C:postgres.log" "$RUSTFS_C:rustfs.log" \
+  --pg-container "$PG_C" \
+  --rustfs-container "$RUSTFS_C"
 
 # --- obtain the DC stack image (shared with run.sh — see its header) ------------------
-if [ -n "${DC_E2E_IMAGE:-}" ]; then
-  log "using prebuilt E2E image: $DC_E2E_IMAGE (no build)"
-  podman image exists "$DC_E2E_IMAGE" || podman pull "$DC_E2E_IMAGE"
-  DC_IMAGE="$DC_E2E_IMAGE"
-else
-  if [ -n "${DC_WORKSPACE_IMAGE:-}" ]; then
-    log "using prebuilt DC workspace image: $DC_WORKSPACE_IMAGE (skipping build.sh)"
-    podman image exists "$DC_WORKSPACE_IMAGE" || podman pull "$DC_WORKSPACE_IMAGE"
-    WORKSPACE_IMAGE="$DC_WORKSPACE_IMAGE"
-  else
-    log "building the DC workspace image (tools/e2e/scripts/build.sh — the same build CI uses)"
-    "$SCRIPT_DIR/build.sh"
-    WORKSPACE_IMAGE="dc-workspace:latest"
-  fi
-  log "building the E2E image (Containerfile.e2e, FROM the workspace image)"
-  podman build --build-arg "BASE_IMAGE=$WORKSPACE_IMAGE" -t dc-e2e:latest -f Containerfile.e2e .
-  DC_IMAGE="dc-e2e:latest"
-fi
+DC_IMAGE="" # set by resolve_image
+resolve_image
 
 # Clean any leftovers from a previous (possibly DC_E2E_KEEP=true) run.
 remove_stack
@@ -126,34 +91,15 @@ log "creating the bridge network ($NET)"
 podman network create "$NET" >/dev/null
 
 log "starting the shared Postgres + RustFS on $NET"
-podman run -d --network "$NET" --name "$PG_C" \
-  -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
-  -v dc_e2e_upload_pgdata:/var/lib/postgresql/data \
-  -v "$E2E_DIR/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro" \
-  docker.io/library/postgres:13 >/dev/null
-podman run -d --network "$NET" --name "$RUSTFS_C" \
-  -v dc_e2e_upload_rustfs_data:/data \
-  docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c >/dev/null
-
-timeout 120 bash -c "until podman exec $PG_C psql -U dc -d dc -tAc \"SELECT to_regclass('public.dc_files')\" 2>/dev/null | grep -q dc_files; do sleep 2; done" \
-  || { log "FAIL: Postgres never came up with sql/init.sql applied"; exit 1; }
-
-log "waiting for RustFS to accept TCP connections on $NET"
-# --entrypoint bash: the image's own ENTRYPOINT (entrypoint.sh) launches the full DC
-# stack and appends any extra args to `ros2 launch` rather than running them as a
-# separate command, so a one-off diagnostic run needs an explicit override — same
-# reasoning and probe run_limits_two_tier.sh uses.
-timeout 60 bash -c "
-  until podman run --rm --network $NET --entrypoint bash '$DC_IMAGE' -c 'exec 3<>/dev/tcp/$RUSTFS_C/9000' >/dev/null 2>&1; do
-    sleep 1
-  done
-" || { log "FAIL: RustFS never became reachable on $NET"; exit 1; }
+start_postgres dc_e2e_upload_pgdata
+start_rustfs dc_e2e_upload_rustfs_data
+# One pass of sql/init.sql creates dc_records and dc_files together, so gating on either
+# gates on the other — this axis's ramp only writes dc_files.
+wait_postgres_ready
+wait_rustfs_ready
 
 log "creating the RustFS bucket"
-podman run --rm --network "$NET" \
-  -e AWS_ACCESS_KEY_ID=rustfsadmin -e AWS_SECRET_ACCESS_KEY=rustfsadmin -e AWS_DEFAULT_REGION=us-east-1 \
-  docker.io/amazon/aws-cli:latest \
-  --endpoint-url "http://$RUSTFS_C:9000" s3 mb s3://dc-e2e
+create_rustfs_bucket "http://$RUSTFS_C:9000"
 
 # --- the ramp itself: run_upload_concurrency_axis.py owns everything from here --------
 log "running the Uploader concurrency ramp (levels: $LEVELS)"

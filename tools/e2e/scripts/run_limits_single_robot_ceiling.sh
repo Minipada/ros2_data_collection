@@ -47,86 +47,43 @@ LEVEL_DURATION="${DC_E2E_CEILING_LEVEL_DURATION:-30}"
 SAMPLE_INTERVAL="${DC_E2E_CEILING_SAMPLE_INTERVAL:-3}"
 TOPIC="${DC_E2E_CEILING_TOPIC:-synth00}"
 DRAIN_SECONDS="${DC_E2E_CEILING_DRAIN_SECONDS:-30}"
-KEEP="${DC_E2E_KEEP:-false}"
 
 PG_C=dc_e2e_ceiling_postgres
 RUSTFS_C=dc_e2e_ceiling_rustfs
 DC_C=dc_e2e_ceiling_dc
 VOLUMES=(dc_e2e_ceiling_pgdata dc_e2e_ceiling_rustfs_data dc_e2e_ceiling_buffer dc_e2e_ceiling_data)
 
-mkdir -p "$RUN_DIR"
 cd "$E2E_DIR"
 
-log() { echo "[e2e-ceiling $(date -u +%H:%M:%S)] $*"; }
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/harness.sh"
 
-remove_stack() {
-  podman rm -f --ignore "$DC_C" "$PG_C" "$RUSTFS_C" >/dev/null
-  local v
-  for v in "${VOLUMES[@]}"; do
-    if podman volume exists "$v"; then
-      podman volume rm "$v" >/dev/null
-    fi
-  done
-}
-
-cleanup() {
-  local exit_code=$?
-  if [ "$exit_code" -ne 0 ] && [ "$KEEP" = "true" ]; then
-    log "FAILED (exit $exit_code) — leaving the stack up (DC_E2E_KEEP=true) for debugging"
-    exit "$exit_code"
-  fi
-  log "tearing down"
-  if podman container exists "$DC_C"; then
-    podman logs "$DC_C" > "$RUN_DIR/dc.log" 2>&1
-  fi
-  remove_stack
-  exit "$exit_code"
-}
-trap cleanup EXIT
+harness_init \
+  --tag e2e-ceiling \
+  --run-dir "$RUN_DIR" \
+  --network host \
+  --containers "$DC_C" "$PG_C" "$RUSTFS_C" \
+  --volumes "${VOLUMES[*]}" \
+  --log-captures "$DC_C:dc.log" \
+  --pg-container "$PG_C" \
+  --rustfs-container "$RUSTFS_C"
 
 # --- obtain the DC stack image (same convention as run.sh — see its header) -----------
-if [ -n "${DC_E2E_IMAGE:-}" ]; then
-  log "using prebuilt E2E image: $DC_E2E_IMAGE (no build)"
-  podman image exists "$DC_E2E_IMAGE" || podman pull "$DC_E2E_IMAGE"
-  DC_IMAGE="$DC_E2E_IMAGE"
-else
-  if [ -n "${DC_WORKSPACE_IMAGE:-}" ]; then
-    log "using prebuilt DC workspace image: $DC_WORKSPACE_IMAGE (skipping build.sh)"
-    podman image exists "$DC_WORKSPACE_IMAGE" || podman pull "$DC_WORKSPACE_IMAGE"
-    WORKSPACE_IMAGE="$DC_WORKSPACE_IMAGE"
-  else
-    log "building the DC workspace image (tools/e2e/scripts/build.sh — the same build CI uses)"
-    "$SCRIPT_DIR/build.sh"
-    WORKSPACE_IMAGE="dc-workspace:latest"
-  fi
-  log "building the E2E image (Containerfile.e2e, FROM the workspace image)"
-  podman build --build-arg "BASE_IMAGE=$WORKSPACE_IMAGE" -t dc-e2e:latest -f Containerfile.e2e .
-  DC_IMAGE="dc-e2e:latest"
-fi
+DC_IMAGE="" # set by resolve_image
+resolve_image
 
 remove_stack
 
 # --- destinations + the one real DC stack ----------------------------------------------
 log "starting Postgres + RustFS"
-podman run -d --network host --name "$PG_C" \
-  -e POSTGRES_USER=dc -e POSTGRES_PASSWORD=password -e POSTGRES_DB=dc \
-  -v dc_e2e_ceiling_pgdata:/var/lib/postgresql/data \
-  -v "$E2E_DIR/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro" \
-  docker.io/library/postgres:13 >/dev/null
-podman run -d --network host --name "$RUSTFS_C" \
-  -v dc_e2e_ceiling_rustfs_data:/data \
-  docker.io/rustfs/rustfs@sha256:84ce557a0245a06a9aae5516f55ee0f007fca78d41df356f419306fdc0cb168c >/dev/null
-
-timeout 60 bash -c "until podman exec $PG_C pg_isready -U dc >/dev/null 2>&1; do sleep 1; done" \
-  || { log "FAIL: Postgres never became ready"; exit 1; }
-timeout 60 bash -c 'until curl -sf http://127.0.0.1:9000 >/dev/null 2>&1 || curl -s http://127.0.0.1:9000 >/dev/null 2>&1; do sleep 1; done' \
-  || { log "FAIL: RustFS never became ready"; exit 1; }
+start_postgres dc_e2e_ceiling_pgdata
+start_rustfs dc_e2e_ceiling_rustfs_data
+# 60, as before: the ramp's own level timing starts from the stack being up.
+wait_postgres_ready 60
+wait_rustfs_ready
 
 log "creating the RustFS bucket"
-podman run --rm --network host \
-  -e AWS_ACCESS_KEY_ID=rustfsadmin -e AWS_SECRET_ACCESS_KEY=rustfsadmin -e AWS_DEFAULT_REGION=us-east-1 \
-  docker.io/amazon/aws-cli:latest \
-  --endpoint-url http://127.0.0.1:9000 s3 mb s3://dc-e2e
+create_rustfs_bucket http://127.0.0.1:9000
 
 log "starting the DC stack"
 podman run -d --network host --name "$DC_C" \
@@ -135,8 +92,7 @@ podman run -d --network host --name "$DC_C" \
   "$DC_IMAGE" >/dev/null
 
 log "waiting for the first Record to reach Postgres"
-timeout 60 bash -c "until [ \"\$(podman exec $PG_C psql -U dc -d dc -tAc 'SELECT count(*) FROM dc_records' 2>/dev/null || echo 0)\" -gt 0 ] 2>/dev/null; do sleep 1; done" \
-  || { log "FAIL: no Record landed in Postgres within 60s of starting the stack"; exit 1; }
+wait_first_record 60 "$(date +%s.%N)" "of starting the stack" >/dev/null
 log "PASS: the stack is up and publishing"
 
 # --- ramp the single-robot ceiling axis, via the *unmodified* ramp controller/probe ---
@@ -160,23 +116,19 @@ sleep 5
 
 # --- extract, then verify zero-loss with the existing, unmodified verifier -----------
 log "extracting the passthrough sink's output"
-podman run --rm --entrypoint bash \
-  -v dc_e2e_ceiling_data:/vol:ro "$DC_IMAGE" \
+extract_from_volume dc_e2e_ceiling_data bash \
   -c 'cat /vol/passthrough/records.ndjson 2>/dev/null || true' > "$RUN_DIR/passthrough.ndjson"
 
 log "extracting raw mode's Destination output"
-podman run --rm --entrypoint bash \
-  -v dc_e2e_ceiling_data:/vol:ro "$DC_IMAGE" \
+extract_from_volume dc_e2e_ceiling_data bash \
   -c 'cat /vol/raw/records.ndjson 2>/dev/null || true' > "$RUN_DIR/raw.ndjson"
 
 log "summarizing the MCAP passthrough writer's output"
-podman run --rm --entrypoint python3 \
-  -v dc_e2e_ceiling_data:/vol:ro "$DC_IMAGE" \
-  /opt/e2e/mcap_summary.py /vol/mcap > "$RUN_DIR/mcap_summary.json"
+extract_from_volume dc_e2e_ceiling_data python3 /opt/e2e/mcap_summary.py /vol/mcap \
+  > "$RUN_DIR/mcap_summary.json"
 
 log "extracting the workload ledger"
-podman run --rm --entrypoint bash \
-  -v dc_e2e_ceiling_data:/vol:ro "$DC_IMAGE" \
+extract_from_volume dc_e2e_ceiling_data bash \
   -c 'cat /vol/workload_ledger.txt 2>/dev/null || true' > "$RUN_DIR/workload_ledger.txt"
 
 log "verifying zero-loss across the whole ramp"
