@@ -16,15 +16,6 @@
 namespace dc_measurements
 {
 
-/// Terminal nav2 GoalStatus values relevant to a mission, expressed with no ROS dependency --
-/// ACCEPTED/EXECUTING/CANCELING never reach the tracker, only what a goal can end on.
-enum class MissionTerminalStatus
-{
-  Succeeded,
-  Canceled,
-  Aborted,
-};
-
 struct MissionEndFact
 {
   std::string mission_id;

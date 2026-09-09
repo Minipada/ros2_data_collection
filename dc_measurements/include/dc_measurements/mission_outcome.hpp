@@ -39,6 +39,18 @@ inline std::string missionOutcomeName(MissionOutcome outcome)
   return "unknown";
 }
 
+/// Terminal nav2 GoalStatus values relevant to a mission, expressed with no ROS dependency --
+/// ACCEPTED/EXECUTING/CANCELING never reach the tracker, only what a goal can end on. Shared by
+/// the single-goal trackers (MissionNav2Tracker, MissionFollowWaypointsTracker), whose missions
+/// end on the same triplet; the through-poses/Open-RMF cores take their terminal vocabulary from
+/// their own sources instead.
+enum class MissionTerminalStatus
+{
+  Succeeded,
+  Canceled,
+  Aborted,
+};
+
 /// A mission_start fact: identical across every adapter (nav2's three action variants,
 /// Open-RMF) -- only what varies per source (the terminal outcome, its reason, extra fields
 /// like recoveries/missed_waypoints) lives in each adapter's own MissionEndFact.
