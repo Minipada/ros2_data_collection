@@ -1,59 +1,24 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
-
-#include <chrono>
 #include <fstream>
 #include <functional>
 #include <nlohmann/json-schema.hpp>
-#include <string>
-#include <thread>
 #include <vector>
 
 #include "ament_index_cpp/get_package_share_directory.hpp"
 #include "controller_manager_msgs/msg/controller_manager_activity.hpp"
 #include "controller_manager_msgs/msg/named_lifecycle_state.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
+#include "measurement_test_bench.hpp"
 
-class MeasurementRos2ControlStatusTest : public ::testing::Test
+class MeasurementRos2ControlStatusTest : public MeasurementBench
 {
 protected:
-  MeasurementRos2ControlStatusTest()
+  MeasurementRos2ControlStatusTest() : MeasurementBench("ros2_control_status")
   {
-    SetUp();
-  }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(
-        rclcpp::NodeOptions(), std::vector<std::string>{ "ros2_control_status" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/ros2_control_status", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementRos2ControlStatusTest::dataCallback, this, std::placeholders::_1));
     activity_pub_ = ms_node_->create_publisher<controller_manager_msgs::msg::ControllerManagerActivity>(
         "/test/controller_manager/activity", rclcpp::QoS(1).reliable().transient_local());
-  }
-
-  void TearDown() override
-  {
-    stopCollection();
-  }
-
-  // Idempotent: one test stops collection mid-activation on purpose, and TearDown must not then
-  // drive the lifecycle node through a transition it is no longer in a state for.
-  void stopCollection()
-  {
-    if (stopped_)
-    {
-      return;
-    }
-    stopped_ = true;
-    ms_node_->deactivate();
-    ms_node_->cleanup();
   }
 
   void declareCommonParameters()
@@ -64,20 +29,6 @@ protected:
     ms_node_->declare_parameter("ros2_control_status.topic", std::string("/test/controller_manager/activity"));
     ms_node_->declare_parameter("ros2_control_status.polling_interval", 50);
     ms_node_->declare_parameter("ros2_control_status.init_collect", false);
-  }
-
-  void startLifecycleNode()
-  {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void dataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    records_.push_back(nlohmann::json::parse(data_str));
-    callback_active_ = true;
   }
 
   static controller_manager_msgs::msg::NamedLifecycleState makeEntry(const std::string& name, uint8_t state_id,
@@ -100,24 +51,6 @@ protected:
     activity_pub_->publish(msg);
   }
 
-  void spinFor(std::chrono::milliseconds duration)
-  {
-    auto deadline = std::chrono::steady_clock::now() + duration;
-    while (std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-  }
-
-  void waitForSubscriber(const std::string& topic)
-  {
-    while (ms_node_->count_subscribers(topic) == 0)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-    }
-  }
-
   // The detector treats a component's very first observed sample as a baseline, not a
   // transition: no Record comes out of it, and the state it carries never fires again since
   // nothing is left to compare against. Every test that wants to observe an actual "start"
@@ -125,7 +58,7 @@ protected:
   void establishInactiveBaseline(const std::string& name)
   {
     publishActivity({ makeEntry(name, lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE, "inactive") }, {});
-    spinFor(std::chrono::milliseconds(100));
+    spinFor(100);
   }
 
   // Republishes `controllers`/`hardware_components` until a *new* Record matching `predicate`
@@ -137,21 +70,26 @@ protected:
                      const std::function<bool(const nlohmann::json&)>& predicate)
   {
     const size_t first_new = records_.size();
-    for (int i = 0; i < 400; ++i)
+    nlohmann::json matched;
+    if (!spinUntil(
+            [&] {
+              publishActivity(controllers, hardware_components);
+              for (size_t r = first_new; r < records_.size(); ++r)
+              {
+                if (predicate(records_[r]))
+                {
+                  matched = records_[r];
+                  return true;
+                }
+              }
+              return false;
+            },
+            4000))
     {
-      publishActivity(controllers, hardware_components);
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      for (size_t r = first_new; r < records_.size(); ++r)
-      {
-        if (predicate(records_[r]))
-        {
-          return records_[r];
-        }
-      }
+      ADD_FAILURE() << "No matching Record within the timeout";
+      return nlohmann::json{};
     }
-    ADD_FAILURE() << "No matching Record within the timeout";
-    return nlohmann::json{};
+    return matched;
   }
 
   static std::function<bool(const nlohmann::json&)> isEvent(const std::string& event)
@@ -172,15 +110,7 @@ protected:
     EXPECT_NO_THROW(validator.validate(record)) << record.dump();
   }
 
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   rclcpp::Publisher<controller_manager_msgs::msg::ControllerManagerActivity>::SharedPtr activity_pub_;
-  std::vector<nlohmann::json> records_;
-
-  bool stopped_{ false };
-
-public:
-  bool callback_active_{ false };
 };
 
 TEST_F(MeasurementRos2ControlStatusTest, EnteringActiveRaisesAStartRecord)
@@ -193,7 +123,7 @@ TEST_F(MeasurementRos2ControlStatusTest, EnteringActiveRaisesAStartRecord)
   publishActivity(
       { makeEntry("diff_drive_controller", lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED, "unconfigured") },
       {});
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
   ASSERT_TRUE(records_.empty()) << "A first-seen sample is a baseline, not a transition";
 
   const std::vector<controller_manager_msgs::msg::NamedLifecycleState> active = { makeEntry(
@@ -243,7 +173,7 @@ TEST_F(MeasurementRos2ControlStatusTest, TransitionBetweenTwoNonActiveStatesProd
   publishActivity(
       { makeEntry("diff_drive_controller", lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED, "unconfigured") },
       {});
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
 
   EXPECT_TRUE(records_.empty()) << "inactive -> unconfigured crosses no `active` boundary";
 }
@@ -255,7 +185,7 @@ TEST_F(MeasurementRos2ControlStatusTest, HardwareComponentsAreTrackedIndependent
   waitForSubscriber("/test/controller_manager/activity");
 
   publishActivity({}, { makeEntry("arm", lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED, "unconfigured") });
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
   ASSERT_TRUE(records_.empty());
 
   const auto start = publishUntilRecord(
@@ -279,23 +209,10 @@ TEST_F(MeasurementRos2ControlStatusTest, ComponentActiveAtShutdownStaysOpenWithN
 
   // Collection stops with the controller still active.
   stopCollection();
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
 
   ASSERT_EQ(records_.size(), 1u) << "Shutdown must not invent a closing Record";
   EXPECT_EQ(records_.back()["event"], "start");
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

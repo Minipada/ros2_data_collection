@@ -1,23 +1,17 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
-
-#include <chrono>
 #include <fstream>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <nlohmann/json-schema.hpp>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "ament_index_cpp/get_package_share_directory.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/measurement.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
+#include "measurement_test_bench.hpp"
 #include "nav2_msgs/action/navigate_through_poses.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 
@@ -30,27 +24,16 @@ constexpr const char* kActionName = "/test/navigate_through_poses";
 // rclcpp_action::Client the test owns -- the Measurement under test never sends a goal itself, it
 // only watches this server's status/feedback/get_result endpoints (#388's passive-observer
 // design), so something else has to originate the goal the way the real BT would.
-class MeasurementMissionNav2ThroughPosesTest : public ::testing::Test
+class MeasurementMissionNav2ThroughPosesTest : public MeasurementBench
 {
 protected:
   using ActionT = nav2_msgs::action::NavigateThroughPoses;
   using ServerGoalHandleT = rclcpp_action::ServerGoalHandle<ActionT>;
   using ClientGoalHandleT = rclcpp_action::ClientGoalHandle<ActionT>;
 
-  MeasurementMissionNav2ThroughPosesTest()
+  MeasurementMissionNav2ThroughPosesTest() : MeasurementBench("mission")
   {
-    SetUp();
-  }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "mission" });
     server_node_ = std::make_shared<rclcpp::Node>("fake_nav2_through_poses_server");
-
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/mission", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementMissionNav2ThroughPosesTest::dataCallback, this, std::placeholders::_1));
 
     action_server_ = rclcpp_action::create_server<ActionT>(
         server_node_, kActionName,
@@ -60,22 +43,6 @@ protected:
         [](const std::shared_ptr<ServerGoalHandleT>&) { return rclcpp_action::CancelResponse::ACCEPT; },
         std::bind(&MeasurementMissionNav2ThroughPosesTest::handleAccepted, this, std::placeholders::_1));
     action_client_ = rclcpp_action::create_client<ActionT>(server_node_, kActionName);
-  }
-
-  void TearDown() override
-  {
-    stopCollection();
-  }
-
-  void stopCollection()
-  {
-    if (stopped_)
-    {
-      return;
-    }
-    stopped_ = true;
-    ms_node_->deactivate();
-    ms_node_->cleanup();
   }
 
   void declareCommonParameters()
@@ -88,18 +55,17 @@ protected:
     ms_node_->declare_parameter("mission.init_collect", false);
   }
 
-  void startLifecycleNode()
+  // The fake nav2 server (and the client driving it) lives on its own node, which the bench's
+  // waits spin alongside the MeasurementServer.
+  void spinExtra() override
   {
-    ms_node_->configure();
-    ms_node_->activate();
-    waitForStatusSubscriber();
+    rclcpp::spin_some(server_node_->get_node_base_interface());
   }
 
-  void dataCallback(const dc_interfaces::msg::StringStamped& msg)
+  void startLifecycleNode()
   {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    records_.push_back(nlohmann::json::parse(data_str));
+    MeasurementBench::startLifecycleNode();
+    waitForStatusSubscriber();
   }
 
   void handleAccepted(const std::shared_ptr<ServerGoalHandleT>& goal_handle)
@@ -114,62 +80,37 @@ protected:
     // throws ("invalid transition from state EXECUTING with event EXECUTE") rather than no-op it.
   }
 
-  void spinFor(std::chrono::milliseconds duration)
-  {
-    auto deadline = std::chrono::steady_clock::now() + duration;
-    while (std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      rclcpp::spin_some(server_node_);
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-  }
-
   void waitForStatusSubscriber()
   {
     const std::string topic = std::string(kActionName) + "/_action/status";
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-    while (server_node_->count_subscribers(topic) == 0 && std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      rclcpp::spin_some(server_node_);
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
+    ASSERT_TRUE(spinUntil([&] { return server_node_->count_subscribers(topic) > 0; }, 10000))
+        << "no subscriber ever appeared on " << topic;
   }
 
   std::shared_ptr<ClientGoalHandleT> sendGoal()
   {
     auto goal_msg = ActionT::Goal();
     auto goal_handle_future = action_client_->async_send_goal(goal_msg);
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-    while (goal_handle_future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready &&
-           std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(server_node_);
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-    auto goal_handle = goal_handle_future.get();
-    EXPECT_NE(goal_handle, nullptr) << "Goal was not accepted within the timeout";
-    return goal_handle;
+    EXPECT_TRUE(spinUntil(
+        [&] { return goal_handle_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready; }, 10000))
+        << "Goal was not accepted within the timeout";
+    return goal_handle_future.get();
   }
 
   std::shared_ptr<ServerGoalHandleT> waitForActiveGoal()
   {
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-    while (std::chrono::steady_clock::now() < deadline)
+    if (!spinUntil(
+            [&] {
+              const std::lock_guard<std::mutex> lock(goal_mutex_);
+              return active_goal_ != nullptr;
+            },
+            10000))
     {
-      {
-        const std::lock_guard<std::mutex> lock(goal_mutex_);
-        if (active_goal_)
-        {
-          return active_goal_;
-        }
-      }
-      rclcpp::spin_some(server_node_);
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      ADD_FAILURE() << "No goal was accepted within the timeout";
+      return nullptr;
     }
-    ADD_FAILURE() << "No goal was accepted within the timeout";
-    return nullptr;
+    const std::lock_guard<std::mutex> lock(goal_mutex_);
+    return active_goal_;
   }
 
   void publishFeedback(int recoveries)
@@ -200,13 +141,7 @@ protected:
   void cancelActiveGoal(const std::shared_ptr<ClientGoalHandleT>& client_goal_handle)
   {
     auto cancel_future = action_client_->async_cancel_goal(client_goal_handle);
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-    while (cancel_future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready &&
-           std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(server_node_);
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
+    spinUntil([&] { return cancel_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready; }, 10000);
     waitForActiveGoal()->canceled(makeResult(0, ""));
   }
 
@@ -214,23 +149,25 @@ protected:
   // get_result round trip doesn't make the test flaky.
   nlohmann::json waitForRecord(const std::function<bool(const nlohmann::json&)>& predicate)
   {
-    const size_t first_new = 0;
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-    while (std::chrono::steady_clock::now() < deadline)
+    nlohmann::json matched;
+    if (!spinUntil(
+            [&] {
+              for (size_t r = 0; r < records_.size(); ++r)
+              {
+                if (predicate(records_[r]))
+                {
+                  matched = records_[r];
+                  return true;
+                }
+              }
+              return false;
+            },
+            10000))
     {
-      for (size_t r = first_new; r < records_.size(); ++r)
-      {
-        if (predicate(records_[r]))
-        {
-          return records_[r];
-        }
-      }
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      rclcpp::spin_some(server_node_);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      ADD_FAILURE() << "No matching Record within the timeout";
+      return nlohmann::json{};
     }
-    ADD_FAILURE() << "No matching Record within the timeout";
-    return nlohmann::json{};
+    return matched;
   }
 
   static std::function<bool(const nlohmann::json&)> isEvent(const std::string& event)
@@ -253,17 +190,12 @@ protected:
     EXPECT_NO_THROW(validator.validate(record)) << record.dump();
   }
 
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
   rclcpp::Node::SharedPtr server_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   rclcpp_action::Server<ActionT>::SharedPtr action_server_;
   rclcpp_action::Client<ActionT>::SharedPtr action_client_;
-  std::vector<nlohmann::json> records_;
 
   std::mutex goal_mutex_;
   std::shared_ptr<ServerGoalHandleT> active_goal_;
-
-  bool stopped_{ false };
 };
 
 TEST_F(MeasurementMissionNav2ThroughPosesTest, GoalAcceptedEmitsAMissionStartRecord)
@@ -356,7 +288,7 @@ TEST_F(MeasurementMissionNav2ThroughPosesTest, RecoveriesFromFeedbackAreCarriedO
   sendGoal();
   waitForRecord(isEvent("mission_start"));
   publishFeedback(3);
-  spinFor(std::chrono::milliseconds(100));
+  spinFor(100);
   succeedActiveGoal();
 
   const auto end = waitForRecord(isEvent("mission_end"));
@@ -395,15 +327,4 @@ TEST_F(MeasurementMissionNav2ThroughPosesTest, SequenceIsMonotonicAcrossSeveralM
   EXPECT_LT(start2["sequence"].get<uint64_t>(), end2["sequence"].get<uint64_t>());
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

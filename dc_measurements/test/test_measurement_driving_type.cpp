@@ -1,49 +1,22 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
-
-#include <chrono>
-#include <functional>
 #include <string>
-#include <thread>
 
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "measurement_test_bench.hpp"
 #include "std_msgs/msg/string.hpp"
 
-class MeasurementDrivingTypeTest : public ::testing::Test
+class MeasurementDrivingTypeTest : public MeasurementBench
 {
 protected:
-  MeasurementDrivingTypeTest()
+  MeasurementDrivingTypeTest() : MeasurementBench("driving_type")
   {
-    SetUp();
-  }
-
-  ~MeasurementDrivingTypeTest() override
-  {
-  }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "driving_type" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/driving_type", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementDrivingTypeTest::dataCallback, this, std::placeholders::_1));
     mode_pub_ = ms_node_->create_publisher<std_msgs::msg::String>("/driving_mode_raw", rclcpp::SystemDefaultsQoS());
     autonomous_vel_pub_ =
         ms_node_->create_publisher<geometry_msgs::msg::Twist>("/autonomy/cmd_vel", rclcpp::SystemDefaultsQoS());
     teleop_vel_pub_ =
         ms_node_->create_publisher<geometry_msgs::msg::Twist>("/teleop/cmd_vel", rclcpp::SystemDefaultsQoS());
-  }
-
-  void TearDown() override
-  {
-    ms_node_->deactivate();
-    ms_node_->cleanup();
   }
 
   void declareCommonParameters()
@@ -54,55 +27,9 @@ protected:
     ms_node_->declare_parameter("driving_type.polling_interval", 50);
   }
 
-  void startLifecycleNode()
-  {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void dataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    data_json_ = nlohmann::json::parse(data_str);
-    callback_active_ = true;
-  }
-
-  void spinUntil(std::function<bool()> predicate, int max_iterations = 500)
-  {
-    for (int i = 0; i < max_iterations && !predicate(); ++i)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    }
-    ASSERT_TRUE(predicate()) << "Condition not met within the timeout";
-  }
-
-  void spinUntilCallback()
-  {
-    callback_active_ = false;
-    spinUntil([this] { return callback_active_; });
-  }
-
-  void spinFor(std::chrono::milliseconds duration)
-  {
-    auto deadline = std::chrono::steady_clock::now() + duration;
-    while (std::chrono::steady_clock::now() < deadline)
-    {
-      rclcpp::spin_some(ms_node_->get_node_base_interface());
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-  }
-
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr mode_pub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr autonomous_vel_pub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr teleop_vel_pub_;
-  nlohmann::json data_json_;
-
-public:
-  bool callback_active_{ false };
 };
 
 TEST_F(MeasurementDrivingTypeTest, DefaultsToUnknownBeforeAnyModeIsObserved)
@@ -110,7 +37,8 @@ TEST_F(MeasurementDrivingTypeTest, DefaultsToUnknownBeforeAnyModeIsObserved)
   declareCommonParameters();
 
   startLifecycleNode();
-  spinUntilCallback();
+
+  ASSERT_TRUE(spinUntil([this] { return callback_active_; })) << "no Record ever arrived";
 
   EXPECT_EQ(data_json_["mode"], "unknown");
 }
@@ -124,19 +52,14 @@ TEST_F(MeasurementDrivingTypeTest, ModeTopicMapsRawValueToConfiguredMode)
   ms_node_->declare_parameter("driving_type.init_collect", false);
 
   startLifecycleNode();
-
-  while (ms_node_->count_subscribers("/driving_mode_raw") == 0)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+  waitForSubscriber("/driving_mode_raw");
 
   std_msgs::msg::String raw;
   raw.data = "1";
-  while (!callback_active_)
-  {
+  ASSERT_TRUE(spinUntil([&] {
     mode_pub_->publish(raw);
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+    return callback_active_;
+  })) << "no Record ever arrived";
 
   EXPECT_EQ(data_json_["mode"], "autonomous");
 }
@@ -150,28 +73,23 @@ TEST_F(MeasurementDrivingTypeTest, ModeTopicIgnoresUnmappedRawValueAndKeepsCurre
   ms_node_->declare_parameter("driving_type.init_collect", false);
 
   startLifecycleNode();
-
-  while (ms_node_->count_subscribers("/driving_mode_raw") == 0)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+  waitForSubscriber("/driving_mode_raw");
 
   std_msgs::msg::String known;
   known.data = "1";
-  while (!callback_active_)
-  {
+  ASSERT_TRUE(spinUntil([&] {
     mode_pub_->publish(known);
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+    return callback_active_;
+  })) << "no Record ever arrived";
   ASSERT_EQ(data_json_["mode"], "autonomous");
 
   callback_active_ = false;
   std_msgs::msg::String unmapped;
   unmapped.data = "99";
   mode_pub_->publish(unmapped);
-  spinFor(std::chrono::milliseconds(200));
+  spinFor(200);
 
-  ASSERT_TRUE(callback_active_);
+  ASSERT_TRUE(spinUntil([this] { return callback_active_; })) << "no Record ever arrived";
   EXPECT_EQ(data_json_["mode"], "autonomous");
 }
 
@@ -185,18 +103,13 @@ TEST_F(MeasurementDrivingTypeTest, VelocitySourceInferenceReportsModeOfLastActiv
   ms_node_->declare_parameter("driving_type.init_collect", false);
 
   startLifecycleNode();
-
-  while (ms_node_->count_subscribers("/teleop/cmd_vel") == 0)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+  waitForSubscriber("/teleop/cmd_vel");
 
   geometry_msgs::msg::Twist twist;
-  while (!callback_active_)
-  {
+  ASSERT_TRUE(spinUntil([&] {
     teleop_vel_pub_->publish(twist);
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+    return callback_active_;
+  })) << "no Record ever arrived";
 
   EXPECT_EQ(data_json_["mode"], "teleop");
 }
@@ -210,39 +123,21 @@ TEST_F(MeasurementDrivingTypeTest, VelocitySourceFallsBackToUnknownAfterTimeout)
   ms_node_->declare_parameter("driving_type.init_collect", false);
 
   startLifecycleNode();
-
-  while (ms_node_->count_subscribers("/autonomy/cmd_vel") == 0)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+  waitForSubscriber("/autonomy/cmd_vel");
 
   geometry_msgs::msg::Twist twist;
-  while (!callback_active_)
-  {
+  ASSERT_TRUE(spinUntil([&] {
     autonomous_vel_pub_->publish(twist);
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+    return callback_active_;
+  })) << "no Record ever arrived";
   ASSERT_EQ(data_json_["mode"], "autonomous");
 
   // Let the configured staleness window elapse with no further publishes on the source.
   callback_active_ = false;
-  spinFor(std::chrono::milliseconds(400));
+  spinFor(400);
 
-  ASSERT_TRUE(callback_active_);
+  ASSERT_TRUE(spinUntil([this] { return callback_active_; })) << "no Record ever arrived";
   EXPECT_EQ(data_json_["mode"], "unknown");
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

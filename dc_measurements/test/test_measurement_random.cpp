@@ -1,37 +1,13 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
+#include "measurement_test_bench.hpp"
 
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
-
-class MeasurementRandomTest : public ::testing::Test
+class MeasurementRandomTest : public MeasurementBench
 {
 protected:
-  MeasurementRandomTest()
+  MeasurementRandomTest() : MeasurementBench("random")
   {
-    SetUp();
-  }
-
-  ~MeasurementRandomTest() override
-  {
-  }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "random" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/random", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementRandomTest::randomDataCallback, this, std::placeholders::_1));
-  }
-
-  void TearDown() override
-  {
-    ms_node_->deactivate();
-    ms_node_->cleanup();
   }
 
   void declareCommonParameters()
@@ -40,29 +16,6 @@ protected:
     ms_node_->declare_parameter("random.group_key", std::string("random"));
     ms_node_->declare_parameter("random.topic_output", std::string("/dc/measurement/random"));
   }
-
-  void startLifecycleNode()
-  {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void randomDataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    nlohmann::json data_json = nlohmann::json::parse(data_str);
-    RCLCPP_INFO_STREAM(ms_node_->get_logger(), "Value: " << data_str);
-    value_ = data_json["value"].get<double>();
-    random_callback_ = true;
-  }
-
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
-  double value_;
-
-public:
-  bool random_callback_{ false };
 };
 
 TEST_F(MeasurementRandomTest, DefaultIntegerWithinRange)
@@ -71,13 +24,10 @@ TEST_F(MeasurementRandomTest, DefaultIntegerWithinRange)
 
   startLifecycleNode();
 
-  while (!random_callback_)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+  ASSERT_TRUE(spinUntil([this] { return callback_active_; })) << "no Record ever arrived";
 
-  EXPECT_GE(value_, 0);
-  EXPECT_LE(value_, 100);
+  EXPECT_GE(data_json_["value"].get<double>(), 0);
+  EXPECT_LE(data_json_["value"].get<double>(), 100);
 }
 
 TEST_F(MeasurementRandomTest, DoubleWithinConfiguredRange)
@@ -89,13 +39,10 @@ TEST_F(MeasurementRandomTest, DoubleWithinConfiguredRange)
 
   startLifecycleNode();
 
-  while (!random_callback_)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+  ASSERT_TRUE(spinUntil([this] { return callback_active_; })) << "no Record ever arrived";
 
-  EXPECT_GE(value_, 5.0);
-  EXPECT_LE(value_, 6.0);
+  EXPECT_GE(data_json_["value"].get<double>(), 5.0);
+  EXPECT_LE(data_json_["value"].get<double>(), 6.0);
 }
 
 TEST_F(MeasurementRandomTest, SameSeedProducesSameSequence)
@@ -107,11 +54,8 @@ TEST_F(MeasurementRandomTest, SameSeedProducesSameSequence)
 
   startLifecycleNode();
 
-  while (!random_callback_)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
-  double first_run_value = value_;
+  ASSERT_TRUE(spinUntil([this] { return callback_active_; })) << "no Record ever arrived";
+  double first_run_value = data_json_["value"].get<double>();
 
   // A second, independently-configured node with the same `seed` (remapped to its own node
   // name/topic so it can't collide with ms_node_'s rosout publisher, lifecycle services, or
@@ -124,10 +68,7 @@ TEST_F(MeasurementRandomTest, SameSeedProducesSameSequence)
   double second_run_value = 0;
   auto sub_data_2 = ms_node_2->create_subscription<dc_interfaces::msg::StringStamped>(
       "/dc/measurement/random_2", rclcpp::SystemDefaultsQoS(), [&](const dc_interfaces::msg::StringStamped& msg) {
-        std::string data_str = msg.data.c_str();
-        boost::replace_all(data_str, "'", "\"");
-        nlohmann::json data_json = nlohmann::json::parse(data_str);
-        second_run_value = data_json["value"].get<double>();
+        second_run_value = MeasurementBench::parseRecord(msg)["value"].get<double>();
         second_callback = true;
       });
   ms_node_2->declare_parameter("random.plugin", std::string("dc_measurements/Random"));
@@ -139,27 +80,17 @@ TEST_F(MeasurementRandomTest, SameSeedProducesSameSequence)
   ms_node_2->configure();
   ms_node_2->activate();
 
-  while (!second_callback)
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+  while (!second_callback && std::chrono::steady_clock::now() < deadline)
   {
     rclcpp::spin_some(ms_node_2->get_node_base_interface());
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
+  ASSERT_TRUE(second_callback) << "the second server never published a Record";
   ms_node_2->deactivate();
   ms_node_2->cleanup();
 
   EXPECT_EQ(first_run_value, second_run_value);
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

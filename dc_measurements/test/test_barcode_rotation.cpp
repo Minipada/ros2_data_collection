@@ -12,6 +12,8 @@
 #include <opencv2/imgproc.hpp>
 #include <string>
 
+#include "measurement_test_bench.hpp"
+
 namespace
 {
 
@@ -151,8 +153,4 @@ TEST(BarcodeRotationTest, LosesACodeTheFrameClips)
   }
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+DC_MEASUREMENT_TEST_MAIN()

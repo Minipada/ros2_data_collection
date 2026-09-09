@@ -1,74 +1,19 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <gtest/gtest.h>
 #include <sys/utsname.h>
 
-#include <chrono>
-#include <thread>
+#include "measurement_test_bench.hpp"
 
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
-
-class MeasurementOSTest : public ::testing::Test
+class MeasurementParametersTest : public MeasurementBench
 {
 protected:
-  MeasurementOSTest()
-  {
-    SetUp();
-  }
-
-  ~MeasurementOSTest() override
+  MeasurementParametersTest() : MeasurementBench("os")
   {
   }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "os" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/os", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementOSTest::osDataCallback, this, std::placeholders::_1));
-  }
-
-  void TearDown() override
-  {
-    ms_node_->deactivate();
-    ms_node_->cleanup();
-  }
-
-  void startLifecycleNode()
-  {
-    ms_node_->configure();
-    ms_node_->activate();
-  }
-
-  void osDataCallback(const dc_interfaces::msg::StringStamped& msg)
-  {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    nlohmann::json data_json = nlohmann::json::parse(data_str);
-    RCLCPP_INFO_STREAM(ms_node_->get_logger(), "Value: " << data_str);
-    cpu_count_ = data_json["cpus"];
-    kernel_ = data_json["kernel"];
-    memory_ = data_json["memory"];
-    callback_active_ = true;
-    count_measurement_callback_++;
-  }
-
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
-  unsigned int cpu_count_;
-  std::string kernel_;
-  float memory_;
-
-public:
-  bool callback_active_{ false };
-  int count_measurement_callback_{ 0 };
 };
 
-TEST_F(MeasurementOSTest, PollingIntervalOneMeasurementOnePercentError)
+TEST_F(MeasurementParametersTest, PollingIntervalOneMeasurementOnePercentError)
 {
   int polling_interval = 30;
   int count_measurement = 90;
@@ -91,29 +36,10 @@ TEST_F(MeasurementOSTest, PollingIntervalOneMeasurementOnePercentError)
   EXPECT_EQ(polling_interval, static_cast<int>(ms_node_->get_parameter("os.polling_interval").as_int()));
   EXPECT_FALSE(ms_node_->get_parameter("os.init_collect").as_bool());
 
-  std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
-
   // Verify that in a certain amount of time, only a certain amount of samples are collected
-  while ((std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time)).count() <
-         polling_interval * (count_measurement + error))
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+  spinFor(polling_interval * (count_measurement + error));
 
-  EXPECT_EQ(count_measurement_callback_, count_measurement);
+  EXPECT_EQ(callback_count_, count_measurement);
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

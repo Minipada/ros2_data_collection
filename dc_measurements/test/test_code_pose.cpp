@@ -11,6 +11,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "dc_measurements/code_pose.hpp"
+#include "measurement_test_bench.hpp"
 
 namespace
 {
@@ -256,8 +257,4 @@ TEST(CodePoseTest, RecoversAPoseFromARenderedQrCode)
   EXPECT_NEAR(pitch, rvec[1], 5.0 * CV_PI / 180.0);
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+DC_MEASUREMENT_TEST_MAIN()

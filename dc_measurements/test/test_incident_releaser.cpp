@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "dc_measurements/incident_releaser.hpp"
+#include "measurement_test_bench.hpp"
 
 using dc_measurements::IncidentReleaser;
 using dc_measurements::IncidentState;
@@ -424,8 +425,4 @@ TEST_F(IncidentReleaserTest, UnlimitedFlushRateReleasesTheWholeWindowInOneBurst)
   EXPECT_EQ(releaser.state(), IncidentState::Buffering);
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+DC_MEASUREMENT_TEST_MAIN()

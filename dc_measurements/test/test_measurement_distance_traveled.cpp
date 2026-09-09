@@ -7,43 +7,18 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <chrono>
-#include <thread>
-
-#include "dc_interfaces/msg/string_stamped.hpp"
-#include "dc_measurements/measurement_server.hpp"
-#include "dc_util/json_utils.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
+#include "measurement_test_bench.hpp"
 
-class MeasurementDistanceTraveledTest : public ::testing::Test
+class MeasurementDistanceTraveledTest : public MeasurementBench
 {
 protected:
-  MeasurementDistanceTraveledTest()
+  MeasurementDistanceTraveledTest() : MeasurementBench("distance_traveled")
   {
-    SetUp();
-  }
-
-  ~MeasurementDistanceTraveledTest() override
-  {
-  }
-
-  void SetUp() override
-  {
-    ms_node_ = std::make_shared<measurement_server::MeasurementServer>(rclcpp::NodeOptions(),
-                                                                       std::vector<std::string>{ "distance_traveled" });
-    sub_data_ = ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-        "/dc/measurement/distance_traveled", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MeasurementDistanceTraveledTest::distanceDataCallback, this, std::placeholders::_1));
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(ms_node_);
   }
 
-  void TearDown() override
-  {
-    ms_node_->deactivate();
-    ms_node_->cleanup();
-  }
-
-  void startLifecycleNode()
+  void declareCommonParameters()
   {
     ms_node_->declare_parameter("distance_traveled.plugin", std::string("dc_measurements/DistanceTraveled"));
     ms_node_->declare_parameter("distance_traveled.group_key", std::string("distance_traveled"));
@@ -55,27 +30,21 @@ protected:
     // whatever garbage value happened to be on the stack. Declared explicitly here so this test
     // exercises real, defined behaviour instead of UB.
     ms_node_->declare_parameter("distance_traveled.transform_timeout", 0.5);
-    ms_node_->configure();
-    ms_node_->activate();
   }
 
-  void distanceDataCallback(const dc_interfaces::msg::StringStamped& msg)
+  // The first successful transform lookup reports the origin distance; every later poll reports
+  // 0.0 (the pose didn't move between polls). Records from several polls can be queued by the
+  // time a wait loop spins them, so the newest one is not necessarily the origin one (#519) --
+  // latch the first key-bearing value here, where each Record is still the only one the loop
+  // has seen from its poll.
+  void onRecord(const std::string& measurement, const dc_interfaces::msg::StringStamped& msg) override
   {
-    std::string data_str = msg.data.c_str();
-    boost::replace_all(data_str, "'", "\"");
-    RCLCPP_INFO_STREAM(ms_node_->get_logger(), "Value: " << data_str);
-    nlohmann::json data_json = nlohmann::json::parse(data_str);
-    // The first successful transform lookup reports the origin distance; every later poll
-    // reports 0.0 (the pose didn't move between polls). Records from several polls can be
-    // queued by the time PublishesDistanceFromOriginOnFirstFix's loop spins them, so the newest
-    // one is not necessarily the origin one -- latch the first key-bearing value here, where
-    // each Record is still the only one the loop has seen from its poll.
-    if (!first_distance_observed_ && data_json.contains("distance_traveled"))
+    MeasurementBench::onRecord(measurement, msg);
+    if (!first_distance_observed_ && data_json_.contains("distance_traveled"))
     {
-      first_distance_ = data_json["distance_traveled"].get<double>();
+      first_distance_ = data_json_["distance_traveled"].get<double>();
       first_distance_observed_ = true;
     }
-    callback_active_ = true;
   }
 
   void broadcastMapToBaseLink(double x, double y)
@@ -98,7 +67,7 @@ protected:
     auto tf_wait_node = std::make_shared<rclcpp::Node>("distance_traveled_tf_wait");
     tf2_ros::Buffer tf_buffer(tf_wait_node->get_clock());
     tf2_ros::TransformListener tf_listener(tf_buffer, tf_wait_node, /*spin_thread=*/true);
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     while (!tf_buffer.canTransform("map", "base_link", tf2::TimePointZero))
     {
       ASSERT_LT(std::chrono::steady_clock::now(), deadline)
@@ -108,18 +77,15 @@ protected:
     }
   }
 
-  std::shared_ptr<measurement_server::MeasurementServer> ms_node_;
-  rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr sub_data_;
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   double first_distance_{ 0.0 };
   bool first_distance_observed_{ false };
-
-public:
-  bool callback_active_{ false };
 };
 
 TEST_F(MeasurementDistanceTraveledTest, PublishesDistanceFromOriginOnFirstFix)
 {
+  declareCommonParameters();
+
   // The plugin's timer starts at activation: have the frame in tf first, so the first collect()
   // cycle is a real fix rather than an empty Record.
   waitForMapFrame();
@@ -127,22 +93,19 @@ TEST_F(MeasurementDistanceTraveledTest, PublishesDistanceFromOriginOnFirstFix)
 
   // last_x_/last_y_ start at (0, 0), so the first successful transform lookup reports the
   // straight-line distance from the origin, and every later poll reports 0.0 (static pose).
-  // Assert on the value distanceDataCallback() latched: several polls' Records can sit in the
-  // subscription queue by the time this loop spins them, so the newest message is not
-  // necessarily the origin one. tf2_ros::TransformListener spins on its own background thread
-  // (MeasurementServer never passed it an explicit node/executor, so it defaults to one); a
-  // short sleep between spins here gives that thread real scheduling opportunities instead of
+  // Assert on the value onRecord() latched (see there for why the newest Record isn't the one
+  // under test). Keep re-broadcasting inside the wait so a tf listener that subscribed late
+  // still gets a transform. tf2_ros::TransformListener spins on its own background thread
+  // (MeasurementServer never passed it an explicit node/executor, so it defaults to one); the
+  // sleep between spins in spinUntil gives that thread real scheduling opportunities instead of
   // this loop busy-spinning a core out from under it.
-  auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
-  while (!first_distance_observed_)
-  {
-    ASSERT_LT(std::chrono::steady_clock::now(), deadline)
-        << "never observed a Record with \"distance_traveled\" -- tf broadcast likely never "
-           "reached the buffer";
-    broadcastMapToBaseLink(3.0, 4.0);
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
-  }
+  ASSERT_TRUE(spinUntil(
+      [&] {
+        broadcastMapToBaseLink(3.0, 4.0);
+        return first_distance_observed_;
+      },
+      10000))
+      << "never observed a Record with \"distance_traveled\" -- tf broadcast likely never reached the buffer";
 
   // sqrt(3^2 + 4^2)
   EXPECT_NEAR(first_distance_, 5.0, 1e-2);
@@ -150,6 +113,7 @@ TEST_F(MeasurementDistanceTraveledTest, PublishesDistanceFromOriginOnFirstFix)
 
 TEST_F(MeasurementDistanceTraveledTest, NoTransformProducesNoPublish)
 {
+  declareCommonParameters();
   startLifecycleNode();
 
   // With no transform ever broadcast, every collect() cycle returns an empty StringStamped, and
@@ -157,26 +121,9 @@ TEST_F(MeasurementDistanceTraveledTest, NoTransformProducesNoPublish)
   // calls data_pub_->publish()) rather than publishing "{}" -- so the callback can never fire.
   // Poll through several collect() cycles (polling_interval=50) and assert it stays that way,
   // same pattern as test_measurement_ip_camera.cpp's NoSegmentsYetProducesNoPublish.
-  auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
-  while (std::chrono::steady_clock::now() < deadline)
-  {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
-  }
+  spinFor(300);
 
   EXPECT_FALSE(callback_active_);
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-
-  // initialize ROS
-  rclcpp::init(argc, argv);
-
-  bool all_successful = RUN_ALL_TESTS();
-
-  // shutdown ROS
-  rclcpp::shutdown();
-
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

@@ -3,10 +3,7 @@
 
 // Unit tests for dc_measurements::MissionFollowWaypointsTracker (#389). No action server, no
 // node: goal_id/status/result all arrive as arguments, mirroring
-// dc_common/test/battery_cycle_accumulator_test.cpp's standalone coverage of
-// BatteryCycleAccumulator. rclcpp::init()/shutdown() in main() below is only for link
-// compatibility with this package's CMakeLists.txt test registration, which does not pass
-// SKIP_LINKING_MAIN_LIBRARIES to ament_add_gtest.
+// dc_common/test/battery_cycle_accumulator_test.cpp's standalone coverage of BatteryCycleAccumulator.
 
 #include "dc_measurements/plugins/measurements/mission_follow_waypoints_tracker.hpp"
 
@@ -16,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "measurement_test_bench.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 using dc_measurements::MissionFollowWaypointsTracker;
@@ -148,11 +146,4 @@ TEST(MissionFollowWaypointsTracker, SequenceIncrementsAcrossMultipleMissions)
   EXPECT_EQ(second_end->sequence, 4u);
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  rclcpp::init(argc, argv);
-  const bool all_successful = RUN_ALL_TESTS();
-  rclcpp::shutdown();
-  return all_successful;
-}
+DC_MEASUREMENT_TEST_MAIN()

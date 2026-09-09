@@ -12,6 +12,7 @@
 #include <string>
 
 #include "dc_measurements/plugins/measurements/mission_nav2_through_poses_core.hpp"
+#include "measurement_test_bench.hpp"
 
 using dc_measurements::GoalPhase;
 using dc_measurements::MissionNav2ThroughPosesCore;
@@ -157,8 +158,4 @@ TEST(MissionNav2ThroughPosesCore, SequenceIsMonotonicAcrossStartsAndEndsOfSevera
   EXPECT_EQ(end2.sequence, 4u);
 }
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+DC_MEASUREMENT_TEST_MAIN()
