@@ -48,14 +48,6 @@ void Intervention::onCleanup()
   }
 }
 
-void Intervention::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "intervention.json");
-  }
-}
-
 dc_interfaces::msg::StringStamped Intervention::collect()
 {
   auto node = getNode();

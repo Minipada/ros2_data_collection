@@ -27,7 +27,6 @@ protected:
    * @brief Configuration of behavior action
    */
   void onConfigure() override;
-  void setValidationSchema() override;
   std::string host_;
   std::string name_;
   unsigned short port_;

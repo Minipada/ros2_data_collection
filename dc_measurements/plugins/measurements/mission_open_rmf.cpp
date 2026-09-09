@@ -139,14 +139,6 @@ void MissionOpenRmf::onCleanup()
   }
 }
 
-void MissionOpenRmf::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "mission_open_rmf.json");
-  }
-}
-
 void MissionOpenRmf::emit(json data, const rclcpp::Time& stamp)
 {
   // One Record leaves per poll, same overflow policy as MissionNav2ThroughPoses::emit().

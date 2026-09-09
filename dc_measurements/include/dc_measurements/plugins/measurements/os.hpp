@@ -23,7 +23,6 @@ protected:
   /**
    * @brief Configuration of behavior action
    */
-  void setValidationSchema() override;
   unsigned long long getTotalSystemMemory();
 };
 

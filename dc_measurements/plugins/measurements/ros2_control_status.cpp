@@ -91,14 +91,6 @@ void Ros2ControlStatus::onCleanup()
   }
 }
 
-void Ros2ControlStatus::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "ros2_control_status.json");
-  }
-}
-
 void Ros2ControlStatus::processEntries(const std::vector<controller_manager_msgs::msg::NamedLifecycleState>& entries,
                                        const std::string& component_type, const rclcpp::Time& stamp,
                                        std::map<std::string, dc_common::StateTransitionDetector<uint8_t>>& detectors)

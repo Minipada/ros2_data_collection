@@ -20,14 +20,6 @@ void TCPHealth::onConfigure()
   name_ = dc_util::get_str_type_param(node, measurement_name_, "name");
 }
 
-void TCPHealth::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "tcp_health.json");
-  }
-}
-
 bool TCPHealth::getPortHealth(unsigned short port)
 {
   using namespace boost::asio;

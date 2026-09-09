@@ -12,14 +12,6 @@ Dummy::Dummy() : dc_measurements::Measurement()
 
 Dummy::~Dummy() = default;
 
-void Dummy::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "dummy.json");
-  }
-}
-
 void Dummy::onConfigure()
 {
   auto node = getNode();

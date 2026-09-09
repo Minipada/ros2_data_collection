@@ -45,7 +45,6 @@ protected:
   /**
    * @brief Configuration of behavior action
    */
-  void setValidationSchema() override;
   void onConfigure() override;
 };
 

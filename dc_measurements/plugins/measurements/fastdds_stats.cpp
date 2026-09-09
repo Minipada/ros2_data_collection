@@ -81,14 +81,6 @@ void FastddsStats::onCleanup()
   }
 }
 
-void FastddsStats::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "fastdds_stats.json");
-  }
-}
-
 dc_interfaces::msg::StringStamped FastddsStats::collect()
 {
   auto node = getNode();

@@ -36,7 +36,6 @@ private:
 protected:
   void onConfigure() override;
   void onCleanup() override;
-  void setValidationSchema() override;
 };
 
 }  // namespace dc_measurements

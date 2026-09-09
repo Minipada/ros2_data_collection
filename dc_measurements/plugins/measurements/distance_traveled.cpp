@@ -27,14 +27,6 @@ void DistanceTraveled::onConfigure()
   node->get_parameter(measurement_name_ + ".transform_timeout", transform_timeout_);
 }
 
-void DistanceTraveled::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "distance_traveled.json");
-  }
-}
-
 dc_interfaces::msg::StringStamped DistanceTraveled::collect()
 {
   auto node = getNode();

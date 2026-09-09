@@ -117,14 +117,6 @@ void Battery::onConfigure()
       battery_topic_, rclcpp::SensorDataQoS(), std::bind(&Battery::batteryStateCb, this, std::placeholders::_1));
 }
 
-void Battery::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "battery.json");
-  }
-}
-
 void Battery::batteryStateCb(const sensor_msgs::msg::BatteryState& msg)
 {
   const auto now = getNode()->get_clock()->now();

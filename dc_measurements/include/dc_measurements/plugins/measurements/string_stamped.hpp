@@ -12,6 +12,8 @@
 namespace dc_measurements
 {
 
+// Republishes another Measurement's Record verbatim, so no schema can describe its data: run it
+// with enable_validator: false, or configure() fails on the schema it would otherwise look for.
 class StringStamped : public dc_measurements::Measurement
 {
 public:
@@ -22,10 +24,6 @@ public:
   void onConfigure() override;
 
 protected:
-  /**
-   * @brief Set validation schema used to confirm data before collecting it
-   */
-  void setValidationSchema() override;
   dc_interfaces::msg::StringStamped last_data_;
   std::string topic_;
   rclcpp::Subscription<dc_interfaces::msg::StringStamped>::SharedPtr subscription_;

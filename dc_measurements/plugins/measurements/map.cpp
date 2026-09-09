@@ -22,14 +22,6 @@ void Map::onConfigure()
   save_base64_ = dc_util::get_bool_type_param(node, measurement_name_, "save_base64", false);
 }
 
-void Map::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "map.json");
-  }
-}
-
 std::string Map::getAbsolutePath(const std::string& param_reference, const rclcpp::Time& now)
 {
   std::string file_save_path = getSavePath(param_reference, now);

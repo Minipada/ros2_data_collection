@@ -20,14 +20,6 @@ void Position::onConfigure()
   transform_timeout_ = dc_util::get_double_type_param(node, measurement_name_, "transform_timeout", 0.1);
 }
 
-void Position::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "position.json");
-  }
-}
-
 dc_interfaces::msg::StringStamped Position::collect()
 {
   auto node = getNode();

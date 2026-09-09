@@ -78,14 +78,6 @@ void SlamToolboxQuality::tryCreateLoopClosureSubscription()
   loop_closure_discovery_timer_.reset();
 }
 
-void SlamToolboxQuality::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "slam_toolbox_quality.json");
-  }
-}
-
 void SlamToolboxQuality::poseCb(const geometry_msgs::msg::PoseWithCovarianceStamped& msg)
 {
   const std::lock_guard<std::mutex> lock(mutex_);

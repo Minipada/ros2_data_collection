@@ -65,14 +65,6 @@ void MissionNav2FollowWaypoints::onCleanup()
   result_client_.reset();
 }
 
-void MissionNav2FollowWaypoints::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "mission_nav2_follow_waypoints.json");
-  }
-}
-
 void MissionNav2FollowWaypoints::enqueue(json data, const rclcpp::Time& stamp)
 {
   if (pending_records_.push(std::move(data), stamp))

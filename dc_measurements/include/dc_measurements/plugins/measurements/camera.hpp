@@ -49,7 +49,6 @@ protected:
    * @brief Configuration of behavior action
    */
   void onConfigure() override;
-  void setValidationSchema() override;
   void rotateImage(cv_bridge::CvImagePtr& cv_ptr);
   std::string getLocalPath(const std::string& param_reference, const rclcpp::Time& now);
   void saveRemoteKeys(json& data_json, const std::string& key, const std::string& relative_path,

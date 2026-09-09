@@ -50,14 +50,6 @@ void Diagnostics::onConfigure()
       topic_, rclcpp::SystemDefaultsQoS(), std::bind(&Diagnostics::diagnosticsCb, this, std::placeholders::_1));
 }
 
-void Diagnostics::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "diagnostics.json");
-  }
-}
-
 void Diagnostics::diagnosticsCb(const diagnostic_msgs::msg::DiagnosticArray& msg)
 {
   json statuses = json::array();

@@ -22,10 +22,6 @@ void StringStamped::onConfigure()
       topic_, 10, std::bind(&StringStamped::dataCb, this, std::placeholders::_1));
 }
 
-void StringStamped::setValidationSchema()
-{
-}
-
 void StringStamped::dataCb(const dc_interfaces::msg::StringStamped& msg)
 {
   last_data_ = msg;

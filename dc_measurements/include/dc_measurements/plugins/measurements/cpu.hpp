@@ -30,10 +30,8 @@ protected:
    * @brief Configuration of behavior action
    */
   void onConfigure() override;
-  void setValidationSchema() override;
   void setProcessesUsage(json& data_json);
   void setAverageCpu(json& data_json);
-  void setValidationSchema(json& data_json);
 };
 
 }  // namespace dc_measurements

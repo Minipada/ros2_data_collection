@@ -12,14 +12,6 @@ Memory::Memory() : dc_measurements::Measurement()
 
 Memory::~Memory() = default;
 
-void Memory::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "memory.json");
-  }
-}
-
 dc_interfaces::msg::StringStamped Memory::collect()
 {
   auto node = getNode();

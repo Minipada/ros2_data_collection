@@ -107,14 +107,6 @@ void Camera::cameraInfoCb(const sensor_msgs::msg::CameraInfo& msg)
   camera_info_received_ = true;
 }
 
-void Camera::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "camera.json");
-  }
-}
-
 void Camera::saveRemoteKeys(json& data_json, const std::string& key, const std::string& relative_path,
                             const rclcpp::Time& now)
 {

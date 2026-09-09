@@ -41,14 +41,6 @@ void Speed::onConfigure()
       odom_topic_, 10, std::bind(&Speed::odomCb, this, std::placeholders::_1));
 }
 
-void Speed::setValidationSchema()
-{
-  if (enable_validator_)
-  {
-    validateSchema("dc_measurements", "speed.json");
-  }
-}
-
 dc_interfaces::msg::StringStamped Speed::collect()
 {
   dc_interfaces::msg::StringStamped msg = last_data_;

@@ -24,7 +24,6 @@ protected:
    * @brief Configuration of behavior action
    */
   void onConfigure() override;
-  void setValidationSchema() override;
   void odomCb(const nav_msgs::msg::Odometry& msg);
 
   std::string odom_topic_;
