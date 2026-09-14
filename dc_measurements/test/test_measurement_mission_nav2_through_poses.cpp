@@ -59,7 +59,7 @@ protected:
   // waits spin alongside the MeasurementServer.
   void spinExtra() override
   {
-    rclcpp::spin_some(server_node_->get_node_base_interface());
+    spinNodeOnce(server_node_->get_node_base_interface());
   }
 
   void startLifecycleNode()

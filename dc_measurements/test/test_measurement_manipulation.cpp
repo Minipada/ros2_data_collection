@@ -106,7 +106,7 @@ protected:
   // MeasurementServer.
   void spinExtra() override
   {
-    rclcpp::spin_some(helper_node_->get_node_base_interface());
+    spinNodeOnce(helper_node_->get_node_base_interface());
   }
 
   void waitForActionServer()

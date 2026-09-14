@@ -67,10 +67,12 @@ TEST_F(MeasurementRandomTest, SameSeedProducesSameSequence)
   bool second_callback = false;
   double second_run_value = 0;
   auto sub_data_2 = ms_node_2->create_subscription<dc_interfaces::msg::StringStamped>(
-      "/dc/measurement/random_2", rclcpp::SystemDefaultsQoS(), [&](const dc_interfaces::msg::StringStamped& msg) {
+      "/dc/measurement/random_2",
+      [&](const dc_interfaces::msg::StringStamped& msg) {
         second_run_value = MeasurementBench::parseRecord(msg)["value"].get<double>();
         second_callback = true;
-      });
+      },
+      rclcpp::SystemDefaultsQoS());
   ms_node_2->declare_parameter("random.plugin", std::string("dc_measurements/Random"));
   ms_node_2->declare_parameter("random.group_key", std::string("random"));
   ms_node_2->declare_parameter("random.topic_output", std::string("/dc/measurement/random_2"));
@@ -83,7 +85,7 @@ TEST_F(MeasurementRandomTest, SameSeedProducesSameSequence)
   const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
   while (!second_callback && std::chrono::steady_clock::now() < deadline)
   {
-    rclcpp::spin_some(ms_node_2->get_node_base_interface());
+    spinNodeOnce(ms_node_2->get_node_base_interface());
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
   ASSERT_TRUE(second_callback) << "the second server never published a Record";

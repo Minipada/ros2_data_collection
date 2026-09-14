@@ -54,8 +54,8 @@ protected:
   // alongside the MeasurementServer.
   void spinExtra() override
   {
-    rclcpp::spin_some(server_node_->get_node_base_interface());
-    rclcpp::spin_some(commander_node_->get_node_base_interface());
+    spinNodeOnce(server_node_->get_node_base_interface());
+    spinNodeOnce(commander_node_->get_node_base_interface());
   }
 
   // Sends a goal through the fake commander and spins until the fake server's handle_accepted has
