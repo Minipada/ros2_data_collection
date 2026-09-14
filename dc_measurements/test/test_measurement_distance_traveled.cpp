@@ -67,7 +67,14 @@ protected:
   {
     auto tf_wait_node = std::make_shared<rclcpp::Node>("distance_traveled_tf_wait");
     tf2_ros::Buffer tf_buffer(tf_wait_node->get_clock());
-    tf2_ros::TransformListener tf_listener(tf_buffer, tf_wait_node, /*spin_thread=*/true);
+    // The NodeT constructor is deprecated on lyrical; NodeInterfaces wraps the node instead.
+    tf2_ros::TransformListener tf_listener(
+        tf_buffer,
+        rclcpp::node_interfaces::NodeInterfaces<
+            rclcpp::node_interfaces::NodeBaseInterface, rclcpp::node_interfaces::NodeLoggingInterface,
+            rclcpp::node_interfaces::NodeParametersInterface, rclcpp::node_interfaces::NodeTopicsInterface>(
+            tf_wait_node),
+        /*spin_thread=*/true);
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     while (!tf_buffer.canTransform("map", "base_link", tf2::TimePointZero))
     {
