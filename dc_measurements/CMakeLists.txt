@@ -286,6 +286,11 @@ add_library(${library_name} SHARED
   src/measurement_server.cpp
 )
 
+target_include_directories(${library_name} PUBLIC
+  ${dc_common_INCLUDE_DIRS}
+  ${dc_core_INCLUDE_DIRS}
+)
+
 target_link_libraries(${library_name} PUBLIC
   ${UUID_LIBRARIES}
   ${link_dependencies}
