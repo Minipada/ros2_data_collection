@@ -1,0 +1,347 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>0010 - The Mission Measurement&#x27;s lifecycle contract: nav2 adapter scope and Record shape - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../open-in.css">
+        <link rel="stylesheet" href="../.././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../../css/logo.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <a style="margin-right: 10px;" href="https://github.com/minipada/ros2_data_collection" target="_blank"><i  class="lni lni-github-original lni-32"></i></a>
+                <a style="margin-right: 10px;" href="mailto:d.bensoussan@proton.me" target="_blank"><i  class="lni lni-envelope lni-32"></i></a>
+                <div>Under <a target="_blank" style="color: var(--sidebar-active);"
+                    href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                license</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/jazzy/doc/src/dc/adr/0010-mission-lifecycle-contract.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="the-mission-measurements-lifecycle-contract-nav2-adapter-scope-and-record-shape"><a class="header" href="#the-mission-measurements-lifecycle-contract-nav2-adapter-scope-and-record-shape">The Mission Measurement's lifecycle contract: nav2 adapter scope and Record shape</a></h1>
+<p>ROS has no standard interface for mission or task lifecycle. Issue #305 asked two
+questions before any Mission Measurement could be written: how far a built-in nav2
+adapter should go inferring "mission" from action goal status, and what an escape-hatch
+message for stacks with their own mission executive should look like. This ADR records
+that decision so #387 (the nav2 adapter) and later adapters (Open-RMF, a mission
+executive) can implement against it without re-litigating scope.</p>
+<p><strong>Decision: the nav2 adapter reports exactly one <code>NavigateToPose</code> goal's lifecycle, and
+every adapter — nav2 or otherwise — emits the same <code>StringStamped</code>/JSON Record shape
+used by every other Measurement, not a new typed <code>dc_interfaces</code> message.</strong></p>
+<h2 id="nav2-adapter-scope"><a class="header" href="#nav2-adapter-scope">Nav2 adapter scope</a></h2>
+<p>The nav2 adapter derives <code>mission_start</code>/<code>mission_end</code> purely from one <code>NavigateToPose</code>
+goal: acceptance, terminal status, and result. It deliberately does not infer anything
+above that:</p>
+<ul>
+<li>A "mission" that spans more than one nav2 goal (a multi-waypoint run coordinated by an
+external mission executive) is out of scope — nav2 has no concept of it, so DC will
+not guess at grouping goals into one mission.</li>
+<li>A mission sourced from a stack other than nav2 (Open-RMF, VDA5050, a custom mission
+executive) is out of scope for this adapter. <code>mission_id</code> and <code>mission_type</code> exist on
+the Record specifically so a future adapter can supply its own values without a schema
+change or reopening this decision.</li>
+<li><code>NavigateThroughPoses</code> and <code>FollowWaypoints</code> are separate nav2 action interfaces with
+their own goal/feedback/result shapes; they get their own adapters, not a generalized
+one, tracked as issues blocked by #387.</li>
+</ul>
+<h2 id="the-escape-hatch-no-new-message-reuse-the-existing-record-contract"><a class="header" href="#the-escape-hatch-no-new-message-reuse-the-existing-record-contract">The escape-hatch: no new message, reuse the existing Record contract</a></h2>
+<p>Every Measurement in this codebase (<code>battery</code>, <code>intervention</code>, <code>fault</code>) publishes
+<code>dc_interfaces::msg::StringStamped</code> carrying a JSON payload validated against a
+<code>dc_measurements</code> JSON Schema — there is no precedent for a typed <code>dc_interfaces</code>
+message per Measurement. The Mission Measurement does not introduce the first
+exception: a stack with its own mission executive is a new Measurement plugin (or a
+future generic "external mission" plugin) publishing the same Record shape below with
+its own <code>mission_id</code>/<code>mission_type</code>, not a new <code>dc_interfaces</code> message type.</p>
+<h2 id="record-shape"><a class="header" href="#record-shape">Record shape</a></h2>
+<ul>
+<li><code>event</code>: <code>"mission_start"</code> or <code>"mission_end"</code>, required — matching <code>battery</code>'s
+<code>charge_session_start</code>/<code>_end</code> convention (a named episode kind), not
+<code>intervention</code>/<code>fault</code>'s generic <code>start</code>/<code>end</code>.</li>
+<li><code>mission_id</code>: string, required on both events. The nav2 adapter synthesises it from
+the goal UUID (<code>unique_identifier_msgs/UUID</code>, stringified). Typed as a string, not an
+incrementing integer like <code>battery</code>'s <code>session_id</code>, so a future adapter can supply an
+externally issued id (a WMS order number, an Open-RMF booking id) without a type
+change.</li>
+<li><code>mission_type</code>: optional string. The nav2 adapter sets it to the nav2 action name
+(<code>"navigate_to_pose"</code>, <code>"navigate_through_poses"</code>, <code>"follow_waypoints"</code> for sibling
+adapters). The schema accepts any string so a non-nav2 source can supply a richer
+value later without a schema change.</li>
+<li><code>sequence</code>: integer, monotonic, incremented per emitted Record from one Measurement
+instance (not per <code>mission_id</code>) — gap detection, mirroring <code>fault</code>'s global counter.</li>
+<li><code>outcome</code>: required on <code>mission_end</code> only. Enum: <code>succeeded</code>, <code>failed</code>, <code>cancelled</code>,
+<code>aborted</code>. For the nav2 adapter: <code>GoalStatus.ABORTED</code> → <code>aborted</code>,
+<code>GoalStatus.CANCELED</code> → <code>cancelled</code>, and <code>failed</code> is driven by a documented
+application-level condition (non-zero <code>NavigateToPose::Result.error_code</code> on an
+otherwise-succeeded goal status) rather than being collapsed into <code>aborted</code>.</li>
+<li><code>reason</code>: string, required on <code>mission_end</code> when <code>outcome</code> is <code>failed</code> or <code>aborted</code>.
+Free text — for the nav2 adapter, verbatim from <code>NavigateToPose::Result.error_msg</code>.
+No DC-invented coded/structured reason table.</li>
+<li><code>error_code</code>: integer, required alongside <code>reason</code>. For the nav2 adapter, verbatim
+from <code>NavigateToPose::Result.error_code</code>.</li>
+<li><code>duration_sec</code>: number, required on <code>mission_end</code> only.</li>
+<li><code>recoveries</code>: integer, optional on <code>mission_end</code> — for the nav2 adapter, from
+<code>NavigateToPose::Feedback.number_of_recoveries</code> at goal completion.</li>
+<li>No <code>update_id</code>/order-update field: a VDA5050-specific mid-mission-amendment concept
+with no evidence DC needs it; adding it later is a non-breaking schema change.</li>
+</ul>
+<h2 id="a-mission-still-running-at-shutdown"><a class="header" href="#a-mission-still-running-at-shutdown">A mission still running at shutdown</a></h2>
+<p>There is no explicit "open" field on the Record. A mission still running when the
+process stops simply never gets a <code>mission_end</code> Record — nothing downstream can average
+an unclosed interval as zero-duration, because there is nothing to average. Deriving an
+"open"/still-running signal at query time (the way <code>dc_kpi_intervention_rate</code> derives
+<code>open_interventions</code>) is the concern of the mission-success-rate view deferred from
+#363, not this Record schema.</p>
+<h2 id="consequences"><a class="header" href="#consequences">Consequences</a></h2>
+<ul>
+<li>#387 (the nav2 <code>NavigateToPose</code> adapter) and its siblings for <code>NavigateThroughPoses</code>
+and <code>FollowWaypoints</code> implement against this Record shape and scope boundary without
+needing further design discussion.</li>
+<li>A future non-nav2 adapter (Open-RMF is the leading candidate; VDA5050 explicitly is
+not, per #305) targets the same <code>mission_start</code>/<code>mission_end</code> contract, supplying its
+own <code>mission_id</code>/<code>mission_type</code>, rather than requiring a new message type or a schema
+redesign.</li>
+<li><code>dc_measurements/plugins/measurements/json/mission_nav2.json</code> (and any sibling
+adapter's schema) validates against this shape; downstream views (#363's deferred
+mission-success-rate panel) can rely on <code>outcome</code> and <code>sequence</code> having the same
+meaning across every adapter that targets this contract.</li>
+</ul>
+<h2 id="considered-options"><a class="header" href="#considered-options">Considered Options</a></h2>
+<ul>
+<li>A new typed <code>dc_interfaces</code> message for mission lifecycle events — rejected: no
+existing Measurement publishes a typed message for structured data: introducing one
+here would be the first exception to a load-bearing convention, for no benefit over
+the JSON Record + schema every other Measurement already uses.</li>
+<li>An adapter that groups nav2 goals into multi-goal missions itself (e.g. by proximity
+in time) — rejected: nav2 has no concept of a multi-goal mission, so any grouping
+heuristic DC invented would be a guess it could not honestly stand behind; the
+<code>mission_id</code>/<code>mission_type</code> escape hatch defers that grouping to a system that
+actually has the information.</li>
+</ul>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/adr/0010-mission-lifecycle-contract.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../dc/adr/0009-mcap-as-a-passthrough-destination.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../dc/adr/0012-aws-sdk-vendor-flattened-source.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../dc/adr/0009-mcap-as-a-passthrough-destination.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../dc/adr/0012-aws-sdk-vendor-flattened-source.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../../ace.js"></script>
+        <script src="../../editor.js"></script>
+        <script src="../../mode-rust.js"></script>
+        <script src="../../theme-dawn.js"></script>
+        <script src="../../theme-tomorrow_night.js"></script>
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../js/mermaid.js"></script>
+        <script src="../../js/mermaid-init.js"></script>
+        <script src="../../js/theme.js"></script>
+
+
+    </body>
+</html>

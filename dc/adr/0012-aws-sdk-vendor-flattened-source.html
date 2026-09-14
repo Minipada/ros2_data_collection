@@ -1,0 +1,328 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>0012 - aws_sdk_vendor fetches aws-sdk-cpp live from GitHub; the flattened-source design is rejected - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../open-in.css">
+        <link rel="stylesheet" href="../.././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../../css/logo.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <a style="margin-right: 10px;" href="https://github.com/minipada/ros2_data_collection" target="_blank"><i  class="lni lni-github-original lni-32"></i></a>
+                <a style="margin-right: 10px;" href="mailto:d.bensoussan@proton.me" target="_blank"><i  class="lni lni-envelope lni-32"></i></a>
+                <div>Under <a target="_blank" style="color: var(--sidebar-active);"
+                    href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                license</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/jazzy/doc/src/dc/adr/0012-aws-sdk-vendor-flattened-source.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="aws_sdk_vendor-fetches-aws-sdk-cpp-live-from-github-the-flattened-source-design-is-rejected"><a class="header" href="#aws_sdk_vendor-fetches-aws-sdk-cpp-live-from-github-the-flattened-source-design-is-rejected">aws_sdk_vendor fetches aws-sdk-cpp live from GitHub; the flattened-source design is rejected</a></h1>
+<p><code>aws_sdk_vendor</code> builds aws-sdk-cpp (core + s3 only) by cloning
+<code>github.com/aws/aws-sdk-cpp.git</code> directly at <code>colcon build</code> time, via
+<code>ament_cmake_vendor_package</code>'s <code>ament_vendor()</code> macro (<code>VCS_TYPE git</code>) — the same idiom
+<code>zmqpp_vendor</code>/<code>tinyxml_vendor</code>/<code>yaml_cpp_vendor</code> already use successfully on the real
+ROS buildfarm. No aws-sdk-cpp source is vendored anywhere: <code>aws_sdk_vendor</code> itself lives
+in its own repo, <code>github.com/Minipada/aws_sdk_vendor</code> (mirroring <code>vector_vendor</code>'s split,
+ADR-0002's amendment), but that repo now holds only this package's <code>CMakeLists.txt</code> and
+<code>package.xml</code> — a thin recipe, not a vendored source tree.</p>
+<h2 id="why"><a class="header" href="#why">Why</a></h2>
+<p>An earlier design (#425, worked out in PR #433) kept <code>aws_sdk_vendor</code> in its own repo but
+flattened aws-sdk-cpp's pinned source into it, plain-committed and pruned to exactly what
+<code>-DBUILD_ONLY=s3</code> compiles, so no network fetch happened at <code>colcon build</code> time at all.
+That design rested on one assumption: that ROS buildfarm binarydeb jobs run with no
+network access, the same constraint that motivated <code>vector_vendor</code>'s checked-in-binary
+amendment (see ADR-0002).</p>
+<p>That assumption is false for the actual compilation step. <code>ros_buildfarm</code>'s own
+job-generation source
+(<code>ros_buildfarm/templates/release/deb/binarypkg_job.xml.em</code>, the "Run Dockerfile - build
+binarydeb" section) invokes <code>docker run --net=host</code> for the container that runs the
+build. And this isn't theoretical: <code>zmqpp_vendor</code> — which does exactly this
+live-git-clone-at-build-time pattern via <code>ament_vendor()</code> — has a real, currently
+succeeding Jenkins job on build.ros2.org
+(<code>Jbin_uN64__zmqpp_vendor__ubuntu_noble_amd64__binary</code>, build #12, <code>SUCCESS</code>).
+<code>vector_vendor</code>'s problem was never generic buildfarm network isolation; it was Vector
+shipping as a large pinned binary rather than buildable source, which the buildfarm has
+no story for regardless of network access, and which <code>ament_vendor()</code> doesn't help with
+either.</p>
+<p>Given real network access, a live fetch is simpler than a flattened source and needs no
+vendored tree, no separate REUSE audit of ~2600 upstream files, and no manual re-pruning
+on every AWS SDK version bump. <code>crt/aws-crt-cpp</code>'s own submodule chain (13 submodules,
+one of which — <code>s2n</code>'s CBMC formal-verification model — is unrelated to
+<code>-DBUILD_ONLY=s3</code>) can be let recurse in full via <code>ament_vendor()</code>'s <code>vcs import --recursive</code>: with real network available, the one extra unused clone is harmless, and
+<code>vcs import</code> has no mechanism to exclude a single nested submodule anyway.</p>
+<p><code>aws_sdk_vendor</code> staying in its own repo, rather than moving back into
+<code>ros2_data_collection</code>, is a separate call from the fetch-mechanism question above: this
+package's own content (<code>CMakeLists.txt</code> + <code>package.xml</code>) is small either way, so unlike
+<code>vector_vendor</code>'s split — which exists specifically to keep ~106MB/bump of binary growth
+out of <code>ros2_data_collection</code>'s git history — there's no bloat this split avoids. It
+stays split anyway so every vendor package this workspace pulls in via <code>.repos</code> follows
+the same layout and the same bump/release workflow.</p>
+<h2 id="decision"><a class="header" href="#decision">Decision</a></h2>
+<ul>
+<li><code>github.com/Minipada/aws_sdk_vendor</code>'s <code>CMakeLists.txt</code> calls <code>ament_vendor()</code> with
+<code>VCS_TYPE git</code>, <code>VCS_URL https://github.com/aws/aws-sdk-cpp.git</code>, and <code>VCS_VERSION</code>
+pinned to the same tag ADR-0007's Phase 2 verified against RustFS. <code>GLOBAL_HOOK</code> is
+required: <code>dc_bridge</code> (the real downstream consumer) only ever calls
+<code>find_package(AWSSDK)</code>, never <code>find_package(aws_sdk_vendor)</code> first, so the install
+prefix has to reach <code>CMAKE_PREFIX_PATH</code> via an environment hook applied
+unconditionally, not a CMake config-extra a consumer would only pick up by
+<code>find_package()</code>-ing this vendor package itself.</li>
+<li>The flattened <code>vendor/aws-sdk-cpp/</code> tree #425/PR #433 committed into
+<code>github.com/Minipada/aws_sdk_vendor</code> is removed from that repo; it now holds only the
+thin <code>ament_vendor()</code> recipe. <code>ros2_data_collection.repos</code> gains an <code>aws_sdk_vendor</code>
+entry (pinned to a tag, alongside <code>vector_vendor</code>'s), the same <code>vcs import</code> path
+<code>vector_vendor</code> already uses.</li>
+<li><code>tools/e2e/Containerfile</code>'s <code>vendor-network-check</code> stage kept proving the <em>lack</em> of
+network isolation is expected for <code>aws_sdk_vendor</code> for a while after this decision —
+under <code>--network=none</code> its <code>colcon build</code> was supposed to fail, same as it always has,
+since nothing about this decision changes what the buildfarm actually does for this
+package. The stage (and the CI job wired to it) was later deleted, see docs/adr/0013:
+a check that fails by design, permanently, for both vendor packages it covers stopped
+being distinguishable from no check at all.</li>
+</ul>
+<h2 id="consequences"><a class="header" href="#consequences">Consequences</a></h2>
+<ul>
+<li>No aws-sdk-cpp source lives in <code>ros2_data_collection</code>, in <code>Minipada/aws_sdk_vendor</code>,
+or anywhere else — one less REUSE audit surface, and no manual pruning step on every
+AWS SDK version bump (just move <code>AWS_SDK_VERSION</code>).</li>
+<li><code>aws_sdk_vendor</code>'s <code>colcon build</code> step needs network, same as it always has since
+ADR-0007; <code>toolchain-base</code>'s <code>vcs import</code> (which fetches both <code>vector_vendor</code> and
+<code>aws_sdk_vendor</code>) stays isolated from <code>tools/e2e/Containerfile</code>'s own build steps.</li>
+<li>Bumping the AWS SDK version now touches two repos, same as bumping Vector already
+does: land the new <code>AWS_SDK_VERSION</code>/<code>&lt;version&gt;</code>/tag in <code>Minipada/aws_sdk_vendor</code>,
+then bump the pinned <code>version:</code> in <code>ros2_data_collection.repos</code>.</li>
+<li>If a future ROS buildfarm policy change <em>does</em> restrict binarydeb network access (the
+false premise here becoming true later), this decision reverses again; nothing about
+the flattened-source design explored in PR #433 is lost — it is documented there and
+in this ADR's history, not deleted.</li>
+</ul>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/adr/0012-aws-sdk-vendor-flattened-source.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../dc/adr/0010-mission-lifecycle-contract.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../dc/adr/0013-remove-network-isolation-check.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../dc/adr/0010-mission-lifecycle-contract.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../dc/adr/0013-remove-network-isolation-check.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../../ace.js"></script>
+        <script src="../../editor.js"></script>
+        <script src="../../mode-rust.js"></script>
+        <script src="../../theme-dawn.js"></script>
+        <script src="../../theme-tomorrow_night.js"></script>
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../js/mermaid.js"></script>
+        <script src="../../js/mermaid-init.js"></script>
+        <script src="../../js/theme.js"></script>
+
+
+    </body>
+</html>

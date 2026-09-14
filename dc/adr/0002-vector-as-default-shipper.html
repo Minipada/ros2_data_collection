@@ -1,0 +1,404 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>0002 - Vector is the blessed default shipper - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../open-in.css">
+        <link rel="stylesheet" href="../.././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../../css/logo.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <a style="margin-right: 10px;" href="https://github.com/minipada/ros2_data_collection" target="_blank"><i  class="lni lni-github-original lni-32"></i></a>
+                <a style="margin-right: 10px;" href="mailto:d.bensoussan@proton.me" target="_blank"><i  class="lni lni-envelope lni-32"></i></a>
+                <div>Under <a target="_blank" style="color: var(--sidebar-active);"
+                    href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                license</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/jazzy/doc/src/dc/adr/0002-vector-as-default-shipper.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="vector-is-the-blessed-default-shipper"><a class="header" href="#vector-is-the-blessed-default-shipper">Vector is the blessed default shipper</a></h1>
+<p>Both upstream Fluent Bit and Vector can sit behind the Bridge's Forward-protocol boundary. We bless <strong>Vector</strong>: its postgres and aws_s3 (MinIO-compatible) sinks are native and maintained where Fluent Bit's pgsql output stayed experimental and MinIO required our own Go plugin; VRL replaces our four chained Lua/rewrite-tag filter hacks with one typed transform; it adds end-to-end acknowledgements on top of disk buffering; and it ships as a single static binary (x86_64/arm64). Docs, demos, and generated config target Vector only — Fluent Bit remains a drop-in option for memory-starved targets (~5MB vs ~100MB RSS) but is not documented as a first-class path.</p>
+<h2 id="consequences"><a class="header" href="#consequences">Consequences</a></h2>
+<ul>
+<li>A <code>vector_vendor</code> ament package vendors the official static binary, pinned to an exact version by checksum (arch-detected); a <code>vector_path</code> parameter allows using a system-installed Vector instead. Apt-repo install and Docker remain documented alternatives.</li>
+</ul>
+<h2 id="amendment-checked-in-binary-instead-of-a-build-time-download-424"><a class="header" href="#amendment-checked-in-binary-instead-of-a-build-time-download-424">Amendment: checked-in binary instead of a build-time download (#424)</a></h2>
+<p><code>vector_vendor</code> originally fetched its pinned binary over the network at build time via
+<code>file(DOWNLOAD ...)</code>, which violates the ROS buildfarm's no-network-access policy for
+binarydeb jobs and defeats #423's network-isolated build check. The "vector-slim"
+feature-flagged build this ADR originally proposed CI would publish was never actually
+built — no such CI job exists in this repo — so it is not available to vendor either.</p>
+<p>Fixed by checking the official <code>vectordotdev/vector</code> release tarballs (x86_64 and
+aarch64, same bytes <code>file(DOWNLOAD ...)</code> used to fetch, same pinned SHA256 checksums)
+directly into <code>vector_vendor/prebuilt/</code>; <code>CMakeLists.txt</code> now extracts and installs from
+the local file, performing no network I/O. The <em>tarball</em>, not the extracted binary, is
+what's committed: the extracted <code>vector</code> binary is 120–142MB (stripped/unstripped)
+depending on target, over GitHub's 100MB hard per-file limit, while the release
+tarball's upstream gzip compression brings each architecture's file to ~50-54MB — under
+the limit.</p>
+<p><strong>Not tracked via Git LFS</strong>, per #421's original implementation decision ("no
+release-time injection step, no <code>git-lfs</code>: committed like any other tracked file").
+LFS was evaluated and briefly adopted mid-review: the specific concern that motivated
+#421's original call — that LFS content wouldn't survive <code>bloom</code>'s release-tarball
+export step — turned out to be unfounded. <code>bloom</code>'s <code>export_upstream</code> delegates to
+<code>vcstools.GitClient.checkout()</code> (a plain <code>git clone</code> + <code>git checkout &lt;tag&gt;</code>, which does
+run LFS's smudge filter), and the export machinery itself
+(<code>vcstools.git_archive_all.GitArchiver</code>) reads files off the working-tree filesystem
+rather than through <code>git archive</code>'s blob-store plumbing (the actual, narrower reason
+plain <code>git archive</code> breaks LFS) — confirmed empirically against a throwaway LFS repo and
+the real <code>vcstools</code>/<code>bloom</code> code, not just read.</p>
+<p>LFS was reverted anyway for a more basic reason: GitHub's free LFS tier is 1GB storage
+and 1GB bandwidth per month, and every future Vector version bump adds both tarballs
+(~106MB) as new, non-deduplicated LFS objects — roughly 9 version bumps before storage
+alone exhausts the free tier, independent of and sooner than the plain-blob approach's
+own cost (git history growing by the same ~106MB per bump, but against no comparable
+quota). A plain committed blob has no such ceiling; the tradeoff is that every future
+Vector bump grows this repo's ordinary git history by ~106MB, permanently, since git
+does not deduplicate binary blobs across versions. Revisit if/when that accumulation
+becomes the more pressing cost — the LFS path is proven to work, should it be needed.</p>
+<h2 id="amendment-split-into-its-own-repo-pulled-in-via-repos"><a class="header" href="#amendment-split-into-its-own-repo-pulled-in-via-repos">Amendment: split into its own repo, pulled in via <code>.repos</code></a></h2>
+<p>The ~106MB-per-bump cost the previous amendment accepted as <code>vector_vendor</code>'s tradeoff
+doesn't have to be <code>ros2_data_collection</code>'s cost to carry — nothing about the rest of
+this repo's history needs to grow every time Vector ships a release. <code>vector_vendor</code>
+now lives at <a href="https://github.com/Minipada/vector_vendor">github.com/Minipada/vector_vendor</a>
+(default branch <code>jazzy</code>, matching this repo's own active line), containing exactly what
+used to sit at <code>ros2_data_collection/vector_vendor/</code>: the same <code>CMakeLists.txt</code>
+(checked-in tarball, checksum-pinned, no network at build time — the previous
+amendment's decision is unchanged, just relocated) and the same two prebuilt tarballs.
+<code>package.xml</code>'s <code>&lt;version&gt;</code> there tracks the vendored Vector version directly (<code>0.57.0</code>
+at the time of the split), not an independent counter.</p>
+<p>Pulled into this workspace via <code>ros2_data_collection.repos</code> (vcstool) rather than a
+<code>COPY</code>/git submodule: <code>vcs import</code> pins to a <strong>tag</strong> (<code>v&lt;VECTOR_VERSION&gt;</code>), not a
+branch, so a given <code>ros2_data_collection</code> commit always resolves the same
+<code>vector_vendor</code> content — a floating branch would make the build's vector_vendor
+content silently drift out from under an unrelated <code>ros2_data_collection</code> change.
+<code>tools/e2e/Containerfile</code>'s <code>toolchain-base</code> stage runs the import (network required,
+same as its rosdep install right below it); every downstream stage's actual <code>colcon build</code> builds against the already-fetched result, unaffected by where the source
+physically came from. Bumping Vector now touches
+two repos: land the new binaries + tag in <code>vector_vendor</code>, then bump the pinned
+<code>version:</code> in <code>ros2_data_collection.repos</code> to match.</p>
+<p>This is a development-workspace convenience only (<code>vcs import</code>/<code>colcon build</code> from
+source); it does not by itself make <code>vector_vendor</code> installable via <code>apt</code> — that
+requires its own independent <code>bloom-release</code> into <code>rosdistro</code>, not yet done, at which
+point <code>ros2_data_collection</code> packages that need it would instead declare a normal
+<code>&lt;depend&gt;vector_vendor&lt;/depend&gt;</code> and let rosdep resolve the released <code>.deb</code>, same as any
+other ROS package dependency. Until then, <code>.repos</code> is how CI and local dev get a
+buildable workspace.</p>
+<h2 id="amendment-back-to-a-live-checksum-pinned-download-435"><a class="header" href="#amendment-back-to-a-live-checksum-pinned-download-435">Amendment: back to a live, checksum-pinned download (#435)</a></h2>
+<p>The no-network-access assumption the first amendment (#424) rested on — that ROS
+buildfarm binarydeb jobs can't reach the network — is false. <code>ros_buildfarm</code>'s own
+job-generation source (<code>ros_buildfarm/templates/release/deb/binarypkg_job.xml.em</code>, the
+"Run Dockerfile - build binarydeb" section) invokes <code>docker run --net=host</code> for the
+container that runs the actual build step, and this isn't theoretical: <code>zmqpp_vendor</code> —
+which fetches its own dependency live at <code>colcon build</code> time via
+<code>ament_cmake_vendor_package</code>'s <code>ament_vendor()</code> — has a real, currently succeeding
+Jenkins job on build.ros2.org (<code>Jbin_uN64__zmqpp_vendor__ubuntu_noble_amd64__binary</code>,
+build #12, <code>SUCCESS</code>). <code>aws_sdk_vendor</code> reached the identical conclusion independently
+for its own build (docs/adr/0012) after resting on the same false premise.</p>
+<p>With real network available at build time, the live-download design this repo used
+before #424 is simply simpler than the checked-in-tarball design that replaced it, and
+it sidesteps the checked-in design's actual cost entirely: nothing binary is committed
+anywhere, so there is nothing for git to fail to deduplicate as Vector ships new
+versions. <code>vector_vendor/CMakeLists.txt</code> reverts to <code>file(DOWNLOAD ...)</code>, fetching the
+official per-architecture release tarball at build time and verifying it against the
+same pinned SHA256 checksums the checked-in design used — the <code>vector_path</code> override for
+air-gapped/distro-packaged builds is unchanged. The checked-in <code>prebuilt/*.tar.gz</code>
+tarballs are removed from <code>Minipada/vector_vendor</code>.</p>
+<p>This does not reopen the "own repo" amendment above: <code>vector_vendor</code> stays split out,
+independent of whether its own content is large enough to justify the split on git-bloat
+grounds by itself — see docs/adr/0012's identical reasoning for <code>aws_sdk_vendor</code>, a
+thin recipe with no bloat of its own that stays split anyway so every vendor package
+this workspace pulls in via <code>.repos</code> follows the same layout and bump/release workflow.
+Vector's vendored version is unchanged by this amendment (still 0.57.0), so
+<code>Minipada/vector_vendor</code>'s existing <code>v0.57.0</code> tag was moved onto the new commit rather
+than minted fresh — <code>package.xml</code>'s <code>&lt;version&gt;</code> continues to track <code>VECTOR_VERSION</code>
+exactly, and there is no independent counter to bump for a fetch-mechanism-only change.</p>
+<p><code>tools/e2e/Containerfile</code>'s <code>vendor-network-check</code> stage (#423) already built
+<code>vector_vendor</code> alongside <code>aws_sdk_vendor</code> under <code>--network=none</code> before this amendment
+— it was a no-op inclusion back then, since the checked-in binary's <code>colcon build</code>
+needed no network and so never failed. It stopped being a no-op here: <code>vector_vendor</code>'s
+build started failing under <code>--network=none</code> for the same reason <code>aws_sdk_vendor</code>'s
+always has, which is the change this amendment's own end-to-end verification confirmed.
+The stage itself (and the CI job wired to it) was later deleted — see docs/adr/0013 —
+once a permanently-failing check on both packages stopped being distinguishable from no
+check at all.</p>
+<p>If a future ROS buildfarm policy change <em>does</em> restrict binarydeb network access (the
+false premise here becoming true later), this decision reverses again to the
+checked-in-tarball design; nothing about that design is lost — it is documented in the
+amendment above and in <code>Minipada/vector_vendor</code>'s own git history, not deleted.</p>
+<h2 id="why-the-forward-protocol-is-the-bridgeshipper-wire-format"><a class="header" href="#why-the-forward-protocol-is-the-bridgeshipper-wire-format">Why the forward protocol is the Bridge→Shipper wire format</a></h2>
+<p>The Bridge must hand Records to the Shipper across a process boundary such that <strong>the
+sender knows what arrived</strong> — durable ingest is impossible without receipt
+acknowledgement. Requirements: a listener the Shipper already ships, sender-visible
+acks, and a minimal Rust client. Vector's source menu, filtered:</p>
+<ul>
+<li><code>socket</code>, <code>stdin</code> — one-way byte streams; no response direction exists, so the
+Shipper cannot confirm receipt. A Shipper restart silently loses in-flight Records.</li>
+<li><code>file</code> — durable, but Vector neither deletes consumed files nor exposes its
+checkpoint, so the Bridge would rotate blind (delete too early = loss, too late =
+unbounded disk); fixing that means building an acknowledged queue anyway.</li>
+<li>websocket — Vector has a websocket sink, not a source.</li>
+<li><code>http</code> — ack-capable (response deferred until the event is buffered) but costs an
+HTTP client plus batching logic; equal capability at a higher price.</li>
+<li><code>vector</code> (native gRPC) — ack-capable; drags tonic/prost/protobuf codegen into the
+Bridge for no functional gain.</li>
+<li><code>fluent</code> (Fluentd's open "Forward" spec) — ack-capable (<code>chunk</code>/<code>ack</code> options are in
+the spec), and the client side is ~170 lines of msgpack over TCP. <strong>Chosen: the
+cheapest ack-capable listener.</strong></li>
+</ul>
+<p><strong>The forward format is not Fluent Bit.</strong> It is an open wire specification from the
+CNCF Fluentd project; no Fluentd/Fluent Bit software runs, links, or vendors into
+DC 2.0 (the embedded Fluent Bit is demolished separately, ADR-0001). DC docs call
+this boundary the <strong>shipper ingest protocol</strong>; the name "fluent" appears only in the
+generated Vector config (<code>type = "fluent"</code>) and interop documentation. A side effect,
+not a goal: any forward-speaking receiver (including stock upstream Fluent Bit, ~5MB
+RSS vs Vector's ~100MB) can be swapped in behind the boundary without Bridge changes.</p>
+<h2 id="amendment-confirmed-delivery-closes-the-acks-half-of-the-promise-266"><a class="header" href="#amendment-confirmed-delivery-closes-the-acks-half-of-the-promise-266">Amendment: confirmed delivery closes the acks half of the promise (#266)</a></h2>
+<p>The "sender-visible acks" requirement above was satisfied by <em>choosing</em> an ack-capable
+protocol, but until #266 the Bridge's Forwarder never actually used the chunk/ack option
+— every frame was sent bare. Spiked directly against the pinned Vector 0.57.0 binary
+before writing any C++: a hand-rolled msgpack client sending <code>[tag, entries, {"chunk": id}]</code> got back <code>{"ack": id}</code> even with the sink completely unreachable (connection
+refused) and only a disk buffer engaged — confirming acks fire on durable-buffer-write,
+not on final delivery to the Destination, which is the guarantee actually wanted here.
+Also found: Vector 0.57 deprecates enabling <code>acknowledgements</code> on the source itself
+in favor of the global <code>[acknowledgements] enabled = true</code> form (identical ack
+behavior, no deprecation warning) — the renderer uses the global form.</p>
+<p>A second on-disk queue for this window (mirroring the Uploader's intent queue, #265)
+was considered and rejected in review: Vector's own disk buffer
+(<code>shipper.buffer_max_bytes</code>) already covers sink/Destination outages, and the
+<code>bridge_ready_gate</code> (ADR-0006) already covers "Vector isn't listening yet" at startup.
+What was missing was purely the <strong>in-flight</strong> window — a Record already handed to a
+<code>send()</code> call whose ack never arrives (Vector respawning, a TCP hiccup) — which an
+in-memory (not disk-backed) bounded window closes cheaply. The double failure of "Bridge
+crashes while this in-memory window is non-empty" is accepted as out of scope, same as
+this ADR's original ready-gate/disk-buffer split assumed no double failures either.</p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/adr/0002-vector-as-default-shipper.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../dc/adr/0001-external-shipper-replaces-embedded-fluent-bit.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../dc/adr/0003-blessed-destinations-plus-passthrough.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../dc/adr/0001-external-shipper-replaces-embedded-fluent-bit.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../dc/adr/0003-blessed-destinations-plus-passthrough.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../../ace.js"></script>
+        <script src="../../editor.js"></script>
+        <script src="../../mode-rust.js"></script>
+        <script src="../../theme-dawn.js"></script>
+        <script src="../../theme-tomorrow_night.js"></script>
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../js/mermaid.js"></script>
+        <script src="../../js/mermaid-init.js"></script>
+        <script src="../../js/theme.js"></script>
+
+
+    </body>
+</html>
