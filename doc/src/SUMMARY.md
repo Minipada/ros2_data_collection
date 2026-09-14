@@ -1,7 +1,10 @@
 # Summary
 
+# Getting Started
+
 - [Introduction](./dc/introduction.md)
 - [Setup](./dc/setup.md)
+  - [Requirements](./dc/requirements.md)
 - [Demos](./dc/demos.md)
   - [Beginner](./dc/demos/beginner.md)
     - [Uptime](./dc/demos/uptime_stdout.md)
@@ -16,9 +19,17 @@
     - [QRcodes to PostgreSQL/RustFS](./dc/demos/qrcodes_minio_pgsql.md)
     - [Fast DDS statistics to PostgreSQL/Grafana](./dc/demos/fastdds_stats_pgsql_grafana.md)
     - [Custom plugin](./dc/demos/custom_stdout.md)
+
+# Concepts
+
 - [Concepts](./dc/concepts.md)
 - [Data Pipeline](./dc/data_pipeline.md)
+- [Data validation](./dc/data_validation.md)
+- [Groups](./dc/groups.md)
 - [Lifecycle Manager](./dc/lifecycle_manager.md)
+
+# Reference
+
 - [Measurements](./dc/measurements.md)
   - [Battery](./dc/measurements/battery.md)
   - [Camera](./dc/measurements/camera.md)
@@ -59,13 +70,13 @@
   - [Same as previous](./dc/conditions/same_as_previous.md)
 - [Triggers](./dc/triggers.md)
   - [Edge trigger](./dc/triggers/edge_trigger.md)
-- [Data validation](./dc/data_validation.md)
-- [Groups](./dc/groups.md)
-- [Raw topic collection](./dc/raw_topics.md)
 - [Destinations](./dc/destinations.md)
+- [Raw topic collection](./dc/raw_topics.md)
 - [KPI views](./dc/kpi_views.md)
 - [Configuration examples](./dc/configuration_examples.md)
-- [Migration](./dc/migration.md)
+
+# Operations
+
 - [Infrastructure setup](./dc/infrastructure_setup.md)
   - [Adminer](./dc/infrastructure_setup/adminer.md)
   - [Elasticsearch](./dc/infrastructure_setup/elasticsearch.md)
@@ -74,9 +85,12 @@
   - [Ip camera](./dc/infrastructure_setup/ip_camera.md)
   - [RustFS](./dc/infrastructure_setup/rustfs.md)
   - [PostgreSQL](./dc/infrastructure_setup/postgresql.md)
+- [Migration](./dc/migration.md)
 - [kind: NetworkPolicy validation](./dc/deploy_kind_networkpolicy.md)
 - [CLI tools](./dc/cli.md)
-- [Requirements](./dc/requirements.md)
+
+# Project
+
 - [Architecture Decision Records](./dc/adr.md)
   <!-- BEGIN GENERATED ADR LIST -->
   - [0001 - External shipper process replaces embedded Fluent Bit](./dc/adr/0001-external-shipper-replaces-embedded-fluent-bit.md)
