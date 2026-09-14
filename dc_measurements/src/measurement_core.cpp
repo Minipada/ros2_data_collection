@@ -6,7 +6,7 @@
 #include <cctype>
 #include <utility>
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
+#include "ament_index_cpp/get_package_share_path.hpp"
 #include "dc_common/record_file_walk.hpp"
 
 namespace dc_measurements
@@ -228,7 +228,7 @@ void MeasurementCore::markConfigureFailed()
 
 void MeasurementCore::validateSchema(const std::string& package_name, const std::string& json_filename)
 {
-  const std::string package_share_directory = ament_index_cpp::get_package_share_directory(package_name);
+  const std::string package_share_directory = ament_index_cpp::get_package_share_path(package_name).string();
   const std::string schema_dir = package_share_directory + "/plugins/measurements/json";
   validateSchema(schema_dir + "/" + json_filename);
 }

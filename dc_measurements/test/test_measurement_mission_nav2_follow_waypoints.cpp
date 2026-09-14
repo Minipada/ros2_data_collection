@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
+#include "ament_index_cpp/get_package_share_path.hpp"
 #include "dc_measurements/measurement.hpp"
 #include "measurement_test_bench.hpp"
 #include "nav2_msgs/action/follow_waypoints.hpp"
@@ -115,7 +115,7 @@ protected:
   static void expectValidatesAgainstSchema(const nlohmann::json& record)
   {
     const std::string schema_dir =
-        ament_index_cpp::get_package_share_directory("dc_measurements") + "/plugins/measurements/json";
+        ament_index_cpp::get_package_share_path("dc_measurements").string() + "/plugins/measurements/json";
     const std::string path = schema_dir + "/mission_nav2_follow_waypoints.json";
     std::ifstream schema_file(path);
     ASSERT_TRUE(schema_file.good()) << "Schema not installed at " << path;

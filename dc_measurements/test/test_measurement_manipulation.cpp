@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 // SPDX-License-Identifier: MPL-2.0
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <ament_index_cpp/get_package_share_path.hpp>
 #include <fstream>
 #include <functional>
 #include <memory>
@@ -171,7 +171,7 @@ protected:
 
   static void expectValidatesAgainstSchema(const nlohmann::json& record)
   {
-    const std::string path = ament_index_cpp::get_package_share_directory("dc_measurements") +
+    const std::string path = ament_index_cpp::get_package_share_path("dc_measurements").string() +
                              "/plugins/measurements/json/manipulation.json";
     std::ifstream schema_file(path);
     ASSERT_TRUE(schema_file.good()) << "Schema not installed at " << path;
