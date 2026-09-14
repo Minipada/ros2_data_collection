@@ -43,11 +43,11 @@ LifecycleManager::LifecycleManager(const rclcpp::NodeOptions& options)
   project_ = get_parameter("project").as_string();
 
   get_parameter("autostart", autostart_);
-  double bond_timeout_s;
+  double bond_timeout_s{ 0.0 };
   get_parameter("bond_timeout", bond_timeout_s);
   bond_timeout_ = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::duration<double>(bond_timeout_s));
 
-  double respawn_timeout_s;
+  double respawn_timeout_s{ 0.0 };
   get_parameter("bond_respawn_max_duration", respawn_timeout_s);
   bond_respawn_max_duration_ = rclcpp::Duration::from_seconds(respawn_timeout_s);
 
@@ -90,7 +90,7 @@ LifecycleManager::LifecycleManager(const rclcpp::NodeOptions& options)
     }
     auto executor = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
     executor->add_callback_group(callback_group_, get_node_base_interface());
-    service_thread_ = std::make_unique<nav2_util::NodeThread>(executor);
+    service_thread_ = std::make_unique<nav2::NodeThread>(executor);
   });
   diagnostics_updater_.setHardwareID(project_);
   diagnostics_updater_.add(project_ + " Health", this, &LifecycleManager::CreateActiveDiagnostic);

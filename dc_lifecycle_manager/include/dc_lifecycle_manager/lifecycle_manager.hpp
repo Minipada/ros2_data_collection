@@ -17,8 +17,8 @@
 #include "bondcpp/bond.hpp"
 #include "diagnostic_updater/diagnostic_updater.hpp"
 #include "nav2_msgs/srv/manage_lifecycle_nodes.hpp"
+#include "nav2_ros_common/node_thread.hpp"
 #include "nav2_util/lifecycle_service_client.hpp"
-#include "nav2_util/node_thread.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "std_srvs/srv/empty.hpp"
 #include "std_srvs/srv/trigger.hpp"
@@ -50,7 +50,7 @@ public:
 protected:
   // Callback group used by services and timers
   rclcpp::CallbackGroup::SharedPtr callback_group_;
-  std::unique_ptr<nav2_util::NodeThread> service_thread_;
+  std::unique_ptr<nav2::NodeThread> service_thread_;
 
   // The services provided by this node
   rclcpp::Service<ManageLifecycleNodes>::SharedPtr manager_srv_;

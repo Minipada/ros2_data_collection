@@ -14,7 +14,7 @@
 #include <regex>
 #include <vector>
 
-#include "nav2_util/lifecycle_node.hpp"
+#include "nav2_ros_common/lifecycle_node.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 namespace dc_util

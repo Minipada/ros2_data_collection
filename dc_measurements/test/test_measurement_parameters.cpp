@@ -21,13 +21,11 @@ TEST_F(MeasurementParametersTest, PollingIntervalOneMeasurementWithinAFewPercent
   // (or coverage-instrumented) runner delays a fire past the window, off by one. The test exists
   // to catch a mis-applied polling_interval, not to bound scheduler latency.
   int error = 3;
-  nav2_util::declare_parameter_if_not_declared(ms_node_, "os.plugin", rclcpp::ParameterValue("dc_measurements/OS"));
-  nav2_util::declare_parameter_if_not_declared(ms_node_, "os.group_key", rclcpp::ParameterValue("os"));
-  nav2_util::declare_parameter_if_not_declared(ms_node_, "os.topic_output",
-                                               rclcpp::ParameterValue("/dc/measurement/os"));
-  nav2_util::declare_parameter_if_not_declared(ms_node_, "os.polling_interval",
-                                               rclcpp::ParameterValue(polling_interval));
-  nav2_util::declare_parameter_if_not_declared(ms_node_, "os.init_collect", rclcpp::ParameterValue(false));
+  nav2::declare_parameter_if_not_declared(ms_node_, "os.plugin", rclcpp::ParameterValue("dc_measurements/OS"));
+  nav2::declare_parameter_if_not_declared(ms_node_, "os.group_key", rclcpp::ParameterValue("os"));
+  nav2::declare_parameter_if_not_declared(ms_node_, "os.topic_output", rclcpp::ParameterValue("/dc/measurement/os"));
+  nav2::declare_parameter_if_not_declared(ms_node_, "os.polling_interval", rclcpp::ParameterValue(polling_interval));
+  nav2::declare_parameter_if_not_declared(ms_node_, "os.init_collect", rclcpp::ParameterValue(false));
 
   startLifecycleNode();
 

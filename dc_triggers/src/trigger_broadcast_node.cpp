@@ -11,7 +11,7 @@ namespace trigger_broadcast_node
 {
 
 TriggerBroadcastNode::TriggerBroadcastNode(const rclcpp::NodeOptions& options)
-  : nav2_util::LifecycleNode("trigger_broadcast_node", "", options)
+  : nav2::LifecycleNode("trigger_broadcast_node", "", options)
   , condition_plugin_loader_("dc_core", "dc_core::Condition")
   , trigger_plugin_loader_("dc_core", "dc_core::Trigger")
 {
@@ -111,27 +111,27 @@ void TriggerBroadcastNode::checkTrigger()
   flush_pub_->publish(msg);
 }
 
-nav2_util::CallbackReturn TriggerBroadcastNode::on_configure(const rclcpp_lifecycle::State& /*previous_state*/)
+nav2::CallbackReturn TriggerBroadcastNode::on_configure(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Configuring");
   auto node = shared_from_this();
 
   if (!loadConditionPlugins())
   {
-    return nav2_util::CallbackReturn::FAILURE;
+    return nav2::CallbackReturn::FAILURE;
   }
 
   if (!loadTriggerPlugin())
   {
-    return nav2_util::CallbackReturn::FAILURE;
+    return nav2::CallbackReturn::FAILURE;
   }
 
   flush_pub_ = node->create_publisher<dc_interfaces::msg::FlushEvent>(trigger_topic_, rclcpp::QoS(10));
 
-  return nav2_util::CallbackReturn::SUCCESS;
+  return nav2::CallbackReturn::SUCCESS;
 }
 
-nav2_util::CallbackReturn TriggerBroadcastNode::on_activate(const rclcpp_lifecycle::State& /*previous_state*/)
+nav2::CallbackReturn TriggerBroadcastNode::on_activate(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Activating");
   auto node = shared_from_this();
@@ -145,10 +145,10 @@ nav2_util::CallbackReturn TriggerBroadcastNode::on_activate(const rclcpp_lifecyc
 
   createBond();
 
-  return nav2_util::CallbackReturn::SUCCESS;
+  return nav2::CallbackReturn::SUCCESS;
 }
 
-nav2_util::CallbackReturn TriggerBroadcastNode::on_deactivate(const rclcpp_lifecycle::State& /*state*/)
+nav2::CallbackReturn TriggerBroadcastNode::on_deactivate(const rclcpp_lifecycle::State& /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Deactivating");
 
@@ -158,10 +158,10 @@ nav2_util::CallbackReturn TriggerBroadcastNode::on_deactivate(const rclcpp_lifec
 
   destroyBond();
 
-  return nav2_util::CallbackReturn::SUCCESS;
+  return nav2::CallbackReturn::SUCCESS;
 }
 
-nav2_util::CallbackReturn TriggerBroadcastNode::on_cleanup(const rclcpp_lifecycle::State& /*state*/)
+nav2::CallbackReturn TriggerBroadcastNode::on_cleanup(const rclcpp_lifecycle::State& /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Cleaning up");
 
@@ -177,13 +177,13 @@ nav2_util::CallbackReturn TriggerBroadcastNode::on_cleanup(const rclcpp_lifecycl
   conditions_.clear();
   flush_pub_.reset();
 
-  return nav2_util::CallbackReturn::SUCCESS;
+  return nav2::CallbackReturn::SUCCESS;
 }
 
-nav2_util::CallbackReturn TriggerBroadcastNode::on_shutdown(const rclcpp_lifecycle::State& /*previous_state*/)
+nav2::CallbackReturn TriggerBroadcastNode::on_shutdown(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Shutting down");
-  return nav2_util::CallbackReturn::SUCCESS;
+  return nav2::CallbackReturn::SUCCESS;
 }
 
 }  // namespace trigger_broadcast_node

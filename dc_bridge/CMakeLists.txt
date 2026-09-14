@@ -61,9 +61,8 @@ add_library(dc_bridge_core
 target_include_directories(dc_bridge_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-# Header-only dc_common dep (record_file_walk.hpp, #479); not in any public header, and
-# ament_target_dependencies can't be used here — it would mix target_link_libraries
-# signatures on a target that already uses the keyword form above.
+# Header-only dc_common dep (record_file_walk.hpp, #479); not in any public header, so
+# include dirs are all the core needs of it (dc_common exports no linkable target).
 target_include_directories(dc_bridge_core PRIVATE ${dc_common_INCLUDE_DIRS})
 target_link_libraries(dc_bridge_core PUBLIC
   nlohmann_json::nlohmann_json
@@ -81,12 +80,16 @@ add_library(dc_bridge_ros
 target_include_directories(dc_bridge_ros PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-# Plain signature (no PUBLIC/PRIVATE): ament_target_dependencies below uses the plain
-# form of target_link_libraries internally, and CMake refuses to mix the two on one
-# target.
-target_link_libraries(dc_bridge_ros dc_bridge_core)
-ament_target_dependencies(dc_bridge_ros
-  rclcpp rosidl_runtime_cpp rosidl_typesupport_introspection_cpp rcpputils)
+# ament_target_dependencies was removed in lyrical (#531): dependencies link by exported
+# target, keyword form throughout (CMake refuses to mix signatures on one target).
+# Message packages have no pkg::pkg umbrella target on any current distro -- their C++
+# typesupport target carries the generated code.
+target_link_libraries(dc_bridge_ros PUBLIC
+  dc_bridge_core
+  rclcpp::rclcpp
+  rosidl_runtime_cpp::rosidl_runtime_cpp
+  rosidl_typesupport_introspection_cpp::rosidl_typesupport_introspection_cpp
+  rcpputils::rcpputils)
 
 # The ROS node. No longer links the AWS SDK (#446): uploading moved to dc_uploader below,
 # so the ROS container never needs to hold object-storage credentials (epic #440's user
@@ -94,8 +97,13 @@ ament_target_dependencies(dc_bridge_ros
 add_executable(dc_bridge
   src/main.cpp
   src/bridge_node.cpp)
-target_link_libraries(dc_bridge dc_bridge_core dc_bridge_ros)
-ament_target_dependencies(dc_bridge rclcpp dc_interfaces std_msgs std_srvs)
+target_link_libraries(dc_bridge PRIVATE
+  dc_bridge_core
+  dc_bridge_ros
+  rclcpp::rclcpp
+  dc_interfaces::dc_interfaces__rosidl_typesupport_cpp
+  std_msgs::std_msgs__rosidl_typesupport_cpp
+  std_srvs::std_srvs__rosidl_typesupport_cpp)
 
 # The Uploader's own entrypoint (#446): reads the durable intent queue the Bridge above
 # writes, uploads Files to object storage, and emits each File's metadata Record itself —
@@ -127,7 +135,8 @@ if(BUILD_TESTING)
             process_config)
     ament_add_gtest(${t}_test test/${t}_test.cpp)
     target_link_libraries(${t}_test dc_bridge_core)
-    ament_target_dependencies(${t}_test dc_common)
+    # dc_common is header-only: include dirs are all the tests need of it.
+    target_include_directories(${t}_test PRIVATE ${dc_common_INCLUDE_DIRS})
     target_compile_definitions(${t}_test PRIVATE
       DC_BRIDGE_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures/render")
   endforeach()
@@ -138,8 +147,13 @@ if(BUILD_TESTING)
   # converter is handed nothing but bytes and a type name. TIMEOUT because the firehose
   # and discovery cases are wall-clock waits on graph events.
   ament_add_gtest(raw_subscriptions_test test/raw_subscriptions_test.cpp TIMEOUT 180)
-  target_link_libraries(raw_subscriptions_test dc_bridge_ros)
-  ament_target_dependencies(raw_subscriptions_test rclcpp dc_interfaces std_msgs)
+  # Plain signature: ament_add_gtest links gtest with the plain form, and CMake refuses
+  # to mix signatures on one target (namespaced targets work as plain args).
+  target_link_libraries(raw_subscriptions_test
+    dc_bridge_ros
+    rclcpp::rclcpp
+    dc_interfaces::dc_interfaces__rosidl_typesupport_cpp
+    std_msgs::std_msgs__rosidl_typesupport_cpp)
 endif()
 
 ament_package()

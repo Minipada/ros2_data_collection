@@ -13,7 +13,7 @@
 #include "geometry_msgs/msg/quaternion.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
 #include "nav2_msgs/srv/manage_lifecycle_nodes.hpp"
-#include "nav2_util/service_client.hpp"
+#include "nav2_ros_common/service_client.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "std_srvs/srv/empty.hpp"
@@ -107,8 +107,8 @@ protected:
   // The node to use for the service call
   rclcpp::Node::SharedPtr node_;
 
-  std::shared_ptr<nav2_util::ServiceClient<ManageLifecycleNodes>> manager_client_;
-  std::shared_ptr<nav2_util::ServiceClient<std_srvs::srv::Trigger>> is_active_client_;
+  std::shared_ptr<nav2::ServiceClient<ManageLifecycleNodes>> manager_client_;
+  std::shared_ptr<nav2::ServiceClient<std_srvs::srv::Trigger>> is_active_client_;
   std::string manage_service_name_;
   std::string active_service_name_;
 };

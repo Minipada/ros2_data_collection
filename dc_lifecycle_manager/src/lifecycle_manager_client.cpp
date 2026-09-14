@@ -26,8 +26,8 @@ LifecycleManagerClient::LifecycleManagerClient(const std::string& name, std::sha
   node_ = parent_node;
 
   // Create the service clients
-  manager_client_ = std::make_shared<nav2_util::ServiceClient<ManageLifecycleNodes>>(manage_service_name_, node_);
-  is_active_client_ = std::make_shared<nav2_util::ServiceClient<std_srvs::srv::Trigger>>(active_service_name_, node_);
+  manager_client_ = std::make_shared<nav2::ServiceClient<ManageLifecycleNodes>>(manage_service_name_, node_);
+  is_active_client_ = std::make_shared<nav2::ServiceClient<std_srvs::srv::Trigger>>(active_service_name_, node_);
 }
 
 bool LifecycleManagerClient::startup(const std::chrono::nanoseconds timeout)

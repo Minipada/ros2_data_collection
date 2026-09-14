@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "nav2_util/node_utils.hpp"
+#include "nav2_ros_common/node_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 namespace dc_util
@@ -66,14 +66,14 @@ T get_param_or_fatal(NodeT node, const std::string& full_name)
 template <typename T, typename NodeT>
 T declare_and_get(NodeT node, const std::string& full_name, const rclcpp::ParameterType& param_type)
 {
-  nav2_util::declare_parameter_if_not_declared(node, full_name, param_type);
+  nav2::declare_parameter_if_not_declared(node, full_name, param_type);
   return get_param_or_fatal<T>(node, full_name);
 }
 
 template <typename T, typename NodeT>
 T declare_and_get(NodeT node, const std::string& full_name, const T& default_value)
 {
-  nav2_util::declare_parameter_if_not_declared(node, full_name, rclcpp::ParameterValue(default_value));
+  nav2::declare_parameter_if_not_declared(node, full_name, rclcpp::ParameterValue(default_value));
   return get_param_or_fatal<T>(node, full_name);
 }
 
