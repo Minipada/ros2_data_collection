@@ -16,6 +16,11 @@
 # already running on the host before calling this script.
 #
 # Env vars (all optional):
+#   ROS_DISTRO     ROS 2 distro to build (default jazzy, #530) — the only input needed
+#                  to build a different distro's workspace image. Forwarded into the
+#                  Containerfile, where it selects the base image, every rosdep/setup
+#                  step, and the distro suffix on the cache mounts. Unset is exactly
+#                  today's jazzy build.
 #   IMAGE_TAG      image tag to build (default dc-workspace:latest)
 #   CCOV           "true" to build with C++ coverage instrumentation (default false)
 #   TARGET         stage to build, e.g. `workspace` or `runtime` — omit to build the
@@ -49,6 +54,7 @@ REPO_ROOT="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
 
 IMAGE_TAG="${IMAGE_TAG:-dc-workspace:latest}"
 CCOV="${CCOV:-false}"
+ROS_DISTRO="${ROS_DISTRO:-jazzy}"
 
 if [ -n "${BUILDAH_TMPDIR:-}" ]; then
   mkdir -p "$BUILDAH_TMPDIR"
@@ -75,6 +81,7 @@ ARGS=(
   --network host
   --build-arg "APT_CACHEBUST=$(date -u +%Y-%m-%d)"
   --build-arg "CCOV=$CCOV"
+  --build-arg "ROS_DISTRO=$ROS_DISTRO"
   -t "$IMAGE_TAG"
   -f "$REPO_ROOT/tools/e2e/Containerfile"
 )

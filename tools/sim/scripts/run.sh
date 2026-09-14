@@ -127,7 +127,10 @@ trap cleanup EXIT
 # and its bridge orphaned. A second stack then joins the same ROS graph, two nodes
 # publish /clock, and every tf2 buffer starts reporting "Detected jump back in time"
 # while Nav2 quietly never localizes. A container boundary makes teardown total.
-SOURCE='source /opt/ros/jazzy/setup.bash && source /root/ws/install/setup.bash'
+# Expanded inside the container: the image's ENV ROS_DISTRO (set by build.sh) picks the
+# setup; :-jazzy covers images predating #530.
+# shellcheck disable=SC2016
+SOURCE='source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && source /root/ws/install/setup.bash'
 
 start_stack() {
   CONTAINER="dc-sim-$$-$1"
@@ -180,8 +183,10 @@ if has_stage sim; then
 
   # The robot appearing in the world is the single most load-bearing assertion here:
   # an illegal-SDF spawn rejection is silent apart from one [Err] line (#324).
+  # Expanded inside the container (the image's ENV ROS_DISTRO), like $SOURCE above.
+  # shellcheck disable=SC2016
   wait_for "the robot to spawn" 600 \
-    "source /opt/ros/jazzy/setup.bash && gz model --list 2>/dev/null | grep -q turtlebot3_waffle" \
+    'source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && gz model --list 2>/dev/null | grep -q turtlebot3_waffle' \
     || fail "turtlebot3_waffle never appeared in gz model --list"
 
   rin "$SOURCE && python3 /opt/sim/verify_sim.py topics" || fail "topic checks"

@@ -24,7 +24,9 @@
 #   files, shared with toolchain's aws_sdk_vendor build, so a change to one file only
 #   recompiles that file's translation unit), `dc-apt` (downloaded .deb archives, so
 #   re-running rosdep install on the same package set skips the network round-trip)
-#   and `dc-pip` (wheels for toolchain-base's pip install). All three mounts live
+#   and `dc-pip` (wheels for toolchain-base's pip install). Mount ids carry a
+#   `-${ROS_DISTRO}` suffix so two distros can never share cached content (#530).
+#   All three mounts live
 #   under buildah's own
 #   $TMPDIR/buildah-cache/<id>, entirely separate from --cache-from/--cache-to's
 #   registry export (which only carries *layers*, not cache-mount content — verified
@@ -45,6 +47,11 @@
 # Plain ROS 2 + C++: no separate language toolchain, no source-built message repos.
 # dc_bridge builds with rosdep + colcon like every other dc_* package.
 
+# The one distro lever (#530): build.sh forwards ROS_DISTRO here, and every stage
+# redeclares it (ARG scope resets at FROM) so its RUNs — rosdep, setup sourcing, and
+# the distro-suffixed cache-mount ids — derive the distro instead of hardcoding one.
+# A changed value invalidates the stage anyway through the FROM below, so unlike
+# APT_CACHEBUST (see toolchain-base) top placement here costs no extra invalidation.
 ARG ROS_DISTRO=jazzy
 
 # --- cacher: nothing but the package manifests, so this stage's own frequent cache
@@ -61,6 +68,8 @@ RUN mkdir -p /tmp/manifests && \
     find src/ros2_data_collection -name package.xml -exec cp --parents -t /tmp/manifests {} +
 
 FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS toolchain-base
+
+ARG ROS_DISTRO=jazzy
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -80,7 +89,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # chain (toolchain, workspace). /var/lib/apt/lists stays ephemeral: every RUN
 # re-fetches indexes via apt-get update anyway, so mounting them would save no
 # downloads while adding shared mutable state across builds.
-RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
+RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     printf 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";\n' \
       > /etc/apt/apt.conf.d/docker-clean && \
     apt-get -q update && \
@@ -127,8 +136,8 @@ ARG APT_CACHEBUST=unknown
 #
 # dc-pip keeps pip's wheel cache on a mount (fastcov/mcap are unpinned, so every daily
 # re-run re-resolves them; the mount means the re-resolution re-downloads nothing).
-RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
-    --mount=type=cache,id=dc-pip,target=/root/.cache/pip \
+RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
+    --mount=type=cache,id=dc-pip-${ROS_DISTRO},target=/root/.cache/pip \
     echo "apt cache bust: ${APT_CACHEBUST}" && \
     apt-get -q update && \
     apt-get -q -y dist-upgrade && \
@@ -138,6 +147,8 @@ RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
     rm -rf /var/lib/apt/lists/*
 
 FROM toolchain-base AS toolchain
+
+ARG ROS_DISTRO=jazzy
 
 # aws_sdk_vendor's source already arrived via toolchain-base's `vcs import` above, so
 # building it here only needs the local rosdep source it depends on registering.
@@ -155,16 +166,16 @@ COPY rosdep src/ros2_data_collection/rosdep
 # APT_CACHEBUST, a .repos or rosdep/ change), but the ~15-min aws-sdk-cpp compile only
 # pays cold once: afterwards ccache serves every object whose preprocessed input
 # (headers included) didn't change, and the re-run costs mostly linking.
-RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
-    --mount=type=cache,id=dc-ccache,target=/root/.ccache \
+RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
+    --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
       > /etc/ros/rosdep/sources.list.d/10-dc.list && \
     apt-get -q update && \
     rosdep update --include-eol-distros && \
     DEBIAN_FRONTEND=noninteractive \
-    rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
+    rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false && \
     # shellcheck disable=SC1091
-    . /opt/ros/jazzy/setup.sh && \
+    . /opt/ros/${ROS_DISTRO}/setup.sh && \
     colcon build --packages-select aws_sdk_vendor \
       --cmake-args -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
       --event-handlers desktop_notification- status- && \
@@ -178,10 +189,10 @@ RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
 # layer's cache key is the manifests' own content — it invalidates only when a
 # dependency list changes, not on an ordinary source edit.
 COPY --from=cacher /tmp/manifests/src ./src
-RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
+RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     apt-get -q update && \
     DEBIAN_FRONTEND=noninteractive \
-    rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
+    rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false && \
     rm -rf /var/lib/apt/lists/*
 
 # --- workspace: full source + colcon build + colcon test, in one image both CI and
@@ -193,6 +204,7 @@ FROM toolchain AS workspace
 # below (CCOV would just read as unset/false here), producing a plain Release build
 # with no error. This exact bug was found and fixed earlier in this branch's history.
 ARG CCOV=false
+ARG ROS_DISTRO=jazzy
 
 COPY . src/ros2_data_collection
 
@@ -216,13 +228,13 @@ COPY . src/ros2_data_collection
 # podman never tags an image at all, so the caller (ci.yaml) would have nothing to
 # `podman run` the coverage data out of. ci.yaml checks TEST_RESULT itself, after
 # extracting coverage, and only pushes the image when it reads 0.
-RUN --mount=type=cache,id=dc-ccache,target=/root/.ccache \
-    --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
+RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
+    --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     apt-get -q update && \
     DEBIAN_FRONTEND=noninteractive \
-    rosdep install -y --from-paths src --ignore-src --rosdistro jazzy --as-root=apt:false && \
+    rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false && \
     # shellcheck disable=SC1091
-    . /opt/ros/jazzy/setup.sh && \
+    . /opt/ros/${ROS_DISTRO}/setup.sh && \
     if [ "$CCOV" = "true" ]; then \
       CMAKE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS='-Wall -Wextra --coverage -O0 -fno-omit-frame-pointer' -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_SHARED_LINKER_FLAGS=--coverage"; \
     else \
@@ -242,6 +254,9 @@ RUN --mount=type=cache,id=dc-ccache,target=/root/.ccache \
     rm -rf /var/lib/apt/lists/*
 
 ENV ROS_UNDERLAY=/root/ws/install
+# What the sim scripts' `source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash` reads at
+# runtime (podman exec inherits the image env) — the image knows its own distro.
+ENV ROS_DISTRO=${ROS_DISTRO}
 RUN echo "source ${ROS_UNDERLAY}/setup.bash" >> /etc/bash.bashrc
 
 # --- runtime: slim, deployable image — install/ only, exec-only system deps, no
@@ -255,6 +270,8 @@ RUN echo "source ${ROS_UNDERLAY}/setup.bash" >> /etc/bash.bashrc
 # build-arg was passed — this is one stage, built twice (CCOV=false and CCOV=true),
 # not two stages to maintain. See ci.yaml's build-workspace / build-workspace-coverage.
 FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS runtime
+
+ARG ROS_DISTRO=jazzy
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /root/ws
@@ -279,7 +296,7 @@ COPY rosdep src/ros2_data_collection/rosdep
 # in this build shares. This layer only invalidates when the manifests or rosdep/
 # change, and when it does the exec-dep .debs are already in dc-apt from toolchain's
 # (build+exec) rosdep install above — a dependency bump re-downloads nothing here.
-RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
+RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     printf 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";\n' \
       > /etc/apt/apt.conf.d/docker-clean && \
     echo "yaml file:///root/ws/src/ros2_data_collection/rosdep/dc.yaml" \
@@ -287,7 +304,7 @@ RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
     apt-get -q update && \
     rosdep update --include-eol-distros && \
     DEBIAN_FRONTEND=noninteractive \
-    rosdep install -y --from-paths src --ignore-src --rosdistro jazzy \
+    rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} \
       --as-root=apt:false --dependency-types=exec \
       --skip-keys="aws_sdk_vendor vector_vendor" && \
     rm -rf /var/lib/apt/lists/* src
@@ -295,4 +312,5 @@ RUN --mount=type=cache,id=dc-apt,target=/var/cache/apt/archives \
 COPY --from=workspace /root/ws/install install
 
 ENV ROS_UNDERLAY=/root/ws/install
+ENV ROS_DISTRO=${ROS_DISTRO}
 RUN echo "source ${ROS_UNDERLAY}/setup.bash" >> /etc/bash.bashrc
