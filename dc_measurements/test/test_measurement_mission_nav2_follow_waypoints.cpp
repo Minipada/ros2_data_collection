@@ -12,7 +12,7 @@
 #include "dc_measurements/measurement.hpp"
 #include "measurement_test_bench.hpp"
 #include "nav2_msgs/action/follow_waypoints.hpp"
-#include "nav2_msgs/msg/missed_waypoint.hpp"
+#include "nav2_msgs/msg/waypoint_status.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 
 using FollowWaypoints = nav2_msgs::action::FollowWaypoints;
@@ -187,8 +187,8 @@ TEST_F(MeasurementMissionNav2FollowWaypointsTest, SucceededStatusWithNonZeroErro
   auto result = std::make_shared<FollowWaypoints::Result>();
   result->error_code = FollowWaypoints::Result::TASK_EXECUTOR_FAILED;
   result->error_msg = "task executor failed";
-  nav2_msgs::msg::MissedWaypoint missed;
-  missed.index = 2;
+  nav2_msgs::msg::WaypointStatus missed;
+  missed.waypoint_index = 2;
   missed.error_code = FollowWaypoints::Result::TASK_EXECUTOR_FAILED;
   result->missed_waypoints.push_back(missed);
   goal_handle_->succeed(result);
