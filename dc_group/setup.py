@@ -40,7 +40,7 @@ setup(
     ],
     description="Collect data and group it",
     license="Proprietary",
-    tests_require=["pytest"],
+    extras_require={"test": ["pytest"]},
     entry_points={
         "console_scripts": [
             "group_server = dc_group.group_server:main",
