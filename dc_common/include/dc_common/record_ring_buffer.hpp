@@ -8,7 +8,7 @@
 #include <chrono>
 #include <cstddef>
 #include <deque>
-#include <string>
+#include <nlohmann/json.hpp>
 #include <utility>
 #include <vector>
 
@@ -21,13 +21,13 @@ namespace dc_common
  */
 struct StampedRecord
 {
-  std::string json;
+  nlohmann::json json;
   std::chrono::system_clock::time_point stamp;
 };
 
 /**
  * @class dc_common::RecordRingBuffer
- * @brief In-memory bounded time-window buffer of stamped Record JSON strings, with no ROS
+ * @brief In-memory bounded time-window buffer of stamped Record json payloads, with no ROS
  * dependency.
  *
  * push() inserts a Record in ascending-stamp order (so out-of-order pushes still leave window()
@@ -56,7 +56,7 @@ public:
    *
    * Does not evict; call evict() to enforce the configured time window.
    */
-  void push(std::string json, std::chrono::system_clock::time_point stamp)
+  void push(nlohmann::json json, std::chrono::system_clock::time_point stamp)
   {
     const auto pos = std::upper_bound(entries_.begin(), entries_.end(), stamp,
                                       [](const std::chrono::system_clock::time_point& s, const StampedRecord& e) {

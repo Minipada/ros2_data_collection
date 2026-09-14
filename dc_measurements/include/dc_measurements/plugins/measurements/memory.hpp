@@ -18,7 +18,7 @@ class Memory : public dc_measurements::Measurement
 public:
   Memory();
   ~Memory() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 protected:
   /**

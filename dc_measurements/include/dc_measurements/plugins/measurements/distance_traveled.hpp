@@ -18,7 +18,7 @@ class DistanceTraveled : public dc_measurements::Measurement
 public:
   DistanceTraveled();
   ~DistanceTraveled() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 protected:
   /**

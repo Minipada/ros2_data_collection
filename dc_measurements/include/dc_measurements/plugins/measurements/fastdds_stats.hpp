@@ -26,7 +26,7 @@ class FastddsStats : public dc_measurements::Measurement
 public:
   FastddsStats();
   ~FastddsStats() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 protected:
   void onConfigure() override;

@@ -125,31 +125,22 @@ json SlamToolboxQuality::sampleRecord(const geometry_msgs::msg::PoseWithCovarian
   return data;
 }
 
-dc_interfaces::msg::StringStamped SlamToolboxQuality::collect()
+json SlamToolboxQuality::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.group_key = group_key_;
-
   // A loop closure takes the poll it lands on: it is a fact about a moment, so it keeps the
   // timestamp of that moment rather than this poll's.
   if (const auto closure = pending_loop_closures_.pop())
   {
-    msg.header.stamp = closure->second;
-    msg.data = closure->first.dump(-1, ' ', true);
-    return msg;
+    return closure->first;
   }
 
   // Nothing on /pose yet: report nothing rather than a Record with no localization data.
   const auto sample = pose_sample_.latest();
   if (!sample)
   {
-    return msg;
+    return json{};
   }
-
-  msg.header.stamp = node->get_clock()->now();
-  msg.data = sample->dump(-1, ' ', true);
-  return msg;
+  return *sample;
 }
 
 }  // namespace dc_measurements

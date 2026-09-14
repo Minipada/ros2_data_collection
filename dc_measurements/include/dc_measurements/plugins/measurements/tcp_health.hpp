@@ -19,7 +19,7 @@ class TCPHealth : public dc_measurements::Measurement
 public:
   TCPHealth();
   ~TCPHealth() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
   bool getPortHealth(unsigned short port);
 
 protected:

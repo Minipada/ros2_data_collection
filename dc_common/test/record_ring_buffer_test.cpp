@@ -11,10 +11,12 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <nlohmann/json.hpp>
 #include <vector>
 
 using dc_common::RecordRingBuffer;
 using dc_common::StampedRecord;
+using json = nlohmann::json;
 
 namespace
 {
@@ -24,9 +26,14 @@ std::chrono::system_clock::time_point at(int seconds)
   return std::chrono::system_clock::time_point(std::chrono::seconds(seconds));
 }
 
-std::vector<std::string> json_of(const std::vector<StampedRecord>& entries)
+json record(const char* literal)
 {
-  std::vector<std::string> out;
+  return json::parse(literal);
+}
+
+std::vector<json> records_of(const std::vector<StampedRecord>& entries)
+{
+  std::vector<json> out;
   out.reserve(entries.size());
   for (const auto& e : entries)
   {
@@ -50,40 +57,40 @@ TEST(RecordRingBuffer, PushDoesNotEvictOnItsOwn)
   // The window is relative to a caller-supplied "now", not to the last push -- pushing a Record
   // far in the future of an earlier one must not silently drop the earlier one.
   RecordRingBuffer buf(std::chrono::seconds(1));
-  buf.push(R"({"n":1})", at(0));
-  buf.push(R"({"n":2})", at(100));
+  buf.push(record(R"({"n":1})"), at(0));
+  buf.push(record(R"({"n":2})"), at(100));
 
   EXPECT_EQ(buf.size(), 2u);
-  EXPECT_EQ(json_of(buf.window()), std::vector<std::string>({ R"({"n":1})", R"({"n":2})" }));
+  EXPECT_EQ(records_of(buf.window()), std::vector<json>({ record(R"({"n":1})"), record(R"({"n":2})") }));
 }
 
 TEST(RecordRingBuffer, WindowReturnsEntriesInTimeOrderRegardlessOfPushOrder)
 {
   RecordRingBuffer buf(std::chrono::seconds(100));
-  buf.push(R"({"n":"middle"})", at(5));
-  buf.push(R"({"n":"first"})", at(1));
-  buf.push(R"({"n":"last"})", at(9));
+  buf.push(record(R"({"n":"middle"})"), at(5));
+  buf.push(record(R"({"n":"first"})"), at(1));
+  buf.push(record(R"({"n":"last"})"), at(9));
 
-  EXPECT_EQ(json_of(buf.window()),
-            std::vector<std::string>({ R"({"n":"first"})", R"({"n":"middle"})", R"({"n":"last"})" }));
+  EXPECT_EQ(records_of(buf.window()),
+            std::vector<json>({ record(R"({"n":"first"})"), record(R"({"n":"middle"})"), record(R"({"n":"last"})") }));
 }
 
 TEST(RecordRingBuffer, EvictDropsEntriesStrictlyOlderThanWindow)
 {
   RecordRingBuffer buf(std::chrono::seconds(10));
-  buf.push(R"({"n":"old"})", at(0));
-  buf.push(R"({"n":"new"})", at(5));
+  buf.push(record(R"({"n":"old"})"), at(0));
+  buf.push(record(R"({"n":"new"})"), at(5));
 
   buf.evict(at(11));  // "old" is 11s old (>10s window); "new" is 6s old (<=10s window).
 
   EXPECT_EQ(buf.size(), 1u);
-  EXPECT_EQ(json_of(buf.window()), std::vector<std::string>({ R"({"n":"new"})" }));
+  EXPECT_EQ(records_of(buf.window()), std::vector<json>({ record(R"({"n":"new"})") }));
 }
 
 TEST(RecordRingBuffer, EvictBoundaryAgeEqualToWindowIsKept)
 {
   RecordRingBuffer buf(std::chrono::seconds(10));
-  buf.push(R"({"n":"boundary"})", at(0));
+  buf.push(record(R"({"n":"boundary"})"), at(0));
 
   buf.evict(at(10));  // age == window exactly: inclusive boundary, must survive.
 
@@ -93,7 +100,7 @@ TEST(RecordRingBuffer, EvictBoundaryAgeEqualToWindowIsKept)
 TEST(RecordRingBuffer, EvictBoundaryOneTickPastWindowIsDropped)
 {
   RecordRingBuffer buf(std::chrono::seconds(10));
-  buf.push(R"({"n":"boundary"})", at(0));
+  buf.push(record(R"({"n":"boundary"})"), at(0));
 
   buf.evict(at(11));  // age > window by the smallest margin used here: must be dropped.
 
@@ -110,20 +117,20 @@ TEST(RecordRingBuffer, EvictOnEmptyBufferIsANoop)
 TEST(RecordRingBuffer, EvictLeavesNewerEntriesAfterDroppingOlderOnes)
 {
   RecordRingBuffer buf(std::chrono::seconds(10));
-  buf.push(R"({"n":"a"})", at(0));
-  buf.push(R"({"n":"b"})", at(3));
-  buf.push(R"({"n":"c"})", at(6));
-  buf.push(R"({"n":"d"})", at(9));
+  buf.push(record(R"({"n":"a"})"), at(0));
+  buf.push(record(R"({"n":"b"})"), at(3));
+  buf.push(record(R"({"n":"c"})"), at(6));
+  buf.push(record(R"({"n":"d"})"), at(9));
 
   buf.evict(at(15));  // window is (5, 15]: only entries with stamp > 5 survive -- b(3) and a(0) drop, c(6)/d(9) stay.
 
-  EXPECT_EQ(json_of(buf.window()), std::vector<std::string>({ R"({"n":"c"})", R"({"n":"d"})" }));
+  EXPECT_EQ(records_of(buf.window()), std::vector<json>({ record(R"({"n":"c"})"), record(R"({"n":"d"})") }));
 }
 
 TEST(RecordRingBuffer, WindowDoesNotMutateOrEvict)
 {
   RecordRingBuffer buf(std::chrono::seconds(1));
-  buf.push(R"({"n":"a"})", at(0));
+  buf.push(record(R"({"n":"a"})"), at(0));
 
   auto first_read = buf.window();
   auto second_read = buf.window();
@@ -136,7 +143,7 @@ TEST(RecordRingBuffer, WindowDoesNotMutateOrEvict)
 TEST(RecordRingBuffer, RepeatedEvictCallsConverge)
 {
   RecordRingBuffer buf(std::chrono::seconds(5));
-  buf.push(R"({"n":"a"})", at(0));
+  buf.push(record(R"({"n":"a"})"), at(0));
 
   buf.evict(at(100));
   buf.evict(at(200));  // calling evict again on an already-empty buffer must not throw or hang.
@@ -147,8 +154,8 @@ TEST(RecordRingBuffer, RepeatedEvictCallsConverge)
 TEST(RecordRingBuffer, ClearDropsEveryEntryRegardlessOfAge)
 {
   RecordRingBuffer buf(std::chrono::seconds(10));
-  buf.push(R"({"n":"a"})", at(0));
-  buf.push(R"({"n":"b"})", at(1));
+  buf.push(record(R"({"n":"a"})"), at(0));
+  buf.push(record(R"({"n":"b"})"), at(1));
 
   buf.clear();  // a consumer that has just released the whole window must not see it again.
 
@@ -156,6 +163,6 @@ TEST(RecordRingBuffer, ClearDropsEveryEntryRegardlessOfAge)
   EXPECT_EQ(buf.size(), 0u);
   EXPECT_TRUE(buf.window().empty());
 
-  buf.push(R"({"n":"c"})", at(2));  // and the buffer is still usable afterwards.
-  EXPECT_EQ(json_of(buf.window()), std::vector<std::string>({ R"({"n":"c"})" }));
+  buf.push(record(R"({"n":"c"})"), at(2));  // and the buffer is still usable afterwards.
+  EXPECT_EQ(records_of(buf.window()), std::vector<json>({ record(R"({"n":"c"})") }));
 }

@@ -6,17 +6,19 @@
 
 #include <map>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
 #include "dc_core/condition.hpp"
 #include "dc_core/condition_set.hpp"
 #include "dc_core/trigger.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 namespace dc_triggers
 {
+
+using json = nlohmann::json;
 
 /**
  * @class dc_triggers::Trigger
@@ -104,10 +106,10 @@ protected:
                                               << "' is not a configured condition; treating it as false.");
       return false;
     }
-    // Triggers have no data sample of their own to hand a Condition the way a Measurement does --
+    // Triggers have no Record of their own to hand a Condition the way a Measurement does --
     // only Conditions that maintain their own state (e.g. subscribing to a topic directly, such
     // as Moving) are meaningful composed into a Trigger.
-    return condition_it->second->getState(dc_interfaces::msg::StringStamped());
+    return condition_it->second->getState(json());
   }
 
   rclcpp_lifecycle::LifecycleNode::WeakPtr node_;

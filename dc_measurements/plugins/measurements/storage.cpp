@@ -27,20 +27,14 @@ void Storage::onConfigure()
 
 Storage::~Storage() = default;
 
-dc_interfaces::msg::StringStamped Storage::collect()
+json Storage::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
   json data_json;
   const std::filesystem::space_info si = std::filesystem::space(full_path_);
   data_json["free_percent"] = (float)si.available / si.capacity * 100;
   data_json["free"] = static_cast<std::intmax_t>(si.free);
   data_json["capacity"] = static_cast<std::intmax_t>(si.capacity);
-  msg.data = data_json.dump(-1, ' ', true);
-
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

@@ -69,40 +69,46 @@ void MeasurementCore::configure(const Config& config, PublishFn publish, Validat
   enricher_config.tags = config.tags;
   enricher_config.custom_keys = config.custom_keys;
   enricher_config.enable_validator = config.enable_validator;
-  record_enricher_ = RecordEnricher(
-      enricher_config, [this](const json& data_json) { validateJSON(data_json); },
-      [this](const std::string& data) { log_(LogLevel::Error, "Error parsing JSON while enriching: " + data); });
+  record_enricher_ = RecordEnricher(enricher_config, [this](const json& data_json) { validateJSON(data_json); });
 
   if (config.buffer_duration_sec > 0.0)
   {
     releaser_ = std::make_shared<IncidentReleaser>(
         durationFromSeconds(config.buffer_duration_sec), durationFromSeconds(config.post_roll_duration_sec),
         durationFromSeconds(config.cooldown_sec), config.max_flush_rate_hz,
-        [this](const std::string& record_json, const TimePoint& stamp, const std::string& incident_id) {
-          publishIncidentRecord(record_json, stamp, incident_id);
+        [this](const json& record, const TimePoint& stamp, const std::string& incident_id) {
+          publishIncidentRecord(record, stamp, incident_id);
         });
   }
 }
 
-void MeasurementCore::publish(const std::string& data, const std::string& group_key, std::int64_t stamp_ns,
-                              const ConditionStateLookup& gate_state, const ConditionStateLookup& conditions,
+void MeasurementCore::publish(const json& data, const std::string& group_key, std::int64_t stamp_ns,
+                              const ConditionResolver& resolve_gate, const ConditionResolver& resolve_condition,
                               const TimePoint& now)
 {
-  if (data.empty() || data == "null")
+  if (data.is_null())
   {
-    // Not necessarily a fault: a Measurement that found nothing to report returns an empty
-    // message on purpose -- Camera does exactly that on every frame with no barcode in view,
-    // which is most frames of the QR-code demo. Throttled and worded accordingly, because at the
-    // polling rate this used to read like a broken pipeline and sent #279 chasing one that was
-    // fine.
+    // Not necessarily a fault: a Measurement that found nothing to report returns a null Record
+    // on purpose -- Camera does exactly that on every frame with no barcode in view, which is
+    // most frames of the QR-code demo. Throttled and worded accordingly, because at the polling
+    // rate this used to read like a broken pipeline and sent #279 chasing one that was fine.
     logThrottled(LogLevel::Warn, last_empty_warn_, now,
                  "No data collected from measurement " + config_.measurement_name +
                      " (nothing to report, or it is not receiving input)");
     return;
   }
 
-  std::string enriched = data;
-  enrich(enriched);
+  const json enriched = enrich(data);
+
+  // Both Condition consultations see the enriched Record (#500): the resolvers are what the
+  // driver implements, the lookups are the per-name shape the gate and dc_core::ConditionSet
+  // evaluate.
+  const auto gate_state = [&resolve_gate, &enriched](const std::string& condition_name) {
+    return resolve_gate(enriched, condition_name);
+  };
+  const auto conditions_state = [&resolve_condition, &enriched](const std::string& condition_name) {
+    return resolve_condition(enriched, condition_name);
+  };
 
   if (!gateOpen(gate_state))
   {
@@ -111,27 +117,26 @@ void MeasurementCore::publish(const std::string& data, const std::string& group_
     return;
   }
 
-  if (publish_gate_.offer(conditionSetOn(conditions)))
+  if (publish_gate_.offer(conditionSetOn(conditions_state)))
   {
     publish_(RecordOut{ enriched, group_key, {}, stamp_ns });
   }
 }
 
-void MeasurementCore::offerSample(const std::string& data, const TimePoint& now)
+void MeasurementCore::offerSample(const json& data, const TimePoint& now)
 {
   if (!releaser_)
   {
     return;
   }
-  if (data.empty() || data == "null")
+  if (data.is_null())
   {
     // Nothing to offer, but the phase deadlines and a rate-limited release still need driving.
     const std::lock_guard<std::mutex> lock(releaser_mutex_);
     releaser_->tick(now);
     return;
   }
-  std::string enriched = data;
-  enrich(enriched);
+  json enriched = enrich(data);
   const std::lock_guard<std::mutex> lock(releaser_mutex_);
   // Drive the phase transitions before deciding what to do with this sample's Files: during
   // post-roll the Record is published live and its Files are left exactly where the Measurement
@@ -295,9 +300,9 @@ std::string MeasurementCore::defaultSchemaFile(const std::string& plugin_lookup_
   return snakeCase(plugin_type) + ".json";
 }
 
-void MeasurementCore::enrich(std::string& data)
+json MeasurementCore::enrich(const json& data)
 {
-  data = record_enricher_.enrich(data);
+  return record_enricher_.enrich(data);
 }
 
 void MeasurementCore::validateJSON(const json& data_json)
@@ -351,22 +356,9 @@ bool MeasurementCore::conditionSetOn(const ConditionStateLookup& conditions)
   return outcome.satisfied();
 }
 
-void MeasurementCore::stageSampleFiles(std::string& data, const TimePoint& now)
+void MeasurementCore::stageSampleFiles(json& data, const TimePoint& now)
 {
-  json data_json;
-  try
-  {
-    data_json = json::parse(data);
-  }
-  catch (json::parse_error& e)
-  {
-    // enrich() already logged whatever made this unparsable; buffer it as-is.
-    return;
-  }
-  if (stageRecordFiles(data_json, now))
-  {
-    data = data_json.dump(-1, ' ', true);
-  }
+  stageRecordFiles(data, now);
   // Rolling deletion of the aged-out staged Files -- the disk-backed half of the same eviction
   // the ring buffer does to their Records, driven with the same `now` and the same window, so
   // the two stay in step. Safe to run mid-release: onFlushEvent() released the window being
@@ -445,13 +437,12 @@ std::filesystem::path MeasurementCore::scratchDir() const
   return std::filesystem::path(base) / ".dc_incident_scratch" / config_.measurement_name;
 }
 
-void MeasurementCore::publishIncidentRecord(const std::string& record_json, const TimePoint& stamp,
-                                            const std::string& incident_id)
+void MeasurementCore::publishIncidentRecord(const json& record, const TimePoint& stamp, const std::string& incident_id)
 {
   // The Incident rides the typed envelope field, not a key injected into the payload (#506): no
   // serialize / re-parse / re-dump round trip, and the payload stays pure member data.
   RecordOut out;
-  out.data = record_json;
+  out.data = record;
   out.group_key = config_.group_key;
   out.incident_id = incident_id;
   out.stamp_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(stamp.time_since_epoch()).count();

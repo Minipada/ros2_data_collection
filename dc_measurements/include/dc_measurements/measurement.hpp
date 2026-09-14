@@ -136,11 +136,12 @@ public:
     return MeasurementCore::defaultSchemaFile(plugin_lookup_name);
   }
 
-  void publish(dc_interfaces::msg::StringStamped msg)
+  void publish(const json& data)
   {
-    auto msg_copy = msg;
-    core_.publish(msg.data, msg.group_key, rclcpp::Time(msg.header.stamp).nanoseconds(), gateLookup(msg_copy),
-                  conditionLookup(msg_copy), std::chrono::system_clock::now());
+    // The driver owns the envelope (#500): stamp and group key are applied here, once, so no
+    // plugin repeats them.
+    core_.publish(data, group_key_, getNode()->get_clock()->now().nanoseconds(), conditionResolver(),
+                  conditionResolver(), std::chrono::system_clock::now());
     if (core_.collectionFinished())
     {
       collect_timer_.reset();
@@ -149,29 +150,47 @@ public:
 
   void publishFromMsg(const dc_interfaces::msg::StringStamped& msg)
   {
-    if (core_.collectible())
+    if (!core_.collectible())
     {
-      publish(msg);
+      return;
     }
+    // A passthrough Record arrives serialized; parse it back so the pipeline stays json to the
+    // publisher edge (#500). A payload that is not JSON at all cannot be enriched, so it is
+    // dropped loudly instead of published as something the schema would reject.
+    const json data = json::parse(msg.data, nullptr, false);
+    if (data.is_discarded())
+    {
+      RCLCPP_ERROR_STREAM(logger_, "Measurement " << measurement_name_ << ": dropped a passthrough Record that is "
+                                                  << "not JSON: " << msg.data);
+      return;
+    }
+    publish(data);
   }
 
   void collectAndPublish()
   {
-    dc_interfaces::msg::StringStamped msg = collect();
+    const json data = collect();
     if (core_.collectible())
     {
       if (core_.hasReleaser())
       {
-        core_.offerSample(msg.data, std::chrono::system_clock::now());
+        core_.offerSample(data, std::chrono::system_clock::now());
       }
       else
       {
-        publish(msg);
+        publish(data);
       }
     }
   }
 
-  virtual dc_interfaces::msg::StringStamped collect() = 0;
+  /**
+   * @brief The collected payload, as json (#500). A null json reports "nothing to collect" and
+   * is dropped by the pipeline with a throttled warning, as the empty message always was.
+   *
+   * The driver owns the envelope: the Record is stamped (node clock, at collection time) and
+   * given the group key after this returns, so no plugin builds a message or serializes.
+   */
+  virtual json collect() = 0;
 
   // configure the server on lifecycle setup
   void configure(const rclcpp_lifecycle::LifecycleNode::WeakPtr& parent, const std::string& name,
@@ -364,12 +383,14 @@ protected:
   MeasurementCore core_;
 
 private:
-  // State of one configured Condition, as dc_core::ConditionSet asks for it. A name that is not a
-  // configured Condition reads as false rather than dereferencing a null plugin, which is what
-  // the previous conditions_[name]->getState(msg) did on a typo'd name.
-  dc_core::ConditionStateLookup conditionLookup(const dc_interfaces::msg::StringStamped& msg) const
+  // Resolves one Condition name to its plugin's state, handed the enriched Record (#500) -- the
+  // same json the pipeline is about to publish. A name that is not a configured Condition reads
+  // as false rather than dereferencing a null plugin, which is what the previous
+  // conditions_[name]->getState(msg) did on a typo'd name; whether the name came from the gate
+  // or from if_all/if_any/if_none is visible in the core's own gate/condition logs.
+  MeasurementCore::ConditionResolver conditionResolver() const
   {
-    return [this, &msg](const std::string& condition_name) {
+    return [this](const json& record, const std::string& condition_name) {
       const auto condition_it = conditions_.find(condition_name);
       if (condition_it == conditions_.end() || !condition_it->second)
       {
@@ -377,31 +398,17 @@ private:
                                                     << "' is not a configured condition; treating it as false.");
         return false;
       }
-      return condition_it->second->getState(msg);
-    };
-  }
-
-  // Same lookup, worded for the gate: a gate_condition naming nothing holds all collection back.
-  dc_core::ConditionStateLookup gateLookup(const dc_interfaces::msg::StringStamped& msg) const
-  {
-    return [this, &msg](const std::string& condition_name) {
-      const auto condition_it = conditions_.find(condition_name);
-      if (condition_it == conditions_.end() || !condition_it->second)
-      {
-        RCLCPP_ERROR_STREAM(logger_, "Measurement " << measurement_name_ << ": gate_condition '" << condition_name
-                                                    << "' is not a configured condition; holding all collection back.");
-        return false;
-      }
-      return condition_it->second->getState(msg);
+      return condition_it->second->getState(record);
     };
   }
 
   // PublishFn target: every Record the pipeline emits -- live or released from the incident
-  // buffer -- goes out through the one lifecycle publisher.
+  // buffer -- goes out through the one lifecycle publisher. This dump is the pipeline's one and
+  // only serialization (#500), written exactly as the enrichment chain's dumps always wrote it.
   void publishOut(const RecordOut& out)
   {
     dc_interfaces::msg::StringStamped msg;
-    msg.data = out.data;
+    msg.data = out.data.dump(-1, ' ', true);
     msg.group_key = out.group_key;
     msg.incident_id = out.incident_id;
     msg.header.stamp = rclcpp::Time(out.stamp_ns);

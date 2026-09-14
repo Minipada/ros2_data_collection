@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
@@ -13,12 +14,13 @@
 using dc_measurements::IncidentReleaser;
 using dc_measurements::IncidentState;
 using dc_measurements::toString;
+using json = nlohmann::json;
 
 // One captured emission, standing in for a ROS publish: what went out, stamped with what, under
 // which incident.
 struct Published
 {
-  std::string json;
+  json record;
   IncidentReleaser::TimePoint stamp;
   std::string incident_id;
 };
@@ -39,8 +41,8 @@ protected:
 
   IncidentReleaser::PublishFn capture()
   {
-    return [this](const std::string& json, const IncidentReleaser::TimePoint& stamp, const std::string& incident_id) {
-      published_.push_back(Published{ json, stamp, incident_id });
+    return [this](const json& record, const IncidentReleaser::TimePoint& stamp, const std::string& incident_id) {
+      published_.push_back(Published{ record, stamp, incident_id });
     };
   }
 
@@ -52,12 +54,12 @@ protected:
                             dc_measurements::durationFromSeconds(cooldown_sec), max_flush_rate_hz, capture());
   }
 
-  std::vector<std::string> publishedJson() const
+  std::vector<json> publishedRecords() const
   {
-    std::vector<std::string> out;
+    std::vector<json> out;
     for (const auto& entry : published_)
     {
-      out.push_back(entry.json);
+      out.push_back(entry.record);
     }
     return out;
   }
@@ -67,8 +69,8 @@ TEST_F(IncidentReleaserTest, StartsArmedAndBufferingPublishesNothing)
 {
   auto releaser = makeReleaser(0.0, 0.0);
 
-  releaser.offer("{\"a\":1}", at(0.0));
-  releaser.offer("{\"a\":2}", at(1.0));
+  releaser.offer(json::parse(R"({"a":1})"), at(0.0));
+  releaser.offer(json::parse(R"({"a":2})"), at(1.0));
   releaser.tick(at(2.0));
 
   EXPECT_TRUE(releaser.isArmed());
@@ -82,14 +84,14 @@ TEST_F(IncidentReleaserTest, FlushReleasesBufferedWindowOldestFirstWithOriginalS
 {
   auto releaser = makeReleaser(0.0, 0.0);
 
-  releaser.offer("{\"a\":1}", at(0.0));
-  releaser.offer("{\"a\":2}", at(1.0));
-  releaser.offer("{\"a\":3}", at(2.0));
+  releaser.offer(json::parse(R"({"a":1})"), at(0.0));
+  releaser.offer(json::parse(R"({"a":2})"), at(1.0));
+  releaser.offer(json::parse(R"({"a":3})"), at(2.0));
 
   releaser.onFlush("incident-1", at(3.0));
 
   ASSERT_EQ(published_.size(), 3u);
-  EXPECT_EQ(publishedJson(), (std::vector<std::string>{ "{\"a\":1}", "{\"a\":2}", "{\"a\":3}" }));
+  EXPECT_EQ(publishedRecords(), (std::vector<json>{ json{ { "a", 1 } }, json{ { "a", 2 } }, json{ { "a", 3 } } }));
   EXPECT_EQ(published_[0].stamp, at(0.0));
   EXPECT_EQ(published_[1].stamp, at(1.0));
   EXPECT_EQ(published_[2].stamp, at(2.0));
@@ -105,13 +107,13 @@ TEST_F(IncidentReleaserTest, SamplesOlderThanBufferWindowAreNotReleased)
 {
   auto releaser = makeReleaser(0.0, 0.0);
 
-  releaser.offer("{\"a\":\"stale\"}", at(0.0));
-  releaser.offer("{\"a\":\"fresh\"}", at(20.0));
+  releaser.offer(json::parse(R"({"a":"stale"})"), at(0.0));
+  releaser.offer(json::parse(R"({"a":"fresh"})"), at(20.0));
 
   releaser.onFlush("incident-1", at(21.0));
 
   ASSERT_EQ(published_.size(), 1u);
-  EXPECT_EQ(published_[0].json, "{\"a\":\"fresh\"}");
+  EXPECT_EQ(published_[0].record, (json{ { "a", "fresh" } }));
 }
 
 // Acceptance criterion: post-roll transition and duration.
@@ -119,7 +121,7 @@ TEST_F(IncidentReleaserTest, PostRollPublishesLiveUnderTheSameIncidentIdForItsDu
 {
   auto releaser = makeReleaser(5.0, 0.0);
 
-  releaser.offer("{\"a\":\"pre\"}", at(0.0));
+  releaser.offer(json::parse(R"({"a":"pre"})"), at(0.0));
   releaser.onFlush("incident-1", at(1.0));
 
   ASSERT_EQ(published_.size(), 1u);
@@ -128,10 +130,10 @@ TEST_F(IncidentReleaserTest, PostRollPublishesLiveUnderTheSameIncidentIdForItsDu
   EXPECT_EQ(releaser.incidentId(), "incident-1");
 
   // Within post-roll: published live, right away, still tagged with the incident.
-  releaser.offer("{\"a\":\"post-1\"}", at(2.0));
-  releaser.offer("{\"a\":\"post-2\"}", at(5.9));
+  releaser.offer(json::parse(R"({"a":"post-1"})"), at(2.0));
+  releaser.offer(json::parse(R"({"a":"post-2"})"), at(5.9));
   ASSERT_EQ(published_.size(), 3u);
-  EXPECT_EQ(published_[1].json, "{\"a\":\"post-1\"}");
+  EXPECT_EQ(published_[1].record, (json{ { "a", "post-1" } }));
   EXPECT_EQ(published_[1].stamp, at(2.0));
   EXPECT_EQ(published_[1].incident_id, "incident-1");
   EXPECT_EQ(published_[2].incident_id, "incident-1");
@@ -139,7 +141,7 @@ TEST_F(IncidentReleaserTest, PostRollPublishesLiveUnderTheSameIncidentIdForItsDu
 
   // Post-roll ends 5s after the flush (at 6.0): this sample is buffered, not published, and with
   // no cooldown configured the machine is armed again.
-  releaser.offer("{\"a\":\"after\"}", at(6.1));
+  releaser.offer(json::parse(R"({"a":"after"})"), at(6.1));
   EXPECT_EQ(published_.size(), 3u);
   EXPECT_EQ(releaser.state(), IncidentState::Buffering) << "state is " << toString(releaser.state());
   EXPECT_TRUE(releaser.isArmed());
@@ -152,7 +154,7 @@ TEST_F(IncidentReleaserTest, CooldownIgnoresASecondFlushWithinItsWindow)
 {
   auto releaser = makeReleaser(2.0, 5.0);
 
-  releaser.offer("{\"a\":\"pre\"}", at(0.0));
+  releaser.offer(json::parse(R"({"a":"pre"})"), at(0.0));
   releaser.onFlush("incident-1", at(1.0));
   ASSERT_EQ(published_.size(), 1u);
 
@@ -163,7 +165,7 @@ TEST_F(IncidentReleaserTest, CooldownIgnoresASecondFlushWithinItsWindow)
   EXPECT_EQ(releaser.incidentId(), "incident-1");
 
   // Post-roll ended at 3.0, cooldown runs to 8.0: samples buffer again but flushes stay ignored.
-  releaser.offer("{\"a\":\"during-cooldown\"}", at(4.0));
+  releaser.offer(json::parse(R"({"a":"during-cooldown"})"), at(4.0));
   EXPECT_EQ(releaser.state(), IncidentState::Cooldown);
   EXPECT_FALSE(releaser.isArmed());
   EXPECT_EQ(releaser.bufferedCount(), 1u);
@@ -180,7 +182,7 @@ TEST_F(IncidentReleaserTest, ReArmsItselfAfterCooldownAndCapturesTheNextIncident
 
   releaser.onFlush("incident-1", at(1.0));
   // Post-roll ends at 3.0, cooldown at 8.0.
-  releaser.offer("{\"a\":\"during-cooldown\"}", at(4.0));
+  releaser.offer(json::parse(R"({"a":"during-cooldown"})"), at(4.0));
   ASSERT_FALSE(releaser.isArmed());
 
   releaser.tick(at(8.0));
@@ -189,14 +191,14 @@ TEST_F(IncidentReleaserTest, ReArmsItselfAfterCooldownAndCapturesTheNextIncident
   EXPECT_TRUE(releaser.incidentId().empty());
 
   // The window buffered during cooldown is the next incident's pre-roll -- no hole at its start.
-  releaser.offer("{\"a\":\"after-rearm\"}", at(9.0));
+  releaser.offer(json::parse(R"({"a":"after-rearm"})"), at(9.0));
   EXPECT_EQ(releaser.bufferedCount(), 2u);
 
   releaser.onFlush("incident-2", at(10.0));
   ASSERT_EQ(published_.size(), 2u);
-  EXPECT_EQ(published_[0].json, "{\"a\":\"during-cooldown\"}");
+  EXPECT_EQ(published_[0].record, (json{ { "a", "during-cooldown" } }));
   EXPECT_EQ(published_[0].incident_id, "incident-2");
-  EXPECT_EQ(published_[1].json, "{\"a\":\"after-rearm\"}");
+  EXPECT_EQ(published_[1].record, (json{ { "a", "after-rearm" } }));
   EXPECT_EQ(published_[1].incident_id, "incident-2");
 }
 
@@ -207,7 +209,7 @@ TEST_F(IncidentReleaserTest, FlushAtTheCooldownDeadlineIsHonored)
   auto releaser = makeReleaser(2.0, 5.0);
 
   releaser.onFlush("incident-1", at(0.0));
-  releaser.offer("{\"a\":\"buffered\"}", at(4.0));
+  releaser.offer(json::parse(R"({"a":"buffered"})"), at(4.0));
   // Post-roll ended at 2.0, cooldown ends exactly at 7.0.
   releaser.onFlush("incident-2", at(7.0));
 
@@ -221,7 +223,7 @@ TEST_F(IncidentReleaserTest, ZeroPostRollAndCooldownReArmImmediatelyAfterRelease
 {
   auto releaser = makeReleaser(0.0, 0.0);
 
-  releaser.offer("{\"a\":\"pre\"}", at(0.0));
+  releaser.offer(json::parse(R"({"a":"pre"})"), at(0.0));
   releaser.onFlush("incident-1", at(1.0));
 
   ASSERT_EQ(published_.size(), 1u);
@@ -229,14 +231,14 @@ TEST_F(IncidentReleaserTest, ZeroPostRollAndCooldownReArmImmediatelyAfterRelease
   EXPECT_TRUE(releaser.isArmed());
 
   // Samples after the release go back into the buffer instead of being published live.
-  releaser.offer("{\"a\":\"next\"}", at(2.0));
+  releaser.offer(json::parse(R"({"a":"next"})"), at(2.0));
   EXPECT_EQ(published_.size(), 1u);
   EXPECT_EQ(releaser.bufferedCount(), 1u);
 
   // ... and a second incident is captured immediately, with its own id.
   releaser.onFlush("incident-2", at(3.0));
   ASSERT_EQ(published_.size(), 2u);
-  EXPECT_EQ(published_[1].json, "{\"a\":\"next\"}");
+  EXPECT_EQ(published_[1].record, (json{ { "a", "next" } }));
   EXPECT_EQ(published_[1].incident_id, "incident-2");
 }
 
@@ -264,7 +266,7 @@ TEST_F(IncidentReleaserTest, FlushWithAnEmptyBufferStillRunsPostRoll)
   EXPECT_TRUE(published_.empty());
   EXPECT_EQ(releaser.state(), IncidentState::PostRoll);
 
-  releaser.offer("{\"a\":\"post\"}", at(1.0));
+  releaser.offer(json::parse(R"({"a":"post"})"), at(1.0));
   ASSERT_EQ(published_.size(), 1u);
   EXPECT_EQ(published_[0].incident_id, "incident-1");
 }
@@ -277,7 +279,7 @@ TEST_F(IncidentReleaserTest, MaxFlushRateSpacesTheReleasedWindowAcrossTicks)
 
   for (int i = 0; i < 5; ++i)
   {
-    releaser.offer("{\"a\":" + std::to_string(i) + "}", at(i));
+    releaser.offer(json::parse("{\"a\":" + std::to_string(i) + "}"), at(i));
   }
 
   releaser.onFlush("incident-1", at(5.0));
@@ -308,8 +310,8 @@ TEST_F(IncidentReleaserTest, MaxFlushRateSpacesTheReleasedWindowAcrossTicks)
 
   // Rate limiting changes when Records go out, not what goes out: same order, same original
   // stamps, same incident.
-  EXPECT_EQ(publishedJson(),
-            (std::vector<std::string>{ "{\"a\":0}", "{\"a\":1}", "{\"a\":2}", "{\"a\":3}", "{\"a\":4}" }));
+  EXPECT_EQ(publishedRecords(), (std::vector<json>{ json{ { "a", 0 } }, json{ { "a", 1 } }, json{ { "a", 2 } },
+                                                    json{ { "a", 3 } }, json{ { "a", 4 } } }));
   for (int i = 0; i < 5; ++i)
   {
     EXPECT_EQ(published_[i].stamp, at(i));
@@ -326,7 +328,7 @@ TEST_F(IncidentReleaserTest, ReleaseNeverEmitsFasterThanTheConfiguredRate)
 
   for (int i = 0; i < 20; ++i)
   {
-    releaser.offer("{\"a\":" + std::to_string(i) + "}", at(i * 0.1));
+    releaser.offer(json::parse("{\"a\":" + std::to_string(i) + "}"), at(i * 0.1));
   }
 
   const double flush_at = 2.0;
@@ -349,9 +351,9 @@ TEST_F(IncidentReleaserTest, SamplesOfferedDuringARateLimitedReleaseAreBufferedA
 {
   auto releaser = makeReleaser(0.0, 0.0, 1.0);  // 1 Hz
 
-  releaser.offer("{\"a\":\"pre-1\"}", at(0.0));
-  releaser.offer("{\"a\":\"pre-2\"}", at(0.5));
-  releaser.offer("{\"a\":\"pre-3\"}", at(0.9));
+  releaser.offer(json::parse(R"({"a":"pre-1"})"), at(0.0));
+  releaser.offer(json::parse(R"({"a":"pre-2"})"), at(0.5));
+  releaser.offer(json::parse(R"({"a":"pre-3"})"), at(0.9));
 
   releaser.onFlush("incident-1", at(1.0));
   ASSERT_EQ(published_.size(), 1u);
@@ -359,20 +361,20 @@ TEST_F(IncidentReleaserTest, SamplesOfferedDuringARateLimitedReleaseAreBufferedA
 
   // offer() ticks first, so a Measurement's polling timer drives the drain on its own: this
   // sample is buffered and the Record due at 2.0 goes out.
-  releaser.offer("{\"a\":\"during-release\"}", at(2.0));
+  releaser.offer(json::parse(R"({"a":"during-release"})"), at(2.0));
   EXPECT_EQ(published_.size(), 2u);
-  EXPECT_EQ(published_[1].json, "{\"a\":\"pre-2\"}");
+  EXPECT_EQ(published_[1].record, (json{ { "a", "pre-2" } }));
   EXPECT_EQ(releaser.bufferedCount(), 1u);
 
   releaser.tick(at(3.0));
   ASSERT_EQ(published_.size(), 3u);
-  EXPECT_EQ(published_[2].json, "{\"a\":\"pre-3\"}");
+  EXPECT_EQ(published_[2].record, (json{ { "a", "pre-3" } }));
   EXPECT_TRUE(releaser.isArmed());
 
   // The sample collected mid-release is the next incident's, not this one's.
   releaser.onFlush("incident-2", at(4.0));
   ASSERT_EQ(published_.size(), 4u);
-  EXPECT_EQ(published_[3].json, "{\"a\":\"during-release\"}");
+  EXPECT_EQ(published_[3].record, (json{ { "a", "during-release" } }));
   EXPECT_EQ(published_[3].incident_id, "incident-2");
 }
 
@@ -382,9 +384,9 @@ TEST_F(IncidentReleaserTest, PostRollStartsWhenTheRateLimitedReleaseFinishes)
 {
   auto releaser = makeReleaser(2.0, 0.0, 2.0);  // post-roll 2s, 2 Hz release
 
-  releaser.offer("{\"a\":\"pre-1\"}", at(0.0));
-  releaser.offer("{\"a\":\"pre-2\"}", at(0.2));
-  releaser.offer("{\"a\":\"pre-3\"}", at(0.4));
+  releaser.offer(json::parse(R"({"a":"pre-1"})"), at(0.0));
+  releaser.offer(json::parse(R"({"a":"pre-2"})"), at(0.2));
+  releaser.offer(json::parse(R"({"a":"pre-3"})"), at(0.4));
 
   releaser.onFlush("incident-1", at(1.0));
   EXPECT_EQ(releaser.state(), IncidentState::Flushing);
@@ -399,12 +401,12 @@ TEST_F(IncidentReleaserTest, PostRollStartsWhenTheRateLimitedReleaseFinishes)
   ASSERT_EQ(published_.size(), 3u);
   EXPECT_EQ(releaser.state(), IncidentState::PostRoll) << "state is " << toString(releaser.state());
 
-  releaser.offer("{\"a\":\"post\"}", at(3.9));
+  releaser.offer(json::parse(R"({"a":"post"})"), at(3.9));
   ASSERT_EQ(published_.size(), 4u);
-  EXPECT_EQ(published_[3].json, "{\"a\":\"post\"}");
+  EXPECT_EQ(published_[3].record, (json{ { "a", "post" } }));
   EXPECT_EQ(published_[3].incident_id, "incident-1");
 
-  releaser.offer("{\"a\":\"after\"}", at(4.1));
+  releaser.offer(json::parse(R"({"a":"after"})"), at(4.1));
   EXPECT_EQ(published_.size(), 4u);
   EXPECT_TRUE(releaser.isArmed());
 }
@@ -416,7 +418,7 @@ TEST_F(IncidentReleaserTest, UnlimitedFlushRateReleasesTheWholeWindowInOneBurst)
 
   for (int i = 0; i < 5; ++i)
   {
-    releaser.offer("{\"a\":" + std::to_string(i) + "}", at(i));
+    releaser.offer(json::parse("{\"a\":" + std::to_string(i) + "}"), at(i));
   }
   releaser.onFlush("incident-1", at(5.0));
 

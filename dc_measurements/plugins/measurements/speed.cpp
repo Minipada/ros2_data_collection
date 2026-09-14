@@ -37,19 +37,14 @@ void Speed::onConfigure()
       odom_topic_, 10, std::bind(&Speed::odomCb, this, std::placeholders::_1));
 }
 
-dc_interfaces::msg::StringStamped Speed::collect()
+json Speed::collect()
 {
-  dc_interfaces::msg::StringStamped msg;
-
   const auto twist = latest_odom_.pop();
   if (!twist)
   {
-    return msg;
+    return json{};
   }
-  msg.group_key = group_key_;
-  msg.header.stamp = twist->second;
-  msg.data = twist->first.dump(-1, ' ', true);
-  return msg;
+  return twist->first;
 }
 
 }  // namespace dc_measurements

@@ -28,7 +28,7 @@ class Permissions : public dc_measurements::Measurement
 public:
   Permissions();
   ~Permissions() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   struct stat getOwner(const std::string& path);

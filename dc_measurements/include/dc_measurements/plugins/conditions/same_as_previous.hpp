@@ -9,7 +9,6 @@
 #include <filesystem>
 
 #include "dc_core/condition.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/condition.hpp"
 #include "dc_util/json_utils.hpp"
 #include "dc_util/node_utils.hpp"
@@ -30,7 +29,7 @@ protected:
   std::vector<std::string> keys_hash_;
   std::vector<std::string> previous_keys_hash_;
   std::string topic_;
-  bool getState(dc_interfaces::msg::StringStamped msg) override;
+  bool getState(const json& record) override;
   void onConfigure() override;
   json previous_json_;
   bool file_hash_same_{ true };

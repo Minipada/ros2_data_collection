@@ -23,7 +23,7 @@ class Battery : public dc_measurements::Measurement
 public:
   Battery();
   ~Battery() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   void batteryStateCb(const sensor_msgs::msg::BatteryState& msg);

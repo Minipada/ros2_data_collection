@@ -13,20 +13,13 @@ Uptime::Uptime() : dc_measurements::Measurement()
 
 Uptime::~Uptime() = default;
 
-dc_interfaces::msg::StringStamped Uptime::collect()
+json Uptime::collect()
 {
   auto uptime = system_.upTime();
 
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
   json data_json;
   data_json["time"] = uptime;
-
-  msg.data = data_json.dump(-1, ' ', true);
-
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

@@ -119,12 +119,8 @@ void IpCamera::onConfigure()
   ffmpeg_thread_.detach();
 }
 
-dc_interfaces::msg::StringStamped IpCamera::collect()
+json IpCamera::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
   json data_json;
 
   std::vector<std::string> recorded_videos;
@@ -159,9 +155,8 @@ dc_interfaces::msg::StringStamped IpCamera::collect()
         remote_path = remote_path.substr(1, remote_path.size() - 1);
         data_json["remote_path"] = remote_path;
         data_json["data_src"] = measurement_name_;
-        msg.data = data_json.dump(-1, ' ', true);
         avformat_free_context(ifmt_ctx);
-        return msg;
+        return data_json;
       }
       catch (std::filesystem::filesystem_error& e)
       {
@@ -170,7 +165,7 @@ dc_interfaces::msg::StringStamped IpCamera::collect()
       avformat_free_context(ifmt_ctx);
     }
   }
-  return msg;
+  return json{};
 }
 
 }  // namespace dc_measurements

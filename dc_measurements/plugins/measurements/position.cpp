@@ -20,12 +20,8 @@ void Position::onConfigure()
   transform_timeout_ = dc_util::get_double_type_param(node, measurement_name_, "transform_timeout", 0.1);
 }
 
-dc_interfaces::msg::StringStamped Position::collect()
+json Position::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
   json data_json;
   geometry_msgs::msg::PoseStamped pose;
   if (!nav2_util::getCurrentPose(pose, *tf_, global_frame_, robot_base_frame_, transform_timeout_))
@@ -43,9 +39,7 @@ dc_interfaces::msg::StringStamped Position::collect()
     data_json["y"] = pose.pose.position.y;
     data_json["yaw"] = yaw;
   }
-  msg.data = data_json.dump(-1, ' ', true);
-
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

@@ -20,7 +20,7 @@ class StringStamped : public dc_measurements::Measurement
 public:
   StringStamped();
   ~StringStamped() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
   void dataCb(const dc_interfaces::msg::StringStamped& msg);
   void onConfigure() override;
 

@@ -120,14 +120,10 @@ void Map::saveRemoteKeys(json& data_json, const std::string& key, const std::str
   }
 }
 
-dc_interfaces::msg::StringStamped Map::collect()
+json Map::collect()
 {
   auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-
   auto now = node->get_clock()->now();
-  msg.header.stamp = now;
-  msg.group_key = group_key_;
   json data_json;
   auto file_save_path = saveMap();
   if (!file_save_path.empty())
@@ -162,9 +158,7 @@ dc_interfaces::msg::StringStamped Map::collect()
     }
   }
 
-  msg.data = data_json.dump(-1, ' ', true);
-
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

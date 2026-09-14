@@ -45,7 +45,7 @@ class Manipulation : public dc_measurements::Measurement
 public:
   Manipulation();
   ~Manipulation() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   using GetResult = moveit_msgs::action::MoveGroup::Impl::GetResultService;

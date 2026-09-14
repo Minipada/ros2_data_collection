@@ -224,7 +224,7 @@ void Camera::addCodePose(json& barcode_json, const ZXing::Position& position, co
       std::sqrt(std::pow(pose->position.x, 2) + std::pow(pose->position.y, 2) + std::pow(pose->position.z, 2));
 }
 
-dc_interfaces::msg::StringStamped Camera::collect()
+json Camera::collect()
 {
   auto node = getNode();
   auto now = node->get_clock()->now();
@@ -431,16 +431,12 @@ dc_interfaces::msg::StringStamped Camera::collect()
       }
     }
   }
-  dc_interfaces::msg::StringStamped msg;
   if (data_json.empty())
   {
-    return msg;
+    return json{};
   }
-  msg.header.stamp = now;
-  msg.group_key = group_key_;
   data_json["camera_name"] = cam_name_;
-  msg.data = data_json.dump(-1, ' ', true);
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

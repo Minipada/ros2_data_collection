@@ -20,7 +20,7 @@ class Random : public dc_measurements::Measurement
 public:
   Random();
   ~Random() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 protected:
   /**

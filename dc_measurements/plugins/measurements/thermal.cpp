@@ -73,7 +73,7 @@ std::vector<std::string> Thermal::discoverZones()
   return zones;
 }
 
-dc_interfaces::msg::StringStamped Thermal::collect()
+json Thermal::collect()
 {
   std::vector<std::string> zones = zones_.empty() ? discoverZones() : zones_;
 
@@ -97,15 +97,9 @@ dc_interfaces::msg::StringStamped Thermal::collect()
     // No zone could be read (e.g. base_path missing/unreadable, or every zone failed):
     // nothing to report this cycle, same "silent, will retry next poll" contract as other
     // hardware-optional plugins (SerialInterface) use for a not-currently-available source.
-    return dc_interfaces::msg::StringStamped();
+    return json{};
   }
-
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
-  msg.data = data_json.dump(-1, ' ', true);
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

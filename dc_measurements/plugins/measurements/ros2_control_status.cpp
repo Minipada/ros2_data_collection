@@ -150,19 +150,14 @@ void Ros2ControlStatus::activityCb(const controller_manager_msgs::msg::Controlle
   processEntries(msg.hardware_components, kHardwareComponentType, stamp, hardware_component_detectors_);
 }
 
-dc_interfaces::msg::StringStamped Ros2ControlStatus::collect()
+json Ros2ControlStatus::collect()
 {
-  dc_interfaces::msg::StringStamped msg;
-  msg.group_key = group_key_;
-
   const auto record = pending_records_.pop();
   if (!record)
   {
-    return msg;
+    return json{};
   }
-  msg.header.stamp = record->second;
-  msg.data = record->first.dump(-1, ' ', true);
-  return msg;
+  return record->first;
 }
 
 }  // namespace dc_measurements

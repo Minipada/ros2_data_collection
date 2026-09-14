@@ -44,21 +44,15 @@ bool TCPHealth::getPortHealth(unsigned short port)
   return result;
 }
 
-dc_interfaces::msg::StringStamped TCPHealth::collect()
+json TCPHealth::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
   json data_json;
   data_json["port"] = port_;
   data_json["host"] = host_;
   data_json["server_name"] = name_;
   data_json["active"] = getPortHealth(port_);
 
-  msg.data = data_json.dump(-1, ' ', true);
-
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

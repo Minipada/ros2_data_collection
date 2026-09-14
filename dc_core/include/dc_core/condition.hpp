@@ -5,9 +5,9 @@
 #define DC_CORE_CONDITION_HPP_
 
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 
-#include "dc_interfaces/msg/string_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 
@@ -42,7 +42,8 @@ public:
    */
   virtual void activate() = 0;
 
-  virtual bool getState(dc_interfaces::msg::StringStamped msg) = 0;
+  // The Record to judge: the same enriched json the Measurement's pipeline produced for it (#500).
+  virtual bool getState(const nlohmann::json& record) = 0;
 
   virtual void publishActive() = 0;
 

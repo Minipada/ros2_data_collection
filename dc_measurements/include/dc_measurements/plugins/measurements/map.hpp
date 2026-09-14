@@ -24,7 +24,7 @@ class Map : public dc_measurements::Measurement
 public:
   Map();
   ~Map() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   std::string saveMap();

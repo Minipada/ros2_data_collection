@@ -202,12 +202,8 @@ int Network::unpack()
   return -1;
 }
 
-dc_interfaces::msg::StringStamped Network::collect()
+json Network::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
   json data_json;
   if (ping())
   {
@@ -223,9 +219,7 @@ dc_interfaces::msg::StringStamped Network::collect()
     data_json["online"] = false;
   }
   data_json["interfaces"] = getNetworkInterfaces();
-  msg.data = data_json.dump(-1, ' ', true);
-
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

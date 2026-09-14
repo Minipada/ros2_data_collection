@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstddef>
 #include <functional>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <utility>
 #include <vector>
@@ -85,11 +86,11 @@ public:
   using TimePoint = std::chrono::system_clock::time_point;
 
   /**
-   * @brief Emit one Record: its (already enriched) JSON payload, the timestamp it was collected
+   * @brief Emit one Record: its (already enriched) json payload, the timestamp it was collected
    * at, and the incident_id of the cycle releasing it.
    */
   using PublishFn =
-      std::function<void(const std::string& record_json, const TimePoint& stamp, const std::string& incident_id)>;
+      std::function<void(const nlohmann::json& record, const TimePoint& stamp, const std::string& incident_id)>;
 
   /**
    * @param buffer_window How much history to keep buffered while armed (`buffer_duration_sec`).
@@ -118,17 +119,17 @@ public:
    * incident_id) during PostRoll. Drives time-based transitions first, so a sample collected after
    * the post-roll deadline is buffered rather than published even if nothing else called tick().
    */
-  void offer(const std::string& record_json, const TimePoint& now)
+  void offer(const nlohmann::json& record, const TimePoint& now)
   {
     tick(now);
 
     if (state_ == IncidentState::PostRoll)
     {
-      publish_(record_json, now, incident_id_);
+      publish_(record, now, incident_id_);
       return;
     }
 
-    buffer_.push(record_json, now);
+    buffer_.push(record, now);
     buffer_.evict(now);
   }
 

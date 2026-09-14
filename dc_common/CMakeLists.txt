@@ -33,14 +33,22 @@ ament_export_dependencies(Boost nlohmann_json)
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
 
-  foreach(test record_ring_buffer_test file_scratch_ring_test state_transition_detector_test
-          battery_cycle_accumulator_test)
+  foreach(test file_scratch_ring_test state_transition_detector_test battery_cycle_accumulator_test)
     ament_add_gtest(${PROJECT_NAME}_${test} test/${test}.cpp)
     target_include_directories(${PROJECT_NAME}_${test} PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
       $<INSTALL_INTERFACE:include>
     )
   endforeach()
+
+  # RecordRingBuffer (#500) holds json Records, so it links nlohmann_json like RecordFileWalk
+  # below.
+  ament_add_gtest(${PROJECT_NAME}_record_ring_buffer_test test/record_ring_buffer_test.cpp)
+  target_include_directories(${PROJECT_NAME}_record_ring_buffer_test PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+  target_link_libraries(${PROJECT_NAME}_record_ring_buffer_test nlohmann_json::nlohmann_json)
 
   # RecordFileWalk (#479) walks nlohmann::json Records, so it links nlohmann_json beyond the
   # plain-header tests above.

@@ -17,7 +17,7 @@ class Position : public dc_measurements::Measurement
 public:
   Position();
   ~Position() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 protected:
   /**

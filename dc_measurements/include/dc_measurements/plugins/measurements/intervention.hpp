@@ -27,7 +27,7 @@ class Intervention : public dc_measurements::Measurement
 public:
   Intervention();
   ~Intervention() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   DrivingModeSource mode_source_;

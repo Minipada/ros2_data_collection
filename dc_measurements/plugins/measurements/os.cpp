@@ -20,12 +20,8 @@ unsigned long long OS::getTotalSystemMemory()
   return pages * page_size;
 }
 
-dc_interfaces::msg::StringStamped OS::collect()
+json OS::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
   json data_json;
   data_json["os"] = lp::OperatingSystem();
   data_json["kernel"] = lp::Kernel();
@@ -36,9 +32,7 @@ dc_interfaces::msg::StringStamped OS::collect()
   // Round to 2 decimals
   data_json["memory"] = std::ceil(mem_total_gb * 100.0) / 100.0;
 
-  msg.data = data_json.dump(-1, ' ', true);
-
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements
