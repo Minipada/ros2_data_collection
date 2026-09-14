@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 #include <gtest/gtest.h>
-#include <tf2/time.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/transform_listener.h>
+#include <tf2/time.hpp>
+#include <tf2_ros/buffer.hpp>
+#include <tf2_ros/transform_broadcaster.hpp>
+#include <tf2_ros/transform_listener.hpp>
 
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "measurement_test_bench.hpp"
