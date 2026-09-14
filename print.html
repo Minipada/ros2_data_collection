@@ -113,11 +113,15 @@
                     <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
                 </noscript>
                 <footer id="nav-separator"></footer>
-                <a style="margin-right: 10px;" href="https://github.com/minipada/ros2_data_collection" target="_blank"><i  class="lni lni-github-original lni-32"></i></a>
-                <a style="margin-right: 10px;" href="mailto:d.bensoussan@proton.me" target="_blank"><i  class="lni lni-envelope lni-32"></i></a>
-                <div>Under <a target="_blank" style="color: var(--sidebar-active);"
-                    href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
-                license</a>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
                 </div>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
@@ -449,7 +453,11 @@ for the demos; see <a href="dc/./infrastructure_setup.html">Infrastructure setup
 <p>If you run into problems building DC, search the issue tracker on
 <a href="https://github.com/minipada/ros2_data_collection/issues">GitHub</a> and feel free to
 <a href="https://github.com/minipada/ros2_data_collection/issues/new">open a ticket</a>.</p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/setup.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="demos"><a class="header" href="#demos">Demos</a></h1>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/setup.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="requirements-1"><a class="header" href="#requirements-1">Requirements</a></h1>
+<p>Requirements are tracked using <a href="https://github.com/strictdoc-project/strictdoc">Strictdoc</a>.</p>
+<p>The goal is to list tasks and do <a href="https://visuresolutions.com/requirements-management-traceability-guide/requirement-based-testing">test based requirements</a>.</p>
+<p><object style="width: 100%; height: 100vh;" data="requirements/html/index.html"></object></p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/requirements.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="demos"><a class="header" href="#demos">Demos</a></h1>
 <p>We will go together through some demos to get started with DC. You shall find them in the <em><a href="https://github.com/minipada/ros2_data_collection/tree/jazzy/dc_demos">dc_demos</a></em> package</p>
 <p>The demos are grouped in three tiers. Start at <a href="dc/./demos/beginner.html">Beginner</a> and work
 down: each demo assumes the concepts explained in the ones before it.</p>
@@ -3231,7 +3239,209 @@ Record may be re-sent; deduplicate on read if that matters to you.</li>
 queue after a successful upload is acknowledged; killing <code>dc_uploader</code> mid-upload
 loses nothing; the next start replays the same intent from disk.</li>
 </ul>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/data_pipeline.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="lifecycle-manager"><a class="header" href="#lifecycle-manager">Lifecycle Manager</a></h1>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/data_pipeline.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="data-validation"><a class="header" href="#data-validation">Data validation</a></h1>
+<h2 id="model"><a class="header" href="#model">Model</a></h2>
+<p>Each Measurement can validate the Records it emits against a model.</p>
+<p>We use use <a href="https://github.com/pboettch/json-schema-validator">JSON schema validator for JSON for Modern C++</a>.</p>
+<p>Schemas follow the JSON 7 model:</p>
+<pre><code class="language-json">{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Uptime",
+    "description": "Time the system has been up",
+    "properties": {
+        "time": {
+            "description": "Time the system has been up",
+            "type": "integer",
+            "minimum": 0
+        }
+    },
+    "type": "object"
+}
+</code></pre>
+<p>Validation is <strong>enabled by default</strong> (<code>enable_validator: true</code>); disable it per plugin
+with <code>enable_validator: false</code> when fields are filtered out or added dynamically (e.g.
+remote paths) in a way the shipped schema doesn't account for.</p>
+<h2 id="failed-validation-callback"><a class="header" href="#failed-validation-callback">Failed validation callback</a></h2>
+<p>You might want to trigger some actions when a validation fails, e.g send the data to another database to later on debug it.</p>
+<p>In this case, you will need to write your own plugin (inherit from an existing one or start from scratch) and define the <code>onFailedValidation</code> function in the class.</p>
+<p>This case is covered by the <a href="dc/./demos/custom_stdout.html">custom plugin demo</a></p>
+<h2 id="use-a-different-schema"><a class="header" href="#use-a-different-schema">Use a different Schema</a></h2>
+<p>For each plugin, a default path is provided but this can be changed by passing the <code>json_schema_path</code> parameter in the measurement plugin parameter to the absolute path of your schema.</p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/data_validation.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="groups"><a class="header" href="#groups">Groups</a></h1>
+<h2 id="description"><a class="header" href="#description">Description</a></h2>
+<p>A <strong>Group</strong> merges the Records of several Measurements into one Record, based on time
+proximity. For example, grouping the <code>cpu</code> and <code>position</code> Measurements publishes a single
+merged Record on <code>/dc/group/my_group</code>:</p>
+<pre><code class="language-json">{
+    "cpu": ...,
+    "position": ...,
+}
+</code></pre>
+<p>A merged Record is an ordinary Record from there on: it carries the Tag derived from its
+output topic, and a Destination receives it by listing that topic in <code>inputs</code>.</p>
+<p>Envelope fields do not get nested under a member's key: a member's <code>tags</code> is replaced by the
+Group's own, and the <code>incident_id</code> on its envelope — the id a Measurement stamps on a Record
+it released as part of an <a href="dc/./measurements.html">incident</a> — is carried onto the merged Record's
+own envelope (first non-empty wins, so a partial Record built from a mix of released and live
+members still carries it). The Bridge lifts that envelope field into the payload's top level,
+where a <code>postgres</code> Destination has a column for it; buried under <code>&lt;group_key&gt;.incident_id</code> it
+would simply be dropped by that sink. A member payload that is not a JSON object — a bare
+scalar or an array — has no such fields to lift, and is merged as it is under its
+<code>group_key</code>.</p>
+<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<div class="admonition-title">
+<div id="admonition-info-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="dc/groups.html#admonition-info"></a>
+</div>
+<div>
+<p>The Group node is written in Python: allocating and passing a variable number of inputs to
+the <code>ApproximateTimeSynchronizer</code> is straightforward there and awkward in C++.</p>
+</div>
+</div>
+<h2 id="node-parameters"><a class="header" href="#node-parameters">Node parameters</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
+<tr><td>groups</td><td>Groups to enable</td><td>list[str]</td><td>N/A</td></tr>
+<tr><td>group_measurement_plugins</td><td>Collect the members' <code>plugin</code> fields into the merged Record's <code>plugins</code> list</td><td>bool</td><td>true</td></tr>
+</tbody></table>
+</div>
+<h2 id="group-parameters"><a class="header" href="#group-parameters">Group parameters</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
+<tr><td>inputs</td><td>Name of the input topics to group</td><td>list[str]</td><td>N/A</td></tr>
+<tr><td>output</td><td>Output topic to send the data to</td><td>str</td><td>"/dc/group/{group}"</td></tr>
+<tr><td>sync_delay</td><td>Delay to wait during all subscriber data need to reach before being published again</td><td>float</td><td>5.0</td></tr>
+<tr><td>sync_timeout</td><td>Seconds an incomplete set may wait before <code>on_sync_timeout</code> applies. 0.0 disables it</td><td>float</td><td>0.0</td></tr>
+<tr><td>on_sync_timeout</td><td>What to do with an incomplete set once <code>sync_timeout</code> elapses: <code>drop</code>/<code>emit_partial</code></td><td>str</td><td>"drop"</td></tr>
+<tr><td>sync_timeout_log_throttle</td><td>Seconds between two sync-timeout warnings for this group. 0.0 logs every one</td><td>float</td><td>60.0</td></tr>
+<tr><td>group_key</td><td>Dictionary key under which data is grouped</td><td>str</td><td>{group_name}</td></tr>
+<tr><td>exclude_keys</td><td>List of keys to exclude from the published data. Data depth is separated by a dot. An entry holding glob syntax (<code>*</code>, <code>?</code>, <code>[seq]</code>) is a glob over the flattened key, one without is a key prefix</td><td>list[str]</td><td>N/A</td></tr>
+<tr><td>nested_data</td><td>Whether measurements are nested dictionaries or flat</td><td>bool</td><td>true</td></tr>
+<tr><td>include_group_name</td><td>Include group name in the JSON as key="name" and value=&lt;group_key&gt;</td><td>bool</td><td>true</td></tr>
+</tbody></table>
+</div>
+<h2 id="incomplete-sets"><a class="header" href="#incomplete-sets">Incomplete sets</a></h2>
+<p>A Group only publishes once <em>every</em> one of its <code>inputs</code> has produced a Record close enough
+in time. If one Measurement stops publishing — a camera unplugged, a plugin crashed, a
+<code>gate_condition</code> that never opens — the whole Group goes silent, and the Records of the
+inputs that <em>are</em> working never reach a Destination.</p>
+<p><code>sync_timeout</code> puts a deadline on that wait. It is measured from the arrival of the first
+Record of a set, and it is a different thing from <code>sync_delay</code>: <code>sync_delay</code> is the
+synchroniser's slop, the maximum spread between the <em>timestamps</em> of Records that may be
+merged together, whereas <code>sync_timeout</code> is real time spent waiting for a set to complete.</p>
+<div class="table-wrapper"><table><thead><tr><th><code>sync_timeout</code></th><th><code>on_sync_timeout</code></th><th>Behaviour</th></tr></thead><tbody>
+<tr><td><code>0.0</code></td><td>(ignored)</td><td>No deadline. The Group waits indefinitely and the synchroniser evicts stale Records on its own</td></tr>
+<tr><td><code>&gt; 0.0</code></td><td><code>drop</code></td><td>The incomplete set is discarded when the deadline elapses. Nothing is published, a warning is logged</td></tr>
+<tr><td><code>&gt; 0.0</code></td><td><code>emit_partial</code></td><td>The Records that did arrive are published as one <strong>partial Record</strong>, then the set is discarded</td></tr>
+</tbody></table>
+</div>
+<p><code>drop</code> is the default, so a Group that sets nothing new behaves exactly as it did before.
+<code>emit_partial</code> needs a positive <code>sync_timeout</code> to have a deadline to fire on; configured
+without one, the Group logs an error and falls back to <code>drop</code>.</p>
+<div id="admonition-info-1" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-1-title">
+<div class="admonition-title">
+<div id="admonition-info-1-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="dc/groups.html#admonition-info-1"></a>
+</div>
+<div>
+<p>The deadline is on the set as a whole, not on each input: it starts with the first Record
+of a set and later Records do not push it back. After a set times out, the Group forgets
+every Record it was holding, so a Record already published in a partial set is never
+merged a second time when its late partner finally arrives.</p>
+</div>
+</div>
+<h3 id="warnings-and-throttling"><a class="header" href="#warnings-and-throttling">Warnings and throttling</a></h3>
+<p>Every timeout logs a warning naming the group, the deadline it missed, and the input
+topics that produced nothing — including under <code>drop</code>, where the warning is the only trace
+left since nothing is published:</p>
+<pre><code class="language-text">[WARN] [group_server]: Group 'memory_cpu': no complete set after 10.0s, dropping the
+incomplete set (no Record from: ['/dc/measurement/memory'])
+</code></pre>
+<p>A Measurement that dies stays dead, so the group keeps timing out and an unthrottled
+warning would repeat every <code>sync_timeout</code> for as long as the robot runs.
+<code>sync_timeout_log_throttle</code> caps this at one warning per group per window (60s by default);
+set it to <code>0.0</code> to log every timeout. The first timeout after a quiet window always logs
+immediately, and reports how many warnings the throttle swallowed since the last one:</p>
+<pre><code class="language-text">[WARN] [group_server]: Group 'memory_cpu': no complete set after 10.0s, dropping the
+incomplete set (no Record from: ['/dc/measurement/memory']) [+5 more in the last 60.0s]
+</code></pre>
+<p>The throttle is per group, so a permanently broken group does not silence the warnings of a
+healthy one that starts failing. Only the <em>log line</em> is rate-limited — under <code>emit_partial</code>
+every timeout still publishes its partial Record, throttled or not.</p>
+<h3 id="what-a-partial-record-looks-like"><a class="header" href="#what-a-partial-record-looks-like">What a partial Record looks like</a></h3>
+<p>A partial Record has the same shape as a complete one, minus the inputs that did not
+report, plus two keys that mark it as partial:</p>
+<pre><code class="language-json">{
+    "cpu": { "used": 12.0 },
+    "partial": true,
+    "missing_inputs": ["/dc/measurement/memory"],
+    "tags": [""],
+    "name": "memory_cpu"
+}
+</code></pre>
+<ul>
+<li><strong>A missing input's key is omitted, not present-and-null.</strong> The Group node knows a
+missing input's <em>topic</em> and nothing else: a Record's <code>group_key</code> and its fields both
+travel inside the Record itself, so there is no correctly shaped null placeholder the
+Group could invent for a Measurement that never published. Consumers with a flat column
+schema — the <code>postgres</code> sink maps a Record's top-level keys onto existing columns — see
+those columns stay <code>NULL</code> for that row, the same as any other column a Record does not
+populate.</li>
+<li><strong><code>partial</code> and <code>missing_inputs</code> appear only on partial Records.</strong> A complete Record is
+byte-for-byte what the Group published before this option existed, so nothing downstream
+has to change to keep consuming complete Records. Treat the absence of <code>partial</code> as
+<code>false</code>.</li>
+<li><code>missing_inputs</code> lists the input <em>topics</em> that contributed no Record, in <code>inputs</code> order.</li>
+<li><code>tags</code>, <code>name</code> and <code>plugins</code> behave as they do on a complete Record — <code>plugins</code> only
+lists the plugins that actually reported.</li>
+<li><code>incident_id</code> behaves the same way: if any member that <em>did</em> arrive was released as part
+of an <a href="dc/./measurements.html">incident</a>, the merged Record carries its <code>incident_id</code>, so a
+partial Record of an incident is still queryable as one.</li>
+</ul>
+<div id="admonition-add-the-columns-before-charting-a-partial-record" class="admonition admonish-warning" role="note" aria-labelledby="admonition-add-the-columns-before-charting-a-partial-record-title">
+<div class="admonition-title">
+<div id="admonition-add-the-columns-before-charting-a-partial-record-title">
+<p>Add the columns before charting a partial Record</p>
+</div>
+<a class="admonition-anchor-link" href="dc/groups.html#admonition-add-the-columns-before-charting-a-partial-record"></a>
+</div>
+<div>
+<p>Vector's <code>postgres</code> sink silently drops top-level keys that have no matching column, so
+<code>partial</code> and <code>missing_inputs</code> are discarded unless you add <code>partial boolean</code> and
+<code>missing_inputs jsonb</code> to the destination table yourself.</p>
+</div>
+</div>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<pre><code class="language-yaml">group_server:
+  ros__parameters:
+    groups: ["memory_cpu", "memory_uptime", "cameras", "map"]
+    memory_cpu:
+      inputs: ["/dc/measurement/memory", "/dc/measurement/cpu"]
+      output: "/dc/group/memory_cpu"
+      sync_delay: 5.0
+      group_key: "memory_cpu"
+    memory_uptime:
+      inputs: ["/dc/measurement/memory", "/dc/measurement/uptime"]
+      output: "/dc/group/memory_uptime"
+      sync_delay: 5.0
+      # Publish whatever arrived rather than nothing if one of the two is 10s late
+      sync_timeout: 10.0
+      on_sync_timeout: "emit_partial"
+      group_key: "memory_uptime"
+    cameras:
+      inputs: ["/dc/measurement/camera"]
+      output: "/dc/group/cameras"
+      sync_delay: 5.0
+      group_key: "cameras"
+    map:
+      inputs: ["/dc/measurement/map"]
+      output: "/dc/group/map"
+      sync_delay: 5.0
+      group_key: "map"
+</code></pre>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/groups.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="lifecycle-manager"><a class="header" href="#lifecycle-manager">Lifecycle Manager</a></h1>
 <p><code>dc_lifecycle_manager</code> is DC's nav2-style manager for the nodes that have a meaningful
 deactivated state. It walks each managed node through the ROS 2 <a href="https://design.ros2.org/articles/node_lifecycle.html">managed-node state
 machine</a> (<code>configure</code>,
@@ -3355,7 +3565,7 @@ and leaves the managed set <code>Unconfigured</code>. Recovery from there needs 
 <p><code>~/is_active</code> (<code>std_srvs/srv/Trigger</code>) reports whether the managed set is currently
 <code>Active</code>, and a <code>diagnostic_updater</code> entry surfaces the same status on <code>/diagnostics</code>.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/lifecycle_manager.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="measurements-3"><a class="header" href="#measurements-3">Measurements</a></h1>
-<h2 id="description"><a class="header" href="#description">Description</a></h2>
+<h2 id="description-1"><a class="header" href="#description-1">Description</a></h2>
 <p>A <strong>Measurement</strong> is a source of sampled data that emits <strong>Records</strong> — timestamped JSON
 documents — on its own ROS topic. For example, a Record from the Memory Measurement:</p>
 <pre><code class="language-json">{
@@ -3373,7 +3583,7 @@ like <code>robot_name</code> only appear once configured as a custom key (see
 <code>timestamp</code> are added later, by Vector once the Bridge forwards the Record — see a
 captured example on any <a href="dc/./demos.html">demo</a> page for the full shape a Destination
 actually receives.</p>
-<h2 id="node-parameters"><a class="header" href="#node-parameters">Node parameters</a></h2>
+<h2 id="node-parameters-1"><a class="header" href="#node-parameters-1">Node parameters</a></h2>
 <p>This node collects data and publishes it as Records. Each Measurement is a pluginlib
 plugin loaded into this node and publishes on its own <code>topic_output</code>; the Bridge
 (<code>dc_bridge</code>) subscribes to those topics and forwards the Records to the Destinations
@@ -3586,7 +3796,7 @@ error is logged: it blocks collection when listed in <code>if_all_conditions</co
 <tr><td><a href="dc/./measurements/uptime.html">Uptime</a></td><td>How long the machine has been turned on</td></tr>
 </tbody></table>
 </div><footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="battery"><a class="header" href="#battery">Battery</a></h1>
-<h2 id="description-1"><a class="header" href="#description-1">Description</a></h2>
+<h2 id="description-2"><a class="header" href="#description-2">Description</a></h2>
 <p>Records the state of one battery pack from a <code>sensor_msgs/BatteryState</code> topic: charge percentage,
 voltage and current on the polling interval, plus a Record when a charging session starts and
 another when it ends. Charging is unavailable time, so the session boundaries are what turn
@@ -3727,7 +3937,7 @@ battery_right:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/battery.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="camera"><a class="header" href="#camera">Camera</a></h1>
-<h2 id="description-2"><a class="header" href="#description-2">Description</a></h2>
+<h2 id="description-3"><a class="header" href="#description-3">Description</a></h2>
 <p>Save camera image files: raw, rotated and/or inspected. Images can be inspected using different
 detection modules (e.g. barcode/QR detection, in-process via <a href="https://github.com/zxing-cpp/zxing-cpp">ZXing-C++</a>)</p>
 <h2 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h2>
@@ -4043,7 +4253,7 @@ matches a Record's <code>remote_paths</code> keys against <code>receives: files<
 <p>A plain capture with <code>estimate_pose: false</code> (no <code>pose</code> field, otherwise identical shape) has not
 been added yet.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/camera.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="cmd_vel"><a class="header" href="#cmd_vel">Cmd_vel</a></h1>
-<h2 id="description-3"><a class="header" href="#description-3">Description</a></h2>
+<h2 id="description-4"><a class="header" href="#description-4">Description</a></h2>
 <p>Collect command velocity sent to the robot by subscribing to cmd_vel topic.</p>
 <h2 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
@@ -4124,7 +4334,7 @@ cmd_vel:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/cmd_vel.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="cpu"><a class="header" href="#cpu">CPU</a></h1>
-<h2 id="description-4"><a class="header" href="#description-4">Description</a></h2>
+<h2 id="description-5"><a class="header" href="#description-5">Description</a></h2>
 <p>Collect cpu usage: average cpu, number of processes running and processes sorted by cpu usage.</p>
 <h2 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
@@ -4212,7 +4422,7 @@ cpu:
 </code></pre>
 <p><code>sorted</code> is empty here because no process crossed <code>cpu_min</code> (10%) in this poll window.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/cpu.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="diagnostics"><a class="header" href="#diagnostics">Diagnostics</a></h1>
-<h2 id="description-5"><a class="header" href="#description-5">Description</a></h2>
+<h2 id="description-6"><a class="header" href="#description-6">Description</a></h2>
 <p>Subscribes to <code>/diagnostics</code> (<code>diagnostic_msgs/DiagnosticArray</code>) and converts matching
 <code>DiagnosticStatus</code> entries into a Record, so hardware/driver health reaches Destinations and
 dashboards like any other Measurement. Each <code>DiagnosticStatus.values</code> key/value pair is preserved
@@ -4307,7 +4517,7 @@ diagnostics_unchanged:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/diagnostics.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="dummy"><a class="header" href="#dummy">Dummy</a></h1>
-<h2 id="description-6"><a class="header" href="#description-6">Description</a></h2>
+<h2 id="description-7"><a class="header" href="#description-7">Description</a></h2>
 <p>The dummy measurement, generates dummy events. It is useful for testing, debugging, benchmarking and getting started with ROS 2 Data collection.</p>
 <h2 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
@@ -4344,7 +4554,7 @@ dummy:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/dummy.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="distance-traveled"><a class="header" href="#distance-traveled">Distance traveled</a></h1>
-<h2 id="description-7"><a class="header" href="#description-7">Description</a></h2>
+<h2 id="description-8"><a class="header" href="#description-8">Description</a></h2>
 <p>Reports the straight-line distance moved between the robot's current TF pose
 (<code>robot_base_frame</code> in <code>global_frame</code>) and its pose at the <em>previous</em> poll — a per-poll
 delta, despite the field's name. Sum it downstream (e.g. <code>SUM(distance_traveled)</code>
@@ -4433,7 +4643,7 @@ distance_traveled:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/distance_traveled.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="driving-type"><a class="header" href="#driving-type">Driving type</a></h1>
-<h2 id="description-8"><a class="header" href="#description-8">Description</a></h2>
+<h2 id="description-9"><a class="header" href="#description-9">Description</a></h2>
 <p>Reports the robot's current operating mode (<code>autonomous</code>, <code>manual</code>, <code>teleop</code>, or <code>unknown</code>) as a
 single Record, so every other Measurement can be segmented by driving mode downstream. There is no
 standard ROS message for "current driving mode", so this Measurement is entirely configuration
@@ -4525,7 +4735,7 @@ not a failed workspace build — when it isn't found. Configuring
 pluginlib's load loudly (missing library), rather than silently doing nothing.</p>
 </div>
 </div>
-<h2 id="description-9"><a class="header" href="#description-9">Description</a></h2>
+<h2 id="description-10"><a class="header" href="#description-10">Description</a></h2>
 <p>Reads eProsima Fast DDS's own Statistics Module — latency, throughput and RTPS packet counts
 between the DomainParticipants, DataWriters and DataReaders it discovers on a DDS domain — through
 <code>Fast-DDS-statistics-backend</code>, and emits one <code>sample</code> Record per polling interval. It follows the
@@ -4670,7 +4880,7 @@ guaranteed on every poll.</p>
 <pre><code>
 &lt;footer id="open-on-gh"&gt;Found a bug? &lt;a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/fastdds_stats.md"&gt;Edit this page on GitHub.&lt;/a&gt;&lt;/footer&gt;</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="fault"><a class="header" href="#fault">Fault</a></h1>
-<h2 id="description-10"><a class="header" href="#description-10">Description</a></h2>
+<h2 id="description-11"><a class="header" href="#description-11">Description</a></h2>
 <p>Reports the transitions <code>diagnostics</code>'s periodic snapshots leave a consumer to reconstruct:
 <code>diagnostics</code> writes the current <code>DiagnosticStatus</code> level on every poll, so recovering "when did
 this component break, and when was it fixed" means scanning for where a value changed in
@@ -4764,7 +4974,7 @@ fault:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/fault.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="intervention"><a class="header" href="#intervention">Intervention</a></h1>
-<h2 id="description-11"><a class="header" href="#description-11">Description</a></h2>
+<h2 id="description-12"><a class="header" href="#description-12">Description</a></h2>
 <p>Reports human takeovers: how often somebody had to step in, how long the robot had been running
 itself beforehand, and how long the takeover lasted. It is a <strong>projection of driving-mode
 transitions</strong> -- it reads the same mode signal
@@ -4851,7 +5061,7 @@ intervention:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/intervention.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="ip-camera"><a class="header" href="#ip-camera">Ip Camera</a></h1>
-<h2 id="description-12"><a class="header" href="#description-12">Description</a></h2>
+<h2 id="description-13"><a class="header" href="#description-13">Description</a></h2>
 <p>Records video in small segments (in case of a cut) and store it locally.
 They are first stored in a temporary folder. Once the record (of e.g 10 seconds) is done, it is moved to another directory.</p>
 <p>Compared to other plugins, the collect function only moves the files from the temporary location, it does not start the recording. It takes some time to establish connection, so we avoid doing this every time. Recording is started at initialization by an ffmpeg process and saved in <a href="https://www.wikiwand.com/en/HTTP_Live_Streaming">HLS format</a>.</p>
@@ -4930,7 +5140,7 @@ ip_camera:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/ip_camera.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="manipulation"><a class="header" href="#manipulation">Manipulation</a></h1>
-<h2 id="description-13"><a class="header" href="#description-13">Description</a></h2>
+<h2 id="description-14"><a class="header" href="#description-14">Description</a></h2>
 <p>Reports one MoveIt <a href="https://github.com/moveit/moveit_msgs/blob/master/action/MoveGroup.action"><code>MoveGroup</code></a>
 goal's lifecycle: a <code>manipulation_start</code> Record when the goal is accepted, a <code>manipulation_end</code>
 Record when it reaches a terminal state. This is a <strong>manipulation goal</strong> — it moves a robot
@@ -5041,7 +5251,7 @@ manipulation:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/manipulation.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="map"><a class="header" href="#map">Map</a></h1>
-<h2 id="description-14"><a class="header" href="#description-14">Description</a></h2>
+<h2 id="description-15"><a class="header" href="#description-15">Description</a></h2>
 <p>Save map using nav2_map_server and collect the map of the local map saved. The measurement also includes metadata: width, height and x and y origin.</p>
 <h2 id="parameters-13"><a class="header" href="#parameters-13">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
@@ -5167,7 +5377,7 @@ map:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/map.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="memory"><a class="header" href="#memory">Memory</a></h1>
-<h2 id="description-15"><a class="header" href="#description-15">Description</a></h2>
+<h2 id="description-16"><a class="header" href="#description-16">Description</a></h2>
 <p>Collect memory used in percentage.</p>
 <h2 id="parameters-14"><a class="header" href="#parameters-14">Parameters</a></h2>
 <p>This Measurement has no parameters beyond the <a href="dc/measurements/../measurements.html#plugin-parameters">common Plugin parameters</a>.</p>
@@ -5202,7 +5412,7 @@ memory:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/memory.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="mission-nav2-followwaypoints"><a class="header" href="#mission-nav2-followwaypoints">Mission (nav2 FollowWaypoints)</a></h1>
-<h2 id="description-16"><a class="header" href="#description-16">Description</a></h2>
+<h2 id="description-17"><a class="header" href="#description-17">Description</a></h2>
 <p>Reports the outcome of a nav2 <code>FollowWaypoints</code> mission -- a patrol or waypoint-following run,
 including nav2's own per-waypoint failure reporting -- as one <code>mission_start</code> Record when a goal is
 accepted and one <code>mission_end</code> Record when it reaches a terminal state. It is the <code>FollowWaypoints</code>
@@ -5315,7 +5525,7 @@ mission:
 </code></pre>
 <p><code>error_code</code> is <code>FollowWaypoints::Result.error_code</code> verbatim -- on the Jazzy <code>nav2_msgs</code> this repo targets, its only non-zero values are <code>UNKNOWN</code> (600) and <code>TASK_EXECUTOR_FAILED</code> (601); <code>missed_waypoints[].error_code</code> is nav2's <code>MissedWaypoint.error_code</code> for that one waypoint, from the same table. <code>MissedWaypoint</code> on Jazzy carries only <code>index</code>, the waypoint's goal pose (not part of this schema) and <code>error_code</code> -- no per-waypoint status enum or free-text reason the way a newer/rolling nav2 has; <code>reason</code>/<code>error_msg</code> above are always the mission-level <code>FollowWaypoints::Result.error_msg</code>, not anything per-waypoint.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/mission_nav2_follow_waypoints.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="mission-nav2-navigatetopose"><a class="header" href="#mission-nav2-navigatetopose">Mission Nav2 (NavigateToPose)</a></h1>
-<h2 id="description-17"><a class="header" href="#description-17">Description</a></h2>
+<h2 id="description-18"><a class="header" href="#description-18">Description</a></h2>
 <p>The nav2 adapter of the Mission Measurement for nav2's <code>NavigateToPose</code> action -- a single-pose
 navigation goal, the base case the mission lifecycle contract (#305, recorded in
 <a href="dc/measurements/../adr/0010-mission-lifecycle-contract.html">ADR-0010</a>)
@@ -5418,7 +5628,7 @@ mission:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/mission_nav2.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="mission-nav2-navigatethroughposes"><a class="header" href="#mission-nav2-navigatethroughposes">Mission Nav2 (NavigateThroughPoses)</a></h1>
-<h2 id="description-18"><a class="header" href="#description-18">Description</a></h2>
+<h2 id="description-19"><a class="header" href="#description-19">Description</a></h2>
 <p>The nav2 adapter of the Mission Measurement for nav2's <code>NavigateThroughPoses</code> action -- the
 action a deployment issues when a mission is a single job through several hard-constraint poses
 in one call, rather than a chain of separate <code>NavigateToPose</code> goals (that sibling adapter is
@@ -5527,7 +5737,7 @@ mission_nav2_through_poses:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/mission_nav2_through_poses.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="mission-open-rmf"><a class="header" href="#mission-open-rmf">Mission (Open-RMF)</a></h1>
-<h2 id="description-19"><a class="header" href="#description-19">Description</a></h2>
+<h2 id="description-20"><a class="header" href="#description-20">Description</a></h2>
 <p>The Open-RMF adapter of the Mission Measurement for Open-RMF's <code>TaskState</code> (the document
 <code>rmf-web</code>'s API server maintains per task). Emits a <code>mission_start</code> Record when a task's status
 first leaves <code>queued</code>/<code>standby</code> into an active state, and a <code>mission_end</code> Record once it reaches a
@@ -5676,7 +5886,7 @@ mission_open_rmf:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/mission_open_rmf.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="network"><a class="header" href="#network">Network</a></h1>
-<h2 id="description-20"><a class="header" href="#description-20">Description</a></h2>
+<h2 id="description-21"><a class="header" href="#description-21">Description</a></h2>
 <p>Collects ping value, whether or not the PC is online and interfaces available. <code>ping()</code>
 opens an unprivileged ICMP "ping" socket (<code>socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)</code>) —
 no root or <code>CAP_NET_RAW</code> needed, only a permissive <code>net.ipv4.ping_group_range</code> (the Linux
@@ -5760,7 +5970,7 @@ for a fast test):</p>
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/network.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="os"><a class="header" href="#os">OS</a></h1>
-<h2 id="description-21"><a class="header" href="#description-21">Description</a></h2>
+<h2 id="description-22"><a class="header" href="#description-22">Description</a></h2>
 <p>Collects the Operating System information: cpus, operating system name and kernel information</p>
 <h2 id="parameters-20"><a class="header" href="#parameters-20">Parameters</a></h2>
 <p>This Measurement has no parameters beyond the <a href="dc/measurements/../measurements.html#plugin-parameters">common Plugin parameters</a>.</p>
@@ -5825,7 +6035,7 @@ os:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/os.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="permissions"><a class="header" href="#permissions">Permissions</a></h1>
-<h2 id="description-22"><a class="header" href="#description-22">Description</a></h2>
+<h2 id="description-23"><a class="header" href="#description-23">Description</a></h2>
 <p>Collect UID, GID, if a file or directory exists and its permissions (in rwx or integer format).</p>
 <h2 id="parameters-21"><a class="header" href="#parameters-21">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
@@ -5897,7 +6107,7 @@ permission_home_dc:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/permissions.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="position"><a class="header" href="#position">Position</a></h1>
-<h2 id="description-23"><a class="header" href="#description-23">Description</a></h2>
+<h2 id="description-24"><a class="header" href="#description-24">Description</a></h2>
 <p>Collect x, y and yaw of the robot.</p>
 <h2 id="parameters-22"><a class="header" href="#parameters-22">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
@@ -5946,7 +6156,7 @@ position:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/position.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="random"><a class="header" href="#random">Random</a></h1>
-<h2 id="description-24"><a class="header" href="#description-24">Description</a></h2>
+<h2 id="description-25"><a class="header" href="#description-25">Description</a></h2>
 <p>Emits a randomly generated value on every polling interval. Useful for exercising the
 pipeline and Destinations without any robot infrastructure — the simplest possible
 Measurement plugin, and a deterministic, infrastructure-free Record source for load and
@@ -5993,7 +6203,7 @@ random:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/random.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="ros2-control-status"><a class="header" href="#ros2-control-status">ROS2 control status</a></h1>
-<h2 id="description-25"><a class="header" href="#description-25">Description</a></h2>
+<h2 id="description-26"><a class="header" href="#description-26">Description</a></h2>
 <p>Reports when a <code>ros2_control</code> controller or hardware component crosses into or out of the
 <code>active</code> lifecycle state -- the state in which it is actually commanding or reading hardware.
 Rather than polling <code>list_controllers</code>/<code>list_hardware_components</code>, Ros2ControlStatus subscribes to
@@ -6072,7 +6282,7 @@ ros2_control_status:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/ros2_control_status.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="serial-interface"><a class="header" href="#serial-interface">Serial interface</a></h1>
-<h2 id="description-26"><a class="header" href="#description-26">Description</a></h2>
+<h2 id="description-27"><a class="header" href="#description-27">Description</a></h2>
 <p>Reads line-delimited data off a configurable serial port (baud rate configurable) and parses
 each line into named fields, publishing them as a Record — for custom robot sensors/boards that
 talk over a UART/USB-serial link and never reach a ROS topic on their own.</p>
@@ -6171,7 +6381,7 @@ a virtual serial pair created with <code>socat</code>, no hardware required:</p>
 <code>/tmp/dc_serial_peer</code>. Killing and restarting <code>socat</code> against the same <code>link=</code> paths simulates an
 unplug/replug cycle and exercises the reconnect path.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/serial_interface.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="slam_toolbox-quality"><a class="header" href="#slam_toolbox-quality">slam_toolbox quality</a></h1>
-<h2 id="description-27"><a class="header" href="#description-27">Description</a></h2>
+<h2 id="description-28"><a class="header" href="#description-28">Description</a></h2>
 <p>Localization quality from two of <a href="https://github.com/SteveMacenski/slam_toolbox">slam_toolbox</a>'s
 native ROS 2 topics: <code>/pose</code> (<code>geometry_msgs/PoseWithCovarianceStamped</code>), polled on the same
 interval as every other Measurement, for a <code>sample</code> Record carrying the pose and its covariance;
@@ -6279,7 +6489,7 @@ same count bucketed hourly for charting) over this Measurement's <code>loop_clos
 the same convention as <code>dc_kpi_intervention_rate()</code>. The demo Grafana KPI dashboard charts loop
 closures per hour; the robot dashboard charts the covariance trend directly from <code>sample</code> Records.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/slam_toolbox_quality.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="speed"><a class="header" href="#speed">Speed</a></h1>
-<h2 id="description-28"><a class="header" href="#description-28">Description</a></h2>
+<h2 id="description-29"><a class="header" href="#description-29">Description</a></h2>
 <p>Collect robot speed using the Odom topic.</p>
 <h2 id="parameters-27"><a class="header" href="#parameters-27">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
@@ -6360,7 +6570,7 @@ speed:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/speed.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="storage"><a class="header" href="#storage">Storage</a></h1>
-<h2 id="description-29"><a class="header" href="#description-29">Description</a></h2>
+<h2 id="description-30"><a class="header" href="#description-30">Description</a></h2>
 <p>Collect storage information on a directory.</p>
 <h2 id="parameters-28"><a class="header" href="#parameters-28">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
@@ -6411,7 +6621,7 @@ storage_home:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/storage.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="string-stamped"><a class="header" href="#string-stamped">String stamped</a></h1>
-<h2 id="description-30"><a class="header" href="#description-30">Description</a></h2>
+<h2 id="description-31"><a class="header" href="#description-31">Description</a></h2>
 <p>Collect generic data from a topic publishing a StringStamped message and republish it. It allows to fetch data from rclc, rclpy and your custom ROS 2 nodes that don't have use a plugin.</p>
 <h2 id="parameters-29"><a class="header" href="#parameters-29">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
@@ -6440,7 +6650,7 @@ my_data:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/string_stamped.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="tcp-health"><a class="header" href="#tcp-health">TCP Health</a></h1>
-<h2 id="description-31"><a class="header" href="#description-31">Description</a></h2>
+<h2 id="description-32"><a class="header" href="#description-32">Description</a></h2>
 <p>Collects status of a TCP server.</p>
 <h2 id="parameters-30"><a class="header" href="#parameters-30">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
@@ -6515,7 +6725,7 @@ tcp_health:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/tcp_health.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="thermal"><a class="header" href="#thermal">Thermal</a></h1>
-<h2 id="description-32"><a class="header" href="#description-32">Description</a></h2>
+<h2 id="description-33"><a class="header" href="#description-33">Description</a></h2>
 <p>Reports temperatures (CPU, GPU, board, ...) from the kernel's thermal sysfs interface
 (<code>/sys/class/thermal/thermal_zone*/</code>), so overheating trends reach dashboards before they
 become failures. Zones are auto-discovered by default; each zone's <code>type</code> string (e.g.
@@ -6568,7 +6778,7 @@ thermal:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/thermal.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="uptime"><a class="header" href="#uptime">Uptime</a></h1>
-<h2 id="description-33"><a class="header" href="#description-33">Description</a></h2>
+<h2 id="description-34"><a class="header" href="#description-34">Description</a></h2>
 <p>Time since when the robot PC has been on.</p>
 <h2 id="parameters-32"><a class="header" href="#parameters-32">Parameters</a></h2>
 <p>This Measurement has no parameters beyond the <a href="dc/measurements/../measurements.html#plugin-parameters">common Plugin parameters</a>.</p>
@@ -6603,7 +6813,7 @@ uptime:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/uptime.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="overview"><a class="header" href="#overview">Overview</a></h1>
-<h2 id="description-34"><a class="header" href="#description-34">Description</a></h2>
+<h2 id="description-35"><a class="header" href="#description-35">Description</a></h2>
 <p>A condition enables or disables one or multiple measurements to be published and thus collected. We could for example enable collecting camera images only when a robot is stopped.</p>
 <p>Each condition is enabled or disabled through a pluginlib plugin. It has these configuration parameters.</p>
 <div id="admonition-conditions-only-see-forward-in-time" class="admonition admonish-note" role="note" aria-labelledby="admonition-conditions-only-see-forward-in-time-title">
@@ -6651,7 +6861,7 @@ Measurement it gates, so one Condition can gate several Measurements at once.</l
 <tr><td><a href="dc/./conditions/same_as_previous.html">Same as previous</a></td><td>Value of the key is the same as the previous one</td></tr>
 </tbody></table>
 </div><footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/conditions.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="compare"><a class="header" href="#compare">Compare</a></h1>
-<h2 id="description-35"><a class="header" href="#description-35">Description</a></h2>
+<h2 id="description-36"><a class="header" href="#description-36">Description</a></h2>
 <p>Compare the value of a JSON key against a configured operand and activate while the comparison
 holds. One plugin covers the whole family: <code>comparison</code> picks the operator and the type you give
 <code>value</code> picks the operand type (the two axes thirteen former per-operator plugins each
@@ -6763,7 +6973,7 @@ participant joining the DDS graph:</p>
 </div>
 <p><code>ne</code> (value differs) and scalar <code>str</code> equality are new with <code>Compare</code>.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/conditions/compare.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="moving"><a class="header" href="#moving">Moving</a></h1>
-<h2 id="description-36"><a class="header" href="#description-36">Description</a></h2>
+<h2 id="description-37"><a class="header" href="#description-37">Description</a></h2>
 <p>Use a <a href="https://www.wikiwand.com/en/Hysteresis">hysteresis</a> on robot position to know whether the robot is moving.</p>
 <h2 id="parameters-34"><a class="header" href="#parameters-34">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
@@ -6788,7 +6998,7 @@ participant joining the DDS graph:</p>
       cam_topic: "/right_intel_realsense_r200_depth/image_raw"
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/conditions/moving.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="same-as-previous"><a class="header" href="#same-as-previous">Same as previous</a></h1>
-<h2 id="description-37"><a class="header" href="#description-37">Description</a></h2>
+<h2 id="description-38"><a class="header" href="#description-38">Description</a></h2>
 <p>Compare JSON key value to the value passed in parameter and returns true if match.</p>
 <h2 id="parameters-35"><a class="header" href="#parameters-35">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
@@ -6814,7 +7024,7 @@ since the last collection — <code>/diagnostics</code> is typically high-volume
       names: ["motor_driver", "battery"]
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/conditions/same_as_previous.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="triggers"><a class="header" href="#triggers">Triggers</a></h1>
-<h2 id="description-38"><a class="header" href="#description-38">Description</a></h2>
+<h2 id="description-39"><a class="header" href="#description-39">Description</a></h2>
 <p>A <strong>Trigger</strong> fires a one-shot signal — a <code>dc_interfaces/msg/FlushEvent</code> — when a composition
 of <a href="dc/./conditions.html">Conditions</a> goes from false to true. Measurements listening for that
 event release the window of recent data they have been holding back, so the seconds <em>leading
@@ -6941,7 +7151,7 @@ lifts the envelope field into the payload before handing a Record to its Destina
 <tr><td><a href="dc/./triggers/edge_trigger.html">Edge trigger</a></td><td>Fires once on the false→true rising edge of an <code>if_all</code>/<code>if_any</code>/<code>if_none</code> Condition composition</td></tr>
 </tbody></table>
 </div>
-<h2 id="node-parameters-1"><a class="header" href="#node-parameters-1">Node parameters</a></h2>
+<h2 id="node-parameters-2"><a class="header" href="#node-parameters-2">Node parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter name</th><th>Description</th><th>Type(s)</th><th>Default</th></tr></thead><tbody>
 <tr><td>condition_plugins</td><td>Name of the condition plugins to load</td><td>list[str]</td><td>[]</td></tr>
 </tbody></table>
@@ -6992,7 +7202,7 @@ the window is paced out intact, which is also what keeps a backlog dump from com
 live collection right after an incident.</p>
 </div>
 </div>
-<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<h2 id="example-1"><a class="header" href="#example-1">Example</a></h2>
 <p>An emergency-brake capture: the robot buffers the last 10 seconds of uptime data, and the
 moment it starts moving the buffer is released and collection continues live for 5 more
 seconds. Swap the <code>moving</code> Condition for whatever expresses your event.</p>
@@ -7038,7 +7248,7 @@ seconds. Swap the <code>moving</code> Condition for whatever expresses your even
 Postgres table, with the <code>incident_id</code> column asserted by query — is
 <code>tools/e2e/scripts/run_incident.sh</code>.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/triggers.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="edge-trigger"><a class="header" href="#edge-trigger">Edge trigger</a></h1>
-<h2 id="description-39"><a class="header" href="#description-39">Description</a></h2>
+<h2 id="description-40"><a class="header" href="#description-40">Description</a></h2>
 <p>Composes the Condition plugins named in <code>if_all_conditions</code>/<code>if_any_conditions</code>/
 <code>if_none_conditions</code> — the exact same rules Measurements already use — and fires exactly
 once on the false→true rising edge of the composed result. A sustained <code>true</code> fires only
@@ -7051,469 +7261,7 @@ of its own beyond the shared <code>trigger.*</code> ones every Trigger plugin re
 <h2 id="trigger-vs-condition-1"><a class="header" href="#trigger-vs-condition-1">Trigger vs Condition</a></h2>
 <p><code>EdgeTrigger</code> fires <em>once</em> per false→true transition; a Condition stays true and keeps gating
 for as long as its predicate holds. See <a href="dc/triggers/../triggers.html#trigger-vs-condition">Trigger vs Condition</a>.</p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/triggers/edge_trigger.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="data-validation"><a class="header" href="#data-validation">Data validation</a></h1>
-<h2 id="model"><a class="header" href="#model">Model</a></h2>
-<p>Each Measurement can validate the Records it emits against a model.</p>
-<p>We use use <a href="https://github.com/pboettch/json-schema-validator">JSON schema validator for JSON for Modern C++</a>.</p>
-<p>Schemas follow the JSON 7 model:</p>
-<pre><code class="language-json">{
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Uptime",
-    "description": "Time the system has been up",
-    "properties": {
-        "time": {
-            "description": "Time the system has been up",
-            "type": "integer",
-            "minimum": 0
-        }
-    },
-    "type": "object"
-}
-</code></pre>
-<p>Validation is <strong>enabled by default</strong> (<code>enable_validator: true</code>); disable it per plugin
-with <code>enable_validator: false</code> when fields are filtered out or added dynamically (e.g.
-remote paths) in a way the shipped schema doesn't account for.</p>
-<h2 id="failed-validation-callback"><a class="header" href="#failed-validation-callback">Failed validation callback</a></h2>
-<p>You might want to trigger some actions when a validation fails, e.g send the data to another database to later on debug it.</p>
-<p>In this case, you will need to write your own plugin (inherit from an existing one or start from scratch) and define the <code>onFailedValidation</code> function in the class.</p>
-<p>This case is covered by the <a href="dc/./demos/custom_stdout.html">custom plugin demo</a></p>
-<h2 id="use-a-different-schema"><a class="header" href="#use-a-different-schema">Use a different Schema</a></h2>
-<p>For each plugin, a default path is provided but this can be changed by passing the <code>json_schema_path</code> parameter in the measurement plugin parameter to the absolute path of your schema.</p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/data_validation.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="groups"><a class="header" href="#groups">Groups</a></h1>
-<h2 id="description-40"><a class="header" href="#description-40">Description</a></h2>
-<p>A <strong>Group</strong> merges the Records of several Measurements into one Record, based on time
-proximity. For example, grouping the <code>cpu</code> and <code>position</code> Measurements publishes a single
-merged Record on <code>/dc/group/my_group</code>:</p>
-<pre><code class="language-json">{
-    "cpu": ...,
-    "position": ...,
-}
-</code></pre>
-<p>A merged Record is an ordinary Record from there on: it carries the Tag derived from its
-output topic, and a Destination receives it by listing that topic in <code>inputs</code>.</p>
-<p>Envelope fields do not get nested under a member's key: a member's <code>tags</code> is replaced by the
-Group's own, and the <code>incident_id</code> on its envelope — the id a Measurement stamps on a Record
-it released as part of an <a href="dc/./measurements.html">incident</a> — is carried onto the merged Record's
-own envelope (first non-empty wins, so a partial Record built from a mix of released and live
-members still carries it). The Bridge lifts that envelope field into the payload's top level,
-where a <code>postgres</code> Destination has a column for it; buried under <code>&lt;group_key&gt;.incident_id</code> it
-would simply be dropped by that sink. A member payload that is not a JSON object — a bare
-scalar or an array — has no such fields to lift, and is merged as it is under its
-<code>group_key</code>.</p>
-<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
-<div class="admonition-title">
-<div id="admonition-info-title">
-<p>Info</p>
-</div>
-<a class="admonition-anchor-link" href="dc/groups.html#admonition-info"></a>
-</div>
-<div>
-<p>The Group node is written in Python: allocating and passing a variable number of inputs to
-the <code>ApproximateTimeSynchronizer</code> is straightforward there and awkward in C++.</p>
-</div>
-</div>
-<h2 id="node-parameters-2"><a class="header" href="#node-parameters-2">Node parameters</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
-<tr><td>groups</td><td>Groups to enable</td><td>list[str]</td><td>N/A</td></tr>
-<tr><td>group_measurement_plugins</td><td>Collect the members' <code>plugin</code> fields into the merged Record's <code>plugins</code> list</td><td>bool</td><td>true</td></tr>
-</tbody></table>
-</div>
-<h2 id="group-parameters"><a class="header" href="#group-parameters">Group parameters</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
-<tr><td>inputs</td><td>Name of the input topics to group</td><td>list[str]</td><td>N/A</td></tr>
-<tr><td>output</td><td>Output topic to send the data to</td><td>str</td><td>"/dc/group/{group}"</td></tr>
-<tr><td>sync_delay</td><td>Delay to wait during all subscriber data need to reach before being published again</td><td>float</td><td>5.0</td></tr>
-<tr><td>sync_timeout</td><td>Seconds an incomplete set may wait before <code>on_sync_timeout</code> applies. 0.0 disables it</td><td>float</td><td>0.0</td></tr>
-<tr><td>on_sync_timeout</td><td>What to do with an incomplete set once <code>sync_timeout</code> elapses: <code>drop</code>/<code>emit_partial</code></td><td>str</td><td>"drop"</td></tr>
-<tr><td>sync_timeout_log_throttle</td><td>Seconds between two sync-timeout warnings for this group. 0.0 logs every one</td><td>float</td><td>60.0</td></tr>
-<tr><td>group_key</td><td>Dictionary key under which data is grouped</td><td>str</td><td>{group_name}</td></tr>
-<tr><td>exclude_keys</td><td>List of keys to exclude from the published data. Data depth is separated by a dot. An entry holding glob syntax (<code>*</code>, <code>?</code>, <code>[seq]</code>) is a glob over the flattened key, one without is a key prefix</td><td>list[str]</td><td>N/A</td></tr>
-<tr><td>nested_data</td><td>Whether measurements are nested dictionaries or flat</td><td>bool</td><td>true</td></tr>
-<tr><td>include_group_name</td><td>Include group name in the JSON as key="name" and value=&lt;group_key&gt;</td><td>bool</td><td>true</td></tr>
-</tbody></table>
-</div>
-<h2 id="incomplete-sets"><a class="header" href="#incomplete-sets">Incomplete sets</a></h2>
-<p>A Group only publishes once <em>every</em> one of its <code>inputs</code> has produced a Record close enough
-in time. If one Measurement stops publishing — a camera unplugged, a plugin crashed, a
-<code>gate_condition</code> that never opens — the whole Group goes silent, and the Records of the
-inputs that <em>are</em> working never reach a Destination.</p>
-<p><code>sync_timeout</code> puts a deadline on that wait. It is measured from the arrival of the first
-Record of a set, and it is a different thing from <code>sync_delay</code>: <code>sync_delay</code> is the
-synchroniser's slop, the maximum spread between the <em>timestamps</em> of Records that may be
-merged together, whereas <code>sync_timeout</code> is real time spent waiting for a set to complete.</p>
-<div class="table-wrapper"><table><thead><tr><th><code>sync_timeout</code></th><th><code>on_sync_timeout</code></th><th>Behaviour</th></tr></thead><tbody>
-<tr><td><code>0.0</code></td><td>(ignored)</td><td>No deadline. The Group waits indefinitely and the synchroniser evicts stale Records on its own</td></tr>
-<tr><td><code>&gt; 0.0</code></td><td><code>drop</code></td><td>The incomplete set is discarded when the deadline elapses. Nothing is published, a warning is logged</td></tr>
-<tr><td><code>&gt; 0.0</code></td><td><code>emit_partial</code></td><td>The Records that did arrive are published as one <strong>partial Record</strong>, then the set is discarded</td></tr>
-</tbody></table>
-</div>
-<p><code>drop</code> is the default, so a Group that sets nothing new behaves exactly as it did before.
-<code>emit_partial</code> needs a positive <code>sync_timeout</code> to have a deadline to fire on; configured
-without one, the Group logs an error and falls back to <code>drop</code>.</p>
-<div id="admonition-info-1" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-1-title">
-<div class="admonition-title">
-<div id="admonition-info-1-title">
-<p>Info</p>
-</div>
-<a class="admonition-anchor-link" href="dc/groups.html#admonition-info-1"></a>
-</div>
-<div>
-<p>The deadline is on the set as a whole, not on each input: it starts with the first Record
-of a set and later Records do not push it back. After a set times out, the Group forgets
-every Record it was holding, so a Record already published in a partial set is never
-merged a second time when its late partner finally arrives.</p>
-</div>
-</div>
-<h3 id="warnings-and-throttling"><a class="header" href="#warnings-and-throttling">Warnings and throttling</a></h3>
-<p>Every timeout logs a warning naming the group, the deadline it missed, and the input
-topics that produced nothing — including under <code>drop</code>, where the warning is the only trace
-left since nothing is published:</p>
-<pre><code class="language-text">[WARN] [group_server]: Group 'memory_cpu': no complete set after 10.0s, dropping the
-incomplete set (no Record from: ['/dc/measurement/memory'])
-</code></pre>
-<p>A Measurement that dies stays dead, so the group keeps timing out and an unthrottled
-warning would repeat every <code>sync_timeout</code> for as long as the robot runs.
-<code>sync_timeout_log_throttle</code> caps this at one warning per group per window (60s by default);
-set it to <code>0.0</code> to log every timeout. The first timeout after a quiet window always logs
-immediately, and reports how many warnings the throttle swallowed since the last one:</p>
-<pre><code class="language-text">[WARN] [group_server]: Group 'memory_cpu': no complete set after 10.0s, dropping the
-incomplete set (no Record from: ['/dc/measurement/memory']) [+5 more in the last 60.0s]
-</code></pre>
-<p>The throttle is per group, so a permanently broken group does not silence the warnings of a
-healthy one that starts failing. Only the <em>log line</em> is rate-limited — under <code>emit_partial</code>
-every timeout still publishes its partial Record, throttled or not.</p>
-<h3 id="what-a-partial-record-looks-like"><a class="header" href="#what-a-partial-record-looks-like">What a partial Record looks like</a></h3>
-<p>A partial Record has the same shape as a complete one, minus the inputs that did not
-report, plus two keys that mark it as partial:</p>
-<pre><code class="language-json">{
-    "cpu": { "used": 12.0 },
-    "partial": true,
-    "missing_inputs": ["/dc/measurement/memory"],
-    "tags": [""],
-    "name": "memory_cpu"
-}
-</code></pre>
-<ul>
-<li><strong>A missing input's key is omitted, not present-and-null.</strong> The Group node knows a
-missing input's <em>topic</em> and nothing else: a Record's <code>group_key</code> and its fields both
-travel inside the Record itself, so there is no correctly shaped null placeholder the
-Group could invent for a Measurement that never published. Consumers with a flat column
-schema — the <code>postgres</code> sink maps a Record's top-level keys onto existing columns — see
-those columns stay <code>NULL</code> for that row, the same as any other column a Record does not
-populate.</li>
-<li><strong><code>partial</code> and <code>missing_inputs</code> appear only on partial Records.</strong> A complete Record is
-byte-for-byte what the Group published before this option existed, so nothing downstream
-has to change to keep consuming complete Records. Treat the absence of <code>partial</code> as
-<code>false</code>.</li>
-<li><code>missing_inputs</code> lists the input <em>topics</em> that contributed no Record, in <code>inputs</code> order.</li>
-<li><code>tags</code>, <code>name</code> and <code>plugins</code> behave as they do on a complete Record — <code>plugins</code> only
-lists the plugins that actually reported.</li>
-<li><code>incident_id</code> behaves the same way: if any member that <em>did</em> arrive was released as part
-of an <a href="dc/./measurements.html">incident</a>, the merged Record carries its <code>incident_id</code>, so a
-partial Record of an incident is still queryable as one.</li>
-</ul>
-<div id="admonition-add-the-columns-before-charting-a-partial-record" class="admonition admonish-warning" role="note" aria-labelledby="admonition-add-the-columns-before-charting-a-partial-record-title">
-<div class="admonition-title">
-<div id="admonition-add-the-columns-before-charting-a-partial-record-title">
-<p>Add the columns before charting a partial Record</p>
-</div>
-<a class="admonition-anchor-link" href="dc/groups.html#admonition-add-the-columns-before-charting-a-partial-record"></a>
-</div>
-<div>
-<p>Vector's <code>postgres</code> sink silently drops top-level keys that have no matching column, so
-<code>partial</code> and <code>missing_inputs</code> are discarded unless you add <code>partial boolean</code> and
-<code>missing_inputs jsonb</code> to the destination table yourself.</p>
-</div>
-</div>
-<h2 id="example-1"><a class="header" href="#example-1">Example</a></h2>
-<pre><code class="language-yaml">group_server:
-  ros__parameters:
-    groups: ["memory_cpu", "memory_uptime", "cameras", "map"]
-    memory_cpu:
-      inputs: ["/dc/measurement/memory", "/dc/measurement/cpu"]
-      output: "/dc/group/memory_cpu"
-      sync_delay: 5.0
-      group_key: "memory_cpu"
-    memory_uptime:
-      inputs: ["/dc/measurement/memory", "/dc/measurement/uptime"]
-      output: "/dc/group/memory_uptime"
-      sync_delay: 5.0
-      # Publish whatever arrived rather than nothing if one of the two is 10s late
-      sync_timeout: 10.0
-      on_sync_timeout: "emit_partial"
-      group_key: "memory_uptime"
-    cameras:
-      inputs: ["/dc/measurement/camera"]
-      output: "/dc/group/cameras"
-      sync_delay: 5.0
-      group_key: "cameras"
-    map:
-      inputs: ["/dc/measurement/map"]
-      output: "/dc/group/map"
-      sync_delay: 5.0
-      group_key: "map"
-</code></pre>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/groups.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="raw-topic-collection"><a class="header" href="#raw-topic-collection">Raw topic collection</a></h1>
-<p>Sometimes the point is not to measure three specific things well, but to capture
-<em>everything on the ROS graph</em> and put it somewhere — a bring-up session, a field
-incident, a robot whose interesting topics you don't know yet.</p>
-<p>For that, <code>dc_bridge</code> has a <strong>generic-subscription mode</strong>. It subscribes to topics it
-was never compiled against, converts each message to JSON, and ships it to a Destination
-like any other Record. No Measurement plugin, no <code>.msg</code> header, no rebuild of DC when
-the robot's message packages change.</p>
-<pre><code class="language-yaml">dc_bridge:
-  ros__parameters:
-    shipper:
-      data_dir: "$HOME/.dc/buffer"
-    destinations: ["raw_log"]
-    raw_log:
-      type: file              # blessed types: file | vector — or postgres/s3/console via
-                               # its passthrough recipe (destinations.md#recipes-postgres-s3-console-via-passthrough)
-      receives: records
-      path: "/tmp/dc/raw_records.ndjson"
-      time_key: "date"
-    raw:
-      enabled: true
-      destination: "raw_log"
-</code></pre>
-<pre><code class="language-bash">ros2 launch dc_bringup dc_raw.launch.py
-</code></pre>
-<p><code>dc_raw.launch.py</code> starts the Bridge <strong>alone</strong> — no <code>measurement_server</code>, no
-<code>group_server</code>, no lifecycle manager, no readiness gate (there are no collection nodes to
-gate). The default params file is
-<a href="https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_bringup/params/dc_raw_params.yaml"><code>dc_bringup/params/dc_raw_params.yaml</code></a>;
-point the launch file at your own with <code>dc_params_file:=…</code>. The same <code>raw:</code> block also
-works inside a normal <code>dc_bringup.launch.py</code> params file, next to your Measurements.</p>
-<h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>
-<p>DC uses exactly what ROS 2 offers for this — the same mechanism <code>ros2 bag record -a</code> and
-PlotJuggler use:</p>
-<ol>
-<li><code>get_topic_names_and_types()</code> lists the graph. Topics are filtered by the
-include/exclude patterns below.</li>
-<li><code>rclcpp::GenericSubscription</code> subscribes to a topic given only its <em>name</em> and <em>type
-string</em>, receiving raw serialized bytes.</li>
-<li>The type's two type support libraries are loaded at run time —
-<code>rosidl_typesupport_cpp</code> to deserialize, <code>rosidl_typesupport_introspection_cpp</code> to
-describe the fields — and the message is walked into JSON.</li>
-<li>The Record is Tagged <code>dc.raw.&lt;topic&gt;</code> and routed to <code>raw.destination</code>.</li>
-</ol>
-<p>The only requirement is that the message package is on the Bridge's
-<code>AMENT_PREFIX_PATH</code> — the same requirement <code>ros2 topic echo</code> has. A type that can't be
-resolved is logged once and skipped; the rest of the graph is still collected.</p>
-<h3 id="tags-and-routing"><a class="header" href="#tags-and-routing">Tags and routing</a></h3>
-<p>A raw Record's Tag is the topic name with the leading <code>/</code> dropped and the rest turned
-into dots, under the <code>dc.raw.</code> namespace:</p>
-<div class="table-wrapper"><table><thead><tr><th>Topic</th><th>Tag</th><th>Shipper route</th></tr></thead><tbody>
-<tr><td><code>/imu</code></td><td><code>dc.raw.imu</code></td><td><code>dc.dc.raw</code></td></tr>
-<tr><td><code>/robot/battery_state</code></td><td><code>dc.raw.robot.battery_state</code></td><td><code>dc.dc.raw</code></td></tr>
-</tbody></table>
-</div>
-<p>Unlike a Measurement's Tag, the <em>whole namespace</em> shares one Vector route
-(<code>dc.dc.raw</code>), matched with <code>starts_with</code> rather than an exact comparison. That is what
-makes discovery possible at all: a rendered Shipper config is fixed when the Bridge
-starts, but raw mode mints new Tags whenever a topic appears, and those Records still
-have to reach a sink without restarting Vector. A <a href="dc/./destinations.html">passthrough
-sink</a> can consume <code>dc.dc.raw</code> like any other route.</p>
-<p>The Tag is carried on the event itself, so a single dump file or table stays
-topic-attributable — check the <code>tag</code> field.</p>
-<h3 id="what-a-record-looks-like"><a class="header" href="#what-a-record-looks-like">What a Record looks like</a></h3>
-<p>The JSON mirrors the message structure, field for field: nested messages become nested
-objects, arrays and sequences become arrays, <code>string</code> stays a string. A
-<code>dc_interfaces/msg/StringStamped</code> on <code>/demo/custom</code> arrives as:</p>
-<pre><code class="language-json">{
-  "tag": "dc.raw.demo.custom",
-  "date": "2026-08-12T09:51:33.114777089",
-  "header": {"frame_id": "base_link", "stamp": {"sec": 1786528293, "nanosec": 114777089}},
-  "data": "{\"value\": 2}",
-  "group_key": "demo"
-}
-</code></pre>
-<p>Messages that start with a <code>std_msgs/msg/Header</code> are timestamped from
-<code>header.stamp</code> — the moment the data was <em>captured</em>. Everything else is stamped with the
-Bridge's own clock on arrival.</p>
-<h3 id="type-mapping"><a class="header" href="#type-mapping">Type mapping</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>ROS field</th><th>JSON</th></tr></thead><tbody>
-<tr><td><code>bool</code></td><td>boolean</td></tr>
-<tr><td><code>int8</code>…<code>int64</code>, <code>uint8</code>…<code>uint64</code>, <code>byte</code>, <code>char</code></td><td>number</td></tr>
-<tr><td><code>float32</code>, <code>float64</code></td><td>number</td></tr>
-<tr><td><code>string</code></td><td>string</td></tr>
-<tr><td><code>wstring</code></td><td>string (transcoded UTF-16 → UTF-8)</td></tr>
-<tr><td>a nested message</td><td>object</td></tr>
-<tr><td>any array or sequence (fixed, bounded, unbounded)</td><td>array</td></tr>
-</tbody></table>
-</div>
-<p>Two things about numbers are worth knowing before you point a query at the result:</p>
-<ul>
-<li><strong><code>NaN</code> and <code>Infinity</code> both become <code>null</code>.</strong> JSON has neither, so there is nowhere else
-for them to go — but it means <code>+Inf</code>, <code>-Inf</code>, <code>NaN</code> and "the producer sent nothing" are
-indistinguishable downstream. This is not a corner case: ROS messages routinely use
-<code>NaN</code> as a sentinel (<code>sensor_msgs/msg/BatteryState.temperature</code> is <code>NaN</code> when the
-battery has no temperature sensor), so expect nulls in fields whose message definition
-documents one.</li>
-<li><strong><code>float32</code> is widened to double</strong>, so a value written as <code>4.05</code> reads back as
-<code>4.050000190734863</code>: the exact binary32 value. If the extra digits bother a dashboard,
-round at the query layer.</li>
-</ul>
-<p>A <code>uint8[]</code> serializes as an array of plain numbers — DC does not compress raw payloads on
-the way out. That is one more reason the size and type limits below exist: the answer to a
-megabyte of image bytes is to not collect it, rather than to encode it more cleverly.</p>
-<h2 id="choosing-what-to-collect"><a class="header" href="#choosing-what-to-collect">Choosing what to collect</a></h2>
-<pre><code class="language-yaml">    raw:
-      include: ["^/"]                       # topic-name regexes: the allowlist
-      exclude: ["^/rosout$", "^/parameter_events$", "^/dc/measurement/", "^/dc/group/"]
-      exclude_types:                        # message-type regexes
-        - "^sensor_msgs/msg/(Image|CompressedImage|PointCloud|PointCloud2|LaserScan)$"
-        - "^tf2_msgs/msg/TFMessage$"
-      rescan_interval_secs: 5.0
-</code></pre>
-<p>A topic is collected when it matches at least one <code>include</code> pattern, no <code>exclude</code>
-pattern, and its type matches no <code>exclude_types</code> pattern. All three are ECMAScript
-regexes matched with <code>regex_search</code>, so they are <strong>unanchored</strong> unless you anchor them:
-<code>camera</code> matches <code>/front/camera/info</code>, <code>^/front/</code> matches only that namespace.</p>
-<p>The values above are the defaults, and they matter:</p>
-<ul>
-<li><strong><code>/rosout</code> is excluded</strong> — it carries the Bridge's own log messages, including the
-warnings raw mode emits about volume.</li>
-<li><strong><code>/dc/measurement/*</code> and <code>/dc/group/*</code> are excluded</strong> — those topics already reach
-their Destinations as Measurement and Group Records. Collecting them raw as well ships
-everything twice, under two different Tags.</li>
-<li><strong>High-rate sensor types are excluded</strong>, by type rather than by name (a camera topic is
-not reliably called anything in particular). One 640×480 <code>sensor_msgs/msg/Image</code> is
-900 kB on the wire and roughly 3.7 MB once every pixel byte is a JSON number; at 30 Hz
-nothing downstream is sized for it. Override the list deliberately if you want them —
-DC will not stop you, but read the next section first.</li>
-</ul>
-<p>To replace a list, write the replacement; note that an <em>empty</em> YAML list (<code>[]</code>) cannot be
-loaded by rclcpp (it has no inferable element type), so use a pattern that matches
-nothing, e.g. <code>["^$"]</code>, to disable a default.</p>
-<p><code>rescan_interval_secs</code> re-scans the graph so topics that appear after startup are picked
-up — a driver started later, a node that respawned. The cost is that a topic is collected
-only from ~one interval after it is first advertised: messages published before that are
-not captured. Set it to <code>0</code> to scan once at startup and never again.</p>
-<p>Topics advertising more than one type are skipped and logged: one subscription carries
-one type, and picking arbitrarily would silently drop the other publisher's messages.</p>
-<p>QoS is matched to the topic's current publishers, the same way <code>ros2 bag record</code> does
-it — best effort if any publisher is best effort, transient local if all of them are.
-Without that, a generic subscription silently receives nothing from a sensor driver.</p>
-<h2 id="backpressure-and-volume"><a class="header" href="#backpressure-and-volume">Backpressure and volume</a></h2>
-<p>Collecting everything can outrun the Shipper trivially. Raw mode's contract is that it
-<strong>sheds at the source rather than buffering inside the Bridge</strong> — an unbounded in-process
-queue would just move a data problem into a memory problem. Four bounds, in the order a
-message meets them:</p>
-<ol>
-<li><strong><code>qos_depth</code></strong> (default 10) — the subscription's own history. If the Bridge is
-momentarily busy, the middleware drops the oldest messages beyond this depth before DC
-ever sees them.</li>
-<li><strong><code>max_message_size_bytes</code></strong> (default 1 MiB, 0 = unlimited) — a serialized message
-above this is dropped whole, <em>before</em> deserialization, so an unexpected point cloud
-costs nothing but a throttled warning. This is a <strong>per-message circuit breaker</strong> — see
-the warning below.</li>
-<li><strong><code>max_rate_hz</code></strong> (default 10, per topic, 0 = unlimited) — at most one Record per
-<code>1/rate</code> seconds per topic: a message passes once that long has elapsed since the last
-one that passed, so each Record is the newest message at the moment it is emitted and
-nothing is held back. A 200 Hz topic at the default becomes 10 Hz of Records. This is
-decimation: it flattens exactly the bursty traffic shape a token bucket would let
-through all at once.</li>
-<li><strong>The Shipper refusing the Record</strong> — if Vector is unreachable or its socket is blocked
-past the Forwarder's write timeout, the raw Record is dropped and counted. Measurement
-Records are kept in the Forwarder's unacked window for resend; raw Records are not,
-because a firehose fills that window and pushes real Records out of it.</li>
-</ol>
-<p>Everything past those bounds behaves like any other Record: Vector's disk buffer
-(<code>shipper.buffer_max_bytes</code>) absorbs a Destination outage, and delivery to the Shipper is
-acknowledged (see <a href="dc/./destinations.html#delivery-guarantees">Destinations</a>).</p>
-<h3 id="how-much-data-is-this"><a class="header" href="#how-much-data-is-this">How much data is this?</a></h3>
-<p>These figures were measured on a simulated robot:
-<code>tools/sim/scripts/measure_raw_volume.sh</code> boots <code>dc_simulation</code>'s warehouse world, drives
-the TurtleBot3-Waffle in a slow circle, points a Bridge in raw mode at its live topics,
-and reports what a <code>file</code> Destination stored, per Tag. Everything below is one run of it —
-re-run it after anything that changes what a Record costs. It's meant for manual local
-runs; its header explains the three configurations and why its rates are counted in
-<em>simulated</em> seconds.</p>
-<p>Rates are that world's Waffle's: IMU 200 Hz, odometry and TF 30 Hz (the <code>DiffDrive</code>
-plugin), lidar and both RGBD cameras 5 Hz. <code>/cmd_vel</code> and <code>/clock</code> are left out — the
-first is the benchmark's own driving, the second exists only because the robot is
-simulated.</p>
-<div class="table-wrapper"><table><thead><tr><th>Configuration</th><th>Shipped</th></tr></thead><tbody>
-<tr><td><strong>Defaults</strong> (10 Hz cap, sensor types excluded)</td><td>24 kB/s — <strong>86 MB/hour, 2.1 GB/day</strong></td></tr>
-<tr><td>…plus <code>scan</code> and <code>tf</code> re-enabled</td><td>69 kB/s — <strong>5.9 GB/day</strong></td></tr>
-<tr><td>…plus both 1280×720 cameras re-enabled</td><td>≈ <strong>9.5 TB/day</strong>, if anything could carry it</td></tr>
-</tbody></table>
-</div>
-<p>Per-Record cost, which is what to multiply by your own topics' rates:</p>
-<div class="table-wrapper"><table><thead><tr><th>Topic (message)</th><th>Publishes at</th><th>Bytes per Record</th></tr></thead><tbody>
-<tr><td><code>/joint_states</code> (<code>JointState</code>, 2 joints)</td><td>1 000 Hz †</td><td>355</td></tr>
-<tr><td><code>/tf</code> (<code>TFMessage</code>, 1 transform)</td><td>30 Hz</td><td>406</td></tr>
-<tr><td><code>…/camera_info</code> (<code>CameraInfo</code>)</td><td>5 Hz</td><td>581</td></tr>
-<tr><td><code>/odom</code> (<code>Odometry</code>)</td><td>30 Hz</td><td>669</td></tr>
-<tr><td><code>/imu</code> (<code>Imu</code>)</td><td>200 Hz</td><td>767</td></tr>
-<tr><td><code>/scan</code> (<code>LaserScan</code>, 360 ranges + intensities)</td><td>5 Hz</td><td>7 878</td></tr>
-<tr><td><code>…/image_raw</code> (<code>Image</code>, 1280×720 <code>rgb8</code>)</td><td>5 Hz</td><td><strong>10 981 032</strong></td></tr>
-</tbody></table>
-</div>
-<p>† the simulator's <code>JointStatePublisher</code> runs every physics step; a real driver is far
-slower. It makes no difference to the total, which is the point of the next paragraph.</p>
-<p><strong>The rate cap is what makes the first row affordable.</strong> A topic
-publishing faster than <code>max_rate_hz</code> contributes <code>bytes_per_record × 10</code> per second no
-matter how fast it actually runs, so <code>joint_states</code> at 1 000 Hz and <code>imu</code> at 200 Hz cost
-3.6 kB/s and 7.7 kB/s respectively. Only the topics <em>below</em> the cap — the 5 Hz sensors —
-bill at their real rate, which is why re-enabling one 5 Hz lidar (7.9 kB per Record, 40
-kB/s, 3.5 GB/day) nearly triples the total on its own.</p>
-<p>The last row is the whole argument for the default type exclusions: one 1280×720 frame
-costs as much as ~16 000 odometry Records. JSON does not merely double a byte array —
-<code>10 981 032</code> bytes for a 2 764 800-byte frame is <strong>four times</strong> the wire size, because
-most pixel values print as three digits and a comma.</p>
-<p>Two cameras at 5 Hz is 110 MB/s of Records, and <strong>nothing in the pipeline carries that</strong>,
-which is why that row says "if anything could carry it": in the run it comes from, the
-Shipper refused 475 of the 894 Records offered to it (<code>dropped … 475 shipper</code>, 53 %). The
-collapse was not confined to the images either — <code>imu</code> arrived at 4 Hz instead of 200 and
-<code>odom</code> at 0.7 Hz instead of 30, because the Bridge spent the window serializing frames.
-Collecting a camera raw does not cost you a camera's worth of storage; it costs you the
-rest of your collection.</p>
-<p><strong>The size cap will not save you from a camera</strong> — and it should not be asked to. A
-640×480 <code>rgb8</code> frame is 921 600 bytes on the wire, <em>under</em> the default
-<code>max_message_size_bytes</code> of 1 MiB, so it passes the size gate and lands as megabytes of
-JSON. (This world's 1280×720 frames are three times that and the default cap does drop
-them whole — which is why the benchmark's camera profile has to lift it to measure
-anything at all. Relying on that is a collection policy that silently switches on the day
-someone fits a smaller sensor.) It is <code>exclude_types</code> that keeps images out, and removing
-that list removes the protection entirely.</p>
-<p>The tempting fix — lower the size cap until frames stop fitting — is a bad trade, because
-<strong>the two limits fail differently</strong>:</p>
-<ul>
-<li><code>max_rate_hz</code> drops <em>by time</em>, uniformly. Every window is still represented, so you get
-an honest lower-resolution time series.</li>
-<li><code>max_message_size_bytes</code> drops <em>by content</em>. On any topic whose messages vary in size —
-a compressed image, a point cloud that grows with scene complexity, a diagnostics array,
-a string payload — it removes precisely the large ones and keeps the small ones. The
-result looks complete and is silently biased toward the least interesting data, with
-nothing in the stored Records to say what went missing.</li>
-</ul>
-<p>So set the size cap high enough that it essentially never fires, and treat it as a circuit
-breaker against the pathological and unanticipated (the topic you did not know carried
-100 MB). To <em>not</em> collect something, exclude it by type or topic: all-or-nothing, visible
-in the startup log, and no biased sample. The only case for a low size cap is when you
-genuinely want "this topic, except its outliers" — which is rarely what anyone means.</p>
-<p>Every drop is counted, and the counters are on the Bridge's readiness service — the
-fastest way to answer "is raw mode shedding?":</p>
-<pre><code class="language-console">$ ros2 service call /dc_bridge/ready std_srvs/srv/Trigger
-response: success=True, message='vector is accepting connections | raw: 12 topic(s),
-  3480 forwarded, dropped 51200 rate / 0 oversize / 0 shipper / 0 undecodable'
-</code></pre>
-<p><code>dropped rate</code> climbing is normal and healthy (it is the limiter doing its job).
-<code>dropped shipper</code> climbing means the pipeline is genuinely behind: raise
-<code>shipper.buffer_max_bytes</code>, lower <code>max_rate_hz</code>, or narrow <code>include</code>.</p>
-<h2 id="when-not-to-use-it"><a class="header" href="#when-not-to-use-it">When <em>not</em> to use it</a></h2>
-<p>Raw mode ships whatever a topic happens to contain. It has no
-<a href="dc/./conditions.html">Conditions</a>, no <a href="dc/./data_validation.html">data validation</a>, no
-<a href="dc/./groups.html">Groups</a>, and no File uploads — a Measurement is still the right tool for
-data you know you want, in a shape you control, joined with other data. Raw mode is for
-the case where you don't know yet, or where "all of it" <em>is</em> the requirement.</p>
-<p>It is also not a rosbag replacement: JSON in Postgres is not a replayable recording. If
-you want replay, point a <a href="dc/./demos/mcap_recording.html">passthrough sink</a> at the
-<code>dc.dc.raw</code> route and let <code>dc_mcap_writer</code> record it, or run <code>ros2 bag record</code> alongside
-DC.</p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/raw_topics.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="destinations-3"><a class="header" href="#destinations-3">Destinations</a></h1>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/triggers/edge_trigger.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="destinations-3"><a class="header" href="#destinations-3">Destinations</a></h1>
 <p>A <strong>Destination</strong> is an external system that receives Records or Files. In the DC 2.0
 architecture (<a href="dc/./adr/0003-blessed-destinations-plus-passthrough.html">ADR-0003</a>), the
 pluginlib destination-plugin layer is retired. The Bridge (<code>dc_bridge</code>) renders the
@@ -8063,7 +7811,267 @@ above) with <code>inputs</code> for the Records, and a second one with no <code>
 status log.</p>
 <p><code>inputs</code> is otherwise mandatory: a Destination that neither lists a topic nor receives
 <code>dc.files</code> would have nothing to deliver, and is rejected at Bridge startup.</p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/destinations.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="kpi-views"><a class="header" href="#kpi-views">KPI views</a></h1>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/destinations.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="raw-topic-collection"><a class="header" href="#raw-topic-collection">Raw topic collection</a></h1>
+<p>Sometimes the point is not to measure three specific things well, but to capture
+<em>everything on the ROS graph</em> and put it somewhere — a bring-up session, a field
+incident, a robot whose interesting topics you don't know yet.</p>
+<p>For that, <code>dc_bridge</code> has a <strong>generic-subscription mode</strong>. It subscribes to topics it
+was never compiled against, converts each message to JSON, and ships it to a Destination
+like any other Record. No Measurement plugin, no <code>.msg</code> header, no rebuild of DC when
+the robot's message packages change.</p>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["raw_log"]
+    raw_log:
+      type: file              # blessed types: file | vector — or postgres/s3/console via
+                               # its passthrough recipe (destinations.md#recipes-postgres-s3-console-via-passthrough)
+      receives: records
+      path: "/tmp/dc/raw_records.ndjson"
+      time_key: "date"
+    raw:
+      enabled: true
+      destination: "raw_log"
+</code></pre>
+<pre><code class="language-bash">ros2 launch dc_bringup dc_raw.launch.py
+</code></pre>
+<p><code>dc_raw.launch.py</code> starts the Bridge <strong>alone</strong> — no <code>measurement_server</code>, no
+<code>group_server</code>, no lifecycle manager, no readiness gate (there are no collection nodes to
+gate). The default params file is
+<a href="https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_bringup/params/dc_raw_params.yaml"><code>dc_bringup/params/dc_raw_params.yaml</code></a>;
+point the launch file at your own with <code>dc_params_file:=…</code>. The same <code>raw:</code> block also
+works inside a normal <code>dc_bringup.launch.py</code> params file, next to your Measurements.</p>
+<h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>
+<p>DC uses exactly what ROS 2 offers for this — the same mechanism <code>ros2 bag record -a</code> and
+PlotJuggler use:</p>
+<ol>
+<li><code>get_topic_names_and_types()</code> lists the graph. Topics are filtered by the
+include/exclude patterns below.</li>
+<li><code>rclcpp::GenericSubscription</code> subscribes to a topic given only its <em>name</em> and <em>type
+string</em>, receiving raw serialized bytes.</li>
+<li>The type's two type support libraries are loaded at run time —
+<code>rosidl_typesupport_cpp</code> to deserialize, <code>rosidl_typesupport_introspection_cpp</code> to
+describe the fields — and the message is walked into JSON.</li>
+<li>The Record is Tagged <code>dc.raw.&lt;topic&gt;</code> and routed to <code>raw.destination</code>.</li>
+</ol>
+<p>The only requirement is that the message package is on the Bridge's
+<code>AMENT_PREFIX_PATH</code> — the same requirement <code>ros2 topic echo</code> has. A type that can't be
+resolved is logged once and skipped; the rest of the graph is still collected.</p>
+<h3 id="tags-and-routing"><a class="header" href="#tags-and-routing">Tags and routing</a></h3>
+<p>A raw Record's Tag is the topic name with the leading <code>/</code> dropped and the rest turned
+into dots, under the <code>dc.raw.</code> namespace:</p>
+<div class="table-wrapper"><table><thead><tr><th>Topic</th><th>Tag</th><th>Shipper route</th></tr></thead><tbody>
+<tr><td><code>/imu</code></td><td><code>dc.raw.imu</code></td><td><code>dc.dc.raw</code></td></tr>
+<tr><td><code>/robot/battery_state</code></td><td><code>dc.raw.robot.battery_state</code></td><td><code>dc.dc.raw</code></td></tr>
+</tbody></table>
+</div>
+<p>Unlike a Measurement's Tag, the <em>whole namespace</em> shares one Vector route
+(<code>dc.dc.raw</code>), matched with <code>starts_with</code> rather than an exact comparison. That is what
+makes discovery possible at all: a rendered Shipper config is fixed when the Bridge
+starts, but raw mode mints new Tags whenever a topic appears, and those Records still
+have to reach a sink without restarting Vector. A <a href="dc/./destinations.html">passthrough
+sink</a> can consume <code>dc.dc.raw</code> like any other route.</p>
+<p>The Tag is carried on the event itself, so a single dump file or table stays
+topic-attributable — check the <code>tag</code> field.</p>
+<h3 id="what-a-record-looks-like"><a class="header" href="#what-a-record-looks-like">What a Record looks like</a></h3>
+<p>The JSON mirrors the message structure, field for field: nested messages become nested
+objects, arrays and sequences become arrays, <code>string</code> stays a string. A
+<code>dc_interfaces/msg/StringStamped</code> on <code>/demo/custom</code> arrives as:</p>
+<pre><code class="language-json">{
+  "tag": "dc.raw.demo.custom",
+  "date": "2026-08-12T09:51:33.114777089",
+  "header": {"frame_id": "base_link", "stamp": {"sec": 1786528293, "nanosec": 114777089}},
+  "data": "{\"value\": 2}",
+  "group_key": "demo"
+}
+</code></pre>
+<p>Messages that start with a <code>std_msgs/msg/Header</code> are timestamped from
+<code>header.stamp</code> — the moment the data was <em>captured</em>. Everything else is stamped with the
+Bridge's own clock on arrival.</p>
+<h3 id="type-mapping"><a class="header" href="#type-mapping">Type mapping</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>ROS field</th><th>JSON</th></tr></thead><tbody>
+<tr><td><code>bool</code></td><td>boolean</td></tr>
+<tr><td><code>int8</code>…<code>int64</code>, <code>uint8</code>…<code>uint64</code>, <code>byte</code>, <code>char</code></td><td>number</td></tr>
+<tr><td><code>float32</code>, <code>float64</code></td><td>number</td></tr>
+<tr><td><code>string</code></td><td>string</td></tr>
+<tr><td><code>wstring</code></td><td>string (transcoded UTF-16 → UTF-8)</td></tr>
+<tr><td>a nested message</td><td>object</td></tr>
+<tr><td>any array or sequence (fixed, bounded, unbounded)</td><td>array</td></tr>
+</tbody></table>
+</div>
+<p>Two things about numbers are worth knowing before you point a query at the result:</p>
+<ul>
+<li><strong><code>NaN</code> and <code>Infinity</code> both become <code>null</code>.</strong> JSON has neither, so there is nowhere else
+for them to go — but it means <code>+Inf</code>, <code>-Inf</code>, <code>NaN</code> and "the producer sent nothing" are
+indistinguishable downstream. This is not a corner case: ROS messages routinely use
+<code>NaN</code> as a sentinel (<code>sensor_msgs/msg/BatteryState.temperature</code> is <code>NaN</code> when the
+battery has no temperature sensor), so expect nulls in fields whose message definition
+documents one.</li>
+<li><strong><code>float32</code> is widened to double</strong>, so a value written as <code>4.05</code> reads back as
+<code>4.050000190734863</code>: the exact binary32 value. If the extra digits bother a dashboard,
+round at the query layer.</li>
+</ul>
+<p>A <code>uint8[]</code> serializes as an array of plain numbers — DC does not compress raw payloads on
+the way out. That is one more reason the size and type limits below exist: the answer to a
+megabyte of image bytes is to not collect it, rather than to encode it more cleverly.</p>
+<h2 id="choosing-what-to-collect"><a class="header" href="#choosing-what-to-collect">Choosing what to collect</a></h2>
+<pre><code class="language-yaml">    raw:
+      include: ["^/"]                       # topic-name regexes: the allowlist
+      exclude: ["^/rosout$", "^/parameter_events$", "^/dc/measurement/", "^/dc/group/"]
+      exclude_types:                        # message-type regexes
+        - "^sensor_msgs/msg/(Image|CompressedImage|PointCloud|PointCloud2|LaserScan)$"
+        - "^tf2_msgs/msg/TFMessage$"
+      rescan_interval_secs: 5.0
+</code></pre>
+<p>A topic is collected when it matches at least one <code>include</code> pattern, no <code>exclude</code>
+pattern, and its type matches no <code>exclude_types</code> pattern. All three are ECMAScript
+regexes matched with <code>regex_search</code>, so they are <strong>unanchored</strong> unless you anchor them:
+<code>camera</code> matches <code>/front/camera/info</code>, <code>^/front/</code> matches only that namespace.</p>
+<p>The values above are the defaults, and they matter:</p>
+<ul>
+<li><strong><code>/rosout</code> is excluded</strong> — it carries the Bridge's own log messages, including the
+warnings raw mode emits about volume.</li>
+<li><strong><code>/dc/measurement/*</code> and <code>/dc/group/*</code> are excluded</strong> — those topics already reach
+their Destinations as Measurement and Group Records. Collecting them raw as well ships
+everything twice, under two different Tags.</li>
+<li><strong>High-rate sensor types are excluded</strong>, by type rather than by name (a camera topic is
+not reliably called anything in particular). One 640×480 <code>sensor_msgs/msg/Image</code> is
+900 kB on the wire and roughly 3.7 MB once every pixel byte is a JSON number; at 30 Hz
+nothing downstream is sized for it. Override the list deliberately if you want them —
+DC will not stop you, but read the next section first.</li>
+</ul>
+<p>To replace a list, write the replacement; note that an <em>empty</em> YAML list (<code>[]</code>) cannot be
+loaded by rclcpp (it has no inferable element type), so use a pattern that matches
+nothing, e.g. <code>["^$"]</code>, to disable a default.</p>
+<p><code>rescan_interval_secs</code> re-scans the graph so topics that appear after startup are picked
+up — a driver started later, a node that respawned. The cost is that a topic is collected
+only from ~one interval after it is first advertised: messages published before that are
+not captured. Set it to <code>0</code> to scan once at startup and never again.</p>
+<p>Topics advertising more than one type are skipped and logged: one subscription carries
+one type, and picking arbitrarily would silently drop the other publisher's messages.</p>
+<p>QoS is matched to the topic's current publishers, the same way <code>ros2 bag record</code> does
+it — best effort if any publisher is best effort, transient local if all of them are.
+Without that, a generic subscription silently receives nothing from a sensor driver.</p>
+<h2 id="backpressure-and-volume"><a class="header" href="#backpressure-and-volume">Backpressure and volume</a></h2>
+<p>Collecting everything can outrun the Shipper trivially. Raw mode's contract is that it
+<strong>sheds at the source rather than buffering inside the Bridge</strong> — an unbounded in-process
+queue would just move a data problem into a memory problem. Four bounds, in the order a
+message meets them:</p>
+<ol>
+<li><strong><code>qos_depth</code></strong> (default 10) — the subscription's own history. If the Bridge is
+momentarily busy, the middleware drops the oldest messages beyond this depth before DC
+ever sees them.</li>
+<li><strong><code>max_message_size_bytes</code></strong> (default 1 MiB, 0 = unlimited) — a serialized message
+above this is dropped whole, <em>before</em> deserialization, so an unexpected point cloud
+costs nothing but a throttled warning. This is a <strong>per-message circuit breaker</strong> — see
+the warning below.</li>
+<li><strong><code>max_rate_hz</code></strong> (default 10, per topic, 0 = unlimited) — at most one Record per
+<code>1/rate</code> seconds per topic: a message passes once that long has elapsed since the last
+one that passed, so each Record is the newest message at the moment it is emitted and
+nothing is held back. A 200 Hz topic at the default becomes 10 Hz of Records. This is
+decimation: it flattens exactly the bursty traffic shape a token bucket would let
+through all at once.</li>
+<li><strong>The Shipper refusing the Record</strong> — if Vector is unreachable or its socket is blocked
+past the Forwarder's write timeout, the raw Record is dropped and counted. Measurement
+Records are kept in the Forwarder's unacked window for resend; raw Records are not,
+because a firehose fills that window and pushes real Records out of it.</li>
+</ol>
+<p>Everything past those bounds behaves like any other Record: Vector's disk buffer
+(<code>shipper.buffer_max_bytes</code>) absorbs a Destination outage, and delivery to the Shipper is
+acknowledged (see <a href="dc/./destinations.html#delivery-guarantees">Destinations</a>).</p>
+<h3 id="how-much-data-is-this"><a class="header" href="#how-much-data-is-this">How much data is this?</a></h3>
+<p>These figures were measured on a simulated robot:
+<code>tools/sim/scripts/measure_raw_volume.sh</code> boots <code>dc_simulation</code>'s warehouse world, drives
+the TurtleBot3-Waffle in a slow circle, points a Bridge in raw mode at its live topics,
+and reports what a <code>file</code> Destination stored, per Tag. Everything below is one run of it —
+re-run it after anything that changes what a Record costs. It's meant for manual local
+runs; its header explains the three configurations and why its rates are counted in
+<em>simulated</em> seconds.</p>
+<p>Rates are that world's Waffle's: IMU 200 Hz, odometry and TF 30 Hz (the <code>DiffDrive</code>
+plugin), lidar and both RGBD cameras 5 Hz. <code>/cmd_vel</code> and <code>/clock</code> are left out — the
+first is the benchmark's own driving, the second exists only because the robot is
+simulated.</p>
+<div class="table-wrapper"><table><thead><tr><th>Configuration</th><th>Shipped</th></tr></thead><tbody>
+<tr><td><strong>Defaults</strong> (10 Hz cap, sensor types excluded)</td><td>24 kB/s — <strong>86 MB/hour, 2.1 GB/day</strong></td></tr>
+<tr><td>…plus <code>scan</code> and <code>tf</code> re-enabled</td><td>69 kB/s — <strong>5.9 GB/day</strong></td></tr>
+<tr><td>…plus both 1280×720 cameras re-enabled</td><td>≈ <strong>9.5 TB/day</strong>, if anything could carry it</td></tr>
+</tbody></table>
+</div>
+<p>Per-Record cost, which is what to multiply by your own topics' rates:</p>
+<div class="table-wrapper"><table><thead><tr><th>Topic (message)</th><th>Publishes at</th><th>Bytes per Record</th></tr></thead><tbody>
+<tr><td><code>/joint_states</code> (<code>JointState</code>, 2 joints)</td><td>1 000 Hz †</td><td>355</td></tr>
+<tr><td><code>/tf</code> (<code>TFMessage</code>, 1 transform)</td><td>30 Hz</td><td>406</td></tr>
+<tr><td><code>…/camera_info</code> (<code>CameraInfo</code>)</td><td>5 Hz</td><td>581</td></tr>
+<tr><td><code>/odom</code> (<code>Odometry</code>)</td><td>30 Hz</td><td>669</td></tr>
+<tr><td><code>/imu</code> (<code>Imu</code>)</td><td>200 Hz</td><td>767</td></tr>
+<tr><td><code>/scan</code> (<code>LaserScan</code>, 360 ranges + intensities)</td><td>5 Hz</td><td>7 878</td></tr>
+<tr><td><code>…/image_raw</code> (<code>Image</code>, 1280×720 <code>rgb8</code>)</td><td>5 Hz</td><td><strong>10 981 032</strong></td></tr>
+</tbody></table>
+</div>
+<p>† the simulator's <code>JointStatePublisher</code> runs every physics step; a real driver is far
+slower. It makes no difference to the total, which is the point of the next paragraph.</p>
+<p><strong>The rate cap is what makes the first row affordable.</strong> A topic
+publishing faster than <code>max_rate_hz</code> contributes <code>bytes_per_record × 10</code> per second no
+matter how fast it actually runs, so <code>joint_states</code> at 1 000 Hz and <code>imu</code> at 200 Hz cost
+3.6 kB/s and 7.7 kB/s respectively. Only the topics <em>below</em> the cap — the 5 Hz sensors —
+bill at their real rate, which is why re-enabling one 5 Hz lidar (7.9 kB per Record, 40
+kB/s, 3.5 GB/day) nearly triples the total on its own.</p>
+<p>The last row is the whole argument for the default type exclusions: one 1280×720 frame
+costs as much as ~16 000 odometry Records. JSON does not merely double a byte array —
+<code>10 981 032</code> bytes for a 2 764 800-byte frame is <strong>four times</strong> the wire size, because
+most pixel values print as three digits and a comma.</p>
+<p>Two cameras at 5 Hz is 110 MB/s of Records, and <strong>nothing in the pipeline carries that</strong>,
+which is why that row says "if anything could carry it": in the run it comes from, the
+Shipper refused 475 of the 894 Records offered to it (<code>dropped … 475 shipper</code>, 53 %). The
+collapse was not confined to the images either — <code>imu</code> arrived at 4 Hz instead of 200 and
+<code>odom</code> at 0.7 Hz instead of 30, because the Bridge spent the window serializing frames.
+Collecting a camera raw does not cost you a camera's worth of storage; it costs you the
+rest of your collection.</p>
+<p><strong>The size cap will not save you from a camera</strong> — and it should not be asked to. A
+640×480 <code>rgb8</code> frame is 921 600 bytes on the wire, <em>under</em> the default
+<code>max_message_size_bytes</code> of 1 MiB, so it passes the size gate and lands as megabytes of
+JSON. (This world's 1280×720 frames are three times that and the default cap does drop
+them whole — which is why the benchmark's camera profile has to lift it to measure
+anything at all. Relying on that is a collection policy that silently switches on the day
+someone fits a smaller sensor.) It is <code>exclude_types</code> that keeps images out, and removing
+that list removes the protection entirely.</p>
+<p>The tempting fix — lower the size cap until frames stop fitting — is a bad trade, because
+<strong>the two limits fail differently</strong>:</p>
+<ul>
+<li><code>max_rate_hz</code> drops <em>by time</em>, uniformly. Every window is still represented, so you get
+an honest lower-resolution time series.</li>
+<li><code>max_message_size_bytes</code> drops <em>by content</em>. On any topic whose messages vary in size —
+a compressed image, a point cloud that grows with scene complexity, a diagnostics array,
+a string payload — it removes precisely the large ones and keeps the small ones. The
+result looks complete and is silently biased toward the least interesting data, with
+nothing in the stored Records to say what went missing.</li>
+</ul>
+<p>So set the size cap high enough that it essentially never fires, and treat it as a circuit
+breaker against the pathological and unanticipated (the topic you did not know carried
+100 MB). To <em>not</em> collect something, exclude it by type or topic: all-or-nothing, visible
+in the startup log, and no biased sample. The only case for a low size cap is when you
+genuinely want "this topic, except its outliers" — which is rarely what anyone means.</p>
+<p>Every drop is counted, and the counters are on the Bridge's readiness service — the
+fastest way to answer "is raw mode shedding?":</p>
+<pre><code class="language-console">$ ros2 service call /dc_bridge/ready std_srvs/srv/Trigger
+response: success=True, message='vector is accepting connections | raw: 12 topic(s),
+  3480 forwarded, dropped 51200 rate / 0 oversize / 0 shipper / 0 undecodable'
+</code></pre>
+<p><code>dropped rate</code> climbing is normal and healthy (it is the limiter doing its job).
+<code>dropped shipper</code> climbing means the pipeline is genuinely behind: raise
+<code>shipper.buffer_max_bytes</code>, lower <code>max_rate_hz</code>, or narrow <code>include</code>.</p>
+<h2 id="when-not-to-use-it"><a class="header" href="#when-not-to-use-it">When <em>not</em> to use it</a></h2>
+<p>Raw mode ships whatever a topic happens to contain. It has no
+<a href="dc/./conditions.html">Conditions</a>, no <a href="dc/./data_validation.html">data validation</a>, no
+<a href="dc/./groups.html">Groups</a>, and no File uploads — a Measurement is still the right tool for
+data you know you want, in a shape you control, joined with other data. Raw mode is for
+the case where you don't know yet, or where "all of it" <em>is</em> the requirement.</p>
+<p>It is also not a rosbag replacement: JSON in Postgres is not a replayable recording. If
+you want replay, point a <a href="dc/./demos/mcap_recording.html">passthrough sink</a> at the
+<code>dc.dc.raw</code> route and let <code>dc_mcap_writer</code> record it, or run <code>ros2 bag record</code> alongside
+DC.</p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/raw_topics.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="kpi-views"><a class="header" href="#kpi-views">KPI views</a></h1>
 <p>DC collects Records; the numbers an operations team reports on are computed from those
 Records in SQL, on the database, never on the robot. The window is a query parameter, so
 changing a KPI definition is re-applying one file — not redeploying a fleet.</p>
@@ -8710,39 +8718,7 @@ encoding.codec = "json"
 <p>Now that you know how it works, you can set up your own Measurements and Destinations —
 see <a href="dc/./measurements.html">Measurements</a> and <a href="dc/./destinations.html">Destinations</a> for every
 parameter.</p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/configuration_examples.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="migration"><a class="header" href="#migration">Migration</a></h1>
-<p>This page tracks in-progress moves between configuration shapes DC itself is making —
-distinct from <a href="dc/./configuration_examples.html">Configuration examples</a>, which teaches the
-current shape from scratch.</p>
-<h2 id="blessed-postgress3console--passthrough-completed"><a class="header" href="#blessed-postgress3console--passthrough-completed">Blessed <code>postgres</code>/<code>s3</code>/<code>console</code> → passthrough (completed)</a></h2>
-<p><a href="dc/./adr/0003-blessed-destinations-plus-passthrough.html">ADR-0003</a> originally blessed
-<code>postgres</code>, <code>s3</code>, <code>file</code>, <code>console</code> and <code>vector</code> with a ROS-param form rendered into
-Vector config by <code>dc_bridge</code>. An audit of that blessed set found <code>postgres</code>, <code>s3</code> (for
-<code>receives: records</code>) and <code>console</code> carried no DC-specific logic — they were pure
-Vector-sink wrappers, and Vector's own <code>vector validate</code> already gives clear,
-field-level errors for them. Every in-repo demo, deploy param file and doc using them
-was moved to passthrough first
-(<a href="https://github.com/minipada/ros2_data_collection/issues/471">#471</a>), then
-<code>dc_bridge</code>'s blessed code path for these three types was removed
-(<a href="https://github.com/minipada/ros2_data_collection/issues/472">#472</a>) — as of that
-change, <code>postgres</code>, <code>s3</code> (for <code>receives: records</code>) and <code>console</code> are <strong>only</strong>
-configurable via passthrough; the blessed ROS-param form for them no longer exists.</p>
-<p><code>file</code> and <code>vector</code> are unaffected and remain blessed — <code>file</code> is a plain local-disk
-Vector sink with no DC-specific logic either, but is kept as the cheap "anchor"
-Destination every passthrough setup needs (<code>dc_bridge</code> derives its ROS subscriptions and
-<code>dc.&lt;tag&gt;</code> routes from <code>destinations</code> alone, never from a passthrough snippet's
-<code>inputs</code>); <code>vector</code> is reserved for the split-deployment/fleet work in
-<a href="https://github.com/minipada/ros2_data_collection/issues/440">#440</a>. <code>s3</code> also stays
-blessed for <code>receives: files</code> (File uploads,
-<a href="dc/./adr/0005-file-uploads-are-bridge-responsibility.html">ADR-0005</a>) — that path is served
-entirely by the Uploader's own S3 client, never by a Vector sink, so there is no
-passthrough equivalent for it to migrate to.</p>
-<p>Working passthrough recipes for <code>postgres</code>, <code>s3</code> (records) and <code>console</code> — reproducing
-exactly what <code>dc_bridge</code> used to render for the blessed form — are in
-<a href="dc/./destinations.html#recipes-postgres-s3-console-via-passthrough">Destinations: Recipes</a>.
-Point <code>custom_config_files</code> at one of them, alongside a <code>file</code> (or <code>vector</code>) anchor
-Destination; nothing else about your Measurements or routing changes.</p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/migration.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="infrastructure-setup"><a class="header" href="#infrastructure-setup">Infrastructure setup</a></h1>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/configuration_examples.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="infrastructure-setup"><a class="header" href="#infrastructure-setup">Infrastructure setup</a></h1>
 <p>DC delivers Records and Files to systems you run yourself. These pages cover bringing up
 the ones the demos and examples assume:</p>
 <div class="table-wrapper"><table><thead><tr><th>Page</th><th>Used as</th></tr></thead><tbody>
@@ -8948,7 +8924,7 @@ Dummy video device (0x0000) (platform:v4l2loopback-000):
 </code></pre>
 <p>Now you can use the ip_camera plugin with the url from the command: <strong>rtsp://127.0.0.1:8554/mystream</strong></p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/ip_camera.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="rustfs-2"><a class="header" href="#rustfs-2">RustFS</a></h1>
-<h2 id="requirements-1"><a class="header" href="#requirements-1">Requirements</a></h2>
+<h2 id="requirements-2"><a class="header" href="#requirements-2">Requirements</a></h2>
 <ol>
 <li>A container engine installed (Podman by default)</li>
 <li>Its compose plugin installed</li>
@@ -9006,7 +8982,39 @@ Dummy video device (0x0000) (platform:v4l2loopback-000):
 <code>tools/infrastructure/docker/config/postgresql/init.sql</code> creates the <code>dc</code> and <code>dc_files</code>
 tables the <code>postgres</code> Destination writes into, and <code>tools/infrastructure/sql/kpi_views.sql</code>
 adds the <a href="dc/infrastructure_setup/../kpi_views.html">KPI views</a> the Grafana dashboards read.</p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/postgresql.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="kind-networkpolicy-validation"><a class="header" href="#kind-networkpolicy-validation">kind: NetworkPolicy validation</a></h1>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/postgresql.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="migration"><a class="header" href="#migration">Migration</a></h1>
+<p>This page tracks in-progress moves between configuration shapes DC itself is making —
+distinct from <a href="dc/./configuration_examples.html">Configuration examples</a>, which teaches the
+current shape from scratch.</p>
+<h2 id="blessed-postgress3console--passthrough-completed"><a class="header" href="#blessed-postgress3console--passthrough-completed">Blessed <code>postgres</code>/<code>s3</code>/<code>console</code> → passthrough (completed)</a></h2>
+<p><a href="dc/./adr/0003-blessed-destinations-plus-passthrough.html">ADR-0003</a> originally blessed
+<code>postgres</code>, <code>s3</code>, <code>file</code>, <code>console</code> and <code>vector</code> with a ROS-param form rendered into
+Vector config by <code>dc_bridge</code>. An audit of that blessed set found <code>postgres</code>, <code>s3</code> (for
+<code>receives: records</code>) and <code>console</code> carried no DC-specific logic — they were pure
+Vector-sink wrappers, and Vector's own <code>vector validate</code> already gives clear,
+field-level errors for them. Every in-repo demo, deploy param file and doc using them
+was moved to passthrough first
+(<a href="https://github.com/minipada/ros2_data_collection/issues/471">#471</a>), then
+<code>dc_bridge</code>'s blessed code path for these three types was removed
+(<a href="https://github.com/minipada/ros2_data_collection/issues/472">#472</a>) — as of that
+change, <code>postgres</code>, <code>s3</code> (for <code>receives: records</code>) and <code>console</code> are <strong>only</strong>
+configurable via passthrough; the blessed ROS-param form for them no longer exists.</p>
+<p><code>file</code> and <code>vector</code> are unaffected and remain blessed — <code>file</code> is a plain local-disk
+Vector sink with no DC-specific logic either, but is kept as the cheap "anchor"
+Destination every passthrough setup needs (<code>dc_bridge</code> derives its ROS subscriptions and
+<code>dc.&lt;tag&gt;</code> routes from <code>destinations</code> alone, never from a passthrough snippet's
+<code>inputs</code>); <code>vector</code> is reserved for the split-deployment/fleet work in
+<a href="https://github.com/minipada/ros2_data_collection/issues/440">#440</a>. <code>s3</code> also stays
+blessed for <code>receives: files</code> (File uploads,
+<a href="dc/./adr/0005-file-uploads-are-bridge-responsibility.html">ADR-0005</a>) — that path is served
+entirely by the Uploader's own S3 client, never by a Vector sink, so there is no
+passthrough equivalent for it to migrate to.</p>
+<p>Working passthrough recipes for <code>postgres</code>, <code>s3</code> (records) and <code>console</code> — reproducing
+exactly what <code>dc_bridge</code> used to render for the blessed form — are in
+<a href="dc/./destinations.html#recipes-postgres-s3-console-via-passthrough">Destinations: Recipes</a>.
+Point <code>custom_config_files</code> at one of them, alongside a <code>file</code> (or <code>vector</code>) anchor
+Destination; nothing else about your Measurements or routing changes.</p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/migration.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="kind-networkpolicy-validation"><a class="header" href="#kind-networkpolicy-validation">kind: NetworkPolicy validation</a></h1>
 <p>The <a href="https://blog.bensoussan.de/post/2026-08-25-a-reference-architecture-for-robot-fleets/">reference fleet architecture</a>
 (epic <a href="https://github.com/minipada/ros2_data_collection/issues/440">#440</a>) claims a robot
 tier has no internet route, sites cannot reach each other, and connections only ever flow
@@ -9207,11 +9215,7 @@ listed in <a href="dc/./destinations.html">Destinations</a>, and
 everything else is reached through the passthrough.</p>
 </div>
 </div>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/cli.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="requirements-2"><a class="header" href="#requirements-2">Requirements</a></h1>
-<p>Requirements are tracked using <a href="https://github.com/strictdoc-project/strictdoc">Strictdoc</a>.</p>
-<p>The goal is to list tasks and do <a href="https://visuresolutions.com/requirements-management-traceability-guide/requirement-based-testing">test based requirements</a>.</p>
-<p><object style="width: 100%; height: 100vh;" data="requirements/html/index.html"></object></p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/requirements.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="architecture-decision-records"><a class="header" href="#architecture-decision-records">Architecture Decision Records</a></h1>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/cli.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="architecture-decision-records"><a class="header" href="#architecture-decision-records">Architecture Decision Records</a></h1>
 <p>An ADR records a significant architecture decision, the reasoning behind it, and what it
 rules out. The list below is generated from
 <a href="https://github.com/minipada/ros2_data_collection/tree/jazzy/docs/adr"><code>docs/adr/</code></a> —
@@ -10228,13 +10232,21 @@ the resulting file.</p>
 </ol>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/faq.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="about-and-contact-1"><a class="header" href="#about-and-contact-1">About and Contact</a></h1>
 <h2 id="about"><a class="header" href="#about">About</a></h2>
-<p>Our team currently includes:</p>
-<div class="table-wrapper"><table><thead><tr><th>Name</th><th>GitHub ID</th></tr></thead><tbody>
-<tr><td>David Bensoussan</td><td><a href="https://github.com/Minipada/">Minipada</a></td></tr>
-</tbody></table>
+<p>DC is maintained by:</p>
+<div class="maintainer-card">
+  <img class="maintainer-avatar" src="https://github.com/Minipada.png" alt="GitHub avatar of Minipada" width="72" height="72">
+  <div class="maintainer-info">
+    <p class="maintainer-name">David Bensoussan</p>
+    <p><a href="https://github.com/Minipada/">@Minipada</a></p>
+  </div>
 </div>
 <h2 id="contact"><a class="header" href="#contact">Contact</a></h2>
-<p>For any inquiry, please contact David (<a href="mailto:d.bensoussan@proton.me">d.bensoussan@proton.me</a>). If your inquiry relates to bugs or open-source feature requests, consider posting a ticket on our GitHub project. If your inquiry relates to configuration support or private feature development, reach out and we will be able to support you in your projects.</p>
+<p>Pick the channel that fits:</p>
+<div class="contact-list">
+  <p><i class="lni lni-envelope"></i> <a href="mailto:d.bensoussan@proton.me">d.bensoussan@proton.me</a> for private inquiries, configuration support and private feature development.</p>
+  <p><i class="lni lni-bug"></i> <a href="https://github.com/Minipada/ros2_data_collection/issues">GitHub Issues</a> for bugs and open-source feature requests.</p>
+  <p><i class="lni lni-comments"></i> <a href="https://github.com/Minipada/ros2_data_collection/discussions">GitHub Discussions</a> for questions and usage help.</p>
+</div>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/about_contact.md">Edit this page on GitHub.</a></footer>
                     </main>
 

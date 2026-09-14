@@ -12,3 +12,59 @@
 .github-only {
     display: none !important;
 }
+
+/* Sidebar footer: social icons and license */
+.sidebar-footer {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    padding: 0.8rem 1.4rem;
+}
+
+.sidebar-footer a {
+    color: var(--sidebar-fg);
+    opacity: 0.65;
+}
+
+.sidebar-footer a:hover {
+    opacity: 1;
+    color: var(--sidebar-active);
+}
+
+.sidebar-footer .lni {
+    font-size: 1.35rem;
+}
+
+.sidebar-footer .sidebar-license {
+    margin-left: auto;
+    font-size: 0.8em;
+}
+
+/* About and Contact page */
+.maintainer-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.maintainer-card .maintainer-avatar {
+    border-radius: 50%;
+}
+
+.maintainer-card p {
+    margin: 0;
+}
+
+.maintainer-card .maintainer-name {
+    font-weight: 600;
+}
+
+.contact-list p {
+    margin: 0.4rem 0;
+}
+
+.contact-list .lni {
+    color: var(--sidebar-active);
+    margin-right: 0.4rem;
+}
