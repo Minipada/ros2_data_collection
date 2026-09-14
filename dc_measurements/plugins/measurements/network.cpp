@@ -19,7 +19,7 @@ void Network::onConfigure()
   // Validate parameters
   // https://stackoverflow.com/questions/5284147/validating-ipv4-addresses-with-regexp
   boost::system::error_code ec;
-  boost::asio::ip::address::from_string(ping_address_, ec);
+  boost::asio::ip::make_address(ping_address_, ec);
   if (ec)
   {
     RCLCPP_ERROR(logger_, "Must be a valid ip address");
