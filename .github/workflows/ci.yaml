@@ -129,7 +129,9 @@ jobs:
             echo "workspace_ref=$IMAGE/dc-workspace:$SHA"
             echo "runtime_ref=$IMAGE/dc-runtime:$SHA"
             echo "e2e_ref=$IMAGE/dc-e2e:$SHA"
-            echo "cache_ref=$IMAGE/dc-workspace-cache:$ROS_DISTRO"
+            # Distro in the repository name, not a tag: podman's --cache-from/--cache-to
+            # reject refs carrying a tag or digest.
+            echo "cache_ref=$IMAGE/dc-workspace-cache-$ROS_DISTRO"
           } >> "$GITHUB_OUTPUT"
 
       # `podman compose` shells out to a host-side provider — it can't be baked into an
@@ -308,7 +310,9 @@ jobs:
           {
             echo "workspace_ref=dc-workspace-coverage:$SHA"
             echo "runtime_ref=$IMAGE/dc-runtime:$SHA-coverage"
-            echo "cache_ref=$IMAGE/dc-workspace-cache:$ROS_DISTRO"
+            # Distro in the repository name, not a tag: podman's --cache-from/--cache-to
+            # reject refs carrying a tag or digest.
+            echo "cache_ref=$IMAGE/dc-workspace-cache-$ROS_DISTRO"
           } >> "$GITHUB_OUTPUT"
 
       - name: Cache podman-compose

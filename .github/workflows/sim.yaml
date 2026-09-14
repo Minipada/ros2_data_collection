@@ -71,7 +71,9 @@ jobs:
           IMAGE="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
           {
             echo "workspace_ref=$IMAGE/dc-workspace:sim-${{ github.sha }}"
-            echo "cache_ref=$IMAGE/dc-workspace-cache-sim:$ROS_DISTRO"
+            # Distro in the repository name, not a tag: podman's --cache-from/--cache-to
+            # reject refs carrying a tag or digest.
+            echo "cache_ref=$IMAGE/dc-workspace-cache-$ROS_DISTRO-sim"
           } >> "$GITHUB_OUTPUT"
 
       # Built here rather than pulled: a scheduled run has no upstream job to depend on,
