@@ -1,9 +1,8 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-# DC 2.0 (Jazzy) documentation build (#252). Builds the mdbook site and the strictdoc
-# requirements export as a CI gate; does not deploy anywhere. GitHub Pages for this repo
-# has been taken down (gh-pages branch deleted) and this job no longer deploys to it.
+# DC 2.0 (Jazzy) documentation build and deploy (#252). Builds the mdbook site and the
+# strictdoc requirements export, and publishes to GitHub Pages on pushes to `jazzy`.
 #
 # Like ci.yaml, this runs the same script a developer runs locally
 # (tools/ci/pre-commit/build_doc.sh, also the `build-doc` pre-commit hook) inside a Podman
@@ -26,14 +25,12 @@
 # fork regardless of what's requested here. That just means a fork PR pushes no cache and
 # builds cold, same as before this change; it does not fail the build.
 #
-# PR preview (#135): the built site is uploaded as a workflow artifact on every run,
-# including PRs — deliberately artifact-only rather than a hosted deploy, since this repo
-# has no preview host configured (#184 closed without one) and reaching one from a fork PR
-# would need `pull_request_target` plus a deploy token, i.e. secrets exposed to untrusted
-# PR code. `pull_request` (not `pull_request_target`) keeps this safe for fork PRs — the
-# default `GITHUB_TOKEN` is read-only there, which is all an artifact upload needs. The
-# job summary step below turns that artifact into a one-click link from the PR's Checks
-# tab instead of leaving reviewers to dig through the run's Artifacts section.
+# PR preview (#135): on pull_request the built site is uploaded as a workflow artifact,
+# not deployed — only pushes to `jazzy` reach Pages. `pull_request` (not
+# `pull_request_target`) keeps fork PRs safe — the default `GITHUB_TOKEN` is read-only
+# there, which is all an artifact upload needs. The job summary step below turns that
+# artifact into a one-click link from the PR's Checks tab instead of leaving reviewers
+# to dig through the run's Artifacts section.
 
 name: Documentation
 
@@ -59,7 +56,7 @@ on:
       - .github/workflows/doc.yaml
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 concurrency:
@@ -116,3 +113,10 @@ jobs:
             echo "\`index.html\`. Downloading requires a GitHub login with read access to"
             echo "this repo, same as any other Actions artifact."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/jazzy'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./doc/book/html
