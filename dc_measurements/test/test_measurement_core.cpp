@@ -19,7 +19,8 @@ using dc_measurements::RecordOut;
 
 // Exercises the ROS-free Measurement pipeline (#499) the way test_incident_releaser.cpp exercises
 // the state machine: no rclcpp, no node -- time is passed in, Records come back through a
-// callback, Conditions are stand-in lookups.
+// callback, Conditions are stand-in resolvers (#500: each handed the enriched Record it is
+// consulted about).
 
 namespace
 {
@@ -86,11 +87,13 @@ struct FakeConditions
 {
   bool state{ false };
   int calls{ 0 };
+  std::vector<json> records_seen;
 
-  MeasurementCore::ConditionStateLookup lookup()
+  MeasurementCore::ConditionResolver resolver()
   {
-    return [this](const std::string&) {
+    return [this](const json& record, const std::string&) {
       calls++;
+      records_seen.push_back(record);
       return state;
     };
   }
@@ -127,19 +130,46 @@ TEST_F(MeasurementCoreTest, PublishesTheEnrichedRecord)
   core.configure(baseConfig(), captured.publishFn(), captured.failureFn(), captured.logFn());
 
   FakeConditions conditions;
-  core.publish(R"({"message":"hi"})", "gk", 42, [](const std::string&) { return true; }, conditions.lookup(), at(100.0));
+  core.publish(
+      json{ { "message", "hi" } }, "gk", 42, [](const json&, const std::string&) { return true; },
+      conditions.resolver(), at(100.0));
 
   ASSERT_EQ(captured.records.size(), 1u);
   const RecordOut& out = captured.records[0];
   EXPECT_EQ(out.group_key, "gk");
   EXPECT_EQ(out.stamp_ns, 42);
-  const json record = json::parse(out.data);
-  EXPECT_EQ(record["message"], "hi");
-  EXPECT_EQ(record["name"], "dummy");
-  EXPECT_EQ(record["run_id"], "run-1");
-  // No Condition is configured: the lookup is never consulted, exactly like the old
+  EXPECT_EQ(out.data["message"], "hi");
+  EXPECT_EQ(out.data["name"], "dummy");
+  EXPECT_EQ(out.data["run_id"], "run-1");
+  // No Condition is configured: the resolver is never consulted, exactly like the old
   // isAnyConditionSet() && isConditionOn() short-circuit.
   EXPECT_EQ(conditions.calls, 0);
+}
+
+// The one Record a Condition is polled about is the finished one -- the same json the enricher
+// produced, not the raw collection (#500).
+TEST_F(MeasurementCoreTest, ConditionsArePolledWithTheEnrichedRecord)
+{
+  Captured captured;
+  MeasurementCore core;
+  auto config = baseConfig();
+  config.if_any_conditions = { "moving" };
+  core.configure(config, captured.publishFn(), captured.failureFn(), captured.logFn());
+
+  FakeConditions conditions;
+  conditions.state = true;
+  core.publish(
+      json{ { "message", "hi" } }, "gk", 0, [](const json&, const std::string&) { return true; }, conditions.resolver(),
+      at(100.0));
+
+  ASSERT_EQ(captured.records.size(), 1u);
+  ASSERT_EQ(conditions.records_seen.size(), 1u);
+  const json& polled = conditions.records_seen.front();
+  EXPECT_EQ(polled["message"], "hi");
+  EXPECT_EQ(polled["name"], "dummy");
+  EXPECT_EQ(polled["run_id"], "run-1");
+  // The polled Record and the published Record are one and the same.
+  EXPECT_EQ(polled, captured.records[0].data);
 }
 
 TEST_F(MeasurementCoreTest, DropsEmptyPayloadsWithAThrottledWarning)
@@ -148,31 +178,17 @@ TEST_F(MeasurementCoreTest, DropsEmptyPayloadsWithAThrottledWarning)
   MeasurementCore core;
   core.configure(baseConfig(), captured.publishFn(), captured.failureFn(), captured.logFn());
 
-  const MeasurementCore::ConditionStateLookup no_gate = [](const std::string&) { return true; };
+  const MeasurementCore::ConditionResolver any_condition = [](const json&, const std::string&) { return true; };
   FakeConditions conditions;
 
-  core.publish("", "gk", 0, no_gate, conditions.lookup(), at(100.0));
-  core.publish("null", "gk", 0, no_gate, conditions.lookup(), at(105.0));
-  core.publish("", "gk", 0, no_gate, conditions.lookup(), at(109.0));
-  core.publish("", "gk", 0, no_gate, conditions.lookup(), at(111.0));
+  core.publish(json(), "gk", 0, any_condition, conditions.resolver(), at(100.0));
+  core.publish(json(), "gk", 0, any_condition, conditions.resolver(), at(105.0));
+  core.publish(json(), "gk", 0, any_condition, conditions.resolver(), at(109.0));
+  core.publish(json(), "gk", 0, any_condition, conditions.resolver(), at(111.0));
 
   EXPECT_TRUE(captured.records.empty());
   EXPECT_EQ(captured.countLevel(LogLevel::Warn), 2);
   EXPECT_TRUE(captured.sawMessage("No data collected from measurement dummy"));
-}
-
-TEST_F(MeasurementCoreTest, ReportsUnparsablePayloadsAndPublishesThemAsTheyCame)
-{
-  Captured captured;
-  MeasurementCore core;
-  core.configure(baseConfig(), captured.publishFn(), captured.failureFn(), captured.logFn());
-
-  core.publish(
-      "not json", "gk", 7, [](const std::string&) { return true; }, [](const std::string&) { return false; }, at(100.0));
-
-  ASSERT_EQ(captured.records.size(), 1u);
-  EXPECT_EQ(captured.records[0].data, "not json");
-  EXPECT_TRUE(captured.sawMessage("Error parsing JSON while enriching: not json"));
 }
 
 TEST_F(MeasurementCoreTest, GateLatchesOpenAndStopsConsultingTheCondition)
@@ -185,7 +201,9 @@ TEST_F(MeasurementCoreTest, GateLatchesOpenAndStopsConsultingTheCondition)
 
   FakeConditions gate;  // the gate condition reads false to start with
   const auto publish_once = [&](const MeasurementCore::TimePoint& now) {
-    core.publish(R"({"message":"x"})", "gk", 0, gate.lookup(), [](const std::string&) { return false; }, now);
+    core.publish(
+        json{ { "message", "x" } }, "gk", 0, gate.resolver(), [](const json&, const std::string&) { return false; },
+        now);
   };
 
   publish_once(at(100.0));
@@ -214,12 +232,14 @@ TEST_F(MeasurementCoreTest, UnknownGateConditionHoldsAllCollectionBack)
   config.gate_condition = "go";
   core.configure(config, captured.publishFn(), captured.failureFn(), captured.logFn());
 
-  // What the driver's lookup does for a gate_condition naming no configured Condition: report
+  // What the driver's resolver does for a gate_condition naming no configured Condition: report
   // false, so the gate never opens.
-  const MeasurementCore::ConditionStateLookup unknown = [](const std::string&) { return false; };
+  const MeasurementCore::ConditionResolver unknown = [](const json&, const std::string&) { return false; };
 
-  core.publish(R"({"message":"x"})", "gk", 0, unknown, [](const std::string&) { return false; }, at(100.0));
-  core.publish(R"({"message":"x"})", "gk", 0, unknown, [](const std::string&) { return false; }, at(101.0));
+  core.publish(
+      json{ { "message", "x" } }, "gk", 0, unknown, [](const json&, const std::string&) { return false; }, at(100.0));
+  core.publish(
+      json{ { "message", "x" } }, "gk", 0, unknown, [](const json&, const std::string&) { return false; }, at(101.0));
 
   EXPECT_TRUE(captured.records.empty());
 }
@@ -237,7 +257,9 @@ TEST_F(MeasurementCoreTest, InitQuotaPublishesUnconditionallyThenConditionsCap)
   FakeConditions conditions;
   conditions.state = true;
   const auto publish_once = [&] {
-    core.publish(R"({"message":"x"})", "gk", 0, [](const std::string&) { return true; }, conditions.lookup(), at(100.0));
+    core.publish(
+        json{ { "message", "x" } }, "gk", 0, [](const json&, const std::string&) { return true; },
+        conditions.resolver(), at(100.0));
   };
 
   publish_once();  // the init quota, unconditional
@@ -269,11 +291,12 @@ TEST_F(MeasurementCoreTest, CollectionFinishedAfterTheQuotaWithNoConditionPublis
   MeasurementCore core;
   core.configure(config, captured.publishFn(), captured.failureFn(), captured.logFn());
 
-  const MeasurementCore::ConditionStateLookup no_gate = [](const std::string&) { return true; };
+  const MeasurementCore::ConditionResolver no_gate = [](const json&, const std::string&) { return true; };
+  const MeasurementCore::ConditionResolver no_condition = [](const json&, const std::string&) { return false; };
   EXPECT_FALSE(core.collectionFinished());
-  core.publish(R"({"message":"x"})", "gk", 0, no_gate, [](const std::string&) { return false; }, at(100.0));
+  core.publish(json{ { "message", "x" } }, "gk", 0, no_gate, no_condition, at(100.0));
   EXPECT_FALSE(core.collectionFinished());
-  core.publish(R"({"message":"x"})", "gk", 0, no_gate, [](const std::string&) { return false; }, at(101.0));
+  core.publish(json{ { "message", "x" } }, "gk", 0, no_gate, no_condition, at(101.0));
   EXPECT_TRUE(core.collectionFinished());
   EXPECT_EQ(captured.records.size(), 2u);
 }
@@ -308,27 +331,26 @@ TEST_F(MeasurementCoreTest, IncidentBufferReleasesOnFlush)
   core.configure(config, captured.publishFn(), captured.failureFn(), captured.logFn());
 
   EXPECT_TRUE(core.hasReleaser());
-  core.offerSample(R"({"message":"a"})", at(100.0));
-  core.offerSample(R"({"message":"b"})", at(101.0));
+  core.offerSample(json{ { "message", "a" } }, at(100.0));
+  core.offerSample(json{ { "message", "b" } }, at(101.0));
   EXPECT_TRUE(captured.records.empty());
 
   core.onFlushEvent("inc-1", at(102.0));
   ASSERT_EQ(captured.records.size(), 2u);
   for (const RecordOut& out : captured.records)
   {
-    const json record = json::parse(out.data);
     // The Incident rides the typed envelope field (#506); the payload carries no such key.
     EXPECT_EQ(out.incident_id, "inc-1");
-    EXPECT_FALSE(record.contains("incident_id"));
+    EXPECT_FALSE(out.data.contains("incident_id"));
     EXPECT_EQ(out.group_key, "gk");
     // Released Records are stamped with when they were collected, not when they were released.
     EXPECT_NE(out.stamp_ns, std::chrono::duration_cast<std::chrono::nanoseconds>(at(102.0).time_since_epoch()).count());
   }
-  EXPECT_EQ(json::parse(captured.records[0].data)["message"], "a");
-  EXPECT_EQ(json::parse(captured.records[1].data)["message"], "b");
+  EXPECT_EQ(captured.records[0].data["message"], "a");
+  EXPECT_EQ(captured.records[1].data["message"], "b");
 
   // Cooldown: a flapping Trigger's second event starts no new cycle.
-  core.offerSample(R"({"message":"c"})", at(103.0));
+  core.offerSample(json{ { "message", "c" } }, at(103.0));
   core.onFlushEvent("inc-2", at(104.0));
   EXPECT_EQ(captured.records.size(), 2u);
 }
@@ -343,15 +365,14 @@ TEST_F(MeasurementCoreTest, PostRollPublishesLiveThenReArms)
   core.configure(config, captured.publishFn(), captured.failureFn(), captured.logFn());
 
   core.onFlushEvent("inc-1", at(100.0));  // empty buffer, straight into post-roll
-  core.offerSample(R"({"message":"live"})", at(110.0));
+  core.offerSample(json{ { "message", "live" } }, at(110.0));
   ASSERT_EQ(captured.records.size(), 1u);
-  const json record = json::parse(captured.records[0].data);
-  EXPECT_EQ(record["message"], "live");
+  EXPECT_EQ(captured.records[0].data["message"], "live");
   EXPECT_EQ(captured.records[0].incident_id, "inc-1");
-  EXPECT_FALSE(record.contains("incident_id"));
+  EXPECT_FALSE(captured.records[0].data.contains("incident_id"));
 
   // Past the post-roll deadline the next sample buffers again.
-  core.offerSample(R"({"message":"buffered"})", at(131.0));
+  core.offerSample(json{ { "message", "buffered" } }, at(131.0));
   EXPECT_EQ(captured.records.size(), 1u);
 }
 
@@ -373,8 +394,8 @@ TEST_F(MeasurementCoreTest, StagesRecordFilesIntoTheScratchRing)
     f << "jpeg-bytes";
   }
 
-  core.offerSample(R"({"local_paths":{"jpeg":")" + produced.string() +
-                       R"("},"remote_paths":{"minio":{"jpeg":"cam/frame.jpg"}}})",
+  core.offerSample(json{ { "local_paths", { { "jpeg", produced.string() } } },
+                         { "remote_paths", { { "minio", { { "jpeg", "cam/frame.jpg" } } } } } },
                    at(100.0));
 
   // Staging *moves* the File...
@@ -387,7 +408,7 @@ TEST_F(MeasurementCoreTest, StagesRecordFilesIntoTheScratchRing)
   // ...and the buffered Record is rewritten to point at the staged copy, remote key untouched.
   core.onFlushEvent("inc-1", at(101.0));
   ASSERT_EQ(captured.records.size(), 1u);
-  const json record = json::parse(captured.records[0].data);
+  const json& record = captured.records[0].data;
   EXPECT_EQ(record["local_paths"]["jpeg"].get<std::string>(), staged.path().string());
   EXPECT_EQ(record["remote_paths"]["minio"]["jpeg"], "cam/frame.jpg");
 }
@@ -406,7 +427,7 @@ TEST_F(MeasurementCoreTest, TeardownPurgesStagedFilesOfBufferedRecords)
     std::ofstream f(produced);
     f << "jpeg-bytes";
   }
-  core.offerSample(R"({"local_paths":{"jpeg":")" + produced.string() + R"("}})", at(100.0));
+  core.offerSample(json{ { "local_paths", { { "jpeg", produced.string() } } } }, at(100.0));
 
   const auto scratch_root = tmp_ / ".dc_incident_scratch" / "dummy";
   ASSERT_TRUE(std::filesystem::exists(scratch_root));
@@ -434,14 +455,16 @@ TEST_F(MeasurementCoreTest, SchemaValidationFeedsThePluginHookAndStillPublishes)
 
   // A Record the schema rejects is reported through the hook, but still published, exactly as
   // this chain always did.
-  core.publish(R"({"other":1})", "gk", 0, [](const std::string&) { return true; },
-               [](const std::string&) { return false; }, at(100.0));
+  core.publish(
+      json{ { "other", 1 } }, "gk", 0, [](const json&, const std::string&) { return true; },
+      [](const json&, const std::string&) { return false; }, at(100.0));
   EXPECT_EQ(captured.validation_failures, 1);
   EXPECT_TRUE(captured.sawMessage("Validation failed:"));
   EXPECT_EQ(captured.records.size(), 1u);
 
-  core.publish(R"({"name":"dummy"})", "gk", 0, [](const std::string&) { return true; },
-               [](const std::string&) { return false; }, at(101.0));
+  core.publish(
+      json{ { "name", "dummy" } }, "gk", 0, [](const json&, const std::string&) { return true; },
+      [](const json&, const std::string&) { return false; }, at(101.0));
   EXPECT_EQ(captured.validation_failures, 1);
   EXPECT_EQ(captured.records.size(), 2u);
 }

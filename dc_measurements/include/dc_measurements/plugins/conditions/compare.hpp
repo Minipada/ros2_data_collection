@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "dc_core/condition.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
 #include "dc_measurements/condition.hpp"
 #include "dc_util/json_utils.hpp"
 #include "dc_util/node_utils.hpp"
@@ -30,7 +29,7 @@ public:
 
 protected:
   std::string key_;
-  bool getState(dc_interfaces::msg::StringStamped msg) override;
+  bool getState(const json& data_json) override;
   void onConfigure() override;
 
 private:

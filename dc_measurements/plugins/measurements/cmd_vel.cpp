@@ -32,19 +32,14 @@ void CmdVel::onConfigure()
       cmd_vel_topic_, 10, std::bind(&CmdVel::cmdVelCb, this, std::placeholders::_1));
 }
 
-dc_interfaces::msg::StringStamped CmdVel::collect()
+json CmdVel::collect()
 {
-  dc_interfaces::msg::StringStamped msg;
-
   const auto twist = latest_twist_.pop();
   if (!twist)
   {
-    return msg;
+    return json{};
   }
-  msg.group_key = group_key_;
-  msg.header.stamp = twist->second;
-  msg.data = twist->first.dump(-1, ' ', true);
-  return msg;
+  return twist->first;
 }
 
 }  // namespace dc_measurements

@@ -46,12 +46,8 @@ void Random::onConfigure()
   }
 }
 
-dc_interfaces::msg::StringStamped Random::collect()
+json Random::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
   json data_json;
 
   if (value_type_ == "integer")
@@ -65,9 +61,7 @@ dc_interfaces::msg::StringStamped Random::collect()
     data_json["value"] = distribution(generator_);
   }
 
-  msg.data = data_json.dump(-1, ' ', true);
-
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

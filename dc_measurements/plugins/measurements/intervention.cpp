@@ -48,22 +48,18 @@ void Intervention::onCleanup()
   }
 }
 
-dc_interfaces::msg::StringStamped Intervention::collect()
+json Intervention::collect()
 {
   auto node = getNode();
   const rclcpp::Time stamp = node->get_clock()->now();
   const std::chrono::system_clock::time_point now{ std::chrono::nanoseconds(stamp.nanoseconds()) };
 
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = stamp;
-  msg.group_key = group_key_;
-
-  // Empty data on every poll that saw no takeover boundary: this Measurement reports events, not
-  // a level, and publish() already treats an empty Record as "nothing to report" (#279).
+  // Null on every poll that saw no takeover boundary: this Measurement reports events, not a
+  // level, and publish() already treats a null Record as "nothing to report" (#279).
   const auto transition = detector_.update(mode_source_.mode(), now);
   if (!transition.has_value())
   {
-    return msg;
+    return json{};
   }
 
   const bool starts = transition->from == kAutonomousMode && isHumanMode(transition->to);
@@ -72,7 +68,7 @@ dc_interfaces::msg::StringStamped Intervention::collect()
   {
     // Autonomy handing over to nothing (a mode signal gone stale to "unknown"), or one human mode
     // replacing another directly: a real transition, but not a takeover boundary.
-    return msg;
+    return json{};
   }
 
   json data_json;
@@ -87,8 +83,7 @@ dc_interfaces::msg::StringStamped Intervention::collect()
   data_json["sequence"] = transition->sequence;
   data_json["open"] = starts;
 
-  msg.data = data_json.dump(-1, ' ', true);
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

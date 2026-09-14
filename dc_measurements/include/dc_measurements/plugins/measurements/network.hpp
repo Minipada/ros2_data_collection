@@ -49,7 +49,7 @@ class Network : public dc_measurements::Measurement
 public:
   Network();
   ~Network() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   std::string ping_address_;

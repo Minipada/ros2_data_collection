@@ -184,19 +184,14 @@ void Manipulation::enqueueEnd(const std::string& goal_key, const std::string& ou
   }
 }
 
-dc_interfaces::msg::StringStamped Manipulation::collect()
+json Manipulation::collect()
 {
-  dc_interfaces::msg::StringStamped msg;
-  msg.group_key = group_key_;
-
   const auto event = pending_events_.pop();
   if (!event)
   {
-    return msg;
+    return json{};
   }
-  msg.header.stamp = event->second;
-  msg.data = event->first.dump(-1, ' ', true);
-  return msg;
+  return event->first;
 }
 
 }  // namespace dc_measurements

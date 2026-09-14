@@ -10,7 +10,6 @@
 
 #include "dc_core/condition.hpp"
 #include "dc_interfaces/msg/condition.hpp"
-#include "dc_interfaces/msg/string_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 namespace dc_conditions
@@ -107,9 +106,9 @@ public:
     enabled_ = false;
   }
 
-  bool getState(dc_interfaces::msg::StringStamped msg) override
+  bool getState(const json& record) override
   {
-    (void)msg;  // Ignore error of variable being unused
+    (void)record;  // Ignore error of variable being unused
     publishActive();
     return active_;
   }

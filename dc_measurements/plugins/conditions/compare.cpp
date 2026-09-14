@@ -138,310 +138,298 @@ void Compare::onConfigure()
   }
 }
 
-bool Compare::getState(dc_interfaces::msg::StringStamped msg)
+bool Compare::getState(const json& data_json)
 {
-  try
+  if (op_ == Op::EXISTS)
   {
-    json data_json = json::parse(msg.data);
+    json flat_json = data_json.flatten();
+    std::string key_exact = std::string("/") + key_;
+    std::string key_w_prefix = key_exact + "/";
 
-    if (op_ == Op::EXISTS)
+    // A flattened key matches "key_" either exactly (key_ is itself a scalar leaf, e.g.
+    // {"level": 5.5} with key_="level" flattens to exactly "/level") or as a "key_/..." prefix
+    // (key_ names an object/array with descendants). Checking the prefix alone misses the
+    // exact-match case entirely, since flatten() never emits "/level/" for a leaf value.
+    bool found = false;
+    for (auto& x : flat_json.items())
     {
-      json flat_json = data_json.flatten();
-      std::string key_exact = std::string("/") + key_;
-      std::string key_w_prefix = key_exact + "/";
-
-      // A flattened key matches "key_" either exactly (key_ is itself a scalar leaf, e.g.
-      // {"level": 5.5} with key_="level" flattens to exactly "/level") or as a "key_/..." prefix
-      // (key_ names an object/array with descendants). Checking the prefix alone misses the
-      // exact-match case entirely, since flatten() never emits "/level/" for a leaf value.
-      bool found = false;
-      for (auto& x : flat_json.items())
+      if (x.key() == key_exact || x.key().rfind(key_w_prefix, 0) == 0)
       {
-        if (x.key() == key_exact || x.key().rfind(key_w_prefix, 0) == 0)
-        {
-          found = true;
-          break;
-        }
+        found = true;
+        break;
       }
-      active_ = found;
-      publishActive();
-      return active_;
     }
+    active_ = found;
+    publishActive();
+    return active_;
+  }
 
-    if (op_ == Op::MATCH)
-    {
-      json flat_json = data_json.flatten();
-      std::string key_w_prefix = std::string("/") + key_;
-
-      if (!flat_json.contains(key_w_prefix))
-      {
-        RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found in msg: " << msg.data);
-        active_ = false;
-        publishActive();
-        return active_;
-      }
-
-      active_ = std::regex_match(flat_json[key_w_prefix].get<std::string>(), regex_);
-      publishActive();
-      return active_;
-    }
-
-    if (operand_ == Operand::BOOL_ARRAY || operand_ == Operand::INT_ARRAY || operand_ == Operand::DOUBLE_ARRAY ||
-        operand_ == Operand::STRING_ARRAY)
-    {
-      // json::json_pointer navigates the unflattened data_json directly: flatten() explodes
-      // arrays into indexed keys ("/key/0", "/key/1", ...), so an array-valued "/key" would
-      // never be found by that pattern -- exactly the value type compared here.
-      json::json_pointer key_ptr(std::string("/") + key_);
-
-      if (!data_json.contains(key_ptr))
-      {
-        RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found in msg: " << msg.data);
-        active_ = false;
-        publishActive();
-        return active_;
-      }
-
-      const json& field = data_json.at(key_ptr);
-
-      if (field.type() != json::value_t::array)
-      {
-        RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not an array");
-        active_ = false;
-        publishActive();
-        return active_;
-      }
-
-      bool elements_ok = false;
-      switch (operand_)
-      {
-        case Operand::BOOL_ARRAY:
-          elements_ok = std::all_of(field.begin(), field.end(), [](const json& el) { return el.is_boolean(); });
-          break;
-        case Operand::INT_ARRAY:
-          elements_ok = std::all_of(field.begin(), field.end(), [](const json& el) { return el.is_number_integer(); });
-          break;
-        case Operand::DOUBLE_ARRAY:
-          elements_ok = std::all_of(field.begin(), field.end(), [](const json& el) { return el.is_number_float(); });
-          break;
-        case Operand::STRING_ARRAY:
-          elements_ok = std::all_of(field.begin(), field.end(), [](const json& el) { return el.is_string(); });
-          break;
-        default:
-          break;
-      }
-      if (!elements_ok)
-      {
-        RCLCPP_WARN_STREAM(logger_, "All values are not of the expected type in key " << key_);
-        active_ = false;
-        publishActive();
-        return active_;
-      }
-
-      switch (operand_)
-      {
-        case Operand::BOOL_ARRAY:
-        {
-          std::vector<bool> data = field.get<std::vector<bool>>();
-          if (order_matters_)
-          {
-            active_ = (data == value_bool_array_);
-          }
-          else
-          {
-            // vector<bool> has no < to sort on; compare as ints, as ListBoolEqual did.
-            std::vector<int> data_int(data.begin(), data.end());
-            std::vector<int> value_int(value_bool_array_.begin(), value_bool_array_.end());
-            std::sort(data_int.begin(), data_int.end());
-            std::sort(value_int.begin(), value_int.end());
-            active_ = (data_int == value_int);
-          }
-          break;
-        }
-        case Operand::INT_ARRAY:
-        {
-          std::vector<int64_t> data = field.get<std::vector<int64_t>>();
-          if (!order_matters_)
-          {
-            std::sort(data.begin(), data.end());
-            auto value_sorted = value_int_array_;
-            std::sort(value_sorted.begin(), value_sorted.end());
-            active_ = (data == value_sorted);
-          }
-          else
-          {
-            active_ = (data == value_int_array_);
-          }
-          break;
-        }
-        case Operand::DOUBLE_ARRAY:
-        {
-          std::vector<double> data = field.get<std::vector<double>>();
-          if (!order_matters_)
-          {
-            std::sort(data.begin(), data.end());
-            auto value_sorted = value_double_array_;
-            std::sort(value_sorted.begin(), value_sorted.end());
-            active_ = (data == value_sorted);
-          }
-          else
-          {
-            active_ = (data == value_double_array_);
-          }
-          break;
-        }
-        case Operand::STRING_ARRAY:
-        {
-          std::vector<std::string> data = field.get<std::vector<std::string>>();
-          if (!order_matters_)
-          {
-            std::sort(data.begin(), data.end());
-            auto value_sorted = value_string_array_;
-            std::sort(value_sorted.begin(), value_sorted.end());
-            active_ = (data == value_sorted);
-          }
-          else
-          {
-            active_ = (data == value_string_array_);
-          }
-          break;
-        }
-        default:
-          break;
-      }
-      if (op_ == Op::NE)
-      {
-        active_ = !active_;
-      }
-      publishActive();
-      return active_;
-    }
-
+  if (op_ == Op::MATCH)
+  {
     json flat_json = data_json.flatten();
     std::string key_w_prefix = std::string("/") + key_;
 
     if (!flat_json.contains(key_w_prefix))
     {
-      RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found in msg: " << msg.data);
+      RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found in record: " << data_json.dump());
       active_ = false;
       publishActive();
       return active_;
     }
 
-    const json& field = flat_json[key_w_prefix];
+    active_ = std::regex_match(flat_json[key_w_prefix].get<std::string>(), regex_);
+    publishActive();
+    return active_;
+  }
 
-    // Type-strict by operand kind: an integer JSON literal is not a double operand and vice
-    // versa, matching the collapsed plugins. is_number_integer(), not a strict type()==
-    // number_integer check: nlohmann::json parses non-negative integer literals (the common
-    // case) as number_unsigned, and is_number_integer() is the one that correctly treats both
-    // as "an integer".
+  if (operand_ == Operand::BOOL_ARRAY || operand_ == Operand::INT_ARRAY || operand_ == Operand::DOUBLE_ARRAY ||
+      operand_ == Operand::STRING_ARRAY)
+  {
+    // json::json_pointer navigates the unflattened data_json directly: flatten() explodes
+    // arrays into indexed keys ("/key/0", "/key/1", ...), so an array-valued "/key" would
+    // never be found by that pattern -- exactly the value type compared here.
+    json::json_pointer key_ptr(std::string("/") + key_);
+
+    if (!data_json.contains(key_ptr))
+    {
+      RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found in record: " << data_json.dump());
+      active_ = false;
+      publishActive();
+      return active_;
+    }
+
+    const json& field = data_json.at(key_ptr);
+
+    if (field.type() != json::value_t::array)
+    {
+      RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not an array");
+      active_ = false;
+      publishActive();
+      return active_;
+    }
+
+    bool elements_ok = false;
     switch (operand_)
     {
-      case Operand::BOOL:
-        if (field.type() != json::value_t::boolean)
-        {
-          RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not a boolean");
-          active_ = false;
-          publishActive();
-          return active_;
-        }
+      case Operand::BOOL_ARRAY:
+        elements_ok = std::all_of(field.begin(), field.end(), [](const json& el) { return el.is_boolean(); });
         break;
-      case Operand::INT:
-        if (!field.is_number_integer())
-        {
-          RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not an integer");
-          active_ = false;
-          publishActive();
-          return active_;
-        }
+      case Operand::INT_ARRAY:
+        elements_ok = std::all_of(field.begin(), field.end(), [](const json& el) { return el.is_number_integer(); });
         break;
-      case Operand::DOUBLE:
-        if (field.type() != json::value_t::number_float)
-        {
-          RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not a double");
-          active_ = false;
-          publishActive();
-          return active_;
-        }
+      case Operand::DOUBLE_ARRAY:
+        elements_ok = std::all_of(field.begin(), field.end(), [](const json& el) { return el.is_number_float(); });
         break;
-      case Operand::STRING:
-        if (field.type() != json::value_t::string)
-        {
-          RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not a string");
-          active_ = false;
-          publishActive();
-          return active_;
-        }
+      case Operand::STRING_ARRAY:
+        elements_ok = std::all_of(field.begin(), field.end(), [](const json& el) { return el.is_string(); });
         break;
       default:
         break;
     }
-
-    switch (op_)
+    if (!elements_ok)
     {
-      case Op::EQ:
-        switch (operand_)
+      RCLCPP_WARN_STREAM(logger_, "All values are not of the expected type in key " << key_);
+      active_ = false;
+      publishActive();
+      return active_;
+    }
+
+    switch (operand_)
+    {
+      case Operand::BOOL_ARRAY:
+      {
+        std::vector<bool> data = field.get<std::vector<bool>>();
+        if (order_matters_)
         {
-          case Operand::BOOL:
-            active_ = (field == value_bool_);
-            break;
-          case Operand::INT:
-            active_ = (field == value_int_);
-            break;
-          case Operand::DOUBLE:
-            active_ = (field == value_double_);
-            break;
-          case Operand::STRING:
-            active_ = (field == value_string_);
-            break;
-          default:
-            break;
+          active_ = (data == value_bool_array_);
+        }
+        else
+        {
+          // vector<bool> has no < to sort on; compare as ints, as ListBoolEqual did.
+          std::vector<int> data_int(data.begin(), data.end());
+          std::vector<int> value_int(value_bool_array_.begin(), value_bool_array_.end());
+          std::sort(data_int.begin(), data_int.end());
+          std::sort(value_int.begin(), value_int.end());
+          active_ = (data_int == value_int);
         }
         break;
-      case Op::NE:
-        switch (operand_)
+      }
+      case Operand::INT_ARRAY:
+      {
+        std::vector<int64_t> data = field.get<std::vector<int64_t>>();
+        if (!order_matters_)
         {
-          case Operand::BOOL:
-            active_ = (field != value_bool_);
-            break;
-          case Operand::INT:
-            active_ = (field != value_int_);
-            break;
-          case Operand::DOUBLE:
-            active_ = (field != value_double_);
-            break;
-          case Operand::STRING:
-            active_ = (field != value_string_);
-            break;
-          default:
-            break;
+          std::sort(data.begin(), data.end());
+          auto value_sorted = value_int_array_;
+          std::sort(value_sorted.begin(), value_sorted.end());
+          active_ = (data == value_sorted);
+        }
+        else
+        {
+          active_ = (data == value_int_array_);
         }
         break;
-      case Op::GT:
-        active_ = (operand_ == Operand::INT) ? (field > value_int_) : (field > value_double_);
+      }
+      case Operand::DOUBLE_ARRAY:
+      {
+        std::vector<double> data = field.get<std::vector<double>>();
+        if (!order_matters_)
+        {
+          std::sort(data.begin(), data.end());
+          auto value_sorted = value_double_array_;
+          std::sort(value_sorted.begin(), value_sorted.end());
+          active_ = (data == value_sorted);
+        }
+        else
+        {
+          active_ = (data == value_double_array_);
+        }
         break;
-      case Op::GE:
-        active_ = (operand_ == Operand::INT) ? (field >= value_int_) : (field >= value_double_);
+      }
+      case Operand::STRING_ARRAY:
+      {
+        std::vector<std::string> data = field.get<std::vector<std::string>>();
+        if (!order_matters_)
+        {
+          std::sort(data.begin(), data.end());
+          auto value_sorted = value_string_array_;
+          std::sort(value_sorted.begin(), value_sorted.end());
+          active_ = (data == value_sorted);
+        }
+        else
+        {
+          active_ = (data == value_string_array_);
+        }
         break;
-      case Op::LT:
-        active_ = (operand_ == Operand::INT) ? (field < value_int_) : (field < value_double_);
-        break;
-      case Op::LE:
-        active_ = (operand_ == Operand::INT) ? (field <= value_int_) : (field <= value_double_);
-        break;
+      }
       default:
         break;
+    }
+    if (op_ == Op::NE)
+    {
+      active_ = !active_;
     }
     publishActive();
     return active_;
   }
-  catch (json::parse_error& e)
+
+  json flat_json = data_json.flatten();
+  std::string key_w_prefix = std::string("/") + key_;
+
+  if (!flat_json.contains(key_w_prefix))
   {
-    RCLCPP_ERROR_STREAM(logger_, "Error parsing JSON (compare): " << msg.data);
+    RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not found in record: " << data_json.dump());
     active_ = false;
     publishActive();
     return active_;
   }
+
+  const json& field = flat_json[key_w_prefix];
+
+  // Type-strict by operand kind: an integer JSON literal is not a double operand and vice
+  // versa, matching the collapsed plugins. is_number_integer(), not a strict type()==
+  // number_integer check: nlohmann::json parses non-negative integer literals (the common
+  // case) as number_unsigned, and is_number_integer() is the one that correctly treats both
+  // as "an integer".
+  switch (operand_)
+  {
+    case Operand::BOOL:
+      if (field.type() != json::value_t::boolean)
+      {
+        RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not a boolean");
+        active_ = false;
+        publishActive();
+        return active_;
+      }
+      break;
+    case Operand::INT:
+      if (!field.is_number_integer())
+      {
+        RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not an integer");
+        active_ = false;
+        publishActive();
+        return active_;
+      }
+      break;
+    case Operand::DOUBLE:
+      if (field.type() != json::value_t::number_float)
+      {
+        RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not a double");
+        active_ = false;
+        publishActive();
+        return active_;
+      }
+      break;
+    case Operand::STRING:
+      if (field.type() != json::value_t::string)
+      {
+        RCLCPP_WARN_STREAM(logger_, "Key " << key_ << " not a string");
+        active_ = false;
+        publishActive();
+        return active_;
+      }
+      break;
+    default:
+      break;
+  }
+
+  switch (op_)
+  {
+    case Op::EQ:
+      switch (operand_)
+      {
+        case Operand::BOOL:
+          active_ = (field == value_bool_);
+          break;
+        case Operand::INT:
+          active_ = (field == value_int_);
+          break;
+        case Operand::DOUBLE:
+          active_ = (field == value_double_);
+          break;
+        case Operand::STRING:
+          active_ = (field == value_string_);
+          break;
+        default:
+          break;
+      }
+      break;
+    case Op::NE:
+      switch (operand_)
+      {
+        case Operand::BOOL:
+          active_ = (field != value_bool_);
+          break;
+        case Operand::INT:
+          active_ = (field != value_int_);
+          break;
+        case Operand::DOUBLE:
+          active_ = (field != value_double_);
+          break;
+        case Operand::STRING:
+          active_ = (field != value_string_);
+          break;
+        default:
+          break;
+      }
+      break;
+    case Op::GT:
+      active_ = (operand_ == Operand::INT) ? (field > value_int_) : (field > value_double_);
+      break;
+    case Op::GE:
+      active_ = (operand_ == Operand::INT) ? (field >= value_int_) : (field >= value_double_);
+      break;
+    case Op::LT:
+      active_ = (operand_ == Operand::INT) ? (field < value_int_) : (field < value_double_);
+      break;
+    case Op::LE:
+      active_ = (operand_ == Operand::INT) ? (field <= value_int_) : (field <= value_double_);
+      break;
+    default:
+      break;
+  }
+  publishActive();
+  return active_;
 }
 
 Compare::~Compare() = default;

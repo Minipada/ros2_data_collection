@@ -223,31 +223,22 @@ json Battery::sampleRecord(const sensor_msgs::msg::BatteryState& msg) const
   return data;
 }
 
-dc_interfaces::msg::StringStamped Battery::collect()
+json Battery::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.group_key = group_key_;
-
   // A session boundary takes the poll it lands on: it is a fact about a moment, so it keeps the
   // timestamp of that moment rather than this poll's.
   if (const auto event = pending_events_.pop())
   {
-    msg.header.stamp = event->second;
-    msg.data = event->first.dump(-1, ' ', true);
-    return msg;
+    return event->first;
   }
 
   // Nothing on the topic yet: report nothing rather than a Record full of absent fields.
   const auto sample = sample_.latest();
   if (!sample)
   {
-    return msg;
+    return json{};
   }
-
-  msg.header.stamp = node->get_clock()->now();
-  msg.data = sample->dump(-1, ' ', true);
-  return msg;
+  return *sample;
 }
 
 }  // namespace dc_measurements

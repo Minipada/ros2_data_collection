@@ -23,9 +23,10 @@ void SameAsPrevious::onConfigure()
   }
 }
 
-bool SameAsPrevious::getState(dc_interfaces::msg::StringStamped msg)
+bool SameAsPrevious::getState(const json& record)
 {
-  json data_json = json::parse(msg.data);
+  // A copy: the caller keeps polling other Conditions with this same Record (#500).
+  json data_json = record;
   if (data_json.empty())
   {
     return false;

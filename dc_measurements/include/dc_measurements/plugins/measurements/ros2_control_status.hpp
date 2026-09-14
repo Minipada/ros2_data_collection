@@ -37,7 +37,7 @@ class Ros2ControlStatus : public dc_measurements::Measurement
 public:
   Ros2ControlStatus();
   ~Ros2ControlStatus() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   void activityCb(const controller_manager_msgs::msg::ControllerManagerActivity& msg);

@@ -46,10 +46,11 @@ enum class LogLevel
 
 /// One Record on its way out of the pipeline: the finished payload, the Group merge key, the
 /// collection timestamp in nanoseconds since the epoch, and the Incident it belongs to (empty
-/// outside one).
+/// outside one). The payload stays json all the way to the publisher edge (#500) -- the driver
+/// owns the pipeline's one and only serialization.
 struct RecordOut
 {
-  std::string data;
+  json data;
   std::string group_key;
   std::string incident_id;
   std::int64_t stamp_ns{ 0 };
@@ -86,6 +87,11 @@ class MeasurementCore
 public:
   using TimePoint = std::chrono::system_clock::time_point;
   using ConditionStateLookup = dc_core::ConditionStateLookup;
+
+  /// Resolves one Condition's state against the Record being published: the driver maps the name
+  /// to its Condition plugin and hands it `record` -- the enriched json, the same Record that
+  /// goes out (#500). Time enters through the entry points, Conditions through this.
+  using ConditionResolver = std::function<bool(const json& record, const std::string& condition_name)>;
 
   /// Emits one Record, live or released from the incident buffer.
   using PublishFn = std::function<void(const RecordOut&)>;
@@ -145,21 +151,23 @@ public:
   /**
    * @brief The live publish path: enrich, gate, count, emit.
    *
-   * Empty and "null" payloads are dropped with a throttled warning -- a Measurement that found
-   * nothing to report (Camera on a frame with no barcode) is not a fault. `gate_state` is
-   * consulted only until the gate latches open; `conditions` only while the set is non-empty, so
-   * Conditions with side effects are polled exactly when the old chain polled them.
+   * A null payload is dropped with a throttled warning -- a Measurement that found nothing to
+   * report (Camera on a frame with no barcode) is not a fault. The gate Condition is consulted
+   * through `resolve_gate`, only until the gate latches open; the if_all/if_any/if_none
+   * Conditions through `resolve_condition`, only while the set is non-empty, so Conditions with
+   * side effects are polled exactly when the old chain polled them -- and always about the
+   * enriched Record (#500).
    */
-  void publish(const std::string& data, const std::string& group_key, std::int64_t stamp_ns,
-               const ConditionStateLookup& gate_state, const ConditionStateLookup& conditions, const TimePoint& now);
+  void publish(const json& data, const std::string& group_key, std::int64_t stamp_ns,
+               const ConditionResolver& resolve_gate, const ConditionResolver& resolve_condition, const TimePoint& now);
 
   /**
    * @brief Hand one collected sample to the incident state machine instead of publish().
    *
    * The sample is enriched like a live Record, its Files staged (#290), then buffered or (during
-   * post-roll) released live. Empty and "null" payloads still tick the phase deadlines along.
+   * post-roll) released live. A null payload still ticks the phase deadlines along.
    */
-  void offerSample(const std::string& data, const TimePoint& now);
+  void offerSample(const json& data, const TimePoint& now);
 
   /// A Trigger fired somewhere in the system: releases the buffered window under `incident_id`
   /// when armed, ignored otherwise (#288).
@@ -213,9 +221,9 @@ public:
   void teardown();
 
 private:
-  // The enrichment step of the pipeline (#482): one parse, one dump, shared by publish() and
-  // offerSample() so a released Record looks identical to a live one, modulo the incident_id.
-  void enrich(std::string& data);
+  // The enrichment step of the pipeline (#482): shared by publish() and offerSample() so a
+  // released Record looks identical to a live one, modulo the incident_id.
+  json enrich(const json& data);
 
   // The validation step: a Record the schema rejects is logged and handed to the plugin hook,
   // but still published, exactly as this chain always did.
@@ -234,7 +242,7 @@ private:
   // A buffered Record's Files, staged (#290): each File the Record references is moved into the
   // scratch ring, the Record rewritten to point at the staged copy, and the ring aged like the
   // Record ring buffer it shadows. Caller holds releaser_mutex_.
-  void stageSampleFiles(std::string& data, const TimePoint& now);
+  void stageSampleFiles(json& data, const TimePoint& now);
   bool stageRecordFiles(json& value, const TimePoint& stamp);
   bool stageOneFile(std::string& path, const TimePoint& stamp);
 
@@ -250,7 +258,7 @@ private:
   // with when it was collected, not when it was released) or collected live during post-roll.
   // Goes straight out through publish_, bypassing publish()'s gate/counter logic: a Record
   // captured for an incident was already unconditionally collected and isn't re-filtered.
-  void publishIncidentRecord(const std::string& record_json, const TimePoint& stamp, const std::string& incident_id);
+  void publishIncidentRecord(const json& record, const TimePoint& stamp, const std::string& incident_id);
 
   // Logs `message` through log_ unless `last` is less than one throttle period old, then stamps
   // it. Stands in for the RCLCPP_*_THROTTLE calls this module cannot use.
@@ -265,7 +273,7 @@ private:
   // The publish decision (gate latch, init quota, condition cap) and the Record shaping, both
   // ROS-free and directly tested (#482).
   PublishGate publish_gate_;
-  RecordEnricher record_enricher_{ RecordEnricher::Config{}, {}, {} };
+  RecordEnricher record_enricher_{ RecordEnricher::Config{}, {} };
 
   // Validation
   bool enable_validator_{ true };

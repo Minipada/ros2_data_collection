@@ -44,7 +44,7 @@ class SlamToolboxQuality : public dc_measurements::Measurement
 public:
   SlamToolboxQuality();
   ~SlamToolboxQuality() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   void poseCb(const geometry_msgs::msg::PoseWithCovarianceStamped& msg);

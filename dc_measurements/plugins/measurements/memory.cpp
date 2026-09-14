@@ -12,17 +12,11 @@ Memory::Memory() : dc_measurements::Measurement()
 
 Memory::~Memory() = default;
 
-dc_interfaces::msg::StringStamped Memory::collect()
+json Memory::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
   json data_json;
   data_json["used"] = System().memoryUtilization() * 100;
-  msg.data = data_json.dump(-1, ' ', true);
-
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

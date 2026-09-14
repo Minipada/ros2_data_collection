@@ -27,12 +27,8 @@ void DistanceTraveled::onConfigure()
   node->get_parameter(measurement_name_ + ".transform_timeout", transform_timeout_);
 }
 
-dc_interfaces::msg::StringStamped DistanceTraveled::collect()
+json DistanceTraveled::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
   json data_json;
   geometry_msgs::msg::PoseStamped pose;
   std::string tf_error;
@@ -58,9 +54,7 @@ dc_interfaces::msg::StringStamped DistanceTraveled::collect()
     this->last_x_ = pose.pose.position.x;
     this->last_y_ = pose.pose.position.y;
   }
-  msg.data = data_json.dump(-1, ' ', true);
-
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

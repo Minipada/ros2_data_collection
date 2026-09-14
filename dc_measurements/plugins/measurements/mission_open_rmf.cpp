@@ -209,19 +209,14 @@ void MissionOpenRmf::handleMessage(const nlohmann::json& message)
   }
 }
 
-dc_interfaces::msg::StringStamped MissionOpenRmf::collect()
+json MissionOpenRmf::collect()
 {
-  dc_interfaces::msg::StringStamped msg;
-  msg.group_key = group_key_;
-
   const auto record = pending_records_.pop();
   if (!record)
   {
-    return msg;
+    return json{};
   }
-  msg.header.stamp = record->second;
-  msg.data = record->first.dump(-1, ' ', true);
-  return msg;
+  return record->first;
 }
 
 }  // namespace dc_measurements

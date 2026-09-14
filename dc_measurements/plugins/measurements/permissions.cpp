@@ -76,12 +76,8 @@ std::string Permissions::formatPermissions(const mode_t& perm, const std::string
   return modeval;
 }
 
-dc_interfaces::msg::StringStamped Permissions::collect()
+json Permissions::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
   json data_json;
   auto info = getOwner(full_path_);
   struct passwd* pw = getpwuid(info.st_uid);
@@ -102,9 +98,7 @@ dc_interfaces::msg::StringStamped Permissions::collect()
   data_json["gid"] = info.st_gid;
   data_json["exists"] = std::filesystem::exists(std::filesystem::path(full_path_));
   data_json["permissions"] = formatPermissions(info.st_mode, permission_format_);
-  msg.data = data_json.dump(-1, ' ', true);
-
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

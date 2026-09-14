@@ -21,7 +21,7 @@ class CmdVel : public dc_measurements::Measurement
 public:
   CmdVel();
   ~CmdVel() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   void cmdVelCb(const geometry_msgs::msg::Twist& msg);

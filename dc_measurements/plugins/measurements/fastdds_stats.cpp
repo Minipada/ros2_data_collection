@@ -81,13 +81,8 @@ void FastddsStats::onCleanup()
   }
 }
 
-dc_interfaces::msg::StringStamped FastddsStats::collect()
+json FastddsStats::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.group_key = group_key_;
-  msg.header.stamp = node->get_clock()->now();
-
   const auto poll_end = std::chrono::system_clock::now();
   const auto poll_start = last_poll_;
   last_poll_ = poll_end;
@@ -179,8 +174,7 @@ dc_interfaces::msg::StringStamped FastddsStats::collect()
   // Record's top-level JSON keys straight onto columns of the same name.
   data["process_names"] = namesOf(EntityKind::PROCESS, monitor_id_);
 
-  msg.data = data.dump(-1, ' ', true);
-  return msg;
+  return data;
 }
 
 }  // namespace dc_measurements

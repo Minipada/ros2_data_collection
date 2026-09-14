@@ -24,33 +24,27 @@ RecordEnricher::Config config()
   return config;
 }
 
-RecordEnricher makeEnricher(RecordEnricher::Config config = {}, std::vector<std::string>* parse_errors = nullptr,
-                            std::vector<json>* validated = nullptr)
+RecordEnricher makeEnricher(RecordEnricher::Config config = {}, std::vector<json>* validated = nullptr)
 {
   RecordEnricher::ValidateFn validate;
   if (validated != nullptr)
   {
     validate = [validated](const json& record) { validated->push_back(record); };
   }
-  return RecordEnricher(config, validate, [parse_errors](const std::string& data) {
-    if (parse_errors != nullptr)
-    {
-      parse_errors->push_back(data);
-    }
-  });
+  return RecordEnricher(config, validate);
 }
 
-json parse(const std::string& data)
+json record(const char* literal)
 {
-  return json::parse(data);
+  return json::parse(literal);
 }
 
 }  // namespace
 
 TEST(RecordEnricherTest, WithNoShapingConfiguredOnlyTheMarkersAreAdded)
 {
-  const json record = parse(makeEnricher(config()).enrich("{\"zone\":\"cpu\",\"temp\":45.1}"));
-  EXPECT_EQ(record, (json{ { "zone", "cpu" }, { "temp", 45.1 }, { "flattened", false }, { "nested", false } }));
+  EXPECT_EQ(makeEnricher(config()).enrich(record(R"({"zone":"cpu","temp":45.1})")),
+            (json{ { "zone", "cpu" }, { "temp", 45.1 }, { "flattened", false }, { "nested", false } }));
 }
 
 TEST(RecordEnricherTest, NestingPutsTheRecordUnderTheMeasurementName)
@@ -58,7 +52,7 @@ TEST(RecordEnricherTest, NestingPutsTheRecordUnderTheMeasurementName)
   auto cfg = config();
   cfg.nested = true;
   // flattenSample() marks every Record with both flags, whatever the settings.
-  EXPECT_EQ(parse(makeEnricher(cfg).enrich("{\"a\":1}")),
+  EXPECT_EQ(makeEnricher(cfg).enrich(record(R"({"a":1})")),
             (json{ { "camera", { { "a", 1 } } }, { "flattened", false }, { "nested", true } }));
 }
 
@@ -66,7 +60,7 @@ TEST(RecordEnricherTest, FlatteningRewritesKeysAsPointersAndMarksBothFlags)
 {
   auto cfg = config();
   cfg.flatten = true;
-  EXPECT_EQ(parse(makeEnricher(cfg).enrich("{\"a\":1,\"b\":{\"c\":2}}")),
+  EXPECT_EQ(makeEnricher(cfg).enrich(record(R"({"a":1,"b":{"c":2}})")),
             (json{ { "/a", 1 }, { "/b/c", 2 }, { "flattened", true }, { "nested", false } }));
 }
 
@@ -76,7 +70,7 @@ TEST(RecordEnricherTest, NestedAndFlattenedPointersCarryTheMeasurementName)
   auto cfg = config();
   cfg.nested = true;
   cfg.flatten = true;
-  EXPECT_EQ(parse(makeEnricher(cfg).enrich("{\"a\":1}")),
+  EXPECT_EQ(makeEnricher(cfg).enrich(record(R"({"a":1})")),
             (json{ { "/camera/a", 1 }, { "flattened", true }, { "nested", true } }));
 }
 
@@ -89,7 +83,7 @@ TEST(RecordEnricherTest, RunIdTagsNameAndPluginLandOnTheTopLevel)
   cfg.tags = { "inspection", "line-3" };
   cfg.include_measurement_name = true;
   cfg.include_measurement_plugin = true;
-  EXPECT_EQ(parse(makeEnricher(cfg).enrich("{\"a\":1}")),
+  EXPECT_EQ(makeEnricher(cfg).enrich(record(R"({"a":1})")),
             (json{ { "camera", { { "a", 1 } } },
                    { "flattened", false },
                    { "name", "camera" },
@@ -103,20 +97,20 @@ TEST(RecordEnricherTest, NoRunIdNoTagsWhenDisabledOrEmpty)
 {
   auto cfg = config();
   cfg.include_measurement_name = true;
-  const json record = parse(makeEnricher(cfg).enrich("{\"a\":1}"));
-  EXPECT_EQ(record.find("run_id"), record.end());
-  EXPECT_EQ(record.find("tags"), record.end());
-  EXPECT_EQ(record.find("plugin"), record.end());
-  EXPECT_EQ(record["name"], "camera");
+  const json shaped = makeEnricher(cfg).enrich(record(R"({"a":1})"));
+  EXPECT_EQ(shaped.find("run_id"), shaped.end());
+  EXPECT_EQ(shaped.find("tags"), shaped.end());
+  EXPECT_EQ(shaped.find("plugin"), shaped.end());
+  EXPECT_EQ(shaped["name"], "camera");
 }
 
 TEST(RecordEnricherTest, CustomKeysFillMissingKeysAndDeclareThemselves)
 {
   auto cfg = config();
   cfg.custom_keys = { json{ { "key", "site" }, { "value", "north" }, { "override", false } } };
-  const json record = parse(makeEnricher(cfg).enrich("{\"a\":1}"));
-  EXPECT_EQ(record["site"], "north");
-  EXPECT_EQ(record["custom_keys"], json::array({ "site" }));
+  const json shaped = makeEnricher(cfg).enrich(record(R"({"a":1})"));
+  EXPECT_EQ(shaped["site"], "north");
+  EXPECT_EQ(shaped["custom_keys"], json::array({ "site" }));
 }
 
 TEST(RecordEnricherTest, ExistingKeyKeepsItsValueUnlessItsEntrySaysOverride)
@@ -124,10 +118,10 @@ TEST(RecordEnricherTest, ExistingKeyKeepsItsValueUnlessItsEntrySaysOverride)
   auto cfg = config();
   cfg.custom_keys = { json{ { "key", "a" }, { "value", "forced" }, { "override", false } },
                       json{ { "key", "b" }, { "value", "replaced" }, { "override", true } } };
-  const json record = parse(makeEnricher(cfg).enrich("{\"a\":\"original\",\"b\":\"original\"}"));
-  EXPECT_EQ(record["a"], "original");
-  EXPECT_EQ(record["b"], "replaced");
-  EXPECT_EQ(record["custom_keys"], json::array({ "a", "b" }));
+  const json shaped = makeEnricher(cfg).enrich(record(R"({"a":"original","b":"original"})"));
+  EXPECT_EQ(shaped["a"], "original");
+  EXPECT_EQ(shaped["b"], "replaced");
+  EXPECT_EQ(shaped["custom_keys"], json::array({ "a", "b" }));
 }
 
 TEST(RecordEnricherTest, CustomKeysRunLastOnTheShapedRecord)
@@ -137,25 +131,25 @@ TEST(RecordEnricherTest, CustomKeysRunLastOnTheShapedRecord)
   cfg.custom_keys = { json{ { "key", "site" }, { "value", "north" }, { "override", false } } };
   // The step runs after flattening, so unlike the collected fields a custom key is a plain
   // top-level key, not a JSON pointer.
-  EXPECT_EQ(parse(makeEnricher(cfg).enrich("{\"a\":1}")), (json{ { "/a", 1 },
-                                                                 { "site", "north" },
-                                                                 { "custom_keys", json::array({ "site" }) },
-                                                                 { "flattened", true },
-                                                                 { "nested", false } }));
+  EXPECT_EQ(makeEnricher(cfg).enrich(record(R"({"a":1})")), (json{ { "/a", 1 },
+                                                                   { "site", "north" },
+                                                                   { "custom_keys", json::array({ "site" }) },
+                                                                   { "flattened", true },
+                                                                   { "nested", false } }));
 }
 
-TEST(RecordEnricherTest, ValidationSeesTheParsedRecordBeforeAnyShaping)
+TEST(RecordEnricherTest, ValidationSeesTheCollectedRecordBeforeAnyShaping)
 {
   auto cfg = config();
   cfg.nested = true;
   cfg.include_measurement_name = true;
   cfg.enable_validator = true;
   std::vector<json> validated;
-  const json record = parse(makeEnricher(cfg, nullptr, &validated).enrich("{\"a\":1}"));
+  const json shaped = makeEnricher(cfg, &validated).enrich(record(R"({"a":1})"));
   ASSERT_EQ(validated.size(), 1u);
   // Exactly what was collected: no "name", no markers -- the shaping has not happened yet.
   EXPECT_EQ(validated.front(), (json{ { "a", 1 } }));
-  EXPECT_EQ(record["name"], "camera");
+  EXPECT_EQ(shaped["name"], "camera");
 }
 
 TEST(RecordEnricherTest, ARecordTheValidatorRejectedIsStillShapedAndPublished)
@@ -167,41 +161,10 @@ TEST(RecordEnricherTest, ARecordTheValidatorRejectedIsStillShapedAndPublished)
   // validateJSON() logs and calls the plugin hook without stopping publication.
   bool rejected = false;
   RecordEnricher::ValidateFn report_rejection = [&rejected](const json&) { rejected = true; };
-  std::vector<std::string> parse_errors;
-  RecordEnricher enricher(cfg, report_rejection,
-                          [&parse_errors](const std::string& data) { parse_errors.push_back(data); });
-  const json record = parse(enricher.enrich("{\"a\":1}"));
+  RecordEnricher enricher(cfg, report_rejection);
+  const json shaped = enricher.enrich(record(R"({"a":1})"));
   EXPECT_TRUE(rejected);
-  EXPECT_EQ(record["name"], "camera");
-  EXPECT_TRUE(parse_errors.empty());
-}
-
-TEST(RecordEnricherTest, DataThatIsNotJsonComesBackUnchangedWithOneParseError)
-{
-  std::vector<std::string> parse_errors;
-  const std::string data = "not json at all";
-  EXPECT_EQ(makeEnricher(config(), &parse_errors).enrich(data), data);
-  ASSERT_EQ(parse_errors.size(), 1u);
-  EXPECT_EQ(parse_errors.front(), data);
-}
-
-TEST(RecordEnricherTest, UnparsableDataWithCustomKeysIsRebuiltAsTheOldChainRebuiltIt)
-{
-  auto cfg = config();
-  cfg.custom_keys = { json{ { "key", "site" }, { "value", "north" }, { "override", false } } };
-  std::vector<std::string> parse_errors;
-  // The per-step chain left the data alone and let the last step (custom keys) rebuild it from
-  // an empty object: the keys themselves plus their declaration, nothing else. The one-parse
-  // pipeline keeps that output byte-for-byte.
-  EXPECT_EQ(parse(makeEnricher(cfg, &parse_errors).enrich("not json")),
-            (json{ { "site", "north" }, { "custom_keys", json::array({ "site" }) } }));
-  EXPECT_EQ(parse_errors.size(), 1u);
-}
-
-TEST(RecordEnricherTest, DumpsCompactAndEnsureAsciiLikeTheStackAlwaysHas)
-{
-  const std::string out = makeEnricher(config()).enrich("{\"city\":\"é\"}");
-  EXPECT_EQ(out, "{\"city\":\"\\u00e9\",\"flattened\":false,\"nested\":false}");
+  EXPECT_EQ(shaped["name"], "camera");
 }
 
 DC_MEASUREMENT_TEST_MAIN()

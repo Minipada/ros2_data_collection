@@ -20,13 +20,13 @@ class SerialInterface : public dc_measurements::Measurement
 public:
   SerialInterface();
   ~SerialInterface() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   bool openPort();
   void closePort();
   int baudToSpeed(int baud_rate);
-  dc_interfaces::msg::StringStamped parseLine(const std::string& line);
+  json parseLine(const std::string& line);
 
   int fd_{ -1 };
   std::string port_;

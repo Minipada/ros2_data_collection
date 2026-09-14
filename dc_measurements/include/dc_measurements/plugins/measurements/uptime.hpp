@@ -17,7 +17,7 @@ class Uptime : public dc_measurements::Measurement
 public:
   Uptime();
   ~Uptime() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 protected:
   /**

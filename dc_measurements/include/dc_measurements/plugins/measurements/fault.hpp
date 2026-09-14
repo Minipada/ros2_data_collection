@@ -35,7 +35,7 @@ class Fault : public dc_measurements::Measurement
 public:
   Fault();
   ~Fault() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   void diagnosticsCb(const diagnostic_msgs::msg::DiagnosticArray& msg);

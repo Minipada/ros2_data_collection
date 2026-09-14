@@ -17,7 +17,7 @@ class OS : public dc_measurements::Measurement
 public:
   OS();
   ~OS() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 protected:
   /**

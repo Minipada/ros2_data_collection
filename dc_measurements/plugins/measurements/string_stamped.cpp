@@ -33,10 +33,21 @@ void StringStamped::dataCb(const dc_interfaces::msg::StringStamped& msg)
   }
 }
 
-dc_interfaces::msg::StringStamped StringStamped::collect()
+json StringStamped::collect()
 {
   const auto cached = latest_record_.pop();
-  return cached ? *cached : dc_interfaces::msg::StringStamped{};
+  if (!cached)
+  {
+    return json{};
+  }
+  // The Record arrives serialized on the topic; the pipeline takes it as json from here on.
+  const json data = json::parse(cached->data, nullptr, false);
+  if (data.is_discarded())
+  {
+    RCLCPP_ERROR_STREAM(logger_, "Dropped a passthrough Record that is not JSON: " << cached->data);
+    return json{};
+  }
+  return data;
 }
 
 }  // namespace dc_measurements

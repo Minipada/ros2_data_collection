@@ -19,7 +19,7 @@ class Thermal : public dc_measurements::Measurement
 public:
   Thermal();
   ~Thermal() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   std::vector<std::string> discoverZones();

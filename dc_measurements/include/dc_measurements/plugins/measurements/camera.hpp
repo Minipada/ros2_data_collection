@@ -34,7 +34,7 @@ class Camera : public dc_measurements::Measurement
 public:
   Camera();
   ~Camera() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr subscription_;

@@ -15,19 +15,15 @@ namespace dc_measurements
 
 /**
  * @class dc_measurements::RecordEnricher
- * @brief The shaping Measurement applies to every Record before it goes out: one JSON parse in,
- * one finished Record out, with no ROS dependency (#482).
+ * @brief The shaping Measurement applies to every Record before it goes out: one collected json
+ * in, one finished Record json out, with no ROS dependency (#482, #500).
  *
  * The steps, in publish()'s order: schema validation, nesting under the measurement name,
- * flattening, run_id, tags, measurement name, measurement plugin, custom keys. The chain this
- * replaces re-parsed and re-serialised the whole Record once per step -- 7+ parse/dump
- * round-trips on every Record the stack publishes; this does one of each, so the finished Record
- * is byte-for-byte what the chain produced, down to the dump flags (compact, ensure_ascii) and
- * the always-present "flattened"/"nested" markers.
+ * flattening, run_id, tags, measurement name, measurement plugin, custom keys. The Record stays
+ * json end to end -- the only serialization left in the pipeline is the publisher edge's.
  *
- * The module has no logger: validation and parse failures are reported through the injected
- * callbacks. `validate` sees the parsed Record before any shaping and handles a rejected Record
- * itself (log, plugin hook) without stopping publication, exactly as validateJSON() did.
+ * The module has no logger: a rejected Record is reported through the injected callback, which
+ * handles it (log, plugin hook) without stopping publication, exactly as validateJSON() did.
  */
 class RecordEnricher
 {
@@ -44,39 +40,20 @@ public:
     bool include_measurement_plugin{ false };  ///< Add "plugin"
     std::vector<std::string> tags;             ///< Added as "tags" when not empty
     std::vector<nlohmann::json> custom_keys;   ///< {key, value, override} entries, added as plain keys
-    bool enable_validator{ false };            ///< Hand the parsed Record to `validate` before shaping
+    bool enable_validator{ false };            ///< Hand the collected Record to `validate` before shaping
   };
 
   /// Reports a Record the schema rejected; owns its logging and hook, and does not stop publication.
   using ValidateFn = std::function<void(const nlohmann::json&)>;
-  /// Reports a Record that is not JSON at all; enrich() then leaves the data as it came in,
-  /// modulo the custom-keys rebuild below.
-  using ParseErrorFn = std::function<void(const std::string&)>;
 
-  RecordEnricher(const Config& config, ValidateFn validate, ParseErrorFn on_parse_error)
-    : config_(config), validate_(std::move(validate)), on_parse_error_(std::move(on_parse_error))
+  RecordEnricher(const Config& config, ValidateFn validate) : config_(config), validate_(std::move(validate))
   {
   }
 
-  /// Parses `data`, applies every configured step and returns the finished Record. Data that does
-  /// not parse comes back unchanged (with one parse-error report) -- the single-parse form of what
-  /// the per-step chain did, see unparsableFallback().
-  std::string enrich(const std::string& data)
+  /// Applies every configured step to `record` and returns the finished Record, enriched and
+  /// unserialized -- Conditions are polled with this same json (#500).
+  nlohmann::json enrich(nlohmann::json record)
   {
-    nlohmann::json record;
-    try
-    {
-      record = nlohmann::json::parse(data);
-    }
-    catch (const nlohmann::json::parse_error& e)
-    {
-      if (on_parse_error_)
-      {
-        on_parse_error_(data);
-      }
-      return unparsableFallback(data);
-    }
-
     if (config_.enable_validator && validate_)
     {
       validate_(record);
@@ -121,7 +98,7 @@ public:
       addCustomKeys(record);
     }
 
-    return record.dump(-1, ' ', true);
+    return record;
   }
 
 private:
@@ -145,24 +122,8 @@ private:
     record["custom_keys"] = std::move(declared);
   }
 
-  // What the per-step chain produced from data it could not parse: every step logged and left the
-  // data alone, except a non-empty custom_keys config, whose step ran last and rebuilt the Record
-  // from an empty object -- replacing it with the custom keys alone. Reproduced as-is, so the one
-  // parse changes no output.
-  std::string unparsableFallback(const std::string& data) const
-  {
-    if (config_.custom_keys.empty())
-    {
-      return data;
-    }
-    nlohmann::json record;
-    addCustomKeys(record);
-    return record.dump(-1, ' ', true);
-  }
-
   Config config_;
   ValidateFn validate_;
-  ParseErrorFn on_parse_error_;
 };
 
 }  // namespace dc_measurements

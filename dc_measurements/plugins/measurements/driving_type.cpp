@@ -17,17 +17,11 @@ void DrivingType::onConfigure()
   mode_source_.configure(getNode(), measurement_name_, logger_);
 }
 
-dc_interfaces::msg::StringStamped DrivingType::collect()
+json DrivingType::collect()
 {
   json data_json;
   data_json["mode"] = mode_source_.mode();
-
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
-  msg.data = data_json.dump(-1, ' ', true);
-  return msg;
+  return data_json;
 }
 
 }  // namespace dc_measurements

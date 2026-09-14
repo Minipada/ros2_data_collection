@@ -20,7 +20,7 @@ class Storage : public dc_measurements::Measurement
 public:
   Storage();
   ~Storage() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   std::string path_;

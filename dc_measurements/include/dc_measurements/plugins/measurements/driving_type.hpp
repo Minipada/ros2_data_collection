@@ -18,7 +18,7 @@ class DrivingType : public dc_measurements::Measurement
 public:
   DrivingType();
   ~DrivingType() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 private:
   DrivingModeSource mode_source_;

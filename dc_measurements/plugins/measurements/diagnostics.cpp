@@ -98,19 +98,14 @@ void Diagnostics::diagnosticsCb(const diagnostic_msgs::msg::DiagnosticArray& msg
   latest_statuses_.push({ std::move(data_json), getNode()->get_clock()->now() });
 }
 
-dc_interfaces::msg::StringStamped Diagnostics::collect()
+json Diagnostics::collect()
 {
-  dc_interfaces::msg::StringStamped msg;
-
   const auto statuses = latest_statuses_.pop();
   if (!statuses)
   {
-    return msg;
+    return json{};
   }
-  msg.group_key = group_key_;
-  msg.header.stamp = statuses->second;
-  msg.data = statuses->first.dump(-1, ' ', true);
-  return msg;
+  return statuses->first;
 }
 
 }  // namespace dc_measurements

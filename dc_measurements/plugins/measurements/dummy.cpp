@@ -18,24 +18,18 @@ void Dummy::onConfigure()
   record_ = dc_util::get_str_type_param(node, measurement_name_, "record", "{\"message\":\"Hello from ROS 2 DC\"}");
 }
 
-dc_interfaces::msg::StringStamped Dummy::collect()
+json Dummy::collect()
 {
-  auto node = getNode();
-  dc_interfaces::msg::StringStamped msg;
-  msg.header.stamp = node->get_clock()->now();
-  msg.group_key = group_key_;
-
   try
   {
-    json data_json = json::parse(record_);
-    msg.data = data_json.dump(-1, ' ', true);
+    return json::parse(record_);
   }
   catch (json::parse_error& ex)
   {
     RCLCPP_ERROR_STREAM(logger_, "Could not parse record as JSON: " << record_);
   }
-
-  return msg;
+  // Unparsable: report nothing, exactly as the old empty Record did.
+  return json{};
 }
 
 }  // namespace dc_measurements

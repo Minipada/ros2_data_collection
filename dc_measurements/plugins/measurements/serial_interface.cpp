@@ -159,7 +159,7 @@ void SerialInterface::closePort()
   }
 }
 
-dc_interfaces::msg::StringStamped SerialInterface::parseLine(const std::string& line)
+json SerialInterface::parseLine(const std::string& line)
 {
   json fields_json = json::object();
 
@@ -222,21 +222,15 @@ dc_interfaces::msg::StringStamped SerialInterface::parseLine(const std::string& 
   json data_json;
   data_json["raw"] = line;
   data_json["fields"] = fields_json;
-
-  dc_interfaces::msg::StringStamped msg;
-  msg.group_key = group_key_;
-  msg.data = data_json.dump(-1, ' ', true);
-  auto node = getNode();
-  msg.header.stamp = node->get_clock()->now();
-  return msg;
+  return data_json;
 }
 
-dc_interfaces::msg::StringStamped SerialInterface::collect()
+json SerialInterface::collect()
 {
   if (fd_ < 0 && !openPort())
   {
     // Port not (yet) available: nothing to report this cycle, will retry next poll.
-    return dc_interfaces::msg::StringStamped();
+    return json{};
   }
 
   char chunk[256];
@@ -286,7 +280,7 @@ dc_interfaces::msg::StringStamped SerialInterface::collect()
   {
     RCLCPP_WARN_STREAM(logger_, "Serial port '" << port_ << "' disconnected; will attempt to reconnect");
     closePort();
-    return dc_interfaces::msg::StringStamped();
+    return json{};
   }
 
   // Line-delimited framing: keep only the most recently completed line this cycle (mirrors
@@ -308,7 +302,7 @@ dc_interfaces::msg::StringStamped SerialInterface::collect()
 
   if (!has_line)
   {
-    return dc_interfaces::msg::StringStamped();
+    return json{};
   }
 
   return parseLine(line);

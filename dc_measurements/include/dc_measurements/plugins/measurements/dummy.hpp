@@ -16,7 +16,7 @@ class Dummy : public dc_measurements::Measurement
 public:
   Dummy();
   ~Dummy() override;
-  dc_interfaces::msg::StringStamped collect() override;
+  json collect() override;
 
 protected:
   /**
