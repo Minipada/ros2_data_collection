@@ -165,7 +165,7 @@ void MeasurementServer::setRunId()
       if (!std::ifstream(run_id_counter_path_))
       {
         // Create parent directory
-        auto parent_dir = std::filesystem::path(run_id_counter_path_).parent_path().u8string();
+        auto parent_dir = std::filesystem::path(run_id_counter_path_).parent_path().string();
         std::filesystem::create_directories(parent_dir);
         // Create file
         std::ofstream file(run_id_counter_path_);

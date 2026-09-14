@@ -46,8 +46,8 @@ std::string Map::saveMap()
   auto node = getNode();
   auto now = node->get_clock()->now();
   std::string absolute_path = getAbsolutePath("save_path", now);
-  auto dir = std::filesystem::path(absolute_path).parent_path().u8string();
-  auto basename = std::filesystem::path(absolute_path).filename().u8string();
+  auto dir = std::filesystem::path(absolute_path).parent_path().string();
+  auto basename = std::filesystem::path(absolute_path).filename().string();
 
   std::filesystem::create_directories(dir);
   std::string command =

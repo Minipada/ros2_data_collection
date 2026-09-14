@@ -86,7 +86,7 @@ TEST_F(MeasurementDummyTest, RobotNameDefaultsToTheHostname)
 
 TEST_F(MeasurementDummyTest, RobotNameResolvesFromFile)
 {
-  auto robot_name_file = (std::filesystem::temp_directory_path() / "dc_measurement_dummy_robot_name_file").u8string();
+  auto robot_name_file = (std::filesystem::temp_directory_path() / "dc_measurement_dummy_robot_name_file").string();
   std::ofstream(robot_name_file) << "TB-42";
 
   declareCommonParameters();
