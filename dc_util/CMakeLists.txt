@@ -7,6 +7,7 @@ project(dc_util)
 set(dependencies
   dc_common
   lifecycle_msgs
+  nav2_ros_common
   nav2_util
   nlohmann_json
   rclcpp
@@ -20,6 +21,10 @@ foreach(Dependency IN ITEMS ${dependencies})
   find_package(${Dependency} REQUIRED)
 endforeach()
 
+# ament_target_dependencies was removed in lyrical (#531): dependencies link by exported
+# target instead. Message packages have no pkg::pkg umbrella target on lyrical -- their
+# C++ typesupport target carries the generated code; dc_common is header-only;
+# yaml_cpp_vendor exports no target (yaml-cpp headers come via ${YAML_CPP_INCLUDEDIR}).
 dc_package()
 
 set(library_name base64_library)
@@ -28,14 +33,23 @@ add_library(${library_name} SHARED
   src/base64.cpp
 )
 
-ament_target_dependencies(${library_name}
-  ${dependencies}
+target_include_directories(${library_name} PUBLIC ${dc_common_INCLUDE_DIRS})
+target_link_libraries(${library_name} PUBLIC
+  lifecycle_msgs::lifecycle_msgs__rosidl_typesupport_cpp
+  nav2_ros_common::nav2_ros_common
+  nav2_util::nav2_util_core
+  nlohmann_json::nlohmann_json
+  rclcpp::rclcpp
+  rclcpp_lifecycle::rclcpp_lifecycle
 )
 
-ament_export_targets(${library_name} HAS_LIBRARY_TARGET)
+# Namespaced export so consumers link dc_util::base64_library on every distro.
+set(export_name export_${library_name})
+
+ament_export_targets(${export_name} HAS_LIBRARY_TARGET NAMESPACE dc_util::)
 
 install(TARGETS ${library_name}
-  EXPORT ${library_name}
+  EXPORT ${export_name}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin

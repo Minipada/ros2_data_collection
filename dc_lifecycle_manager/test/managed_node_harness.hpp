@@ -21,8 +21,8 @@
 #include <vector>
 
 #include "dc_lifecycle_manager/lifecycle_manager.hpp"
-#include "nav2_util/lifecycle_node.hpp"
-#include "nav2_util/node_thread.hpp"
+#include "nav2_ros_common/lifecycle_node.hpp"
+#include "nav2_ros_common/node_thread.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 namespace dc_lifecycle_manager_test
@@ -90,11 +90,11 @@ private:
  * destroyed on deactivate). Spinning is under the test's control so a test can simulate
  * a node that stops answering heartbeats without killing the process it lives in.
  */
-class DummyManagedNode : public nav2_util::LifecycleNode
+class DummyManagedNode : public nav2::LifecycleNode
 {
 public:
   DummyManagedNode(const std::string& name, std::shared_ptr<TransitionRecorder> recorder, bool use_bond)
-    : nav2_util::LifecycleNode(name), recorder_(std::move(recorder)), use_bond_(use_bond)
+    : nav2::LifecycleNode(name), recorder_(std::move(recorder)), use_bond_(use_bond)
   {
   }
 
@@ -108,7 +108,7 @@ public:
   {
     if (!spin_thread_)
     {
-      spin_thread_ = std::make_unique<nav2_util::NodeThread>(get_node_base_interface());
+      spin_thread_ = std::make_unique<nav2::NodeThread>(get_node_base_interface());
     }
   }
 
@@ -118,48 +118,48 @@ public:
     spin_thread_.reset();
   }
 
-  nav2_util::CallbackReturn on_configure(const rclcpp_lifecycle::State& /*state*/) override
+  nav2::CallbackReturn on_configure(const rclcpp_lifecycle::State& /*state*/) override
   {
     recorder_->record(std::string(get_name()) + ":configure");
-    return nav2_util::CallbackReturn::SUCCESS;
+    return nav2::CallbackReturn::SUCCESS;
   }
 
-  nav2_util::CallbackReturn on_activate(const rclcpp_lifecycle::State& /*state*/) override
+  nav2::CallbackReturn on_activate(const rclcpp_lifecycle::State& /*state*/) override
   {
     if (use_bond_)
     {
       createBond();
     }
     recorder_->record(std::string(get_name()) + ":activate");
-    return nav2_util::CallbackReturn::SUCCESS;
+    return nav2::CallbackReturn::SUCCESS;
   }
 
-  nav2_util::CallbackReturn on_deactivate(const rclcpp_lifecycle::State& /*state*/) override
+  nav2::CallbackReturn on_deactivate(const rclcpp_lifecycle::State& /*state*/) override
   {
     if (use_bond_)
     {
       destroyBond();
     }
     recorder_->record(std::string(get_name()) + ":deactivate");
-    return nav2_util::CallbackReturn::SUCCESS;
+    return nav2::CallbackReturn::SUCCESS;
   }
 
-  nav2_util::CallbackReturn on_cleanup(const rclcpp_lifecycle::State& /*state*/) override
+  nav2::CallbackReturn on_cleanup(const rclcpp_lifecycle::State& /*state*/) override
   {
     recorder_->record(std::string(get_name()) + ":cleanup");
-    return nav2_util::CallbackReturn::SUCCESS;
+    return nav2::CallbackReturn::SUCCESS;
   }
 
-  nav2_util::CallbackReturn on_shutdown(const rclcpp_lifecycle::State& /*state*/) override
+  nav2::CallbackReturn on_shutdown(const rclcpp_lifecycle::State& /*state*/) override
   {
     recorder_->record(std::string(get_name()) + ":shutdown");
-    return nav2_util::CallbackReturn::SUCCESS;
+    return nav2::CallbackReturn::SUCCESS;
   }
 
 private:
   std::shared_ptr<TransitionRecorder> recorder_;
   bool use_bond_;
-  std::unique_ptr<nav2_util::NodeThread> spin_thread_;
+  std::unique_ptr<nav2::NodeThread> spin_thread_;
 };
 
 /**

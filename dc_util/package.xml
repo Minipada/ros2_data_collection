@@ -21,6 +21,7 @@ SPDX-License-Identifier: MPL-2.0
   <depend>dc_common</depend>
   <depend>launch</depend>
   <depend>launch_testing_ament_cmake</depend>
+  <depend>nav2_ros_common</depend>
   <depend>nav2_util</depend>
   <depend>nlohmann-json-dev</depend>
   <depend>rclcpp</depend>

@@ -1,6 +1,6 @@
 # Zero-loss E2E harness (#249)
 
-Proves the DC 2.0 (Jazzy) pipeline's reliability claims end-to-end: launch-to-first-
+Proves the DC 2.0 (Lyrical) pipeline's reliability claims end-to-end: launch-to-first-
 Record under 10 seconds, and zero Record/File loss across a destination outage plus a
 full stack restart. Runs with **Podman** (see `CLAUDE.md` "Containers: Podman, not
 Docker") — no Docker required.

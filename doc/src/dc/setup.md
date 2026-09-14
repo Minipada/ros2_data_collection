@@ -11,7 +11,7 @@ The default, recommended way to run DC — nothing to build, nothing but Podman 
 
 ### Quick run
 
-No build needed — the published `:jazzy` images run the all-in-one shape (every ROS
+No build needed — the published `:lyrical` images run the all-in-one shape (every ROS
 node, the Bridge and the Shipper in one `dc-ros` container) directly against a local
 Postgres, with RustFS available alongside it for a files/S3 Destination. Isolated
 network by default — `dc-ros` reaches the stores by container name, not the host's
@@ -67,7 +67,7 @@ can be run and checked before the next, in its own terminal:
    podman run --rm -it --network dc_robot_net --name dc_robot_aio \
      -v dc_robot_aio_buffer:/root/.dc/buffer \
      -v "$(pwd)/params/aio_params_local.yaml:/opt/dc/dc_params.yaml:ro" \
-     ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy \
+     ghcr.io/minipada/ros2_data_collection/dc-ros:lyrical \
      dc_params_file:=/opt/dc/dc_params.yaml
    ```
 
@@ -80,7 +80,7 @@ can be run and checked before the next, in its own terminal:
    Password `password`.
 
 See
-[`deploy/robot/README.md`](https://github.com/minipada/ros2_data_collection/blob/jazzy/deploy/robot/README.md)
+[`deploy/robot/README.md`](https://github.com/minipada/ros2_data_collection/blob/lyrical/deploy/robot/README.md)
 for the three-container split topology, the host-network variant, and trying it against
 a real store before fleet rollout.
 
@@ -94,7 +94,7 @@ IMAGE_TAG=dc-workspace:local ./tools/e2e/scripts/build.sh
 
 `tools/e2e/scripts/test.sh` runs `colcon test` against that image, and
 `tools/e2e/scripts/run.sh` drives the zero-loss end-to-end harness. See
-[`tools/e2e/README.md`](https://github.com/minipada/ros2_data_collection/blob/jazzy/tools/e2e/README.md).
+[`tools/e2e/README.md`](https://github.com/minipada/ros2_data_collection/blob/lyrical/tools/e2e/README.md).
 
 ### Deployment renderings and a local Kubernetes loop
 
@@ -104,7 +104,7 @@ as Compose, Podman Quadlet and Kubernetes manifests, for whichever a site alread
 iterating on the Kubernetes rendering itself, a loop of plain `podman build`,
 [k3d](https://k3d.io) and `kubectl` commands brings up a disposable local cluster in
 seconds — no wrapper script, no registry, just the commands themselves. See
-[`deploy/robot/README.md`](https://github.com/minipada/ros2_data_collection/blob/jazzy/deploy/robot/README.md)
+[`deploy/robot/README.md`](https://github.com/minipada/ros2_data_collection/blob/lyrical/deploy/robot/README.md)
 for the full command sequence and what each step is for.
 
 ```admonish warning title="Development loop, not production parity"
@@ -119,7 +119,7 @@ For developing DC itself, or wherever containers aren't an option.
 
 ### Requirements
 
-- ROS 2 Jazzy (`ros-jazzy-ros-base` or larger), on Ubuntu 24.04 or a Debian equivalent
+- ROS 2 Lyrical (`ros-lyrical-ros-base` or larger), on Ubuntu 26.04 or a Debian equivalent
 - `colcon`, `rosdep`, `git`, `vcstool` (`python3-vcstool`), a C++17 compiler
 - x86-64 or aarch64 — the architectures `vector_vendor` has a pinned Vector binary for
 
@@ -132,10 +132,12 @@ For developing DC itself, or wherever containers aren't an option.
    git clone https://github.com/minipada/ros2_data_collection.git
    ```
 
-2. Pull in `vector_vendor` and `aws_sdk_vendor` (both their own repos — see
-   [ADR-0002](./adr/0002-vector-as-default-shipper.md)'s amendment and
-   [ADR-0012](./adr/0012-aws-sdk-vendor-flattened-source.md)), register DC's local rosdep
-   rules (two header-only C++
+2. Pull in `vector_vendor`, `aws_sdk_vendor` and `nlohmann_json_schema_validator_vendor`
+   (each its own repo — see
+   [ADR-0002](./adr/0002-vector-as-default-shipper.md)'s amendment,
+   [ADR-0012](./adr/0012-aws-sdk-vendor-flattened-source.md) and
+   `ros2_data_collection.repos`), register DC's local rosdep
+   rules (header-only C++
    libraries upstream rosdistro has no key for), then resolve dependencies:
 
    ```bash
@@ -150,7 +152,7 @@ For developing DC itself, or wherever containers aren't an option.
 3. Build:
 
    ```bash
-   source /opt/ros/jazzy/setup.bash
+   source /opt/ros/lyrical/setup.bash
    colcon build
    ```
 

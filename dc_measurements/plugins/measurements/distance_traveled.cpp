@@ -22,8 +22,8 @@ void DistanceTraveled::onConfigure()
   // never actually applied to transform_timeout_. Left as its original direct nav2_util call
   // rather than routed through dc_util, to avoid silently changing this behavior. Not in scope
   // for #178; worth its own follow-up.
-  nav2_util::declare_parameter_if_not_declared(node, measurement_name_ + ".transform_tolerance",
-                                               rclcpp::ParameterValue(static_cast<float>(0.1)));
+  nav2::declare_parameter_if_not_declared(node, measurement_name_ + ".transform_tolerance",
+                                          rclcpp::ParameterValue(static_cast<float>(0.1)));
   node->get_parameter(measurement_name_ + ".transform_timeout", transform_timeout_);
 }
 

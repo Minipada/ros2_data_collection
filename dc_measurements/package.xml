@@ -35,6 +35,7 @@ SPDX-License-Identifier: MPL-2.0
   <depend>lifecycle_msgs</depend>
   <depend>moveit_msgs</depend>
   <depend>nav2_msgs</depend>
+  <depend>nav2_ros_common</depend>
   <depend>nav2_util</depend>
   <depend>nlohmann-json-dev</depend>
   <depend>nlohmann_json_schema_validator_vendor</depend>

@@ -12,7 +12,7 @@
 #include "dc_core/condition.hpp"
 #include "dc_core/trigger.hpp"
 #include "dc_interfaces/msg/flush_event.hpp"
-#include "nav2_util/lifecycle_node.hpp"
+#include "nav2_ros_common/lifecycle_node.hpp"
 #include "pluginlib/class_loader.hpp"
 
 namespace trigger_broadcast_node
@@ -25,7 +25,7 @@ namespace trigger_broadcast_node
  * incident_id -- each time it fires. Mirrors measurement_server::MeasurementServer's plugin
  * loading, scaled down to the single Trigger this node hosts.
  */
-class TriggerBroadcastNode : public nav2_util::LifecycleNode
+class TriggerBroadcastNode : public nav2::LifecycleNode
 {
 public:
   explicit TriggerBroadcastNode(const rclcpp::NodeOptions& options = rclcpp::NodeOptions());
@@ -44,11 +44,11 @@ public:
   bool loadTriggerPlugin();
 
 protected:
-  nav2_util::CallbackReturn on_configure(const rclcpp_lifecycle::State& state) override;
-  nav2_util::CallbackReturn on_activate(const rclcpp_lifecycle::State& state) override;
-  nav2_util::CallbackReturn on_deactivate(const rclcpp_lifecycle::State& state) override;
-  nav2_util::CallbackReturn on_cleanup(const rclcpp_lifecycle::State& state) override;
-  nav2_util::CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) override;
+  nav2::CallbackReturn on_configure(const rclcpp_lifecycle::State& state) override;
+  nav2::CallbackReturn on_activate(const rclcpp_lifecycle::State& state) override;
+  nav2::CallbackReturn on_deactivate(const rclcpp_lifecycle::State& state) override;
+  nav2::CallbackReturn on_cleanup(const rclcpp_lifecycle::State& state) override;
+  nav2::CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) override;
 
   // Polls the Trigger plugin; on a fire, mints an incident_id and publishes a FlushEvent.
   void checkTrigger();

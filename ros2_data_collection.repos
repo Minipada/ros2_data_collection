@@ -18,3 +18,11 @@ repositories:
     type: git
     url: https://github.com/Minipada/aws_sdk_vendor.git
     version: v1.11.600
+  # Source-built on the lyrical line: its rosdistro resolves
+  # nlohmann_json_schema_validator_vendor but the resolute .deb isn't published yet
+  # (#531), so rosdep can't install it there. Tag 0.6.0 is the lyrical branch's build
+  # content. Drop once ros-lyrical-nlohmann-json-schema-validator-vendor ships.
+  nlohmann_json_schema_validator_vendor:
+    type: git
+    url: https://github.com/open-rmf/nlohmann_json_schema_validator_vendor.git
+    version: 0.6.0
