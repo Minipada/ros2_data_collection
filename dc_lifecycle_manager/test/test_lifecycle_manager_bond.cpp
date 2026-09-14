@@ -78,7 +78,7 @@ protected:
     const std::string manager_name = managerName();
     manager_ = std::make_shared<dc_lifecycle_manager::LifecycleManager>(managerOptions(
         manager_name, node_names, { "configure", "activate" }, true, kBondTimeout, attempt_respawn_reconnection, 60.0));
-    manager_thread_ = std::make_unique<nav2_util::NodeThread>(manager_->get_node_base_interface());
+    manager_thread_ = std::make_unique<nav2::NodeThread>(manager_->get_node_base_interface());
     client_node_ = std::make_shared<rclcpp::Node>(manager_name + "_client");
     client_ = std::make_unique<dc_lifecycle_manager::LifecycleManagerClient>(manager_name, client_node_);
   }
@@ -101,7 +101,7 @@ protected:
   std::shared_ptr<TransitionRecorder> recorder_;
   std::vector<std::shared_ptr<DummyManagedNode>> nodes_;
   std::shared_ptr<dc_lifecycle_manager::LifecycleManager> manager_;
-  std::unique_ptr<nav2_util::NodeThread> manager_thread_;
+  std::unique_ptr<nav2::NodeThread> manager_thread_;
   rclcpp::Node::SharedPtr client_node_;
   std::unique_ptr<dc_lifecycle_manager::LifecycleManagerClient> client_;
 };

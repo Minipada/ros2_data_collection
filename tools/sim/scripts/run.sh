@@ -128,9 +128,9 @@ trap cleanup EXIT
 # publish /clock, and every tf2 buffer starts reporting "Detected jump back in time"
 # while Nav2 quietly never localizes. A container boundary makes teardown total.
 # Expanded inside the container: the image's ENV ROS_DISTRO (set by build.sh) picks the
-# setup; :-jazzy covers images predating #530.
+# setup; :-lyrical covers images predating #530.
 # shellcheck disable=SC2016
-SOURCE='source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && source /root/ws/install/setup.bash'
+SOURCE='source /opt/ros/${ROS_DISTRO:-lyrical}/setup.bash && source /root/ws/install/setup.bash'
 
 start_stack() {
   CONTAINER="dc-sim-$$-$1"
@@ -186,7 +186,7 @@ if has_stage sim; then
   # Expanded inside the container (the image's ENV ROS_DISTRO), like $SOURCE above.
   # shellcheck disable=SC2016
   wait_for "the robot to spawn" 600 \
-    'source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && gz model --list 2>/dev/null | grep -q turtlebot3_waffle' \
+    'source /opt/ros/${ROS_DISTRO:-lyrical}/setup.bash && gz model --list 2>/dev/null | grep -q turtlebot3_waffle' \
     || fail "turtlebot3_waffle never appeared in gz model --list"
 
   rin "$SOURCE && python3 /opt/sim/verify_sim.py topics" || fail "topic checks"

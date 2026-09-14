@@ -5,7 +5,7 @@
 # three-container split topology (#440 scenario 2/3, #447). A thin `FROM` on top of
 # tools/e2e/Containerfile's `runtime` stage (install/ + exec-only deps, not the full
 # source/build/test workspace — that used to make this image 16.9GB): this is the
-# image a real deployment pulls and runs, published to ghcr.io on merge to `jazzy`
+# image a real deployment pulls and runs, published to ghcr.io on merge to `lyrical`
 # (see .github/workflows/ci.yaml's build-dc-ros-image job).
 #
 # Unlike Containerfile.e2e, this carries no default params file: `dc_bringup` already

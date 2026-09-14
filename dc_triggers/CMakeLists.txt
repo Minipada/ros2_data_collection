@@ -9,6 +9,7 @@ set(dependencies
   dc_interfaces
   dc_util
   lifecycle_msgs
+  nav2_ros_common
   nav2_util
   pluginlib
   rclcpp_components
@@ -25,6 +26,22 @@ endforeach()
 find_package(PkgConfig REQUIRED)
 pkg_search_module(UUID REQUIRED uuid)
 
+# ament_target_dependencies was removed in lyrical (#531): dependencies link by exported
+# target instead. Message packages have no pkg::pkg umbrella target on lyrical -- their
+# C++ typesupport target carries the generated code; dc_core is header-only (include dirs
+# wired below); dc_util's export is namespaced.
+set(link_dependencies
+  dc_interfaces::dc_interfaces__rosidl_typesupport_cpp
+  dc_util::base64_library
+  lifecycle_msgs::lifecycle_msgs__rosidl_typesupport_cpp
+  nav2_ros_common::nav2_ros_common
+  nav2_util::nav2_util_core
+  pluginlib::pluginlib
+  rclcpp_components::component_manager
+  rclcpp_lifecycle::rclcpp_lifecycle
+  std_msgs::std_msgs__rosidl_typesupport_cpp
+)
+
 dc_package()
 
 set(library_name trigger_broadcast_node_core)
@@ -33,6 +50,7 @@ set(executable_name trigger_broadcast_node)
 include_directories(
   include
   ${UUID_INCLUDE_DIRS}
+  ${dc_core_INCLUDE_DIRS}
 )
 
 # Trigger plugins
@@ -40,7 +58,7 @@ add_library(dc_edge_trigger SHARED plugins/edge_trigger.cpp)
 list(APPEND dc_trigger_plugin_libs dc_edge_trigger)
 
 foreach(trigger_plugin ${dc_trigger_plugin_libs})
-  ament_target_dependencies(${trigger_plugin} ${dependencies})
+  target_link_libraries(${trigger_plugin} PUBLIC ${link_dependencies})
   target_compile_definitions(${trigger_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
 
@@ -51,13 +69,9 @@ add_library(${library_name} SHARED
   src/trigger_broadcast_node.cpp
 )
 
-target_link_libraries(
-  ${library_name}
+target_link_libraries(${library_name} PUBLIC
   ${UUID_LIBRARIES}
-)
-
-ament_target_dependencies(${library_name}
-  ${dependencies}
+  ${link_dependencies}
 )
 
 # Executable
@@ -65,13 +79,9 @@ add_executable(${executable_name}
   src/main.cpp
 )
 
-target_link_libraries(
-  ${executable_name}
+target_link_libraries(${executable_name} PRIVATE
   ${library_name}
-)
-
-ament_target_dependencies(${executable_name}
-  ${dependencies}
+  ${link_dependencies}
 )
 
 rclcpp_components_register_nodes(${library_name} "trigger_broadcast_node::TriggerBroadcastNode")
@@ -109,14 +119,18 @@ if(BUILD_TESTING)
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
   )
-  ament_target_dependencies(${PROJECT_NAME}_test_edge_trigger
-    ${dependencies}
-    dc_measurements
-    nav_msgs
+  # dc_measurements exports plain library names, not CMake targets, so its libraries and
+  # include dirs come via the variables ament_target_dependencies used to consume (#531).
+  target_include_directories(${PROJECT_NAME}_test_edge_trigger PRIVATE
+    ${dc_measurements_INCLUDE_DIRS}
   )
-  target_link_libraries(
-    ${PROJECT_NAME}_test_edge_trigger
+  # Plain signature: ament_add_gtest links gtest with the plain form, and CMake refuses
+  # to mix signatures on one target (namespaced targets work as plain args).
+  target_link_libraries(${PROJECT_NAME}_test_edge_trigger
     ${library_name}
+    ${link_dependencies}
+    ${dc_measurements_LIBRARIES}
+    nav_msgs::nav_msgs__rosidl_typesupport_cpp
   )
 endif()
 

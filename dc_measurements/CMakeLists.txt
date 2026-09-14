@@ -18,6 +18,7 @@ set(dependencies
   lifecycle_msgs
   moveit_msgs
   nav2_msgs
+  nav2_ros_common
   nav2_util
   nlohmann_json
   nlohmann_json_schema_validator
@@ -39,6 +40,36 @@ find_package(ament_cmake_ros REQUIRED)
 foreach(Dependency IN ITEMS ${dependencies})
   find_package(${Dependency} REQUIRED)
 endforeach()
+
+# ament_target_dependencies was removed in lyrical (#531): dependencies link by exported
+# target instead. Message packages have no pkg::pkg umbrella target on lyrical -- their
+# C++ typesupport target carries the generated code. dc_common/dc_core are header-only
+# (include dirs wired per target below); yaml_cpp_vendor exports no target
+# (yaml-cpp::yaml-cpp is found and linked directly); PkgConfig is tooling, not a library.
+set(link_dependencies
+  action_msgs::action_msgs__rosidl_typesupport_cpp
+  ament_index_cpp::ament_index_cpp
+  controller_manager_msgs::controller_manager_msgs__rosidl_typesupport_cpp
+  cv_bridge::cv_bridge
+  dc_interfaces::dc_interfaces__rosidl_typesupport_cpp
+  dc_util::base64_library
+  diagnostic_msgs::diagnostic_msgs__rosidl_typesupport_cpp
+  geometry_msgs::geometry_msgs__rosidl_typesupport_cpp
+  lifecycle_msgs::lifecycle_msgs__rosidl_typesupport_cpp
+  moveit_msgs::moveit_msgs__rosidl_typesupport_cpp
+  nav2_msgs::nav2_msgs__rosidl_typesupport_cpp
+  nav2_ros_common::nav2_ros_common
+  nav2_util::nav2_util_core
+  pluginlib::pluginlib
+  rclcpp_action::rclcpp_action
+  rclcpp_components::component_manager
+  rclcpp_lifecycle::rclcpp_lifecycle
+  sensor_msgs::sensor_msgs__rosidl_typesupport_cpp
+  std_msgs::std_msgs__rosidl_typesupport_cpp
+  tf2::tf2
+  tf2_geometry_msgs::tf2_geometry_msgs
+  unique_identifier_msgs::unique_identifier_msgs__rosidl_typesupport_cpp
+)
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(UUID REQUIRED uuid)
@@ -112,13 +143,17 @@ function(dc_add_measurement_plugin name)
   add_library(${name} SHARED ${ARG_SOURCES})
   list(APPEND dc_measurement_plugin_libs ${name})
   set(dc_measurement_plugin_libs ${dc_measurement_plugin_libs} PARENT_SCOPE)
-  ament_target_dependencies(${name} ${dependencies})
-  target_link_libraries(${name}
+  target_include_directories(${name} PUBLIC
+    ${dc_common_INCLUDE_DIRS}
+    ${dc_core_INCLUDE_DIRS}
+  )
+  target_link_libraries(${name} PUBLIC
     dc_measurement_core
     nlohmann_json::nlohmann_json
     nlohmann_json_schema_validator
     yaml-cpp::yaml-cpp
     ${UUID_LIBRARIES}
+    ${link_dependencies}
     ${ARG_DEPS}
   )
   target_compile_definitions(${name} PRIVATE BT_PLUGIN_EXPORT)
@@ -133,7 +168,11 @@ function(dc_add_condition_plugin name)
   add_library(${name} SHARED ${ARG_SOURCES})
   list(APPEND dc_condition_plugin_libs ${name})
   set(dc_condition_plugin_libs ${dc_condition_plugin_libs} PARENT_SCOPE)
-  ament_target_dependencies(${name} ${dependencies})
+  target_include_directories(${name} PUBLIC
+    ${dc_common_INCLUDE_DIRS}
+    ${dc_core_INCLUDE_DIRS}
+  )
+  target_link_libraries(${name} PUBLIC ${link_dependencies})
   target_compile_definitions(${name} PRIVATE BT_PLUGIN_EXPORT)
 endfunction()
 
@@ -152,14 +191,13 @@ add_library(dc_measurement_core SHARED
   src/measurement_core.cpp
 )
 
-ament_target_dependencies(dc_measurement_core
-  ament_index_cpp
-  dc_common
-  dc_core
+target_include_directories(dc_measurement_core PUBLIC
+  ${dc_common_INCLUDE_DIRS}
+  ${dc_core_INCLUDE_DIRS}
 )
 
-target_link_libraries(
-  dc_measurement_core
+target_link_libraries(dc_measurement_core PUBLIC
+  ament_index_cpp::ament_index_cpp
   nlohmann_json::nlohmann_json
   nlohmann_json_schema_validator
 )
@@ -248,13 +286,9 @@ add_library(${library_name} SHARED
   src/measurement_server.cpp
 )
 
-target_link_libraries(
-  ${library_name}
+target_link_libraries(${library_name} PUBLIC
   ${UUID_LIBRARIES}
-)
-
-ament_target_dependencies(${library_name}
-  ${dependencies}
+  ${link_dependencies}
 )
 
 # Executable
@@ -262,15 +296,11 @@ add_executable(${executable_name}
   src/main.cpp
 )
 
-target_link_libraries(
-  ${executable_name}
+target_link_libraries(${executable_name} PRIVATE
   nlohmann_json::nlohmann_json
   nlohmann_json_schema_validator
   ${library_name}
-)
-
-ament_target_dependencies(${executable_name}
-  ${dependencies}
+  ${link_dependencies}
 )
 
 rclcpp_components_register_nodes(${library_name} "measurement_server::MeasurementServer")
@@ -370,17 +400,20 @@ if(BUILD_TESTING)
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
     )
-    ament_target_dependencies(${PROJECT_NAME}_${test}
-    ${dependencies}
+    target_include_directories(${PROJECT_NAME}_${test} PRIVATE
+    ${dc_common_INCLUDE_DIRS}
+    ${dc_core_INCLUDE_DIRS}
     )
-    target_link_libraries(
-      ${PROJECT_NAME}_${test}
+    # Plain signature: ament_add_gtest links gtest with the plain form, and CMake
+    # refuses to mix signatures on one target (namespaced targets work as plain args).
+    target_link_libraries(${PROJECT_NAME}_${test}
       dc_measurement_core
       nlohmann_json::nlohmann_json
       nlohmann_json_schema_validator
       opencv_calib3d
       ${library_name}
-      )
+      ${link_dependencies}
+    )
   endforeach()
   # These two encode a QR code (ZXing's writer) to read one back; every other test gets
   # the reader transitively or not at all.

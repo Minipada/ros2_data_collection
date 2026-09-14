@@ -6,8 +6,9 @@
 #   tree, so `toolchain`'s COPY --from below keys its own cache on dependency lists
 #   alone, not on every source edit — without having to hardcode one COPY per package.
 # - `toolchain-base`: a small stable apt layer (git + vcstool), then `vcs import`s
-#   vector_vendor and aws_sdk_vendor — both live in their own repos (docs/adr/0002,
-#   docs/adr/0012) — then the daily-busted dist-upgrade + the remaining OS packages
+#   vector_vendor, aws_sdk_vendor and nlohmann_json_schema_validator_vendor — each in
+#   its own repo (docs/adr/0002, docs/adr/0012, .repos for why the third is
+#   source-built) — then the daily-busted dist-upgrade + the remaining OS packages
 #   every later stage needs (ccache, lcov, pip tools). Keeping the fetch tools and the
 #   vendor fetch OUT from under the cache-bust layer means the network-bound `vcs
 #   import` only re-runs when ros2_data_collection.repos changes, not once per UTC
@@ -52,7 +53,7 @@
 # the distro-suffixed cache-mount ids — derive the distro instead of hardcoding one.
 # A changed value invalidates the stage anyway through the FROM below, so unlike
 # APT_CACHEBUST (see toolchain-base) top placement here costs no extra invalidation.
-ARG ROS_DISTRO=jazzy
+ARG ROS_DISTRO=lyrical
 
 # --- cacher: nothing but the package manifests, so this stage's own frequent cache
 # invalidation (it COPYs the whole repo) costs nothing — it does no compilation, and
@@ -69,7 +70,7 @@ RUN mkdir -p /tmp/manifests && \
 
 FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS toolchain-base
 
-ARG ROS_DISTRO=jazzy
+ARG ROS_DISTRO=lyrical
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -148,7 +149,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
 
 FROM toolchain-base AS toolchain
 
-ARG ROS_DISTRO=jazzy
+ARG ROS_DISTRO=lyrical
 
 # aws_sdk_vendor's source already arrived via toolchain-base's `vcs import` above, so
 # building it here only needs the local rosdep source it depends on registering.
@@ -189,10 +190,15 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
 # layer's cache key is the manifests' own content — it invalidates only when a
 # dependency list changes, not on an ordinary source edit.
 COPY --from=cacher /tmp/manifests/src ./src
+# nav2_bringup is released into the lyrical rosdistro but its resolute .deb publish
+# still lags (#531) — skip it there instead of failing; nothing in the build, colcon
+# test or the CI sim needs it at build time (only dc_demos' tb3 launch includes it at
+# runtime, and that demo isn't CI-exercised). Drop the conditional once the .deb ships.
 RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     apt-get -q update && \
-    DEBIAN_FRONTEND=noninteractive \
-    rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false && \
+    LAGGING_DEBS="" && { [ "${ROS_DISTRO}" = "lyrical" ] && LAGGING_DEBS="nav2_bringup" || true; } && \
+    DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false \
+      --skip-keys="${LAGGING_DEBS}" && \
     rm -rf /var/lib/apt/lists/*
 
 # --- workspace: full source + colcon build + colcon test, in one image both CI and
@@ -204,7 +210,7 @@ FROM toolchain AS workspace
 # below (CCOV would just read as unset/false here), producing a plain Release build
 # with no error. This exact bug was found and fixed earlier in this branch's history.
 ARG CCOV=false
-ARG ROS_DISTRO=jazzy
+ARG ROS_DISTRO=lyrical
 
 COPY . src/ros2_data_collection
 
@@ -231,8 +237,9 @@ COPY . src/ros2_data_collection
 RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     apt-get -q update && \
-    DEBIAN_FRONTEND=noninteractive \
-    rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false && \
+    LAGGING_DEBS="" && { [ "${ROS_DISTRO}" = "lyrical" ] && LAGGING_DEBS="nav2_bringup" || true; } && \
+    DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false \
+      --skip-keys="${LAGGING_DEBS}" && \
     # shellcheck disable=SC1091
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
     if [ "$CCOV" = "true" ]; then \
@@ -240,6 +247,12 @@ RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     else \
       CMAKE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release"; \
     fi && \
+    # CMAKE_POLICY_VERSION_MINIMUM: resolute's CMake 4 removed compatibility with
+    # cmake_minimum_required < 3.5, which the vendored json-schema-validator still
+    # declares (#531). Exported, not a --cmake-args cache var, because the vendor
+    # builds the lib via ExternalProject, which inherits env but not cache vars.
+    # No-op on older CMake and on compliant projects.
+    export CMAKE_POLICY_VERSION_MINIMUM=3.5 && \
     eval colcon build --packages-skip aws_sdk_vendor --cmake-args "$CMAKE_ARGS" --event-handlers desktop_notification- status- && \
     ccache -s && \
     # shellcheck disable=SC1091
@@ -254,7 +267,7 @@ RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     rm -rf /var/lib/apt/lists/*
 
 ENV ROS_UNDERLAY=/root/ws/install
-# What the sim scripts' `source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash` reads at
+# What the sim scripts' `source /opt/ros/${ROS_DISTRO:-lyrical}/setup.bash` reads at
 # runtime (podman exec inherits the image env) — the image knows its own distro.
 ENV ROS_DISTRO=${ROS_DISTRO}
 RUN echo "source ${ROS_UNDERLAY}/setup.bash" >> /etc/bash.bashrc
@@ -271,7 +284,7 @@ RUN echo "source ${ROS_UNDERLAY}/setup.bash" >> /etc/bash.bashrc
 # not two stages to maintain. See ci.yaml's build-workspace / build-workspace-coverage.
 FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS runtime
 
-ARG ROS_DISTRO=jazzy
+ARG ROS_DISTRO=lyrical
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /root/ws
@@ -281,13 +294,13 @@ WORKDIR /root/ws
 # dc_* package.xml files tagging deps correctly rather than the catch-all <depend>
 # for anything build-only.
 #
-# --skip-keys for aws_sdk_vendor/vector_vendor: dc_bridge/package.xml depends on both,
-# but unlike the toolchain stage above, this stage never `vcs import`s them (it starts
+# --skip-keys for the three vendors: dc_bridge/dc_measurements depend on them, but
+# unlike the toolchain stage above, this stage never `vcs import`s them (it starts
 # fresh FROM ros-base, deliberately skipping toolchain's git/ccache/build-essential
-# layers), so cacher's manifest-only copy has no package.xml for either — rosdep sees
-# an unresolvable name instead of a local package satisfied via --ignore-src. Both are
-# already fully linked into the install/ tree copied in below; nothing here needs to
-# resolve their own transitive deps as apt packages.
+# layers), so cacher's manifest-only copy has no package.xml for any of them — rosdep
+# sees an unresolvable name instead of a local package satisfied via --ignore-src.
+# All three are already fully linked into the install/ tree copied in below; nothing
+# here needs to resolve their own transitive deps as apt packages.
 COPY --from=cacher /tmp/manifests/src ./src
 COPY rosdep src/ros2_data_collection/rosdep
 # dc-apt + the docker-clean rewrite (see toolchain-base). The rewrite is mandatory
@@ -303,10 +316,10 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
       > /etc/ros/rosdep/sources.list.d/10-dc.list && \
     apt-get -q update && \
     rosdep update --include-eol-distros && \
-    DEBIAN_FRONTEND=noninteractive \
-    rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} \
+    LAGGING_DEBS="" && { [ "${ROS_DISTRO}" = "lyrical" ] && LAGGING_DEBS="nav2_bringup" || true; } && \
+    DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} \
       --as-root=apt:false --dependency-types=exec \
-      --skip-keys="aws_sdk_vendor vector_vendor" && \
+      --skip-keys="aws_sdk_vendor vector_vendor nlohmann_json_schema_validator_vendor ${LAGGING_DEBS}" && \
     rm -rf /var/lib/apt/lists/* src
 
 COPY --from=workspace /root/ws/install install

@@ -14,7 +14,7 @@
 #include "dc_util/filesystem_utils.hpp"
 #include "dc_util/node_utils.hpp"
 #include "dc_util/string_utils.hpp"
-#include "nav2_util/lifecycle_node.hpp"
+#include "nav2_ros_common/lifecycle_node.hpp"
 #include "pluginlib/class_list_macros.hpp"
 #include "pluginlib/class_loader.hpp"
 #include "tf2_ros/buffer.h"
@@ -29,7 +29,7 @@ using json = nlohmann::json;
  * @class dc_measurement::MeasurementNode
  * @brief An server hosting a map of behavior plugins
  */
-class MeasurementServer : public nav2_util::LifecycleNode
+class MeasurementServer : public nav2::LifecycleNode
 {
 public:
   /**
@@ -56,27 +56,27 @@ protected:
   /**
    * @brief Configure lifecycle server
    */
-  nav2_util::CallbackReturn on_configure(const rclcpp_lifecycle::State& state) override;
+  nav2::CallbackReturn on_configure(const rclcpp_lifecycle::State& state) override;
 
   /**
    * @brief Activate lifecycle server
    */
-  nav2_util::CallbackReturn on_activate(const rclcpp_lifecycle::State& state) override;
+  nav2::CallbackReturn on_activate(const rclcpp_lifecycle::State& state) override;
 
   /**
    * @brief Deactivate lifecycle server
    */
-  nav2_util::CallbackReturn on_deactivate(const rclcpp_lifecycle::State& state) override;
+  nav2::CallbackReturn on_deactivate(const rclcpp_lifecycle::State& state) override;
 
   /**
    * @brief Cleanup lifecycle server
    */
-  nav2_util::CallbackReturn on_cleanup(const rclcpp_lifecycle::State& state) override;
+  nav2::CallbackReturn on_cleanup(const rclcpp_lifecycle::State& state) override;
 
   /**
    * @brief Shutdown lifecycle server
    */
-  nav2_util::CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) override;
+  nav2::CallbackReturn on_shutdown(const rclcpp_lifecycle::State& state) override;
 
   void setRunId();
   void setCustomKeys();

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-# DC 2.0 (Jazzy) CI (#249). This branch only builds the jazzy line (external Vector
+# DC 2.0 (Lyrical) CI (#249). This branch only builds the lyrical line (external Vector
 # shipper, C++ dc_bridge). The humble-line `industrial_ci`/Docker workflow this repo used
 # to run doesn't apply here and
 # isn't carried over onto this branch (it still exists on `humble`, a separate branch/tree
@@ -16,10 +16,10 @@
 # verify-published-images/verify-robot-manifests actually pull and run the real images a
 # PR just built, catching a broken image before merge rather than only after. Their refs
 # come from .github/actions/image-ref (#450, ported from ~/dev/monorepo's action of the
-# same name), which also computes a sluggified branch ref (jazzy -> :jazzy, a PR -> its
-# head branch's slug) — that branch ref, `:jazzy`, is the one a fleet robot actually
+# same name), which also computes a sluggified branch ref (lyrical -> :lyrical, a PR -> its
+# head branch's slug) — that branch ref, `:lyrical`, is the one a fleet robot actually
 # pins to; this repo pushes no `:latest` tag at all. It's pushed only on `push` to
-# `jazzy`, mirroring monorepo's own podman-push, which withholds branch_ref on
+# `lyrical`, mirroring monorepo's own podman-push, which withholds branch_ref on
 # pull_request the same way: a not-yet-merged PR must never move that floating ref.
 #
 #   build-workspace (Release: build + colcon test) ─┬─▶ sim                    (pull dc-workspace, simulation smoke check)
@@ -28,8 +28,8 @@
 #                                                    ├─▶ build-dc-ros-image ─┬─▶ verify-published-images  (pull + run, no build)
 #                                                    │                      ├─▶ verify-kind-networkpolicy (#452: kind + Calico, NetworkPolicy proof)
 #                                                    └─▶ build-dc-uploader-image ─┴─▶ verify-robot-manifests (#450: podman kube play + network isolation)
-#   build-workspace-coverage (CCOV=true, push/workflow_dispatch only) ─┬─▶ build-dc-ros-coverage-image      (dc-ros:jazzy-coverage)
-#                                                                      └─▶ build-dc-uploader-coverage-image (dc-uploader:jazzy-coverage)
+#   build-workspace-coverage (CCOV=true, push/workflow_dispatch only) ─┬─▶ build-dc-ros-coverage-image      (dc-ros:lyrical-coverage)
+#                                                                      └─▶ build-dc-uploader-coverage-image (dc-uploader:lyrical-coverage)
 #   kpi-views (standalone: SQL + a throwaway Postgres, no workspace image needed)
 #   raw-volume (standalone: stdlib Python fixtures over the shared volume accounting)
 #   vector-pin (standalone: Vector version literals vs the .repos pin, #484)
@@ -65,21 +65,21 @@ name: CI
 # Documentation-only changes don't need a workspace rebuild. GitHub skips the workflow only
 # when *every* changed file matches `paths-ignore`, so a PR touching both docs and code
 # still gets the full build/test/e2e chain. Deliberately not ignored: `tools/**`,
-# `containers/**` and `.github/**`, which change how CI itself builds. `jazzy` is not
+# `containers/**` and `.github/**`, which change how CI itself builds. `lyrical` is not
 # branch-protected, so a skipped run leaves no required status check pending — recheck this
 # before enabling branch protection, since skipped path-filtered workflows never report.
 on:
   workflow_dispatch:
   pull_request:
     branches:
-      - jazzy
+      - lyrical
     paths-ignore:
       - doc/**
       - docs/**
       - "**.md"
   push:
     branches:
-      - jazzy
+      - lyrical
     paths-ignore:
       - doc/**
       - docs/**
@@ -95,7 +95,7 @@ jobs:
     # The one distro lever (#530): build.sh forwards it into the Containerfile, and the
     # cache key/ref below carry it so two distros can never share cached content.
     env:
-      ROS_DISTRO: jazzy
+      ROS_DISTRO: lyrical
     permissions:
       contents: read
       packages: write
@@ -272,7 +272,7 @@ jobs:
   # `workspace_ref` here is a bare local tag (no registry): only the slim `runtime`
   # derivative gets pushed, so the multi-GB coverage layer never reaches ghcr.io.
   #
-  # Gated to push (a real merge to `jazzy`) or workflow_dispatch (manual — GitHub's
+  # Gated to push (a real merge to `lyrical`) or workflow_dispatch (manual — GitHub's
   # "Run workflow" button, or `gh workflow run ci.yaml --ref <branch>`, against any
   # branch/PR head) — never plain `pull_request`, which would double every PR's
   # compute cost for a report almost no PR needs. build-dc-ros-coverage-image/
@@ -283,7 +283,7 @@ jobs:
     runs-on: ubuntu-latest
     # Same distro lever as build-workspace above (#530).
     env:
-      ROS_DISTRO: jazzy
+      ROS_DISTRO: lyrical
     permissions:
       contents: read
       packages: write
@@ -385,7 +385,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage/cpp.info
-          flags: cpp-jazzy
+          flags: cpp-lyrical
 
       # Same build context/args as above, diverging only at the new `runtime` stage —
       # local layer cache makes this incremental over the build just above.
@@ -506,7 +506,7 @@ jobs:
   # below pushes sha_ref on every run (PR included — same CI-internal-reuse reasoning
   # as dc-workspace/dc-e2e above, and what lets verify-published-images/
   # verify-robot-manifests test the real image a PR just built) and pushes branch_ref
-  # (`:jazzy` — the ref a fleet robot actually pins to; this repo pushes no `:latest`
+  # (`:lyrical` — the ref a fleet robot actually pins to; this repo pushes no `:latest`
   # tag) only on `push` — mirroring monorepo's own podman-push, which withholds
   # branch_ref on pull_request events the same way. A not-yet-merged PR must never move
   # that floating ref. Thin `FROM` layers over the already-tested workspace image
@@ -542,7 +542,7 @@ jobs:
           SHA_REF: ${{ steps.image.outputs.sha_ref }}
         run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$SHA_REF" -f containers/dc-ros/Containerfile containers/dc-ros
 
-      # branch_ref only on push to jazzy — see this job's header comment. No :latest:
+      # branch_ref only on push to lyrical — see this job's header comment. No :latest:
       # this repo doesn't push that tag.
       - name: Determine refs to push
         id: push_refs
@@ -559,7 +559,7 @@ jobs:
             echo "PUSH_REFS_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Push the dc-ros image (:<sha>, plus branch on push to jazzy)
+      - name: Push the dc-ros image (:<sha>, plus branch on push to lyrical)
         uses: ./.github/actions/podman-push
         with:
           refs: ${{ steps.push_refs.outputs.refs }}
@@ -594,7 +594,7 @@ jobs:
           SHA_REF: ${{ steps.image.outputs.sha_ref }}
         run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$SHA_REF" -f containers/dc-uploader/Containerfile containers/dc-uploader
 
-      # branch_ref only on push to jazzy — see build-dc-ros-image's header comment. No
+      # branch_ref only on push to lyrical — see build-dc-ros-image's header comment. No
       # :latest: this repo doesn't push that tag.
       - name: Determine refs to push
         id: push_refs
@@ -611,7 +611,7 @@ jobs:
             echo "PUSH_REFS_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Push the dc-uploader image (:<sha>, plus branch on push to jazzy)
+      - name: Push the dc-uploader image (:<sha>, plus branch on push to lyrical)
         uses: ./.github/actions/podman-push
         with:
           refs: ${{ steps.push_refs.outputs.refs }}
@@ -665,7 +665,7 @@ jobs:
             echo "PUSH_REFS_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Push the dc-ros image (:<sha>-coverage, plus branch on push to jazzy)
+      - name: Push the dc-ros image (:<sha>-coverage, plus branch on push to lyrical)
         uses: ./.github/actions/podman-push
         with:
           refs: ${{ steps.push_refs.outputs.refs }}
@@ -714,7 +714,7 @@ jobs:
             echo "PUSH_REFS_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Push the dc-uploader image (:<sha>-coverage, plus branch on push to jazzy)
+      - name: Push the dc-uploader image (:<sha>-coverage, plus branch on push to lyrical)
         uses: ./.github/actions/podman-push
         with:
           refs: ${{ steps.push_refs.outputs.refs }}
@@ -838,8 +838,8 @@ jobs:
 
       # Pulls the PR's just-built image, same as verify-robot-manifests/
       # verify-published-images — testing what this run actually built, not whatever
-      # :jazzy happens to be. Exported via GITHUB_ENV: kubernetes/robot-a.yaml commits
-      # a real default (ghcr.io/.../dc-ros:jazzy, the same floating ref a real
+      # :lyrical happens to be. Exported via GITHUB_ENV: kubernetes/robot-a.yaml commits
+      # a real default (ghcr.io/.../dc-ros:lyrical, the same floating ref a real
       # deployment runs), so this is only an override, same convention as
       # deploy/robot/scripts/verify_kube_play.sh — a plain local run with DC_ROS_IMAGE
       # unset exercises that committed default instead, one workflow either way.
@@ -868,7 +868,7 @@ jobs:
           kind load image-archive /tmp/dc-ros.tar --name dc-kind
           rm -f /tmp/dc-ros.tar
 
-      # robot-a.yaml commits ghcr.io/.../dc-ros:jazzy as dc-ros's real default (the
+      # robot-a.yaml commits ghcr.io/.../dc-ros:lyrical as dc-ros's real default (the
       # floating ref build-dc-ros-image pushes on every merge, same as
       # deploy/robot/kubernetes/robot-pod.yaml) — patched in place, before the build
       # below reads it, with the PR's own just-built :<sha> image, so this run tests
@@ -876,7 +876,7 @@ jobs:
       # checkout, never committed back.
       - name: Point robot-a.yaml at the PR's dc-ros image
         run: |
-          sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy|$DC_ROS_IMAGE|" \
+          sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-ros:lyrical|$DC_ROS_IMAGE|" \
             tools/kind/kubernetes/robot-a.yaml
 
       # One `kubectl apply -k` for the entire steady-state topology (kustomize ships
