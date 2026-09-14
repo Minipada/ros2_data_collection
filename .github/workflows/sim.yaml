@@ -40,6 +40,10 @@ concurrency:
 jobs:
   sim:
     runs-on: ubuntu-latest
+    # Same distro lever as ci.yaml's build jobs (#530): build.sh forwards it into the
+    # Containerfile, and the cache ref below carries it.
+    env:
+      ROS_DISTRO: jazzy
     # The full pass was 63 min on 8 cores; a 4-core runner roughly doubles that, and the
     # earlier stages and the image build come on top. Generous on purpose so a contended
     # runner fails on an assertion rather than on the clock -- but well inside GitHub's
@@ -62,11 +66,12 @@ jobs:
         id: refs
         env:
           REPO: ${{ github.repository }}
+          ROS_DISTRO: ${{ env.ROS_DISTRO }}
         run: |
           IMAGE="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
           {
             echo "workspace_ref=$IMAGE/dc-workspace:sim-${{ github.sha }}"
-            echo "cache_ref=$IMAGE/dc-workspace-cache-sim"
+            echo "cache_ref=$IMAGE/dc-workspace-cache-sim:$ROS_DISTRO"
           } >> "$GITHUB_OUTPUT"
 
       # Built here rather than pulled: a scheduled run has no upstream job to depend on,

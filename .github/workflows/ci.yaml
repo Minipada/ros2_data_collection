@@ -92,6 +92,10 @@ concurrency:
 jobs:
   build-workspace:
     runs-on: ubuntu-latest
+    # The one distro lever (#530): build.sh forwards it into the Containerfile, and the
+    # cache key/ref below carry it so two distros can never share cached content.
+    env:
+      ROS_DISTRO: jazzy
     permissions:
       contents: read
       packages: write
@@ -118,13 +122,14 @@ jobs:
         env:
           SHA: ${{ github.sha }}
           REPO: ${{ github.repository }}
+          ROS_DISTRO: ${{ env.ROS_DISTRO }}
         run: |
           IMAGE="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
           {
             echo "workspace_ref=$IMAGE/dc-workspace:$SHA"
             echo "runtime_ref=$IMAGE/dc-runtime:$SHA"
             echo "e2e_ref=$IMAGE/dc-e2e:$SHA"
-            echo "cache_ref=$IMAGE/dc-workspace-cache"
+            echo "cache_ref=$IMAGE/dc-workspace-cache:$ROS_DISTRO"
           } >> "$GITHUB_OUTPUT"
 
       # `podman compose` shells out to a host-side provider — it can't be baked into an
@@ -179,10 +184,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/buildah-tmp
-          key: buildah-buildcache-${{ runner.os }}-${{ github.sha }}
+          key: buildah-buildcache-${{ env.ROS_DISTRO }}-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
-            buildah-buildcache-${{ runner.os }}-
-            buildah-ccache-${{ runner.os }}-
+            buildah-buildcache-${{ env.ROS_DISTRO }}-${{ runner.os }}-
 
       # Same script a developer runs locally (./tools/e2e/scripts/build.sh) — builds,
       # rosdep-installs, colcon builds, and colcon tests the whole workspace in one
@@ -275,6 +279,9 @@ jobs:
   build-workspace-coverage:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    # Same distro lever as build-workspace above (#530).
+    env:
+      ROS_DISTRO: jazzy
     permissions:
       contents: read
       packages: write
@@ -295,12 +302,13 @@ jobs:
         env:
           SHA: ${{ github.sha }}
           REPO: ${{ github.repository }}
+          ROS_DISTRO: ${{ env.ROS_DISTRO }}
         run: |
           IMAGE="ghcr.io/$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
           {
             echo "workspace_ref=dc-workspace-coverage:$SHA"
             echo "runtime_ref=$IMAGE/dc-runtime:$SHA-coverage"
-            echo "cache_ref=$IMAGE/dc-workspace-cache"
+            echo "cache_ref=$IMAGE/dc-workspace-cache:$ROS_DISTRO"
           } >> "$GITHUB_OUTPUT"
 
       - name: Cache podman-compose
@@ -329,10 +337,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/buildah-tmp-coverage
-          key: buildah-buildcache-coverage-${{ runner.os }}-${{ github.sha }}
+          key: buildah-buildcache-coverage-${{ env.ROS_DISTRO }}-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
-            buildah-buildcache-coverage-${{ runner.os }}-
-            buildah-ccache-coverage-${{ runner.os }}-
+            buildah-buildcache-coverage-${{ env.ROS_DISTRO }}-${{ runner.os }}-
 
       - name: Build + test the DC workspace (coverage-instrumented)
         env:

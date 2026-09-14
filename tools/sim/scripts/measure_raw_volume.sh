@@ -77,7 +77,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
-SOURCE='source /opt/ros/jazzy/setup.bash && source /root/ws/install/setup.bash'
+# Expanded inside the container: the image's ENV ROS_DISTRO (set by build.sh) picks the
+# setup; :-jazzy covers images predating #530.
+# shellcheck disable=SC2016
+SOURCE='source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && source /root/ws/install/setup.bash'
 rin() { podman exec -e HOME=/root "$CONTAINER" bash -lc "$1"; }
 rbg() { podman exec -d -e HOME=/root "$CONTAINER" bash -lc "$1" >/dev/null; }
 
@@ -105,7 +108,8 @@ for profile in $PROFILES; do
   # Same load-bearing assertion as tools/sim/scripts/run.sh: an illegal-SDF spawn
   # rejection is one [Err] line, and everything downstream then measures an empty world.
   waited=0
-  until rin "source /opt/ros/jazzy/setup.bash && timeout 30 gz model --list 2>/dev/null | grep -q turtlebot3_waffle" >/dev/null 2>&1; do
+  # shellcheck disable=SC2016  # expanded inside the container, like $SOURCE above
+  until rin 'source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && timeout 30 gz model --list 2>/dev/null | grep -q turtlebot3_waffle' >/dev/null 2>&1; do
     [ "$waited" -lt 900 ] || fail "turtlebot3_waffle never appeared in gz model --list"
     sleep 15
     waited=$((waited + 15))
