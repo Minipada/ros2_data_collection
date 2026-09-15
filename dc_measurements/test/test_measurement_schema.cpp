@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
+#include "ament_index_cpp/get_package_share_path.hpp"
 #include "dc_measurements/measurement.hpp"
 #include "measurement_test_bench.hpp"
 
@@ -18,7 +18,7 @@
 
 std::vector<std::string> registeredPluginTypes()
 {
-  std::ifstream xml(ament_index_cpp::get_package_share_directory("dc_measurements") + "/measurement_plugin.xml");
+  std::ifstream xml(ament_index_cpp::get_package_share_path("dc_measurements").string() + "/measurement_plugin.xml");
   std::string content((std::istreambuf_iterator<char>(xml)), std::istreambuf_iterator<char>());
 
   std::vector<std::string> types;
@@ -33,7 +33,7 @@ std::vector<std::string> registeredPluginTypes()
 
 std::string schemaPath(const std::string& plugin_type)
 {
-  return ament_index_cpp::get_package_share_directory("dc_measurements") + "/plugins/measurements/json/" +
+  return ament_index_cpp::get_package_share_path("dc_measurements").string() + "/plugins/measurements/json/" +
          dc_measurements::Measurement::defaultSchemaFile(plugin_type);
 }
 

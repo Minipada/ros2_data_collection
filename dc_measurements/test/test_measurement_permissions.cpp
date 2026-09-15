@@ -15,7 +15,7 @@ class MeasurementPermissionsTest : public MeasurementBench
 protected:
   MeasurementPermissionsTest() : MeasurementBench("permissions")
   {
-    test_file_ = (std::filesystem::temp_directory_path() / "dc_measurement_permissions_test_file").u8string();
+    test_file_ = (std::filesystem::temp_directory_path() / "dc_measurement_permissions_test_file").string();
     std::ofstream(test_file_) << "test";
     chmod(test_file_.c_str(), 0644);
   }

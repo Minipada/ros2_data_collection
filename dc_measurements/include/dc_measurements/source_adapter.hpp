@@ -64,7 +64,9 @@ public:
     }
     T value = std::move(values_.front());
     values_.pop_front();
-    return value;
+    // Explicit optional construction: for T = nlohmann::json, `return value` alone is
+    // ambiguous on GCC 15 (optional's converting ctor vs json's operator ValueType).
+    return std::optional<T>(std::move(value));
   }
 
   /// The newest pending value, copied -- for a sample source that re-reports it on every poll
@@ -76,7 +78,7 @@ public:
     {
       return std::nullopt;
     }
-    return values_.back();
+    return std::optional<T>(values_.back());
   }
 
 private:

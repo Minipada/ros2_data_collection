@@ -6,7 +6,7 @@
 #include <nlohmann/json-schema.hpp>
 #include <vector>
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
+#include "ament_index_cpp/get_package_share_path.hpp"
 #include "controller_manager_msgs/msg/controller_manager_activity.hpp"
 #include "controller_manager_msgs/msg/named_lifecycle_state.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
@@ -101,7 +101,7 @@ protected:
   // half fills it fails the test rather than only logging.
   static void expectValidatesAgainstSchema(const nlohmann::json& record)
   {
-    const std::string path = ament_index_cpp::get_package_share_directory("dc_measurements") +
+    const std::string path = ament_index_cpp::get_package_share_path("dc_measurements").string() +
                              "/plugins/measurements/json/ros2_control_status.json";
     std::ifstream schema_file(path);
     ASSERT_TRUE(schema_file.good()) << "Schema not installed at " << path;

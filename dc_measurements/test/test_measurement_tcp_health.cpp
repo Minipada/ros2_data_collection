@@ -15,7 +15,7 @@ protected:
   // Asks the OS for a free ephemeral port by binding to port 0.
   static unsigned short reserveFreePort()
   {
-    boost::asio::io_service svc;
+    boost::asio::io_context svc;
     boost::asio::ip::tcp::acceptor acceptor(svc);
     acceptor.open(boost::asio::ip::tcp::v4());
     acceptor.bind({ boost::asio::ip::tcp::v4(), 0 });
@@ -25,7 +25,7 @@ protected:
 
 TEST_F(MeasurementTCPHealthTest, ActiveWhenPortIsListening)
 {
-  boost::asio::io_service svc;
+  boost::asio::io_context svc;
   boost::asio::ip::tcp::acceptor acceptor(svc);
   acceptor.open(boost::asio::ip::tcp::v4());
   acceptor.bind({ boost::asio::ip::tcp::v4(), 0 });

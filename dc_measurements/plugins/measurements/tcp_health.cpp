@@ -29,7 +29,7 @@ bool TCPHealth::getPortHealth(unsigned short port)
 
   try
   {
-    io_service svc;
+    io_context svc;
     tcp::acceptor a(svc);
 
     boost::system::error_code ec;

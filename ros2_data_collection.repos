@@ -20,9 +20,11 @@ repositories:
     version: v1.11.600
   # Source-built on the lyrical line: its rosdistro resolves
   # nlohmann_json_schema_validator_vendor but the resolute .deb isn't published yet
-  # (#531), so rosdep can't install it there. Tag 0.6.0 is the lyrical branch's build
-  # content. Drop once ros-lyrical-nlohmann-json-schema-validator-vendor ships.
+  # (#531), so rosdep can't install it there. Pinned to main (vendored upstream v2.4.0):
+  # 0.6.0's upstream predates the json_pointer to_string() fixes and deprecation-warns all
+  # over the build against the resolute nlohmann 3.11.3. Drop once
+  # ros-lyrical-nlohmann-json-schema-validator-vendor ships.
   nlohmann_json_schema_validator_vendor:
     type: git
     url: https://github.com/open-rmf/nlohmann_json_schema_validator_vendor.git
-    version: 0.6.0
+    version: 43358d96f0a458f798d2d347d18ef7177042d304

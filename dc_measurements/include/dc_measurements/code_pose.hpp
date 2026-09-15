@@ -4,14 +4,13 @@
 #ifndef DC_MEASUREMENTS__CODE_POSE_HPP_
 #define DC_MEASUREMENTS__CODE_POSE_HPP_
 
-#include <tf2/LinearMath/Matrix3x3.h>
-#include <tf2/LinearMath/Quaternion.h>
-
 #include <algorithm>
 #include <array>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
 #include <optional>
+#include <tf2/LinearMath/Matrix3x3.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
 #include <vector>
 
 #include "geometry_msgs/msg/pose.hpp"
