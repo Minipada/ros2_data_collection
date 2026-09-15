@@ -202,15 +202,16 @@ fi
 
 # --- stage: simulation + Nav2 ---------------------------------------------------------
 if has_stage nav || has_stage waypoints || has_stage detect; then
-  # Two activation attempts. A launch that is alive but never finishes activating —
-  # 2 of this job's first 3 runs stalled out 30 minutes here while the third
-  # activated in 30 s — is a hung lifecycle transition (a dropped service response
-  # never comes back), not a slow one, and nothing in the log says so. A fresh
-  # container is the retry: pkill-ing the launch inside the same one leaves the
-  # orphaned simulator publishing /clock alongside the new one (see stop_stack).
-  # The managers bring nodes up one at a time, so their per-node lines say where a
-  # hung attempt stopped — printed before tearing it down, since the generic log
-  # tail is all WARN noise from nodes that came up fine.
+  # Two activation attempts. A launch that is alive but never finishes activating
+  # costs the stage its whole wait_for ceiling — the lifecycle manager aborts the
+  # sequence on the first node whose transition fails and never logs again, which
+  # reads exactly like a hang. (The run that motivated this: bt_navigator failing
+  # activation over a 1s action-server discovery race, see qrcodes_nav.yaml's
+  # wait_for_service_timeout.) A fresh container is the retry: pkill-ing the launch
+  # inside the same one leaves the orphaned simulator publishing /clock alongside
+  # the new one (see stop_stack). The managers bring nodes up one at a time, so
+  # their per-node lines say where an attempt stopped — printed before tearing it
+  # down, since the generic log tail is all WARN noise from nodes that came up fine.
   nav_up=""
   for attempt in 1 2; do
     start_stack "nav-$attempt"
