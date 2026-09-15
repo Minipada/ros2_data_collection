@@ -118,8 +118,19 @@ WORKDIR /root/ws
 # (#271, in the `toolchain` stage below) a cache hit across ordinary source edits
 # elsewhere in ros2_data_collection.
 COPY ros2_data_collection.repos .
+# navigation2 is vendored (see ros2_data_collection.repos) for exactly three directories:
+# nav2_smac_planner — its resolute .deb never published because the OMPL deb doesn't
+# carry the Boost CMake metadata omplConfig.cmake's find_dependency needs (ompl#1457)
+# — nav2_bringup, which can't publish transitively, and the navigation2 metapackage
+# itself, which nav2_bringup find_packages at configure time. Every other nav2 package
+# has a resolute .deb that the rosdep steps below install, so the rest of the monorepo
+# is trimmed here: colcon and rosdep must not see manifests for packages that would
+# then be built and demanded twice. Trim and the .repos entry go together once both
+# .debs ship (#531).
 RUN mkdir -p src/ros2_data_collection && \
-    vcs import --shallow src/ros2_data_collection < ros2_data_collection.repos
+    vcs import --shallow src/ros2_data_collection < ros2_data_collection.repos && \
+    find src/ros2_data_collection/navigation2 -mindepth 1 -maxdepth 1 -type d \
+      ! -name nav2_smac_planner ! -name nav2_bringup ! -name navigation2 -exec rm -rf {} +
 
 # Daily apt cache-bust (see CLAUDE.md "Containers: Podman, not Docker"): a date-valued
 # build-arg rebuilds the apt layer once per UTC day so OS security patches don't go stale.
@@ -140,6 +151,9 @@ ARG APT_CACHEBUST=unknown
 # never fetching a package's `install_requires` over the network at build time — so
 # listing `mcap` in dc_mcap_writer/setup.py alone does not make it importable here; it
 # has to be installed into this image explicitly, same as fastcov below.
+# libboost-serialization-dev: the vendored nav2_smac_planner's configure resolves
+# omplConfig.cmake, whose find_dependency(Boost serialization) needs CMake metadata the
+# ros-lyrical-ompl deb doesn't declare (ompl#1457) — here until that packaging fix lands.
 #
 # dc-pip keeps pip's wheel cache on a mount (fastcov/mcap are unpinned, so every daily
 # re-run re-resolves them; the mount means the re-resolution re-downloads nothing).
@@ -149,7 +163,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     apt-get -q update && \
     apt-get -q -y dist-upgrade && \
     apt-get -q install --no-install-recommends -y \
-    python3-pip ccache lcov mold && \
+    libboost-serialization-dev python3-pip ccache lcov mold && \
     pip install --break-system-packages fastcov mcap && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial
 
@@ -197,15 +211,13 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
 # layer's cache key is the manifests' own content — it invalidates only when a
 # dependency list changes, not on an ordinary source edit.
 COPY --from=cacher /tmp/manifests/src ./src
-# nav2_bringup is released into the lyrical rosdistro but its resolute .deb publish
-# still lags (#531) — skip it there instead of failing; nothing in the build, colcon
-# test or the CI sim needs it at build time (only dc_demos' tb3 launch includes it at
-# runtime, and that demo isn't CI-exercised). Drop the conditional once the .deb ships.
 RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     apt-get -q update && \
-    LAGGING_DEBS="" && { [ "${ROS_DISTRO}" = "lyrical" ] && LAGGING_DEBS="nav2_bringup" || true; } && \
+    # navigation2 (bringup's metapackage) has no resolute .deb while any member is
+    # blocked (#531) and nothing needs the metapackage itself: its members arrive as
+    # .debs via rosdep, or from the vendored source build (colcon).
     DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false \
-      --skip-keys="${LAGGING_DEBS}" && \
+      --skip-keys="navigation2" && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial
 
 # --- workspace: full source + colcon build + colcon test, in one image both CI and
@@ -241,12 +253,16 @@ COPY . src/ros2_data_collection
 # podman never tags an image at all, so the caller (ci.yaml) would have nothing to
 # `podman run` the coverage data out of. ci.yaml checks TEST_RESULT itself, after
 # extracting coverage, and only pushes the image when it reads 0.
+#
+# SC2086: NAV2_PKGS below is meant to word-split into one skip name per package.
+# hadolint ignore=SC2086
 RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     apt-get -q update && \
-    LAGGING_DEBS="" && { [ "${ROS_DISTRO}" = "lyrical" ] && LAGGING_DEBS="nav2_bringup" || true; } && \
+    # navigation2 (bringup's metapackage) has no resolute .deb while any member is
+    # blocked (#531) — same skip as the deps stage above.
     DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false \
-      --skip-keys="${LAGGING_DEBS}" && \
+      --skip-keys="navigation2" && \
     # shellcheck disable=SC1091
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
     if [ "$CCOV" = "true" ]; then \
@@ -264,7 +280,15 @@ RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     ccache -s && \
     # shellcheck disable=SC1091
     . install/setup.bash && \
-    ( colcon test --packages-skip aws_sdk_vendor --event-handlers desktop_notification- status- ; echo $? > /tmp/test_exit ) && \
+    # The two vendored navigation2 packages (ros2_data_collection.repos) land in the
+    # workspace build above — but their own test suites (bringup's simulator launch
+    # tests among them) are not ours to gate. The loop and the skips go when the
+    # .repos entry does.
+    NAV2_PKGS="" && \
+    for d in src/ros2_data_collection/navigation2/*/; do \
+      if [ -f "${d}package.xml" ]; then NAV2_PKGS="${NAV2_PKGS}$(basename "${d}") "; fi; \
+    done && \
+    ( colcon test --packages-skip aws_sdk_vendor ${NAV2_PKGS} --event-handlers desktop_notification- status- ; echo $? > /tmp/test_exit ) && \
     ( colcon test-result --verbose ; echo $? > /tmp/result_exit ) && \
     ( src/ros2_data_collection/tools/code_coverage_report.bash ci || echo "warning: coverage report generation produced no data (non-coverage build?)" >&2 ) && \
     mkdir -p coverage && \
@@ -308,6 +332,10 @@ WORKDIR /root/ws
 # sees an unresolvable name instead of a local package satisfied via --ignore-src.
 # All three are already fully linked into the install/ tree copied in below; nothing
 # here needs to resolve their own transitive deps as apt packages.
+# nav2_bringup is skipped for the same reason on the lyrical line — it is vendored,
+# source-built (see ros2_data_collection.repos), so it rides in with the install/ tree
+# and has no .deb to install. The other nav2 packages install from .debs like any
+# other exec dependency.
 COPY --from=cacher /tmp/manifests/src ./src
 COPY rosdep src/ros2_data_collection/rosdep
 # dc-apt + the docker-clean rewrite (see toolchain-base). The rewrite is mandatory
@@ -323,10 +351,9 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
       > /etc/ros/rosdep/sources.list.d/10-dc.list && \
     apt-get -q update && \
     rosdep update --include-eol-distros && \
-    LAGGING_DEBS="" && { [ "${ROS_DISTRO}" = "lyrical" ] && LAGGING_DEBS="nav2_bringup" || true; } && \
     DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} \
       --as-root=apt:false --dependency-types=exec \
-      --skip-keys="aws_sdk_vendor vector_vendor nlohmann_json_schema_validator_vendor ${LAGGING_DEBS}" && \
+      --skip-keys="aws_sdk_vendor vector_vendor nlohmann_json_schema_validator_vendor nav2_bringup" && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial src
 
 COPY --from=workspace /root/ws/install install
