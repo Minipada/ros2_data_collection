@@ -116,6 +116,11 @@ cleanup() {
     exit $rc
   fi
   stop_stack
+  # The launch logs land only in $RUN_DIR/sim.log; a CI failure that leaves them there
+  # costs a full re-run to diagnose. Tail them into the job log on the way out.
+  if [ "$rc" -ne 0 ]; then
+    tail -n 80 "$RUN_DIR/sim.log" >&2 || true
+  fi
   exit $rc
 }
 trap cleanup EXIT
@@ -197,16 +202,39 @@ fi
 
 # --- stage: simulation + Nav2 ---------------------------------------------------------
 if has_stage nav || has_stage waypoints || has_stage detect; then
-  start_stack nav
-  # `detect` needs the measurement/bridge half of the demo running; the other stages do
-  # not, and leaving it out keeps them cheaper on a runner with no GPU.
-  if has_stage detect; then USE_DC=True; else USE_DC=False; fi
-  log "launching tb3_qrcodes.launch.py (simulation + Nav2, DC $USE_DC)"
-  rbg "$SOURCE && ros2 launch dc_demos tb3_qrcodes.launch.py headless:=True use_rviz:=False use_dc:=$USE_DC $QRCODES_LAUNCH_ARGS > /tmp/qrcodes.log 2>&1"
+  # Two activation attempts. A launch that is alive but never finishes activating —
+  # 2 of this job's first 3 runs stalled out 30 minutes here while the third
+  # activated in 30 s — is a hung lifecycle transition (a dropped service response
+  # never comes back), not a slow one, and nothing in the log says so. A fresh
+  # container is the retry: pkill-ing the launch inside the same one leaves the
+  # orphaned simulator publishing /clock alongside the new one (see stop_stack).
+  # The managers bring nodes up one at a time, so their per-node lines say where a
+  # hung attempt stopped — printed before tearing it down, since the generic log
+  # tail is all WARN noise from nodes that came up fine.
+  nav_up=""
+  for attempt in 1 2; do
+    start_stack "nav-$attempt"
+    # `detect` needs the measurement/bridge half of the demo running; the other stages
+    # do not, and leaving it out keeps them cheaper on a runner with no GPU.
+    if has_stage detect; then USE_DC=True; else USE_DC=False; fi
+    log "launching tb3_qrcodes.launch.py (simulation + Nav2, attempt $attempt of 2, DC $USE_DC)"
+    rbg "$SOURCE && ros2 launch dc_demos tb3_qrcodes.launch.py headless:=True use_rviz:=False use_dc:=$USE_DC $QRCODES_LAUNCH_ARGS > /tmp/qrcodes.log 2>&1"
 
-  wait_for "Nav2 to activate" 1800 \
-    'grep -aq "lifecycle_manager_navigation.*Managed nodes are active" /tmp/qrcodes.log' \
-    || fail "nav2 never reported all managed nodes active"
+    if wait_for "Nav2 to activate" 1800 \
+      'grep -aq "lifecycle_manager_navigation.*Managed nodes are active" /tmp/qrcodes.log'
+    then
+      nav_up=1
+      break
+    fi
+    # A launch that died on startup is a crash, not a lost response — retrying costs
+    # another half hour for the same outcome, so say which and bail immediately
+    # (cleanup tails the log on failure).
+    rin 'pgrep -f tb3_qrcodes.launch.py >/dev/null' \
+      || fail "the tb3_qrcodes launch died on startup (log tail follows)"
+    rin 'grep -a "Activating\|Managed nodes are active\|Failed to change state\|Configuring" /tmp/qrcodes.log | tail -30' || true
+    stop_stack
+  done
+  [ -n "$nav_up" ] || fail "nav2 never reported all managed nodes active (both attempts)"
   rin 'grep -aq "lifecycle_manager_localization.*Managed nodes are active" /tmp/qrcodes.log' \
     || fail "localization never reported all managed nodes active"
 
