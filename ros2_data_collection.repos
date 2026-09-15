@@ -28,11 +28,13 @@ repositories:
     type: git
     url: https://github.com/open-rmf/nlohmann_json_schema_validator_vendor.git
     version: 43358d96f0a458f798d2d347d18ef7177042d304
-  # Source-built on the lyrical line: nav2_bringup is released into the lyrical
-  # rosdistro but its resolute .deb publish still lags (#531), and dc_bringup and
-  # dc_demos' tb3 demo name nav2 packages at runtime. Pinned to the tip of
+  # Source-built on the lyrical line, for the only two navigation2 packages whose
+  # resolute .debs never published (#531): nav2_smac_planner (its farm build fails on
+  # the OMPL deb's missing Boost CMake metadata, ompl#1457) and nav2_bringup, blocked
+  # transitively. The rest of the monorepo is trimmed at vcs-import time and those
+  # packages install as .debs — see tools/e2e/Containerfile. Pinned to the tip of
   # navigation2's own lyrical branch. Drop once ros-lyrical-nav2-bringup ships —
-  # together with the nav2 skips in tools/e2e/Containerfile's runtime stage.
+  # together with the trim and the skips in tools/e2e/Containerfile.
   navigation2:
     type: git
     url: https://github.com/ros-navigation/navigation2.git
