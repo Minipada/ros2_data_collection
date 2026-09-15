@@ -28,3 +28,12 @@ repositories:
     type: git
     url: https://github.com/open-rmf/nlohmann_json_schema_validator_vendor.git
     version: 43358d96f0a458f798d2d347d18ef7177042d304
+  # Source-built on the lyrical line: nav2_bringup is released into the lyrical
+  # rosdistro but its resolute .deb publish still lags (#531), and dc_bringup and
+  # dc_demos' tb3 demo name nav2 packages at runtime. Pinned to the tip of
+  # navigation2's own lyrical branch. Drop once ros-lyrical-nav2-bringup ships —
+  # together with the nav2 skips in tools/e2e/Containerfile's runtime stage.
+  navigation2:
+    type: git
+    url: https://github.com/ros-navigation/navigation2.git
+    version: 3c3c1e8f11e62ee376a1ced66a51e2607e940ebd

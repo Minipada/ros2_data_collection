@@ -19,28 +19,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-from ament_index_python.packages import get_package_prefix, get_package_share_directory
+from ament_index_python.packages import get_package_share_directory
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 PACKAGES = ["dc_demos", "dc_simulation", "dc_bringup"]
 # Paths a launch argument may legitimately point at without the file existing yet.
 ALLOW_MISSING = ()
-# Launch files skipped while a third-party package they need has no resolute .deb yet
-# (#531) — the temporary carve-out as the Containerfile's LAGGING_DEBS rosdep skip.
-# Maps launch file name -> packages whose absence triggers the skip (any one). Drop
-# each entry once the .deb ships.
-SKIP_IF_PACKAGE_MISSING = {
-    "tb3_qrcodes.launch.py": ("nav2_bringup",),
-}
-
-
-def package_missing(name):
-    try:
-        get_package_prefix(name)
-    except Exception:
-        return True
-    return False
 
 
 class Report:
@@ -79,11 +64,6 @@ def check_launch_loads(report):
         report: collects pass/fail for the exit status.
     """
     for pkg, path in launch_files():
-        missing_deps = [p for p in SKIP_IF_PACKAGE_MISSING.get(path.name, ()) if package_missing(p)]
-        if missing_deps:
-            skipped = ", ".join(missing_deps)
-            report.check(True, f"{pkg}/{path.name} loads (skipped: no {skipped} .deb, #531)")
-            continue
         proc = subprocess.run(
             ["ros2", "launch", pkg, path.name, "--show-args"],
             capture_output=True,

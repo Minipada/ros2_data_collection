@@ -196,16 +196,7 @@ if has_stage sim; then
 fi
 
 # --- stage: simulation + Nav2 ---------------------------------------------------------
-# nav2_bringup's resolute .deb publish lags (#531) and the Containerfile's rosdep skips
-# it, so the tb3 demo can't run on that distro — skip these stages until the .deb ships.
-NAV2_BRINGUP_PRESENT=false
-if rin "$SOURCE && ros2 pkg prefix nav2_bringup >/dev/null 2>&1"; then
-  NAV2_BRINGUP_PRESENT=true
-fi
-if ! $NAV2_BRINGUP_PRESENT; then
-  log "skipping nav/waypoints/detect stages: no resolute .deb for nav2_bringup (#531)"
-fi
-if { has_stage nav || has_stage waypoints || has_stage detect; } && $NAV2_BRINGUP_PRESENT; then
+if has_stage nav || has_stage waypoints || has_stage detect; then
   start_stack nav
   # `detect` needs the measurement/bridge half of the demo running; the other stages do
   # not, and leaving it out keeps them cheaper on a runner with no GPU.
@@ -223,7 +214,7 @@ if { has_stage nav || has_stage waypoints || has_stage detect; } && $NAV2_BRINGU
 fi
 
 # --- stage: waypoint following --------------------------------------------------------
-if { has_stage waypoints || has_stage detect; } && $NAV2_BRINGUP_PRESENT; then
+if has_stage waypoints || has_stage detect; then
   if has_stage detect; then
     log "recording every QR code the demo reads"
     rbg "$SOURCE && $GROUND_TRUTH_ENV python3 /opt/sim/verify_sim.py record > /tmp/codes.log 2>&1"
@@ -278,7 +269,7 @@ fi
 # Navigating the aisles perfectly while reading nothing is exactly the failure #51
 # describes, and every other stage here passes while it happens: the robot spawns, the
 # cameras publish, Nav2 reaches every goal. Only counting decoded codes catches it.
-if has_stage detect && $NAV2_BRINGUP_PRESENT; then
+if has_stage detect; then
   log "checking the demo actually read the codes it drove up to"
 
   # One station is one stop in front of one pallet, and the Camera measurements report
