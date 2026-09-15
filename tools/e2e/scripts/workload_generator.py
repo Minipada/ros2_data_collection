@@ -27,9 +27,12 @@ from sensor_msgs.msg import Image
 from dc_interfaces.msg import StringStamped
 
 # How long to wait for the DC pipeline to subscribe before giving up and publishing
-# anyway. The harness's own <10s startup gate (run.sh) trips first if the stack never
-# comes up, so this is only a safety net against hanging, not a real timing knob.
-PIPELINE_READY_TIMEOUT_S = 30.0
+# anyway. Has to outlast the split harness's deliberate 20s Shipper delay: the pipeline
+# can't subscribe until the bridge readiness gate opens, and under runner load that
+# chain once outlasted the old 30s net, publishing the first ~26 Records into an empty
+# graph — real data loss by the verifier's ledger (e2e-split). A safety net against
+# hanging, not a timing knob: it returns the instant the subscriptions exist.
+PIPELINE_READY_TIMEOUT_S = 120.0
 
 NUM_SYNTH_TOPICS = 14
 SYNTH_TOPIC_PREFIX = "/dc/e2e/synth/synth"
