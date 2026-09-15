@@ -41,9 +41,8 @@ foreach(Dependency IN ITEMS ${dependencies})
   find_package(${Dependency} REQUIRED)
 endforeach()
 
-# ament_target_dependencies was removed in lyrical (#531): dependencies link by exported
-# target instead. Message packages have no pkg::pkg umbrella target on lyrical -- their
-# C++ typesupport target carries the generated code. dc_common/dc_core are header-only
+# Message packages have no pkg::pkg umbrella target -- their C++ typesupport target
+# carries the generated code. dc_common/dc_core are header-only
 # (include dirs wired per target below); yaml_cpp_vendor exports no target
 # (yaml-cpp::yaml-cpp is found and linked directly); PkgConfig is tooling, not a library.
 # The schema-validator vendor's upstream (v2.4.0) exports only the namespaced target

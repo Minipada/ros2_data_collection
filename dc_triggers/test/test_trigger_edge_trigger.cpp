@@ -12,7 +12,7 @@
 
 namespace
 {
-// rclcpp::spin_some is deprecated on lyrical; a throwaway executor spins the same work.
+// rclcpp::spin_some is deprecated; a throwaway executor spins the same work.
 void spinNode(const rclcpp::node_interfaces::NodeBaseInterface::SharedPtr& node)
 {
   rclcpp::executors::SingleThreadedExecutor executor;
@@ -41,7 +41,7 @@ protected:
         { rclcpp::Parameter("condition_plugins", std::vector<std::string>{ "moving" }) });
     tb_node_ = std::make_shared<trigger_broadcast_node::TriggerBroadcastNode>(options);
 
-    // nav2::LifecycleNode's create_subscription (callback before QoS) shadows rclcpp's on lyrical.
+    // nav2::LifecycleNode's create_subscription (callback before QoS) shadows rclcpp's.
     sub_flush_ = tb_node_->create_subscription<dc_interfaces::msg::FlushEvent>(
         "/dc/flush", std::bind(&TriggerEdgeTriggerTest::flushEventCallback, this, std::placeholders::_1),
         rclcpp::SystemDefaultsQoS());

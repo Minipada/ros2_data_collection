@@ -26,10 +26,9 @@ foreach(Dependency IN ITEMS ${dependencies})
   find_package(${Dependency} REQUIRED)
 endforeach()
 
-# ament_target_dependencies was removed in lyrical (#531): dependencies link by exported
-# target instead. Message packages have no pkg::pkg umbrella target on lyrical -- their
-# C++ typesupport target carries the generated code; dc_common is header-only;
-# yaml_cpp_vendor exports no target (yaml-cpp headers come via ${YAML_CPP_INCLUDEDIR}).
+# Message packages have no pkg::pkg umbrella target -- their C++ typesupport target
+# carries the generated code; dc_common is header-only; yaml_cpp_vendor exports no
+# target (yaml-cpp headers come via ${YAML_CPP_INCLUDEDIR}).
 dc_package()
 
 set(library_name base64_library)

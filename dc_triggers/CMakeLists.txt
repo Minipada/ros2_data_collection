@@ -26,10 +26,9 @@ endforeach()
 find_package(PkgConfig REQUIRED)
 pkg_search_module(UUID REQUIRED uuid)
 
-# ament_target_dependencies was removed in lyrical (#531): dependencies link by exported
-# target instead. Message packages have no pkg::pkg umbrella target on lyrical -- their
-# C++ typesupport target carries the generated code; dc_core is header-only (include dirs
-# wired below); dc_util's export is namespaced.
+# Message packages have no pkg::pkg umbrella target -- their C++ typesupport target
+# carries the generated code; dc_core is header-only (include dirs wired below);
+# dc_util's export is namespaced.
 set(link_dependencies
   dc_interfaces::dc_interfaces__rosidl_typesupport_cpp
   dc_util::base64_library

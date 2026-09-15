@@ -67,9 +67,8 @@ protected:
   {
     auto tf_wait_node = std::make_shared<rclcpp::Node>("distance_traveled_tf_wait");
     tf2_ros::Buffer tf_buffer(tf_wait_node->get_clock());
-    // The NodeT constructor is deprecated on lyrical; NodeInterfaces wraps the node's
-    // interfaces instead. It reads get_node_*_interface() off the NodeT& itself, so the
-    // node object goes in, not the shared_ptr.
+    // NodeInterfaces reads get_node_*_interface() off the NodeT& itself, so the node
+    // object goes in, not the shared_ptr.
     tf2_ros::TransformListener tf_listener(
         tf_buffer,
         rclcpp::node_interfaces::NodeInterfaces<
