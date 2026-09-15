@@ -116,6 +116,11 @@ cleanup() {
     exit $rc
   fi
   stop_stack
+  # The launch logs land only in $RUN_DIR/sim.log; a CI failure that leaves them there
+  # costs a full re-run to diagnose. Tail them into the job log on the way out.
+  if [ "$rc" -ne 0 ]; then
+    tail -n 80 "$RUN_DIR/sim.log" >&2 || true
+  fi
   exit $rc
 }
 trap cleanup EXIT
@@ -206,7 +211,13 @@ if has_stage nav || has_stage waypoints || has_stage detect; then
 
   wait_for "Nav2 to activate" 1800 \
     'grep -aq "lifecycle_manager_navigation.*Managed nodes are active" /tmp/qrcodes.log' \
-    || fail "nav2 never reported all managed nodes active"
+    || {
+      # Thirty minutes without the line is either a hung activation or a launch that
+      # died on startup — say which before bailing (cleanup tails the log on failure).
+      rin 'pgrep -f tb3_qrcodes.launch.py >/dev/null' \
+        || fail "the tb3_qrcodes launch died on startup (log tail follows)"
+      fail "nav2 never reported all managed nodes active"
+    }
   rin 'grep -aq "lifecycle_manager_localization.*Managed nodes are active" /tmp/qrcodes.log' \
     || fail "localization never reported all managed nodes active"
 
