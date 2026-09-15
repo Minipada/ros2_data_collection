@@ -8,7 +8,7 @@
 #include <nlohmann/json-schema.hpp>
 #include <string>
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
+#include "ament_index_cpp/get_package_share_path.hpp"
 #include "measurement_test_bench.hpp"
 
 // Runs a Record through the Measurement's own installed schema, the same file and validator
@@ -18,7 +18,7 @@ class ThermalSchema
 public:
   ThermalSchema()
   {
-    std::ifstream schema_file(ament_index_cpp::get_package_share_directory("dc_measurements") +
+    std::ifstream schema_file(ament_index_cpp::get_package_share_path("dc_measurements").string() +
                               "/plugins/measurements/json/thermal.json");
     validator_.set_root_schema(nlohmann::json::parse(schema_file));
   }

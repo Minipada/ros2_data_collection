@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.16)
 project(dc_lifecycle_manager)
 
 set(dependencies
@@ -10,6 +10,7 @@ set(dependencies
   dc_common
   lifecycle_msgs
   nav2_msgs
+  nav2_ros_common
   nav2_util
   rclcpp
   rclcpp_action
@@ -26,6 +27,24 @@ foreach(Dependency IN ITEMS ${dependencies})
   find_package(${Dependency} REQUIRED)
 endforeach()
 
+# Message packages have no pkg::pkg umbrella target -- their C++ typesupport target
+# carries the generated code; dc_common is header-only (include dirs wired below).
+set(link_dependencies
+  bondcpp::bondcpp
+  diagnostic_updater::diagnostic_updater
+  lifecycle_msgs::lifecycle_msgs__rosidl_typesupport_cpp
+  nav2_msgs::nav2_msgs__rosidl_typesupport_cpp
+  nav2_ros_common::nav2_ros_common
+  nav2_util::nav2_util_core
+  rclcpp::rclcpp
+  rclcpp_action::rclcpp_action
+  rclcpp_lifecycle::rclcpp_lifecycle
+  rclcpp_components::component_manager
+  std_msgs::std_msgs__rosidl_typesupport_cpp
+  std_srvs::std_srvs__rosidl_typesupport_cpp
+  tf2_geometry_msgs::tf2_geometry_msgs
+)
+
 dc_package()
 
 include_directories(
@@ -39,20 +58,16 @@ add_library(${library_name} SHARED
   src/lifecycle_manager_client.cpp
 )
 
-ament_target_dependencies(${library_name}
-  ${dependencies}
-)
+target_include_directories(${library_name} PUBLIC ${dc_common_INCLUDE_DIRS})
+target_link_libraries(${library_name} PUBLIC ${link_dependencies})
 
 add_executable(lifecycle_manager
   src/main.cpp
 )
 
-target_link_libraries(lifecycle_manager
+target_link_libraries(lifecycle_manager PRIVATE
   ${library_name}
-)
-
-ament_target_dependencies(lifecycle_manager
-  ${dependencies}
+  ${link_dependencies}
 )
 
 rclcpp_components_register_nodes(${library_name} "dc_lifecycle_manager::LifecycleManager")
@@ -87,11 +102,11 @@ if(BUILD_TESTING)
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>
       $<INSTALL_INTERFACE:include>
     )
-    ament_target_dependencies(${PROJECT_NAME}_${test}
-      ${dependencies}
-    )
+    # Plain signature: ament_add_gtest links gtest with the plain form, and CMake
+    # refuses to mix signatures on one target (namespaced targets work as plain args).
     target_link_libraries(${PROJECT_NAME}_${test}
       ${library_name}
+      ${link_dependencies}
     )
   endforeach()
 endif()

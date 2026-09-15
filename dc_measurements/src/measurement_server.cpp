@@ -75,7 +75,7 @@ std::string resolveRobotName(const std::string& value, const std::string& value_
 
 MeasurementServer::MeasurementServer(const rclcpp::NodeOptions& options,
                                      const std::vector<std::string>& measurement_plugins)
-  : nav2_util::LifecycleNode("measurement_server", "", options)
+  : nav2::LifecycleNode("measurement_server", "", options)
   , measurement_plugin_loader_("dc_core", "dc_core::Measurement")
   , condition_plugin_loader_("dc_core", "dc_core::Condition")
 {
@@ -165,7 +165,7 @@ void MeasurementServer::setRunId()
       if (!std::ifstream(run_id_counter_path_))
       {
         // Create parent directory
-        auto parent_dir = std::filesystem::path(run_id_counter_path_).parent_path().u8string();
+        auto parent_dir = std::filesystem::path(run_id_counter_path_).parent_path().string();
         std::filesystem::create_directories(parent_dir);
         // Create file
         std::ofstream file(run_id_counter_path_);
@@ -195,7 +195,7 @@ MeasurementServer::~MeasurementServer()
   measurements_.clear();
 }
 
-nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle::State& /*previous_state*/)
+nav2::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Configuring");
   auto node = shared_from_this();
@@ -213,15 +213,15 @@ nav2_util::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle
 
   if (!loadConditionPlugins())
   {
-    return nav2_util::CallbackReturn::FAILURE;
+    return nav2::CallbackReturn::FAILURE;
   }
 
   if (!loadMeasurementPlugins())
   {
-    return nav2_util::CallbackReturn::FAILURE;
+    return nav2::CallbackReturn::FAILURE;
   }
 
-  return nav2_util::CallbackReturn::SUCCESS;
+  return nav2::CallbackReturn::SUCCESS;
 }
 
 bool MeasurementServer::loadConditionPlugins()
@@ -307,7 +307,7 @@ bool MeasurementServer::loadMeasurementPlugins()
   return true;
 }
 
-nav2_util::CallbackReturn MeasurementServer::on_activate(const rclcpp_lifecycle::State& /* previous_state */)
+nav2::CallbackReturn MeasurementServer::on_activate(const rclcpp_lifecycle::State& /* previous_state */)
 {
   RCLCPP_INFO(get_logger(), "Activating");
   std::vector<pluginlib::UniquePtr<dc_core::Measurement>>::iterator iter;
@@ -319,10 +319,10 @@ nav2_util::CallbackReturn MeasurementServer::on_activate(const rclcpp_lifecycle:
   // create bond connection
   createBond();
 
-  return nav2_util::CallbackReturn::SUCCESS;
+  return nav2::CallbackReturn::SUCCESS;
 }
 
-nav2_util::CallbackReturn MeasurementServer::on_deactivate(const rclcpp_lifecycle::State& /*state*/)
+nav2::CallbackReturn MeasurementServer::on_deactivate(const rclcpp_lifecycle::State& /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Deactivating");
 
@@ -335,21 +335,21 @@ nav2_util::CallbackReturn MeasurementServer::on_deactivate(const rclcpp_lifecycl
   // destroy bond connection
   destroyBond();
 
-  return nav2_util::CallbackReturn::SUCCESS;
+  return nav2::CallbackReturn::SUCCESS;
 }
 
-nav2_util::CallbackReturn MeasurementServer::on_cleanup(const rclcpp_lifecycle::State& /*state*/)
+nav2::CallbackReturn MeasurementServer::on_cleanup(const rclcpp_lifecycle::State& /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Cleaning up");
   tf_.reset();
 
-  return nav2_util::CallbackReturn::SUCCESS;
+  return nav2::CallbackReturn::SUCCESS;
 }
 
-nav2_util::CallbackReturn MeasurementServer::on_shutdown(const rclcpp_lifecycle::State& /*previous_state*/)
+nav2::CallbackReturn MeasurementServer::on_shutdown(const rclcpp_lifecycle::State& /*previous_state*/)
 {
   RCLCPP_INFO(get_logger(), "Shutting down");
-  return nav2_util::CallbackReturn::SUCCESS;
+  return nav2::CallbackReturn::SUCCESS;
 }
 
 }  // end namespace measurement_server

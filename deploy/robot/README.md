@@ -137,7 +137,7 @@ podman run --rm -it --name dc_robot_vector --network dc_robot_net \
 podman run --rm -it --name dc_robot_dc_ros --network dc_robot_net \
   -v dc_robot_uploader:/root/.dc/robot/uploader -v dc_robot_config:/etc/dc/shipper \
   -v "$(pwd)/params/robot_params_local.yaml:/opt/dc/robot_params.yaml:ro" \
-  ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy \
+  ghcr.io/minipada/ros2_data_collection/dc-ros:lyrical \
   dc_params_file:=/opt/dc/robot_params.yaml run_uploader:=false
 
 # Terminal 5 — dc-uploader (still points at the edge.site.example S3 placeholder —
@@ -152,7 +152,7 @@ podman run --rm -it --name dc_robot_dc_uploader --network dc_robot_net \
   -e DC_UPLOADER_S3_ACCESS_KEY_ID=changeme -e DC_UPLOADER_S3_SECRET_ACCESS_KEY=changeme \
   -e DC_UPLOADER_DELETE_WHEN_SENT=true \
   -v dc_robot_uploader:/root/.dc/robot/uploader \
-  ghcr.io/minipada/ros2_data_collection/dc-uploader:jazzy
+  ghcr.io/minipada/ros2_data_collection/dc-uploader:lyrical
 ```
 
 Tear down: `Ctrl-C` each terminal, then `podman network rm dc_robot_net` and `podman
@@ -210,7 +210,7 @@ podman run --rm -it --network host --name dc_robot_rustfs \
 # (dc_bringup/params/dc_params.yaml) already points at 127.0.0.1:5432.
 podman run --rm -it --network host --name dc_robot_aio \
   -v dc_robot_aio_buffer:/root/.dc/buffer \
-  ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy
+  ghcr.io/minipada/ros2_data_collection/dc-ros:lyrical
 ```
 
 Isolated network (matches `compose.isolated-network.yaml`) — same three terminals, but
@@ -225,7 +225,7 @@ podman network create dc_robot_net
 podman run --rm -it --network dc_robot_net --name dc_robot_aio \
   -v dc_robot_aio_buffer:/root/.dc/buffer \
   -v "$(pwd)/params/aio_params_local.yaml:/opt/dc/dc_params.yaml:ro" \
-  ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy \
+  ghcr.io/minipada/ros2_data_collection/dc-ros:lyrical \
   dc_params_file:=/opt/dc/dc_params.yaml
 ```
 
@@ -275,15 +275,15 @@ normally costs. There is no wrapper script — every step below is a plain `podm
 
 ```sh
 # 1. Get the images into local Podman storage. This example uses the images this
-#    branch already publishes, tagged :jazzy — ghcr.io tags follow the branch name
+#    branch already publishes, tagged :lyrical — ghcr.io tags follow the branch name
 #    here, never :latest, the same way ROS's own images are tagged by distro codename
-#    (ros:jazzy-ros-base), never ros:latest. --entrypoint true skips actually launching
+#    (ros:lyrical-ros-base), never ros:latest. --entrypoint true skips actually launching
 #    DC; this step exists only to fetch the image. To test your own local changes
 #    instead, build containers/dc-ros/Containerfile the same way CI does (BASE_IMAGE
 #    from tools/e2e/scripts/build.sh) and tag the result identically — nothing below
 #    changes.
-podman run --rm --entrypoint true ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy
-podman run --rm --entrypoint true ghcr.io/minipada/ros2_data_collection/dc-uploader:jazzy
+podman run --rm --entrypoint true ghcr.io/minipada/ros2_data_collection/dc-ros:lyrical
+podman run --rm --entrypoint true ghcr.io/minipada/ros2_data_collection/dc-uploader:lyrical
 
 # 2. Create the cluster. --volume stages params/robot_params.yaml where
 #    kubernetes/robot-pod.yaml's hostPath volume expects it, on the node itself
@@ -303,11 +303,11 @@ k3d cluster create dc-robot-dev \
 #    from the build workspace) — this step needs that much free disk twice over
 #    (Podman's own storage, plus the tar) and is the slow part of the loop; everything
 #    after it is fast.
-rm -f /tmp/dc-ros.tar && podman save ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy -o /tmp/dc-ros.tar && k3d image import /tmp/dc-ros.tar -c dc-robot-dev
-rm -f /tmp/dc-uploader.tar && podman save ghcr.io/minipada/ros2_data_collection/dc-uploader:jazzy -o /tmp/dc-uploader.tar && k3d image import /tmp/dc-uploader.tar -c dc-robot-dev
+rm -f /tmp/dc-ros.tar && podman save ghcr.io/minipada/ros2_data_collection/dc-ros:lyrical -o /tmp/dc-ros.tar && k3d image import /tmp/dc-ros.tar -c dc-robot-dev
+rm -f /tmp/dc-uploader.tar && podman save ghcr.io/minipada/ros2_data_collection/dc-uploader:lyrical -o /tmp/dc-uploader.tar && k3d image import /tmp/dc-uploader.tar -c dc-robot-dev
 
 # 4. Run the Pod. `k3d/kustomization.yaml` overlays kubernetes/robot-pod.yaml: pins
-#    both images to :jazzy instead of the base manifest's :latest, and sets
+#    both images to :lyrical instead of the base manifest's :latest, and sets
 #    imagePullPolicy: Never so kubelet uses what was just imported instead of reaching
 #    out to ghcr.io itself. `apply -k` itself refuses a base outside its own directory,
 #    which is why this pipes through `kustomize` (which accepts the override) instead.

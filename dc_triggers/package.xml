@@ -19,6 +19,7 @@ SPDX-License-Identifier: MPL-2.0
   <depend>dc_interfaces</depend>
   <depend>dc_util</depend>
   <depend>lifecycle_msgs</depend>
+  <depend>nav2_ros_common</depend>
   <depend>nav2_util</depend>
   <depend>pkg-config</depend>
   <depend>pluginlib</depend>

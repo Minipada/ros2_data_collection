@@ -1,20 +1,24 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 project(dc_demos)
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(ament_cmake_ros REQUIRED)
 
+# nav2_bringup stays a package.xml exec_depend only: it is released into the lyrical
+# rosdistro but its resolute .deb publish still lags (#531), so there is no CMake config
+# to find at configure time. Nothing here compiles against it -- only the tb3 demo launch
+# files include it at runtime, and none of them is CI-exercised. Restore it here once the
+# .deb ships.
 set(dependencies
   geometry_msgs
   dc_measurements
   dc_simulation
   nlohmann_json
   nlohmann_json_schema_validator
-  nav2_bringup
   rclpy
   simulation_interfaces
   xacro
@@ -58,12 +62,20 @@ add_library(dc_uptime_custom_measurement SHARED
 )
 list(APPEND dc_measurement_plugin_libs dc_uptime_custom_measurement)
 
+# Message packages have no pkg::pkg umbrella target -- their C++ typesupport target
+# carries the generated code. The launch/Python-only deps (rclpy, xacro, nav2_bringup,
+# dc_simulation) export nothing linkable, and dc_measurements exports plain library
+# names, not CMake targets.
 foreach(measurement_plugin ${dc_measurement_plugin_libs})
-  ament_target_dependencies(${measurement_plugin} ${dependencies})
-  target_link_libraries(
-    ${measurement_plugin}
+  target_include_directories(${measurement_plugin} PUBLIC
+    ${dc_measurements_INCLUDE_DIRS}
+  )
+  target_link_libraries(${measurement_plugin} PUBLIC
     nlohmann_json::nlohmann_json
-    nlohmann_json_schema_validator
+    nlohmann_json_schema_validator::validator
+    geometry_msgs::geometry_msgs__rosidl_typesupport_cpp
+    simulation_interfaces::simulation_interfaces__rosidl_typesupport_cpp
+    ${dc_measurements_LIBRARIES}
   )
   target_compile_definitions(${measurement_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()

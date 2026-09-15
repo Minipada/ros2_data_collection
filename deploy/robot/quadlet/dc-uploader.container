@@ -13,7 +13,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-Image=ghcr.io/minipada/ros2_data_collection/dc-uploader:jazzy
+Image=ghcr.io/minipada/ros2_data_collection/dc-uploader:lyrical
 ContainerName=dc_robot_dc_uploader
 
 Environment=DC_UPLOADER_STORAGE_NAME=edge

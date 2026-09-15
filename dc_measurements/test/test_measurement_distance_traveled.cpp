@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MPL-2.0
 
 #include <gtest/gtest.h>
-#include <tf2/time.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/transform_listener.h>
+
+#include <tf2/time.hpp>
+#include <tf2_ros/buffer.hpp>
+#include <tf2_ros/transform_broadcaster.hpp>
+#include <tf2_ros/transform_listener.hpp>
 
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "measurement_test_bench.hpp"
@@ -66,7 +67,15 @@ protected:
   {
     auto tf_wait_node = std::make_shared<rclcpp::Node>("distance_traveled_tf_wait");
     tf2_ros::Buffer tf_buffer(tf_wait_node->get_clock());
-    tf2_ros::TransformListener tf_listener(tf_buffer, tf_wait_node, /*spin_thread=*/true);
+    // NodeInterfaces reads get_node_*_interface() off the NodeT& itself, so the node
+    // object goes in, not the shared_ptr.
+    tf2_ros::TransformListener tf_listener(
+        tf_buffer,
+        rclcpp::node_interfaces::NodeInterfaces<
+            rclcpp::node_interfaces::NodeBaseInterface, rclcpp::node_interfaces::NodeLoggingInterface,
+            rclcpp::node_interfaces::NodeParametersInterface, rclcpp::node_interfaces::NodeTopicsInterface>(
+            *tf_wait_node),
+        /*spin_thread=*/true);
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     while (!tf_buffer.canTransform("map", "base_link", tf2::TimePointZero))
     {

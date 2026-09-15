@@ -8,11 +8,11 @@
 #include <string>
 #include <vector>
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
+#include "ament_index_cpp/get_package_share_path.hpp"
 #include "dc_measurements/measurement.hpp"
 #include "measurement_test_bench.hpp"
 #include "nav2_msgs/action/follow_waypoints.hpp"
-#include "nav2_msgs/msg/missed_waypoint.hpp"
+#include "nav2_msgs/msg/waypoint_status.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 
 using FollowWaypoints = nav2_msgs::action::FollowWaypoints;
@@ -54,8 +54,8 @@ protected:
   // alongside the MeasurementServer.
   void spinExtra() override
   {
-    rclcpp::spin_some(server_node_->get_node_base_interface());
-    rclcpp::spin_some(commander_node_->get_node_base_interface());
+    spinNodeOnce(server_node_->get_node_base_interface());
+    spinNodeOnce(commander_node_->get_node_base_interface());
   }
 
   // Sends a goal through the fake commander and spins until the fake server's handle_accepted has
@@ -115,7 +115,7 @@ protected:
   static void expectValidatesAgainstSchema(const nlohmann::json& record)
   {
     const std::string schema_dir =
-        ament_index_cpp::get_package_share_directory("dc_measurements") + "/plugins/measurements/json";
+        ament_index_cpp::get_package_share_path("dc_measurements").string() + "/plugins/measurements/json";
     const std::string path = schema_dir + "/mission_nav2_follow_waypoints.json";
     std::ifstream schema_file(path);
     ASSERT_TRUE(schema_file.good()) << "Schema not installed at " << path;
@@ -187,8 +187,8 @@ TEST_F(MeasurementMissionNav2FollowWaypointsTest, SucceededStatusWithNonZeroErro
   auto result = std::make_shared<FollowWaypoints::Result>();
   result->error_code = FollowWaypoints::Result::TASK_EXECUTOR_FAILED;
   result->error_msg = "task executor failed";
-  nav2_msgs::msg::MissedWaypoint missed;
-  missed.index = 2;
+  nav2_msgs::msg::WaypointStatus missed;
+  missed.waypoint_index = 2;
   missed.error_code = FollowWaypoints::Result::TASK_EXECUTOR_FAILED;
   result->missed_waypoints.push_back(missed);
   goal_handle_->succeed(result);

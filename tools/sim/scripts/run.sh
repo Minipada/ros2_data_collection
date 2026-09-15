@@ -116,6 +116,11 @@ cleanup() {
     exit $rc
   fi
   stop_stack
+  # The launch logs land only in $RUN_DIR/sim.log; a CI failure that leaves them there
+  # costs a full re-run to diagnose. Tail them into the job log on the way out.
+  if [ "$rc" -ne 0 ]; then
+    tail -n 80 "$RUN_DIR/sim.log" >&2 || true
+  fi
   exit $rc
 }
 trap cleanup EXIT
@@ -128,9 +133,9 @@ trap cleanup EXIT
 # publish /clock, and every tf2 buffer starts reporting "Detected jump back in time"
 # while Nav2 quietly never localizes. A container boundary makes teardown total.
 # Expanded inside the container: the image's ENV ROS_DISTRO (set by build.sh) picks the
-# setup; :-jazzy covers images predating #530.
+# setup; :-lyrical covers images predating #530.
 # shellcheck disable=SC2016
-SOURCE='source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && source /root/ws/install/setup.bash'
+SOURCE='source /opt/ros/${ROS_DISTRO:-lyrical}/setup.bash && source /root/ws/install/setup.bash'
 
 start_stack() {
   CONTAINER="dc-sim-$$-$1"
@@ -186,7 +191,7 @@ if has_stage sim; then
   # Expanded inside the container (the image's ENV ROS_DISTRO), like $SOURCE above.
   # shellcheck disable=SC2016
   wait_for "the robot to spawn" 600 \
-    'source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && gz model --list 2>/dev/null | grep -q turtlebot3_waffle' \
+    'source /opt/ros/${ROS_DISTRO:-lyrical}/setup.bash && gz model --list 2>/dev/null | grep -q turtlebot3_waffle' \
     || fail "turtlebot3_waffle never appeared in gz model --list"
 
   rin "$SOURCE && python3 /opt/sim/verify_sim.py topics" || fail "topic checks"
@@ -197,16 +202,40 @@ fi
 
 # --- stage: simulation + Nav2 ---------------------------------------------------------
 if has_stage nav || has_stage waypoints || has_stage detect; then
-  start_stack nav
-  # `detect` needs the measurement/bridge half of the demo running; the other stages do
-  # not, and leaving it out keeps them cheaper on a runner with no GPU.
-  if has_stage detect; then USE_DC=True; else USE_DC=False; fi
-  log "launching tb3_qrcodes.launch.py (simulation + Nav2, DC $USE_DC)"
-  rbg "$SOURCE && ros2 launch dc_demos tb3_qrcodes.launch.py headless:=True use_rviz:=False use_dc:=$USE_DC $QRCODES_LAUNCH_ARGS > /tmp/qrcodes.log 2>&1"
+  # Two activation attempts. A launch that is alive but never finishes activating
+  # costs the stage its whole wait_for ceiling — the lifecycle manager aborts the
+  # sequence on the first node whose transition fails and never logs again, which
+  # reads exactly like a hang. (The run that motivated this: bt_navigator failing
+  # activation over a 1s action-server discovery race, see qrcodes_nav.yaml's
+  # wait_for_service_timeout.) A fresh container is the retry: pkill-ing the launch
+  # inside the same one leaves the orphaned simulator publishing /clock alongside
+  # the new one (see stop_stack). The managers bring nodes up one at a time, so
+  # their per-node lines say where an attempt stopped — printed before tearing it
+  # down, since the generic log tail is all WARN noise from nodes that came up fine.
+  nav_up=""
+  for attempt in 1 2; do
+    start_stack "nav-$attempt"
+    # `detect` needs the measurement/bridge half of the demo running; the other stages
+    # do not, and leaving it out keeps them cheaper on a runner with no GPU.
+    if has_stage detect; then USE_DC=True; else USE_DC=False; fi
+    log "launching tb3_qrcodes.launch.py (simulation + Nav2, attempt $attempt of 2, DC $USE_DC)"
+    rbg "$SOURCE && ros2 launch dc_demos tb3_qrcodes.launch.py headless:=True use_rviz:=False use_dc:=$USE_DC $QRCODES_LAUNCH_ARGS > /tmp/qrcodes.log 2>&1"
 
-  wait_for "Nav2 to activate" 1800 \
-    'grep -aq "lifecycle_manager_navigation.*Managed nodes are active" /tmp/qrcodes.log' \
-    || fail "nav2 never reported all managed nodes active"
+    if wait_for "Nav2 to activate" 1800 \
+      'grep -aq "lifecycle_manager_navigation.*Managed nodes are active" /tmp/qrcodes.log'
+    then
+      nav_up=1
+      break
+    fi
+    # A launch that died on startup is a crash, not a lost response — retrying costs
+    # another half hour for the same outcome, so say which and bail immediately
+    # (cleanup tails the log on failure).
+    rin 'pgrep -f tb3_qrcodes.launch.py >/dev/null' \
+      || fail "the tb3_qrcodes launch died on startup (log tail follows)"
+    rin 'grep -a "Activating\|Managed nodes are active\|Failed to change state\|Configuring" /tmp/qrcodes.log | tail -30' || true
+    stop_stack
+  done
+  [ -n "$nav_up" ] || fail "nav2 never reported all managed nodes active (both attempts)"
   rin 'grep -aq "lifecycle_manager_localization.*Managed nodes are active" /tmp/qrcodes.log' \
     || fail "localization never reported all managed nodes active"
 

@@ -18,10 +18,10 @@ robot:
 images:
   dcRos:
     repository: ghcr.io/minipada/ros2_data_collection/dc-ros
-    tag: jazzy
+    tag: lyrical
   dcUploader:
     repository: ghcr.io/minipada/ros2_data_collection/dc-uploader
-    tag: jazzy
+    tag: lyrical
   vector:
     # Pinned to ros2_data_collection.repos' vector_vendor version, same constraint as
     # ../../compose.yaml/quadlet/vector.container/kubernetes/robot-pod.yaml — bump by
