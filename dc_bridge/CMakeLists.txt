@@ -15,7 +15,12 @@ endif()
 
 # msgpack-cxx's exported config resolves Boost with find_dependency() module-style, which
 # CMake 4 deprecates (CMP0167); prefer configs so it lands on Boost's own config instead.
+# Scoped to that one find: left on, ament_cmake_gtest's find_package(GTest) also lands on
+# GTest's config, which defines GTest::* targets but none of the GTEST_LIBRARIES variables
+# ament_add_gtest() links -- tests would link with no gtest in them.
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+find_package(msgpack-cxx REQUIRED)
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG OFF)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -24,7 +29,6 @@ find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(tomlplusplus REQUIRED)
-find_package(msgpack-cxx REQUIRED)
 find_package(Threads REQUIRED)
 # Runtime message introspection for raw / generic-subscription mode (#227): the same
 # type support pair `ros2 bag record -a` uses to handle types it was never built against.
@@ -128,6 +132,13 @@ add_executable(dc_render
 target_link_libraries(dc_render dc_bridge_core)
 
 install(TARGETS dc_bridge dc_uploader dc_render DESTINATION lib/${PROJECT_NAME})
+
+# The Bridge's libraries ride along with the executables: the runtime image copies only
+# install/ (tools/e2e/Containerfile's runtime stage), the binaries carry no RPATH, and
+# their resolution is LD_LIBRARY_PATH from the sourced overlay — so without this both
+# dc_bridge and dc_uploader abort at startup with an unloadable libdc_bridge_ros.so
+# (#531: first exercised by the verify-* jobs, never before run on this distro line).
+install(TARGETS dc_bridge_core dc_bridge_ros LIBRARY DESTINATION lib)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
