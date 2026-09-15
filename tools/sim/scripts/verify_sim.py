@@ -22,7 +22,7 @@ import pathlib
 import sys
 
 import rclpy
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import OccupancyGrid, Odometry
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile, QoSReliabilityPolicy
@@ -71,7 +71,7 @@ class Verifier(Node):
             self.create_subscription(
                 Image, topic, lambda m, t=topic: self.images.setdefault(t, m), 10
             )
-        self.cmd_vel = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.cmd_vel = self.create_publisher(TwistStamped, "/cmd_vel", 10)
 
     def _set(self, attr):
         def cb(msg):
@@ -189,7 +189,7 @@ def check_topics(node, report):
 
 
 def check_cmd_vel(node, report):
-    """A Twist on /cmd_vel reaches DiffDrive and the robot moves.
+    """A TwistStamped on /cmd_vel reaches DiffDrive and the robot moves.
 
     The one assertion that proves the robot is really in the world and really actuated,
     rather than merely present in a topic list.
@@ -203,13 +203,15 @@ def check_cmd_vel(node, report):
         return
     start = node.odom.pose.pose.position
 
-    twist = Twist()
-    twist.linear.x = 0.2
+    # Stamped to match the bridge: on lyrical the nav2 command chain is TwistStamped
+    # end to end, and one topic can't carry two types (see the bridge config).
+    twist = TwistStamped()
+    twist.twist.linear.x = 0.2
     end_ns = node.get_clock().now().nanoseconds + DRIVE_S * 1e9
     while node.get_clock().now().nanoseconds < end_ns:
         node.cmd_vel.publish(twist)
         node.spin(0.2)
-    node.cmd_vel.publish(Twist())
+    node.cmd_vel.publish(TwistStamped())
     node.spin(5)
 
     end = node.odom.pose.pose.position
