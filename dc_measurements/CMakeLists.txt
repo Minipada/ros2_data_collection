@@ -46,6 +46,8 @@ endforeach()
 # C++ typesupport target carries the generated code. dc_common/dc_core are header-only
 # (include dirs wired per target below); yaml_cpp_vendor exports no target
 # (yaml-cpp::yaml-cpp is found and linked directly); PkgConfig is tooling, not a library.
+# The schema-validator vendor's upstream (v2.4.0) exports only the namespaced target
+# nlohmann_json_schema_validator::validator -- a bare name here would link with no include dirs.
 set(link_dependencies
   action_msgs::action_msgs__rosidl_typesupport_cpp
   ament_index_cpp::ament_index_cpp
@@ -150,7 +152,7 @@ function(dc_add_measurement_plugin name)
   target_link_libraries(${name} PUBLIC
     dc_measurement_core
     nlohmann_json::nlohmann_json
-    nlohmann_json_schema_validator
+    nlohmann_json_schema_validator::validator
     yaml-cpp::yaml-cpp
     ${UUID_LIBRARIES}
     ${link_dependencies}
@@ -199,7 +201,7 @@ target_include_directories(dc_measurement_core PUBLIC
 target_link_libraries(dc_measurement_core PUBLIC
   ament_index_cpp::ament_index_cpp
   nlohmann_json::nlohmann_json
-  nlohmann_json_schema_validator
+  nlohmann_json_schema_validator::validator
 )
 
 
@@ -303,7 +305,7 @@ add_executable(${executable_name}
 
 target_link_libraries(${executable_name} PRIVATE
   nlohmann_json::nlohmann_json
-  nlohmann_json_schema_validator
+  nlohmann_json_schema_validator::validator
   ${library_name}
   ${link_dependencies}
 )
@@ -414,7 +416,7 @@ if(BUILD_TESTING)
     target_link_libraries(${PROJECT_NAME}_${test}
       dc_measurement_core
       nlohmann_json::nlohmann_json
-      nlohmann_json_schema_validator
+      nlohmann_json_schema_validator::validator
       opencv_calib3d
       ${library_name}
       ${link_dependencies}

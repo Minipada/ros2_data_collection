@@ -74,7 +74,7 @@ foreach(measurement_plugin ${dc_measurement_plugin_libs})
   )
   target_link_libraries(${measurement_plugin} PUBLIC
     nlohmann_json::nlohmann_json
-    nlohmann_json_schema_validator
+    nlohmann_json_schema_validator::validator
     geometry_msgs::geometry_msgs__rosidl_typesupport_cpp
     simulation_interfaces::simulation_interfaces__rosidl_typesupport_cpp
     ${dc_measurements_LIBRARIES}

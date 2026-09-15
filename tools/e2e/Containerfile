@@ -129,6 +129,8 @@ RUN mkdir -p src/ros2_data_collection && \
 # vendor repos with the top placement, and cache-hits both with this placement).
 ARG APT_CACHEBUST=unknown
 # fastcov: tools/code_coverage_report.bash's C++ coverage tool; lcov/ccache round it out.
+# mold: linker for every dc_* link step — ~35 plugin .so + ~50 gtest binaries per build,
+# and ccache caches objects, not links.
 # mcap: dc_mcap_writer's (#210/ADR-0009) one Python dependency. `colcon build`'s
 # ament_python step installs each package with `pip install --no-deps`, deliberately
 # never fetching a package's `install_requires` over the network at build time — so
@@ -143,7 +145,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     apt-get -q update && \
     apt-get -q -y dist-upgrade && \
     apt-get -q install --no-install-recommends -y \
-    python3-pip ccache lcov && \
+    python3-pip ccache lcov mold && \
     pip install --break-system-packages fastcov mcap && \
     rm -rf /var/lib/apt/lists/*
 
@@ -179,6 +181,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
     colcon build --packages-select aws_sdk_vendor \
       --cmake-args -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+      -DCMAKE_LINKER_TYPE=MOLD \
       --event-handlers desktop_notification- status- && \
     ccache -s && \
     rm -rf /var/lib/apt/lists/*
@@ -243,9 +246,9 @@ RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     # shellcheck disable=SC1091
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
     if [ "$CCOV" = "true" ]; then \
-      CMAKE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS='-Wall -Wextra --coverage -O0 -fno-omit-frame-pointer' -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_SHARED_LINKER_FLAGS=--coverage"; \
+      CMAKE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS='-Wall -Wextra --coverage -O0 -fno-omit-frame-pointer' -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_SHARED_LINKER_FLAGS=--coverage -DCMAKE_LINKER_TYPE=MOLD"; \
     else \
-      CMAKE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release"; \
+      CMAKE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_LINKER_TYPE=MOLD"; \
     fi && \
     # CMAKE_POLICY_VERSION_MINIMUM: resolute's CMake 4 removed compatibility with
     # cmake_minimum_required < 3.5, which the vendored json-schema-validator still
