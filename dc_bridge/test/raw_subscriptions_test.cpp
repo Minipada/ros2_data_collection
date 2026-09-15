@@ -70,7 +70,7 @@ RawConfig test_config(std::vector<std::string> include)
 template <typename Predicate>
 bool spin_until(const rclcpp::Node::SharedPtr& node, Predicate predicate, std::chrono::seconds timeout = 10s)
 {
-  // rclcpp::spin_some(node) is deprecated on lyrical; the executor form is its replacement.
+  // rclcpp::spin_some(node) is deprecated; the executor form is its replacement.
   rclcpp::executors::SingleThreadedExecutor executor;
   executor.add_node(node);
   const auto deadline = std::chrono::steady_clock::now() + timeout;

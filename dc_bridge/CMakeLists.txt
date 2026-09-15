@@ -88,8 +88,6 @@ add_library(dc_bridge_ros
 target_include_directories(dc_bridge_ros PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-# ament_target_dependencies was removed in lyrical (#531): dependencies link by exported
-# target, keyword form throughout (CMake refuses to mix signatures on one target).
 # Message packages have no pkg::pkg umbrella target on any current distro -- their C++
 # typesupport target carries the generated code.
 target_link_libraries(dc_bridge_ros PUBLIC
