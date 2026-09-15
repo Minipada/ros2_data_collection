@@ -371,6 +371,9 @@ waypoint_follower:
 velocity_smoother:
   ros__parameters:
     use_sim_time: True
+    # Lyrical nav2 defaults to stamped twists; the gz bridge subscribes /cmd_vel as
+    # plain Twist and one topic can't carry two types -- the robot would never move.
+    enable_stamped_cmd_vel: False
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
@@ -387,6 +390,9 @@ velocity_smoother:
 collision_monitor:
   ros__parameters:
     use_sim_time: True
+    # Same stamped-twist default as velocity_smoother above; its output is the
+    # bridge's /cmd_vel.
+    enable_stamped_cmd_vel: False
     base_frame_id: "base_footprint"
     odom_frame_id: "odom"
     cmd_vel_in_topic: "cmd_vel_smoothed"
