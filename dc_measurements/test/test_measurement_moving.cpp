@@ -13,7 +13,7 @@ protected:
     : MeasurementBench("dummy", rclcpp::NodeOptions().parameter_overrides(
                                     { rclcpp::Parameter("condition_plugins", std::vector<std::string>{ "moving" }) }))
   {
-    odom_pub_ = ms_node_->create_publisher<nav_msgs::msg::Odometry>("/odom", rclcpp::QoS(10));
+    odom_pub_ = ms_node_->create_publisher<nav_msgs::msg::Odometry>("/test/moving/odom", rclcpp::QoS(10));
 
     ms_node_->declare_parameter("dummy.plugin", std::string("dc_measurements/Dummy"));
     ms_node_->declare_parameter("dummy.topic_output", std::string("/dc/measurement/dummy"));
@@ -24,7 +24,7 @@ protected:
     ms_node_->declare_parameter("dummy.condition_max_measurements", 0);
 
     ms_node_->declare_parameter("moving.plugin", std::string("dc_conditions/Moving"));
-    ms_node_->declare_parameter("moving.odom_topic", std::string("/odom"));
+    ms_node_->declare_parameter("moving.odom_topic", std::string("/test/moving/odom"));
     ms_node_->declare_parameter("moving.speed_threshold", 0.2);
     // 3 consecutive above/below-threshold Odometry messages required to flip state -- large
     // enough to distinguish "not yet enough messages" from "flipped" in the tests below.
