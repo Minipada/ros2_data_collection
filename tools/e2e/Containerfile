@@ -118,18 +118,19 @@ WORKDIR /root/ws
 # (#271, in the `toolchain` stage below) a cache hit across ordinary source edits
 # elsewhere in ros2_data_collection.
 COPY ros2_data_collection.repos .
-# navigation2 is vendored (see ros2_data_collection.repos) for exactly two packages:
+# navigation2 is vendored (see ros2_data_collection.repos) for exactly three directories:
 # nav2_smac_planner — its resolute .deb never published because the OMPL deb doesn't
 # carry the Boost CMake metadata omplConfig.cmake's find_dependency needs (ompl#1457)
-# — and nav2_bringup, which can't publish transitively. Every other nav2 package has
-# a resolute .deb that the rosdep steps below install, so the rest of the monorepo is
-# trimmed here: colcon and rosdep must not see manifests for packages that would then
-# be built and demanded twice. Trim and the .repos entry go together once both .debs
-# ship (#531).
+# — nav2_bringup, which can't publish transitively, and the navigation2 metapackage
+# itself, which nav2_bringup find_packages at configure time. Every other nav2 package
+# has a resolute .deb that the rosdep steps below install, so the rest of the monorepo
+# is trimmed here: colcon and rosdep must not see manifests for packages that would
+# then be built and demanded twice. Trim and the .repos entry go together once both
+# .debs ship (#531).
 RUN mkdir -p src/ros2_data_collection && \
     vcs import --shallow src/ros2_data_collection < ros2_data_collection.repos && \
     find src/ros2_data_collection/navigation2 -mindepth 1 -maxdepth 1 -type d \
-      ! -name nav2_smac_planner ! -name nav2_bringup -exec rm -rf {} +
+      ! -name nav2_smac_planner ! -name nav2_bringup ! -name navigation2 -exec rm -rf {} +
 
 # Daily apt cache-bust (see CLAUDE.md "Containers: Podman, not Docker"): a date-valued
 # build-arg rebuilds the apt layer once per UTC day so OS security patches don't go stale.
