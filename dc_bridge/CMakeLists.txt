@@ -15,7 +15,12 @@ endif()
 
 # msgpack-cxx's exported config resolves Boost with find_dependency() module-style, which
 # CMake 4 deprecates (CMP0167); prefer configs so it lands on Boost's own config instead.
+# Scoped to that one find: left on, ament_cmake_gtest's find_package(GTest) also lands on
+# GTest's config, which defines GTest::* targets but none of the GTEST_LIBRARIES variables
+# ament_add_gtest() links -- tests would link with no gtest in them.
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+find_package(msgpack-cxx REQUIRED)
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG OFF)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -24,7 +29,6 @@ find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(tomlplusplus REQUIRED)
-find_package(msgpack-cxx REQUIRED)
 find_package(Threads REQUIRED)
 # Runtime message introspection for raw / generic-subscription mode (#227): the same
 # type support pair `ros2 bag record -a` uses to handle types it was never built against.
