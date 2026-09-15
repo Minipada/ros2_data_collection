@@ -473,7 +473,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sim-logs
-          path: tools/sim/scripts/.run/**
+          # run.sh puts .run/ next to its own directory (tools/sim/.run), not beside
+          # run.sh itself.
+          path: tools/sim/.run/**
           # .run/ is hidden — upload-artifact skips hidden dirs by default (#517)
           include-hidden-files: true
 
