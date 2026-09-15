@@ -45,10 +45,10 @@ protected:
     sub_flush_ = tb_node_->create_subscription<dc_interfaces::msg::FlushEvent>(
         "/dc/flush", std::bind(&TriggerEdgeTriggerTest::flushEventCallback, this, std::placeholders::_1),
         rclcpp::SystemDefaultsQoS());
-    odom_pub_ = tb_node_->create_publisher<nav_msgs::msg::Odometry>("/odom", rclcpp::QoS(10));
+    odom_pub_ = tb_node_->create_publisher<nav_msgs::msg::Odometry>("/test/edge_trigger/odom", rclcpp::QoS(10));
 
     tb_node_->declare_parameter("moving.plugin", std::string("dc_conditions/Moving"));
-    tb_node_->declare_parameter("moving.odom_topic", std::string("/odom"));
+    tb_node_->declare_parameter("moving.odom_topic", std::string("/test/edge_trigger/odom"));
     // A single Odometry message flips the Condition, keeping the test deterministic and fast.
     tb_node_->declare_parameter("moving.count_hysteresis", 1);
 

@@ -13,7 +13,9 @@ protected:
     : MeasurementBench("dummy", rclcpp::NodeOptions().parameter_overrides(
                                     { rclcpp::Parameter("condition_plugins", std::vector<std::string>{ "moving" }) }))
   {
-    odom_pub_ = ms_node_->create_publisher<nav_msgs::msg::Odometry>("/odom", rclcpp::QoS(10));
+    // A private topic, not /odom: the first test asserts nothing ever arrives, and any other
+    // test process on the runner (same ROS domain) publishing /odom would open the gate (#531).
+    odom_pub_ = ms_node_->create_publisher<nav_msgs::msg::Odometry>("/test/gate_condition/odom", rclcpp::QoS(10));
 
     ms_node_->declare_parameter("dummy.plugin", std::string("dc_measurements/Dummy"));
     ms_node_->declare_parameter("dummy.topic_output", std::string("/dc/measurement/dummy"));
@@ -22,7 +24,7 @@ protected:
     ms_node_->declare_parameter("dummy.gate_condition", std::string("moving"));
 
     ms_node_->declare_parameter("moving.plugin", std::string("dc_conditions/Moving"));
-    ms_node_->declare_parameter("moving.odom_topic", std::string("/odom"));
+    ms_node_->declare_parameter("moving.odom_topic", std::string("/test/gate_condition/odom"));
     // A single Odometry message flips the Condition, keeping the test deterministic and fast.
     ms_node_->declare_parameter("moving.count_hysteresis", 1);
   }
@@ -69,7 +71,7 @@ TEST_F(MeasurementGateConditionTest, ArmsOnceThenLatchesOpenEvenAfterConditionBe
   ms_node_->declare_parameter("dummy.init_collect", false);
 
   startLifecycleNode();
-  waitForSubscriber("/odom");
+  waitForSubscriber("/test/gate_condition/odom");
 
   // Before the robot ever moves, no measurement is published.
   spinFor(polling_interval_ * 3);
