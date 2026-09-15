@@ -11,7 +11,7 @@
 #include "dc_measurements/mission_uuid.hpp"
 #include "dc_measurements/plugins/measurements/mission_follow_waypoints_tracker.hpp"
 #include "nav2_msgs/action/follow_waypoints.hpp"
-#include "nav2_msgs/msg/missed_waypoint.hpp"
+#include "nav2_msgs/msg/waypoint_status.hpp"
 
 namespace dc_measurements
 {

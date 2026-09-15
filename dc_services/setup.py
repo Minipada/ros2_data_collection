@@ -40,7 +40,7 @@ setup(
     ],
     description="Collect cpu data",
     license="Proprietary",
-    tests_require=["pytest"],
+    extras_require={"test": ["pytest"]},
     entry_points={
         "console_scripts": [
             "save_image = dc_services.save_image:main",

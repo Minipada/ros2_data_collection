@@ -132,7 +132,7 @@ public:
       result_extra_.clear();
       for (const auto& waypoint : response.result.missed_waypoints)
       {
-        result_extra_.push_back({ waypoint.index, waypoint.error_code });
+        result_extra_.push_back({ waypoint.waypoint_index, waypoint.error_code });
       }
     }
   }

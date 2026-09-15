@@ -38,9 +38,10 @@ protected:
     ms_node_ = std::make_shared<measurement_server::MeasurementServer>(options, measurements_);
     for (const std::string& name : measurements_)
     {
+      // nav2::LifecycleNode's create_subscription (callback before QoS) shadows rclcpp's on lyrical.
       subs_.push_back(ms_node_->create_subscription<dc_interfaces::msg::StringStamped>(
-          "/dc/measurement/" + name, rclcpp::SystemDefaultsQoS(),
-          [this, name](const dc_interfaces::msg::StringStamped& msg) { onRecord(name, msg); }));
+          "/dc/measurement/" + name, [this, name](const dc_interfaces::msg::StringStamped& msg) { onRecord(name, msg); },
+          rclcpp::SystemDefaultsQoS()));
     }
   }
 
@@ -85,9 +86,17 @@ protected:
   {
   }
 
+  // rclcpp::spin_some is deprecated on lyrical; a throwaway executor spins the same work.
+  static void spinNodeOnce(const rclcpp::node_interfaces::NodeBaseInterface::SharedPtr& node)
+  {
+    rclcpp::executors::SingleThreadedExecutor executor;
+    executor.add_node(node);
+    executor.spin_some();
+  }
+
   void spinOnce()
   {
-    rclcpp::spin_some(ms_node_->get_node_base_interface());
+    spinNodeOnce(ms_node_->get_node_base_interface());
     spinExtra();
   }
 

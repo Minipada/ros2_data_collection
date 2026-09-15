@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.16)
 project(dc_measurements)
 
 set(dependencies
@@ -284,6 +284,11 @@ pluginlib_export_plugin_description_file(dc_core condition_plugin.xml)
 # Library
 add_library(${library_name} SHARED
   src/measurement_server.cpp
+)
+
+target_include_directories(${library_name} PUBLIC
+  ${dc_common_INCLUDE_DIRS}
+  ${dc_core_INCLUDE_DIRS}
 )
 
 target_link_libraries(${library_name} PUBLIC

@@ -17,11 +17,9 @@
 namespace dc_measurements
 {
 
-/// One entry of FollowWaypoints::Result.missed_waypoints (nav2_msgs/msg/MissedWaypoint on Jazzy),
-/// stripped of the goal pose -- not part of #389's schema. Jazzy's MissedWaypoint is just
-/// index/goal/error_code -- no per-waypoint status enum or error_msg the way an older/rolling nav2
-/// has (verified directly against the `jazzy` branch, not `main`, after #388 hit exactly this
-/// mismatch for NavigateThroughPoses).
+/// One entry of FollowWaypoints::Result.missed_waypoints (nav2_msgs/msg/WaypointStatus on
+/// Lyrical), stripped of the pose, per-waypoint status and error_msg -- not part of #389's
+/// schema. The Record keeps the index/error_code keys the Jazzy-line MissedWaypoint carried.
 struct WaypointOutcome
 {
   std::uint32_t index{ 0 };

@@ -53,7 +53,7 @@ void IpCamera::onConfigure()
   }
 
   std::string absolute_path = getAbsolutePath("save_path");
-  storage_dir_ = std::filesystem::path(absolute_path).parent_path().u8string();
+  storage_dir_ = std::filesystem::path(absolute_path).parent_path().string();
   std::filesystem::create_directories(dc_util::expand_time(storage_dir_));
   std::string playlist_path = std::filesystem::path(storage_dir_) / "playlist.m3u8";
   RCLCPP_ERROR(logger_, "absolute_path:%s, storage_dir_: %s, save_path_:%s", absolute_path.c_str(),
@@ -126,16 +126,16 @@ json IpCamera::collect()
   std::vector<std::string> recorded_videos;
   for (const auto& entry : std::filesystem::directory_iterator(storage_dir_))
   {
-    std::string entry_path = entry.path().u8string();
+    std::string entry_path = entry.path().string();
     AVFormatContext* ifmt_ctx = NULL;
     if (std::filesystem::path(entry_path).filename() != "playlist.m3u8" &&
         avformat_open_input(&ifmt_ctx, entry_path.c_str(), NULL, NULL) >= 0)
     {
       try
       {
-        std::string collect_path = entry.path().u8string();
+        std::string collect_path = entry.path().string();
         collect_path.replace(collect_path.find("tmp/"), sizeof("tmp/") - 1, "");
-        auto collect_dir = std::filesystem::path(collect_path).parent_path().u8string();
+        auto collect_dir = std::filesystem::path(collect_path).parent_path().string();
         std::filesystem::create_directories(collect_dir);
         std::filesystem::rename(entry_path, collect_path);
         data_json["local_path"] = collect_path;

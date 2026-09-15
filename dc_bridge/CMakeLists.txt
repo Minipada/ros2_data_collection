@@ -13,6 +13,10 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra)
 endif()
 
+# msgpack-cxx's exported config resolves Boost with find_dependency() module-style, which
+# CMake 4 deprecates (CMP0167); prefer configs so it lands on Boost's own config instead.
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(dc_interfaces REQUIRED)

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 project(dc_util)
 
 set(dependencies
@@ -14,7 +14,10 @@ set(dependencies
   rclcpp_lifecycle
   yaml_cpp_vendor
 )
-find_package(Boost REQUIRED)
+# CONFIG, not the default module lookup: CMake 4 deprecates FindBoost (CMP0167) and Boost
+# >= 1.70 ships its own config. Boost::headers is linked PUBLIC so consumers of the exported
+# target get the include dirs (string_utils.hpp includes boost/ headers directly).
+find_package(Boost CONFIG REQUIRED)
 
 find_package(ament_cmake REQUIRED)
 foreach(Dependency IN ITEMS ${dependencies})
@@ -35,6 +38,7 @@ add_library(${library_name} SHARED
 
 target_include_directories(${library_name} PUBLIC ${dc_common_INCLUDE_DIRS})
 target_link_libraries(${library_name} PUBLIC
+  Boost::headers
   lifecycle_msgs::lifecycle_msgs__rosidl_typesupport_cpp
   nav2_ros_common::nav2_ros_common
   nav2_util::nav2_util_core

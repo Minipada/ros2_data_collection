@@ -10,6 +10,17 @@
 #include "dc_triggers/trigger_broadcast_node.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 
+namespace
+{
+// rclcpp::spin_some is deprecated on lyrical; a throwaway executor spins the same work.
+void spinNode(const rclcpp::node_interfaces::NodeBaseInterface::SharedPtr& node)
+{
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(node);
+  executor.spin_some();
+}
+}  // namespace
+
 class TriggerEdgeTriggerTest : public ::testing::Test
 {
 protected:
@@ -30,9 +41,10 @@ protected:
         { rclcpp::Parameter("condition_plugins", std::vector<std::string>{ "moving" }) });
     tb_node_ = std::make_shared<trigger_broadcast_node::TriggerBroadcastNode>(options);
 
+    // nav2::LifecycleNode's create_subscription (callback before QoS) shadows rclcpp's on lyrical.
     sub_flush_ = tb_node_->create_subscription<dc_interfaces::msg::FlushEvent>(
-        "/dc/flush", rclcpp::SystemDefaultsQoS(),
-        std::bind(&TriggerEdgeTriggerTest::flushEventCallback, this, std::placeholders::_1));
+        "/dc/flush", std::bind(&TriggerEdgeTriggerTest::flushEventCallback, this, std::placeholders::_1),
+        rclcpp::SystemDefaultsQoS());
     odom_pub_ = tb_node_->create_publisher<nav_msgs::msg::Odometry>("/odom", rclcpp::QoS(10));
 
     tb_node_->declare_parameter("moving.plugin", std::string("dc_conditions/Moving"));
@@ -78,7 +90,7 @@ protected:
         (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time)).count() <
         milliseconds)
     {
-      rclcpp::spin_some(tb_node_->get_node_base_interface());
+      spinNode(tb_node_->get_node_base_interface());
     }
   }
 
@@ -114,7 +126,7 @@ TEST_F(TriggerEdgeTriggerTest, FiresOnceOnRisingEdgeNotOnSustainedTrue)
   publishOdom(1.0);
   while (flush_count_ == 0)
   {
-    rclcpp::spin_some(tb_node_->get_node_base_interface());
+    spinNode(tb_node_->get_node_base_interface());
   }
   EXPECT_EQ(flush_count_, 1);
 
@@ -132,7 +144,7 @@ TEST_F(TriggerEdgeTriggerTest, SecondRisingEdgeFiresAgainWithDistinctIncidentId)
   publishOdom(1.0);
   while (flush_count_ == 0)
   {
-    rclcpp::spin_some(tb_node_->get_node_base_interface());
+    spinNode(tb_node_->get_node_base_interface());
   }
   EXPECT_EQ(flush_count_, 1);
 
@@ -149,7 +161,7 @@ TEST_F(TriggerEdgeTriggerTest, SecondRisingEdgeFiresAgainWithDistinctIncidentId)
   publishOdom(1.0);
   while (flush_count_ == 1)
   {
-    rclcpp::spin_some(tb_node_->get_node_base_interface());
+    spinNode(tb_node_->get_node_base_interface());
   }
   EXPECT_EQ(flush_count_, 2);
   EXPECT_EQ(incident_ids_.size(), 2u);

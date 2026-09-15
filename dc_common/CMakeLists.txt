@@ -1,11 +1,11 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 project(dc_common)
 
 find_package(ament_cmake REQUIRED)
-find_package(Boost REQUIRED)
+find_package(Boost CONFIG REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(Threads REQUIRED)
 
@@ -28,7 +28,12 @@ install(
   DESTINATION include/
 )
 ament_export_include_directories(include)
-ament_export_dependencies(Boost nlohmann_json)
+# Boost is deliberately NOT exported: ament_export_dependencies can only carry a package
+# name, so consumers would re-run CMake's deprecated FindBoost module (CMP0167). The only
+# Boost usage downstream of dc_common's headers is Beast/Asio in WebSocketJsonClient, whose
+# headers resolve from the system include path; dc_util links Boost::headers for its own
+# exported target instead.
+ament_export_dependencies(nlohmann_json)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)

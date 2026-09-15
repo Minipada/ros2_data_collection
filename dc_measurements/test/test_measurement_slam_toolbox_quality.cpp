@@ -6,7 +6,7 @@
 #include <nlohmann/json-schema.hpp>
 #include <vector>
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
+#include "ament_index_cpp/get_package_share_path.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 #include "measurement_test_bench.hpp"
 #include "std_msgs/msg/empty.hpp"
@@ -100,7 +100,7 @@ protected:
   // half fills it fails the test rather than only logging.
   static void expectValidatesAgainstSchema(const nlohmann::json& record)
   {
-    const std::string path = ament_index_cpp::get_package_share_directory("dc_measurements") +
+    const std::string path = ament_index_cpp::get_package_share_path("dc_measurements").string() +
                              "/plugins/measurements/json/slam_toolbox_quality.json";
     std::ifstream schema_file(path);
     ASSERT_TRUE(schema_file.good()) << "Schema not installed at " << path;
