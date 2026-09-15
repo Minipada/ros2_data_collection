@@ -133,6 +133,13 @@ target_link_libraries(dc_render dc_bridge_core)
 
 install(TARGETS dc_bridge dc_uploader dc_render DESTINATION lib/${PROJECT_NAME})
 
+# The Bridge's libraries ride along with the executables: the runtime image copies only
+# install/ (tools/e2e/Containerfile's runtime stage), the binaries carry no RPATH, and
+# their resolution is LD_LIBRARY_PATH from the sourced overlay — so without this both
+# dc_bridge and dc_uploader abort at startup with an unloadable libdc_bridge_ros.so
+# (#531: first exercised by the verify-* jobs, never before run on this distro line).
+install(TARGETS dc_bridge_core dc_bridge_ros LIBRARY DESTINATION lib)
+
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   # Header-only, ROS-free utilities (#285): uploader_test stages a File the way an armed
