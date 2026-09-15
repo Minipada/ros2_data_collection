@@ -16,7 +16,9 @@ set(dependencies
 )
 # CONFIG, not the default module lookup: CMake 4 deprecates FindBoost (CMP0167) and Boost
 # >= 1.70 ships its own config. Boost::headers is linked PUBLIC so consumers of the exported
-# target get the include dirs (string_utils.hpp includes boost/ headers directly).
+# target get the include dirs (string_utils.hpp includes boost/ headers directly); ament can't
+# carry the dep for them (it exports bare package names, which would re-run the deprecated
+# module), so dc_util-extras.cmake finds Boost CONFIG-first in every consumer.
 find_package(Boost CONFIG REQUIRED)
 
 find_package(ament_cmake REQUIRED)
@@ -74,4 +76,4 @@ ament_export_include_directories(include)
 ament_export_libraries(${library_name})
 ament_export_dependencies(${dependencies})
 
-ament_package()
+ament_package(CONFIG_EXTRAS "dc_util-extras.cmake")
