@@ -19,7 +19,11 @@
 
 - ros_topic_name: "cmd_vel"
   gz_topic_name: "/cmd_vel"
-  ros_type_name: "geometry_msgs/msg/Twist"
+  # TwistStamped: on lyrical nav2's command chain (controller_server through
+  # collision_monitor) is stamped end to end and one topic can't carry two types, so
+  # the bridge has to match what lands on /cmd_vel. The gz side stays gz.msgs.Twist,
+  # which is what waffle.model's DiffDrive consumes.
+  ros_type_name: "geometry_msgs/msg/TwistStamped"
   gz_type_name: "gz.msgs.Twist"
   direction: ROS_TO_GZ
 
