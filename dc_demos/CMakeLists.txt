@@ -62,12 +62,10 @@ add_library(dc_uptime_custom_measurement SHARED
 )
 list(APPEND dc_measurement_plugin_libs dc_uptime_custom_measurement)
 
-# ament_target_dependencies was removed in lyrical (#531): dependencies link by exported
-# target instead. Message packages have no pkg::pkg umbrella target on lyrical -- their
-# C++ typesupport target carries the generated code. The launch/Python-only deps (rclpy,
-# xacro, nav2_bringup, dc_simulation) export nothing linkable, and dc_measurements
-# exports plain library names, not CMake targets -- linked via the same variables
-# ament_target_dependencies used to consume.
+# Message packages have no pkg::pkg umbrella target -- their C++ typesupport target
+# carries the generated code. The launch/Python-only deps (rclpy, xacro, nav2_bringup,
+# dc_simulation) export nothing linkable, and dc_measurements exports plain library
+# names, not CMake targets.
 foreach(measurement_plugin ${dc_measurement_plugin_libs})
   target_include_directories(${measurement_plugin} PUBLIC
     ${dc_measurements_INCLUDE_DIRS}
