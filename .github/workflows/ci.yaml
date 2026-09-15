@@ -136,14 +136,19 @@ jobs:
 
       # `podman compose` shells out to a host-side provider — it can't be baked into an
       # image the way podman itself manages containers, since the provider has to run
-      # on the runner to drive the runner's podman. ~/.local is cached (keyed on the
-      # pinned version) so `pip install` below is a fast no-op against the cache instead
-      # of a fresh PyPI fetch on every run; pinning the provider avoids the
+      # on the runner to drive the runner's podman. pip's --user install tree is cached
+      # (keyed on the pinned version) so `pip install` below is a fast no-op against the
+      # cache instead of a fresh PyPI fetch on every run; pinning the provider avoids the
       # docker-compose cli-plugin, which needs a Podman API socket that isn't running here.
+      # bin/lib, not all of ~/.local: podman's rootless container storage lives in
+      # ~/.local/share/containers, and taring image layers full of root-owned files both
+      # burns minutes and aborts the save outright (one unreadable file fails the tar).
       - name: Cache podman-compose
         uses: actions/cache@v4
         with:
-          path: ~/.local
+          path: |
+            ~/.local/bin
+            ~/.local/lib
           key: podman-compose-1.5.0
       - name: Install podman-compose
         run: |
