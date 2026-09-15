@@ -90,12 +90,16 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # chain (toolchain, workspace). /var/lib/apt/lists stays ephemeral: every RUN
 # re-fetches indexes via apt-get update anyway, so mounting them would save no
 # downloads while adding shared mutable state across builds.
+# Every apt RUN below ends by removing archives/partial too: apt creates it _apt-owned
+# 0700 inside the dc-apt mount, and CI's actions/cache tars this tree as the runner user
+# post-job — one unreadable file aborts the whole save, taking dc-ccache with it (#531).
+# apt recreates the dir itself on the next download.
 RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     printf 'Dir::Cache::pkgcache "";\nDir::Cache::srcpkgcache "";\n' \
       > /etc/apt/apt.conf.d/docker-clean && \
     apt-get -q update && \
     apt-get -q install --no-install-recommends -y git python3-vcstool && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial
 
 WORKDIR /root/ws
 
@@ -147,7 +151,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     apt-get -q install --no-install-recommends -y \
     python3-pip ccache lcov mold && \
     pip install --break-system-packages fastcov mcap && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial
 
 FROM toolchain-base AS toolchain
 
@@ -184,7 +188,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
       -DCMAKE_LINKER_TYPE=MOLD \
       --event-handlers desktop_notification- status- && \
     ccache -s && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial
 
 # Full-workspace rosdep install for system (apt) dependencies — nav2_common,
 # cv_bridge, ffmpeg, etc. — baked into this image, not left to a later stage that
@@ -202,7 +206,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     LAGGING_DEBS="" && { [ "${ROS_DISTRO}" = "lyrical" ] && LAGGING_DEBS="nav2_bringup" || true; } && \
     DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false \
       --skip-keys="${LAGGING_DEBS}" && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial
 
 # --- workspace: full source + colcon build + colcon test, in one image both CI and
 # local dev build the same way (./tools/e2e/scripts/build.sh) ---
@@ -267,7 +271,7 @@ RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     ( [ -f lcov/total_coverage.info ] && cp lcov/total_coverage.info coverage/cpp.info || true ) && \
     TEST_EXIT=$(cat /tmp/test_exit) && RESULT_EXIT=$(cat /tmp/result_exit) && \
     if [ "$TEST_EXIT" -ne 0 ] || [ "$RESULT_EXIT" -ne 0 ]; then echo "colcon test reported failures" >&2; echo 1 > TEST_RESULT; else echo 0 > TEST_RESULT; fi && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial
 
 ENV ROS_UNDERLAY=/root/ws/install
 # What the sim scripts' `source /opt/ros/${ROS_DISTRO:-lyrical}/setup.bash` reads at
@@ -323,7 +327,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} \
       --as-root=apt:false --dependency-types=exec \
       --skip-keys="aws_sdk_vendor vector_vendor nlohmann_json_schema_validator_vendor ${LAGGING_DEBS}" && \
-    rm -rf /var/lib/apt/lists/* src
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial src
 
 COPY --from=workspace /root/ws/install install
 
