@@ -240,7 +240,7 @@ if has_stage nav || has_stage waypoints || has_stage detect; then
     # (cleanup tails the log on failure).
     rin 'pgrep -f tb3_qrcodes.launch.py >/dev/null' \
       || fail "the tb3_qrcodes launch died on startup (log tail follows)"
-    rin 'grep -a "Activating\|Managed nodes are active\|Failed to change state\|Configuring" /tmp/qrcodes.log | tail -30' || true
+    rin 'grep -a "Activating\|Managed nodes are active\|Failed to change state\|not available\|Configuring" /tmp/qrcodes.log | tail -30' || true
     stop_stack
   done
   [ -n "$nav_up" ] || fail "nav2 never reported all managed nodes active (both attempts)"
