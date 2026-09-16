@@ -165,14 +165,21 @@ if has_stage lint; then
   stop_stack
 fi
 
-# Waits for a condition inside the container, polling until a deadline.
+# Waits for a condition inside the container, polling until a deadline. An
+# optional 4th arg is an abort condition: once it holds, the deadline can't be
+# met any more and polling to the ceiling would only burn the stage's budget
+# (a lifecycle manager that aborted bringup never logs again).
 wait_for() {
-  local desc="$1" timeout="$2" cmd="$3" waited=0
+  local desc="$1" timeout="$2" cmd="$3" abort="${4:-}" waited=0
   log "waiting for $desc (up to ${timeout}s)"
   while [ "$waited" -lt "$timeout" ]; do
     if rin "$cmd" >/dev/null 2>&1; then
       log "$desc — ready after ${waited}s"
       return 0
+    fi
+    if [ -n "$abort" ] && rin "$abort" >/dev/null 2>&1; then
+      log "$desc — gave up after ${waited}s (abort condition met)"
+      return 1
     fi
     sleep 15
     waited=$((waited + 15))
@@ -202,16 +209,16 @@ fi
 
 # --- stage: simulation + Nav2 ---------------------------------------------------------
 if has_stage nav || has_stage waypoints || has_stage detect; then
-  # Two activation attempts. A launch that is alive but never finishes activating
-  # costs the stage its whole wait_for ceiling — the lifecycle manager aborts the
-  # sequence on the first node whose transition fails and never logs again, which
-  # reads exactly like a hang. (The run that motivated this: bt_navigator failing
-  # activation over a 1s action-server discovery race, see qrcodes_nav.yaml's
-  # wait_for_service_timeout.) A fresh container is the retry: pkill-ing the launch
-  # inside the same one leaves the orphaned simulator publishing /clock alongside
-  # the new one (see stop_stack). The managers bring nodes up one at a time, so
-  # their per-node lines say where an attempt stopped — printed before tearing it
-  # down, since the generic log tail is all WARN noise from nodes that came up fine.
+  # Two activation attempts. When the lifecycle manager aborts bringup ("Failed to
+  # bring up all requested nodes" — bt_navigator losing an action-server discovery
+  # race, see qrcodes_nav.yaml's wait_for_service_timeout) it never logs again, so
+  # the abort condition in the wait_for below is what keeps a lost attempt from
+  # burning the whole 1800s ceiling. A fresh container is the retry: pkill-ing the
+  # launch inside the same one leaves the orphaned simulator publishing /clock
+  # alongside the new one (see stop_stack). The managers bring nodes up one at a
+  # time, so their per-node lines say where an attempt stopped — printed before
+  # tearing it down, since the generic log tail is all WARN noise from nodes that
+  # came up fine.
   nav_up=""
   for attempt in 1 2; do
     start_stack "nav-$attempt"
@@ -222,13 +229,14 @@ if has_stage nav || has_stage waypoints || has_stage detect; then
     rbg "$SOURCE && ros2 launch dc_demos tb3_qrcodes.launch.py headless:=True use_rviz:=False use_dc:=$USE_DC $QRCODES_LAUNCH_ARGS > /tmp/qrcodes.log 2>&1"
 
     if wait_for "Nav2 to activate" 1800 \
-      'grep -aq "lifecycle_manager_navigation.*Managed nodes are active" /tmp/qrcodes.log'
+      'grep -aq "lifecycle_manager_navigation.*Managed nodes are active" /tmp/qrcodes.log' \
+      'grep -aq "Failed to bring up all requested nodes" /tmp/qrcodes.log'
     then
       nav_up=1
       break
     fi
     # A launch that died on startup is a crash, not a lost response — retrying costs
-    # another half hour for the same outcome, so say which and bail immediately
+    # another bringup for the same outcome, so say which and bail immediately
     # (cleanup tails the log on failure).
     rin 'pgrep -f tb3_qrcodes.launch.py >/dev/null' \
       || fail "the tb3_qrcodes launch died on startup (log tail follows)"
