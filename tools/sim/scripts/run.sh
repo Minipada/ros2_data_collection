@@ -153,9 +153,13 @@ stop_stack() {
   CONTAINER=""
 }
 
-# `ros2 launch` needs a writable HOME for its log directory.
-rin() { podman exec -e HOME=/root "$CONTAINER" bash -lc "$1"; }
-rbg() { podman exec -d -e HOME=/root "$CONTAINER" bash -lc "$1" >/dev/null; }
+# `ros2 launch` needs a writable HOME for its log directory. Every ROS process in the
+# container also gets the UDPv4-only FastDDS profile (fastrtps-udponly.xml, next to
+# this script, mounted at /opt/sim): with the default transports, discovery between
+# already-matched participants intermittently never completes on this graph and
+# bt_navigator's activation dies waiting for action servers (see the XML).
+rin() { podman exec -e HOME=/root -e FASTDDS_DEFAULT_PROFILES_FILE=/opt/sim/fastrtps-udponly.xml "$CONTAINER" bash -lc "$1"; }
+rbg() { podman exec -d -e HOME=/root -e FASTDDS_DEFAULT_PROFILES_FILE=/opt/sim/fastrtps-udponly.xml "$CONTAINER" bash -lc "$1" >/dev/null; }
 
 # --- stage: static lint ---------------------------------------------------------------
 if has_stage lint; then
@@ -209,9 +213,9 @@ fi
 
 # --- stage: simulation + Nav2 ---------------------------------------------------------
 if has_stage nav || has_stage waypoints || has_stage detect; then
-  # Two activation attempts. When the lifecycle manager aborts bringup ("Failed to
-  # bring up all requested nodes" — bt_navigator losing an action-server discovery
-  # race, see qrcodes_nav.yaml's wait_for_service_timeout) it never logs again, so
+  # Three activation attempts. When the lifecycle manager aborts bringup ("Failed to
+  # bring up all requested nodes" — bt_navigator's late-created action clients losing
+  # endpoint discovery, see fastrtps-udponly.xml) it never logs again, so
   # the abort condition in the wait_for below is what keeps a lost attempt from
   # burning the whole 1800s ceiling. A fresh container is the retry: pkill-ing the
   # launch inside the same one leaves the orphaned simulator publishing /clock
@@ -220,12 +224,12 @@ if has_stage nav || has_stage waypoints || has_stage detect; then
   # tearing it down, since the generic log tail is all WARN noise from nodes that
   # came up fine.
   nav_up=""
-  for attempt in 1 2; do
+  for attempt in 1 2 3; do
     start_stack "nav-$attempt"
     # `detect` needs the measurement/bridge half of the demo running; the other stages
     # do not, and leaving it out keeps them cheaper on a runner with no GPU.
     if has_stage detect; then USE_DC=True; else USE_DC=False; fi
-    log "launching tb3_qrcodes.launch.py (simulation + Nav2, attempt $attempt of 2, DC $USE_DC)"
+    log "launching tb3_qrcodes.launch.py (simulation + Nav2, attempt $attempt of 3, DC $USE_DC)"
     rbg "$SOURCE && ros2 launch dc_demos tb3_qrcodes.launch.py headless:=True use_rviz:=False use_dc:=$USE_DC $QRCODES_LAUNCH_ARGS > /tmp/qrcodes.log 2>&1"
 
     if wait_for "Nav2 to activate" 1800 \
@@ -241,9 +245,14 @@ if has_stage nav || has_stage waypoints || has_stage detect; then
     rin 'pgrep -f tb3_qrcodes.launch.py >/dev/null' \
       || fail "the tb3_qrcodes launch died on startup (log tail follows)"
     rin 'grep -a "Activating\|Managed nodes are active\|Failed to change state\|not available\|Configuring" /tmp/qrcodes.log | tail -30' || true
+    # Runner-side transport evidence for the discovery wedge: does the env var reach
+    # the processes, is SHM really off, how many datagram sockets exist, how much memory.
+    # The vars must expand inside the container, hence the single quotes.
+    # shellcheck disable=SC2016
+    rin 'echo "FASTDDS_DEFAULT_PROFILES_FILE=$FASTDDS_DEFAULT_PROFILES_FILE"; echo "udp sockets: $(wc -l < /proc/net/udp)"; echo "shm segs: $(ls /dev/shm | grep -c fastrtps || true)"; free -m | head -2' || true
     stop_stack
   done
-  [ -n "$nav_up" ] || fail "nav2 never reported all managed nodes active (both attempts)"
+  [ -n "$nav_up" ] || fail "nav2 never reported all managed nodes active (all attempts)"
   rin 'grep -aq "lifecycle_manager_localization.*Managed nodes are active" /tmp/qrcodes.log' \
     || fail "localization never reported all managed nodes active"
 
