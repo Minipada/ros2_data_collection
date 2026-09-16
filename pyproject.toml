@@ -3,7 +3,7 @@
 
 [project]
 name = "ros2-data-collection"
-version = "0.1.0"
+version = "0.2.0"
 description = "Collect operational data from robots and route it to external infrastructure"
 authors = [{ name = "David Bensoussan", email = "d.bensoussan@proton.me" }]
 # Jazzy targets Ubuntu 24.04, whose interpreter is 3.12.
