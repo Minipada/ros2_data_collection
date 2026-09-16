@@ -329,18 +329,24 @@ WORKDIR /root/ws
 # dc_* package.xml files tagging deps correctly rather than the catch-all <depend>
 # for anything build-only.
 #
-# --skip-keys for the three vendors and the nav2 packages: dc_bridge/dc_measurements
-# depend on the vendors, and dc packages declare the nav2 keys, but unlike the
-# toolchain stage above, this stage never `vcs import`s anything (it starts fresh
-# FROM ros-base, deliberately skipping toolchain's git/ccache/build-essential layers),
-# so cacher's manifest-only copy has no package.xml for any of them — rosdep sees an
-# unresolvable name instead of a local package satisfied via --ignore-src. All of them
-# are already fully linked into the install/ tree copied in below (the vendors built
-# by toolchain, nav2 by the workspace build — rolling ships no ros-rolling-nav2-* debs
-# to install instead); nothing here needs to resolve their own transitive deps as apt
-# packages. The nav2 skip list goes when ros-rolling-nav2-* ships, together with the
-# .repos entry and the trim in toolchain-base.
+# --skip-keys: the only keys nothing resolves to. nav2's manifests (overlaid below)
+# declare slam_toolbox (unreleased on rolling) and nav2_rviz_plugins (trimmed at
+# import time), and neither is on this image's bringup path — AMCL localizes, nothing
+# launches rviz. Skipped here rather than resolved; both go when ros-rolling-nav2-*
+# ships, together with the .repos entry and the trim in toolchain-base.
+#
+# The imported trees (vendors + navigation2) are overlaid beside cacher's
+# manifest-only copy so rosdep sees their package.xml and resolves their FULL exec
+# closure as apt packages. Without this, only the dc manifests' direct keys resolve —
+# on lyrical the nav2 .debs pulled their own transitive deps (geographic-msgs among
+# them), but rolling ships no nav2 debs, and a runtime image whose dc plugins dlopen
+# nav2 libraries missing one of those transitive .so's fails at plugin load (found as
+# "cannot open shared object file: libgeographic_msgs__rosidl_generator_c.so" in the
+# first rolling run). --ignore-src keeps the nav2/vendor keys themselves local (they
+# ride in with the install/ tree copied in below); the sources this COPY brings are
+# removed by the rm -rf src in the RUN below, before the image is tagged.
 COPY --from=cacher /tmp/manifests/src ./src
+COPY --from=toolchain-base /root/ws/src/ros2_data_collection ./src/ros2_data_collection
 COPY rosdep src/ros2_data_collection/rosdep
 # dc-apt + the docker-clean rewrite (see toolchain-base). The rewrite is mandatory
 # here, not hygiene: this stage starts fresh FROM ros-base with the stock docker-clean,
@@ -357,7 +363,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     rosdep update --include-eol-distros && \
     DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} \
       --as-root=apt:false --dependency-types=exec \
-      --skip-keys="aws_sdk_vendor vector_vendor nlohmann_json_schema_validator_vendor nav2_bringup nav2_common nav2_lifecycle_manager nav2_msgs nav2_ros_common nav2_simple_commander nav2_util" && \
+      --skip-keys="slam_toolbox nav2_rviz_plugins" && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial src
 
 COPY --from=workspace /root/ws/install install
