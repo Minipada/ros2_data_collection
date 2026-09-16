@@ -229,7 +229,7 @@ if has_stage nav || has_stage waypoints || has_stage detect; then
     rbg "$SOURCE && ros2 launch dc_demos tb3_qrcodes.launch.py headless:=True use_rviz:=False use_dc:=$USE_DC $QRCODES_LAUNCH_ARGS > /tmp/qrcodes.log 2>&1"
 
     if wait_for "Nav2 to activate" 1800 \
-      'grep -aq "lifecycle_manager_navigation.*Managed nodes are active" /tmp/qrcodes.log' \
+      'grep -aq "lifecycle_manager_nav2.*Managed nodes are active" /tmp/qrcodes.log' \
       'grep -aq "Failed to bring up all requested nodes" /tmp/qrcodes.log'
     then
       nav_up=1
@@ -244,8 +244,9 @@ if has_stage nav || has_stage waypoints || has_stage detect; then
     stop_stack
   done
   [ -n "$nav_up" ] || fail "nav2 never reported all managed nodes active (both attempts)"
-  rin 'grep -aq "lifecycle_manager_localization.*Managed nodes are active" /tmp/qrcodes.log' \
-    || fail "localization never reported all managed nodes active"
+  # navigation2's main merged the navigation and localization managers into one
+  # (lifecycle_manager_nav2), so the "Managed nodes are active" line above already
+  # covers map_server/amcl — there is no separate localization manager to wait for.
 
   rin "$SOURCE && python3 /opt/sim/verify_sim.py nav" || fail "nav checks"
 fi
