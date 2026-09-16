@@ -12,7 +12,11 @@ class MeasurementPositionTest : public MeasurementBench
 protected:
   MeasurementPositionTest() : MeasurementBench("position")
   {
-    tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(ms_node_);
+    // NodeInterfaces bundle, not the node pointer: tf2_ros >= 0.46 (rolling) removed
+    // the node-templated constructor; 0.45 (lyrical) takes the bundle too.
+    tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(
+        rclcpp::node_interfaces::NodeInterfaces<rclcpp::node_interfaces::NodeParametersInterface,
+                                                rclcpp::node_interfaces::NodeTopicsInterface>(*ms_node_));
   }
 
   void declareCommonParameters()

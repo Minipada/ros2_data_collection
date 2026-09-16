@@ -204,15 +204,12 @@ nav2::CallbackReturn MeasurementServer::on_configure(const rclcpp_lifecycle::Sta
   setBaseSavePath();
 
   tf_ = std::make_shared<tf2_ros::Buffer>(get_clock());
-#if defined(TF2_ROS_TIMER_TAKES_NODE_INTERFACES)
+  // NodeInterfaces bundle, not the raw interfaces: tf2_ros >= 0.46 (rolling) removed
+  // the two-interface constructor; 0.45 (lyrical) takes the bundle too.
   auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
       rclcpp::node_interfaces::NodeInterfaces<rclcpp::node_interfaces::NodeBaseInterface,
                                               rclcpp::node_interfaces::NodeTimersInterface>(
           get_node_base_interface(), get_node_timers_interface()));
-#else
-  auto timer_interface =
-      std::make_shared<tf2_ros::CreateTimerROS>(get_node_base_interface(), get_node_timers_interface());
-#endif
   tf_->setCreateTimerInterface(timer_interface);
   transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_);
 
