@@ -283,11 +283,14 @@ RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     . install/setup.bash && \
     # navigation2's source-built packages (ros2_data_collection.repos) land in the
     # workspace build above — but their test suites (system_tests among them) are not
-    # ours to gate. The loop and the skips go when ros-rolling-nav2-* ships, together
-    # with the .repos entry and the trim in toolchain-base.
+    # ours to gate. Depth-independent find: some packages (opennav_docking) sit under
+    # nested container dirs, which the one-level loop this replaced silently missed —
+    # and an ungated nav2 suite is exactly what then fails the run. The find and the
+    # skips go when ros-rolling-nav2-* ships, together with the .repos entry and the
+    # trim in toolchain-base.
     NAV2_PKGS="" && \
-    for d in src/ros2_data_collection/navigation2/*/; do \
-      if [ -f "${d}package.xml" ]; then NAV2_PKGS="${NAV2_PKGS}$(basename "${d}") "; fi; \
+    for x in $(find src/ros2_data_collection/navigation2 -name package.xml); do \
+      NAV2_PKGS="${NAV2_PKGS}$(basename "$(dirname "$x")") "; \
     done && \
     ( colcon test --packages-skip aws_sdk_vendor ${NAV2_PKGS} --event-handlers desktop_notification- status- ; echo $? > /tmp/test_exit ) && \
     ( colcon test-result --verbose ; echo $? > /tmp/result_exit ) && \
