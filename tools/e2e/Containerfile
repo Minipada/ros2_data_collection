@@ -151,6 +151,13 @@ RUN mkdir -p src/ros2_data_collection && \
 # omplConfig.cmake, whose find_dependency(Boost serialization) needs CMake metadata the
 # ompl deb doesn't declare (ompl#1457) — here until that packaging fix lands.
 #
+# ros-${ROS_DISTRO}-rmw-cyclonedds-cpp: the sim harness (tools/sim/scripts/run.sh) runs
+# its containers on CycloneDDS. Under bringup contention on 4-core runners, fastrtps
+# (the default RMW) announces an action server's topics but never its *_action/send_goal
+# service endpoints, so nav2's bt_navigator never discovers compute_path_to_pose and
+# bringup aborts — deterministic on CI, gone under CycloneDDS (2/2 vs 0/2 under a 2-CPU
+# cap). Only the sim drives a graph big enough to hit it; nothing else selects the RMW.
+#
 # dc-pip keeps pip's wheel cache on a mount (fastcov/mcap are unpinned, so every daily
 # re-run re-resolves them; the mount means the re-resolution re-downloads nothing).
 RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
@@ -159,7 +166,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     apt-get -q update && \
     apt-get -q -y dist-upgrade && \
     apt-get -q install --no-install-recommends -y \
-    libboost-serialization-dev python3-pip ccache lcov mold && \
+    libboost-serialization-dev ros-${ROS_DISTRO}-rmw-cyclonedds-cpp python3-pip ccache lcov mold && \
     pip install --break-system-packages fastcov mcap && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial
 
