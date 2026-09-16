@@ -18,6 +18,16 @@ repositories:
     type: git
     url: https://github.com/Minipada/aws_sdk_vendor.git
     version: v1.11.600
+  # Source-built on this branch: the rolling rosdistro *indexes*
+  # nlohmann_json_schema_validator_vendor but its .deb isn't published to the apt
+  # repo yet, so rosdep resolves the key and the install fails. Pinned to main
+  # (vendored upstream v2.4.0) — same reasoning as the lyrical line: 0.6.0's upstream
+  # predates the json_pointer to_string() fixes and deprecation-warns all over the
+  # build against resolute's nlohmann 3.11.3. Drop once the ros-rolling .deb ships.
+  nlohmann_json_schema_validator_vendor:
+    type: git
+    url: https://github.com/open-rmf/nlohmann_json_schema_validator_vendor.git
+    version: 43358d96f0a458f798d2d347d18ef7177042d304
   # Source-built on this branch: navigation2 has no rolling release yet — nothing in
   # the monorepo ships as a ros-rolling-* .deb — so the sim's bringup stack (amcl,
   # map_server, planner/controller servers, bt_navigator, ...) can only come from
