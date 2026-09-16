@@ -16,7 +16,7 @@
 #
 # It needs the same workspace image tools/sim/scripts/run.sh uses (build it with
 # tools/e2e/scripts/build.sh, or set DC_SIM_IMAGE to one you have) and podman. An
-# equivalent local ROS 2 Lyrical + gz-sim Harmonic workspace works too, if you would rather
+# equivalent local ROS 2 Rolling + gz-sim Harmonic workspace works too, if you would rather
 # run the four steps by hand.
 #
 # Rates are measured in *simulated* seconds, not wall-clock ones. The warehouse is 317
@@ -78,9 +78,9 @@ cleanup() {
 trap cleanup EXIT
 
 # Expanded inside the container: the image's ENV ROS_DISTRO (set by build.sh) picks the
-# setup; :-lyrical covers images predating #530.
+# setup; :-rolling covers images predating #530.
 # shellcheck disable=SC2016
-SOURCE='source /opt/ros/${ROS_DISTRO:-lyrical}/setup.bash && source /root/ws/install/setup.bash'
+SOURCE='source /opt/ros/${ROS_DISTRO:-rolling}/setup.bash && source /root/ws/install/setup.bash'
 rin() { podman exec -e HOME=/root "$CONTAINER" bash -lc "$1"; }
 rbg() { podman exec -d -e HOME=/root "$CONTAINER" bash -lc "$1" >/dev/null; }
 
@@ -109,7 +109,7 @@ for profile in $PROFILES; do
   # rejection is one [Err] line, and everything downstream then measures an empty world.
   waited=0
   # shellcheck disable=SC2016  # expanded inside the container, like $SOURCE above
-  until rin 'source /opt/ros/${ROS_DISTRO:-lyrical}/setup.bash && timeout 30 gz model --list 2>/dev/null | grep -q turtlebot3_waffle' >/dev/null 2>&1; do
+  until rin 'source /opt/ros/${ROS_DISTRO:-rolling}/setup.bash && timeout 30 gz model --list 2>/dev/null | grep -q turtlebot3_waffle' >/dev/null 2>&1; do
     [ "$waited" -lt 900 ] || fail "turtlebot3_waffle never appeared in gz model --list"
     sleep 15
     waited=$((waited + 15))

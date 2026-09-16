@@ -6,15 +6,16 @@
 #   tree, so `toolchain`'s COPY --from below keys its own cache on dependency lists
 #   alone, not on every source edit — without having to hardcode one COPY per package.
 # - `toolchain-base`: a small stable apt layer (git + vcstool), then `vcs import`s
-#   vector_vendor, aws_sdk_vendor and nlohmann_json_schema_validator_vendor — each in
-#   its own repo (docs/adr/0002, docs/adr/0012, .repos for why the third is
-#   source-built) — then the daily-busted dist-upgrade + the remaining OS packages
-#   every later stage needs (ccache, lcov, pip tools). Keeping the fetch tools and the
-#   vendor fetch OUT from under the cache-bust layer means the network-bound `vcs
-#   import` only re-runs when ros2_data_collection.repos changes, not once per UTC
-#   day. Split from `toolchain` below so this stage's cache keys stay
-#   `ros2_data_collection.repos`'s own content (a vendor-package version bump), not
-#   the full-workspace rosdep install `toolchain` adds on top.
+#   ros2_data_collection.repos — vector_vendor and aws_sdk_vendor (docs/adr/0002,
+#   docs/adr/0012) plus navigation2, which rolling doesn't release at all yet (.repos
+#   for why it is source-built and tracks `main`) — then the daily-busted
+#   dist-upgrade + the remaining OS packages every later stage needs (ccache, lcov,
+#   pip tools). The fetch tools stay above the cache-bust layer; the import itself
+#   sits under it, so it re-resolves every source once per UTC day — that daily
+#   re-resolution is what makes navigation2's branch ref track its head instead of
+#   silently freezing it. Split from `toolchain` below so this stage's cache keys stay
+#   `ros2_data_collection.repos`'s own content, not the full-workspace rosdep install
+#   `toolchain` adds on top.
 # - `toolchain`: `toolchain-base` + pre-built aws-sdk-cpp + full-workspace rosdep
 #   install. Stays a cache hit across ordinary source changes; re-runs caused by
 #   parent invalidation (daily cache-bust, .repos/rosdep changes) compile from the
@@ -53,7 +54,7 @@
 # the distro-suffixed cache-mount ids — derive the distro instead of hardcoding one.
 # A changed value invalidates the stage anyway through the FROM below, so unlike
 # APT_CACHEBUST (see toolchain-base) top placement here costs no extra invalidation.
-ARG ROS_DISTRO=lyrical
+ARG ROS_DISTRO=rolling
 
 # --- cacher: nothing but the package manifests, so this stage's own frequent cache
 # invalidation (it COPYs the whole repo) costs nothing — it does no compilation, and
@@ -70,7 +71,7 @@ RUN mkdir -p /tmp/manifests && \
 
 FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS toolchain-base
 
-ARG ROS_DISTRO=lyrical
+ARG ROS_DISTRO=rolling
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -103,46 +104,40 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
 
 WORKDIR /root/ws
 
-# vector_vendor and aws_sdk_vendor both live in their own repos (docs/adr/0002's
-# amendment, docs/adr/0012), so they have to be fetched into the workspace source tree
-# the same way a developer's own `vcs import` would, before anything downstream can
-# `colcon build` them. A separate COPY (not folded into an apt RUN) keys this layer's
-# own cache on ros2_data_collection.repos's content: it re-fetches when that file
-# changes (either package's version bump) — not on an ordinary source edit elsewhere
-# in the repo, and not on the daily APT_CACHEBUST refresh, whose layer sits above
-# this one rather than below. `vcs
-# import` needs network; every later `colcon build`/`colcon test` in downstream stages
-# runs against the already-materialized result. Keying the fetch on
-# ros2_data_collection.repos rather than the full source tree is also what keeps
-# aws_sdk_vendor's ~15-minute aws-sdk-cpp source build
-# (#271, in the `toolchain` stage below) a cache hit across ordinary source edits
-# elsewhere in ros2_data_collection.
-COPY ros2_data_collection.repos .
-# navigation2 is vendored (see ros2_data_collection.repos) for exactly three directories:
-# nav2_smac_planner — its resolute .deb never published because the OMPL deb doesn't
-# carry the Boost CMake metadata omplConfig.cmake's find_dependency needs (ompl#1457)
-# — nav2_bringup, which can't publish transitively, and the navigation2 metapackage
-# itself, which nav2_bringup find_packages at configure time. Every other nav2 package
-# has a resolute .deb that the rosdep steps below install, so the rest of the monorepo
-# is trimmed here: colcon and rosdep must not see manifests for packages that would
-# then be built and demanded twice. Trim and the .repos entry go together once both
-# .debs ship (#531).
-RUN mkdir -p src/ros2_data_collection && \
-    vcs import --shallow src/ros2_data_collection < ros2_data_collection.repos && \
-    find src/ros2_data_collection/navigation2 -mindepth 1 -maxdepth 1 -type d \
-      ! -name nav2_smac_planner ! -name nav2_bringup ! -name navigation2 -exec rm -rf {} +
-
 # Daily apt cache-bust (see CLAUDE.md "Containers: Podman, not Docker"): a date-valued
 # build-arg rebuilds the apt layer once per UTC day so OS security patches don't go stale.
 # Its own RUN layer (no DC source) so it stays a cache hit across code changes.
 #
-# The ARG is declared HERE, immediately before its only use, not at the top of the
-# stage: buildah carries every in-scope build-arg in each RUN's environment, so its
-# cache key picks up the arg's value even for RUNs that never reference it — declared
-# at the top, the changing date invalidated the fetch-tools and `vcs import` layers
-# above daily too (verified empirically: a one-day-older APT_CACHEBUST re-cloned both
-# vendor repos with the top placement, and cache-hits both with this placement).
+# The ARG is declared HERE — after the stable fetch-tools layer, before the `vcs
+# import` and its only apt RUN: buildah carries every in-scope build-arg in each RUN's
+# environment, so its cache key picks up the arg's value even for RUNs that never
+# reference it. That is wanted for the import, not just tolerated: navigation2's
+# .repos entry is a branch ref (main, its rolling head), and an import layered above
+# the bust would silently re-serve the last-cloned commit from cache forever — the
+# daily re-resolution here is what makes it track rolling head. The two pinned vendor
+# tags re-resolve to the same SHAs for the cost of a shallow clone.
 ARG APT_CACHEBUST=unknown
+
+# The .repos sources are fetched into the workspace source tree the same way a
+# developer's own `vcs import` would, before anything downstream can `colcon build`
+# them. Keying the fetch on ros2_data_collection.repos's content (a separate COPY, not
+# folded into an apt RUN) is what keeps aws_sdk_vendor's ~15-minute aws-sdk-cpp source
+# build (#271, in the `toolchain` stage below) a cache hit across ordinary source
+# edits elsewhere in ros2_data_collection. `vcs import` needs network; every later
+# `colcon build`/`colcon test` in downstream stages runs against the
+# already-materialized result.
+COPY ros2_data_collection.repos .
+# navigation2 is source-built (see ros2_data_collection.repos): rolling has no
+# ros-rolling-nav2-* debs at all yet, so the sim's bringup stack can only come from
+# source. Two directories are trimmed at import time: nav2_rviz_plugins (a GUI plugin
+# — qt6/rviz deps and build minutes for a stack this branch never launches headed) and
+# nav2_system_tests (navigation2's own integration suite, not ours to gate). Trim,
+# .repos entry and the nav2 test skips below go together once ros-rolling-nav2-*
+# ships.
+RUN mkdir -p src/ros2_data_collection && \
+    vcs import --shallow src/ros2_data_collection < ros2_data_collection.repos && \
+    find src/ros2_data_collection/navigation2 -mindepth 1 -maxdepth 1 -type d \
+      \( -name nav2_rviz_plugins -o -name nav2_system_tests \) -exec rm -rf {} +
 # fastcov: tools/code_coverage_report.bash's C++ coverage tool; lcov/ccache round it out.
 # mold: linker for every dc_* link step — ~35 plugin .so + ~50 gtest binaries per build,
 # and ccache caches objects, not links.
@@ -151,9 +146,9 @@ ARG APT_CACHEBUST=unknown
 # never fetching a package's `install_requires` over the network at build time — so
 # listing `mcap` in dc_mcap_writer/setup.py alone does not make it importable here; it
 # has to be installed into this image explicitly, same as fastcov below.
-# libboost-serialization-dev: the vendored nav2_smac_planner's configure resolves
+# libboost-serialization-dev: the source-built nav2_smac_planner's configure resolves
 # omplConfig.cmake, whose find_dependency(Boost serialization) needs CMake metadata the
-# ros-lyrical-ompl deb doesn't declare (ompl#1457) — here until that packaging fix lands.
+# ompl deb doesn't declare (ompl#1457) — here until that packaging fix lands.
 #
 # dc-pip keeps pip's wheel cache on a mount (fastcov/mcap are unpinned, so every daily
 # re-run re-resolves them; the mount means the re-resolution re-downloads nothing).
@@ -169,7 +164,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
 
 FROM toolchain-base AS toolchain
 
-ARG ROS_DISTRO=lyrical
+ARG ROS_DISTRO=rolling
 
 # aws_sdk_vendor's source already arrived via toolchain-base's `vcs import` above, so
 # building it here only needs the local rosdep source it depends on registering.
@@ -193,11 +188,14 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
       > /etc/ros/rosdep/sources.list.d/10-dc.list && \
     apt-get -q update && \
     rosdep update --include-eol-distros && \
-    # navigation2 has no resolute .deb (#531) and --ignore-src can't skip it here: the
-    # trimmed nav2 tree's manifests demand the metapackage without shipping its own.
+    # slam_toolbox / nav2_rviz_plugins: nav2_bringup's own package.xml declares both,
+    # neither releases into rolling today (slam_toolbox not in the rosdistro at all,
+    # the rviz plugin trimmed at import time above). Neither is on the sim's bringup
+    # path (localization is AMCL, not SLAM; nothing here launches rviz) — skip their
+    # resolution. Goes when ros-rolling-nav2-* ships, with the .repos entry.
     DEBIAN_FRONTEND=noninteractive \
     rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false \
-      --skip-keys="navigation2" && \
+      --skip-keys="slam_toolbox nav2_rviz_plugins" && \
     # shellcheck disable=SC1091
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
     colcon build --packages-select aws_sdk_vendor \
@@ -216,11 +214,11 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
 COPY --from=cacher /tmp/manifests/src ./src
 RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     apt-get -q update && \
-    # navigation2 (bringup's metapackage) has no resolute .deb while any member is
-    # blocked (#531) and nothing needs the metapackage itself: its members arrive as
-    # .debs via rosdep, or from the vendored source build (colcon).
+    # Same two nav2-satellite skips as the toolchain stage above; the nav2 trees
+    # themselves resolve via --ignore-src, since cacher's copy merges into the
+    # imported src/ this stage inherits.
     DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false \
-      --skip-keys="navigation2" && \
+      --skip-keys="slam_toolbox nav2_rviz_plugins" && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial
 
 # --- workspace: full source + colcon build + colcon test, in one image both CI and
@@ -232,7 +230,7 @@ FROM toolchain AS workspace
 # below (CCOV would just read as unset/false here), producing a plain Release build
 # with no error. This exact bug was found and fixed earlier in this branch's history.
 ARG CCOV=false
-ARG ROS_DISTRO=lyrical
+ARG ROS_DISTRO=rolling
 
 COPY . src/ros2_data_collection
 
@@ -262,10 +260,9 @@ COPY . src/ros2_data_collection
 RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     apt-get -q update && \
-    # navigation2 (bringup's metapackage) has no resolute .deb while any member is
-    # blocked (#531) — same skip as the deps stage above.
+    # Same two nav2-satellite skips as the toolchain stage above.
     DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false \
-      --skip-keys="navigation2" && \
+      --skip-keys="slam_toolbox nav2_rviz_plugins" && \
     # shellcheck disable=SC1091
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
     if [ "$CCOV" = "true" ]; then \
@@ -273,20 +270,14 @@ RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     else \
       CMAKE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_LINKER_TYPE=MOLD"; \
     fi && \
-    # CMAKE_POLICY_VERSION_MINIMUM: resolute's CMake 4 removed compatibility with
-    # cmake_minimum_required < 3.5, which the vendored json-schema-validator still
-    # declares (#531). Exported, not a --cmake-args cache var, because the vendor
-    # builds the lib via ExternalProject, which inherits env but not cache vars.
-    # No-op on older CMake and on compliant projects.
-    export CMAKE_POLICY_VERSION_MINIMUM=3.5 && \
     eval colcon build --packages-skip aws_sdk_vendor --cmake-args "$CMAKE_ARGS" --event-handlers desktop_notification- status- && \
     ccache -s && \
     # shellcheck disable=SC1091
     . install/setup.bash && \
-    # The two vendored navigation2 packages (ros2_data_collection.repos) land in the
-    # workspace build above — but their own test suites (bringup's simulator launch
-    # tests among them) are not ours to gate. The loop and the skips go when the
-    # .repos entry does.
+    # navigation2's source-built packages (ros2_data_collection.repos) land in the
+    # workspace build above — but their test suites (system_tests among them) are not
+    # ours to gate. The loop and the skips go when ros-rolling-nav2-* ships, together
+    # with the .repos entry and the trim in toolchain-base.
     NAV2_PKGS="" && \
     for d in src/ros2_data_collection/navigation2/*/; do \
       if [ -f "${d}package.xml" ]; then NAV2_PKGS="${NAV2_PKGS}$(basename "${d}") "; fi; \
@@ -301,7 +292,7 @@ RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial
 
 ENV ROS_UNDERLAY=/root/ws/install
-# What the sim scripts' `source /opt/ros/${ROS_DISTRO:-lyrical}/setup.bash` reads at
+# What the sim scripts' `source /opt/ros/${ROS_DISTRO:-rolling}/setup.bash` reads at
 # runtime (podman exec inherits the image env) — the image knows its own distro.
 ENV ROS_DISTRO=${ROS_DISTRO}
 RUN echo "source ${ROS_UNDERLAY}/setup.bash" >> /etc/bash.bashrc
@@ -318,7 +309,7 @@ RUN echo "source ${ROS_UNDERLAY}/setup.bash" >> /etc/bash.bashrc
 # not two stages to maintain. See ci.yaml's build-workspace / build-workspace-coverage.
 FROM docker.io/library/ros:${ROS_DISTRO}-ros-base AS runtime
 
-ARG ROS_DISTRO=lyrical
+ARG ROS_DISTRO=rolling
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /root/ws
@@ -328,17 +319,17 @@ WORKDIR /root/ws
 # dc_* package.xml files tagging deps correctly rather than the catch-all <depend>
 # for anything build-only.
 #
-# --skip-keys for the three vendors: dc_bridge/dc_measurements depend on them, but
-# unlike the toolchain stage above, this stage never `vcs import`s them (it starts
-# fresh FROM ros-base, deliberately skipping toolchain's git/ccache/build-essential
-# layers), so cacher's manifest-only copy has no package.xml for any of them — rosdep
-# sees an unresolvable name instead of a local package satisfied via --ignore-src.
-# All three are already fully linked into the install/ tree copied in below; nothing
-# here needs to resolve their own transitive deps as apt packages.
-# nav2_bringup is skipped for the same reason on the lyrical line — it is vendored,
-# source-built (see ros2_data_collection.repos), so it rides in with the install/ tree
-# and has no .deb to install. The other nav2 packages install from .debs like any
-# other exec dependency.
+# --skip-keys for the two vendors and the nav2 packages: dc_bridge/dc_measurements
+# depend on the vendors, and dc packages declare the nav2 keys, but unlike the
+# toolchain stage above, this stage never `vcs import`s anything (it starts fresh
+# FROM ros-base, deliberately skipping toolchain's git/ccache/build-essential layers),
+# so cacher's manifest-only copy has no package.xml for any of them — rosdep sees an
+# unresolvable name instead of a local package satisfied via --ignore-src. All of them
+# are already fully linked into the install/ tree copied in below (the vendors built
+# by toolchain, nav2 by the workspace build — rolling ships no ros-rolling-nav2-* debs
+# to install instead); nothing here needs to resolve their own transitive deps as apt
+# packages. The nav2 skip list goes when ros-rolling-nav2-* ships, together with the
+# .repos entry and the trim in toolchain-base.
 COPY --from=cacher /tmp/manifests/src ./src
 COPY rosdep src/ros2_data_collection/rosdep
 # dc-apt + the docker-clean rewrite (see toolchain-base). The rewrite is mandatory
@@ -356,7 +347,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     rosdep update --include-eol-distros && \
     DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} \
       --as-root=apt:false --dependency-types=exec \
-      --skip-keys="aws_sdk_vendor vector_vendor nlohmann_json_schema_validator_vendor nav2_bringup" && \
+      --skip-keys="aws_sdk_vendor vector_vendor nav2_bringup nav2_common nav2_lifecycle_manager nav2_msgs nav2_ros_common nav2_simple_commander nav2_util" && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial src
 
 COPY --from=workspace /root/ws/install install

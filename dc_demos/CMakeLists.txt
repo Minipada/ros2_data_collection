@@ -8,11 +8,11 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(ament_cmake_ros REQUIRED)
 
-# nav2_bringup stays a package.xml exec_depend only: it is released into the lyrical
-# rosdistro but its resolute .deb publish still lags (#531), so there is no CMake config
-# to find at configure time. Nothing here compiles against it -- only the tb3 demo launch
-# files include it at runtime, and none of them is CI-exercised. Restore it here once the
-# .deb ships.
+# nav2_bringup stays a package.xml exec_depend only: navigation2 doesn't release into
+# the rolling rosdistro at all yet, so it is source-built (ros2_data_collection.repos)
+# and exports no CMake config to find at configure time. Nothing here compiles against
+# it -- only the tb3 demo launch files include it at runtime. Restore it here once
+# ros-rolling-nav2-bringup ships.
 set(dependencies
   geometry_msgs
   dc_measurements

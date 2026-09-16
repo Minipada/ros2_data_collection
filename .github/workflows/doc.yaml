@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-# DC 2.0 (Lyrical) documentation build (#252). Builds the mdbook site and the strictdoc
+# DC 2.0 (Rolling) documentation build (#252). Builds the mdbook site and the strictdoc
 # requirements export. GitHub Pages stays owned by the jazzy line (#527) — this branch
 # builds and previews only, so the two distro branches can't fight over one site.
 #
@@ -39,7 +39,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - lyrical
+      - rolling
     paths:
       - doc/**
       - requirements/**
@@ -48,7 +48,7 @@ on:
       - .github/workflows/doc.yaml
   pull_request:
     branches:
-      - lyrical
+      - rolling
     paths:
       - doc/**
       - requirements/**
@@ -116,7 +116,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Deploy to GitHub Pages
-        # Unreachable under this branch's own triggers (lyrical only) — kept pointing at
+        # Unreachable under this branch's own triggers (rolling only) — kept pointing at
         # jazzy on purpose: one Pages publisher at a time.
         if: github.event_name == 'push' && github.ref == 'refs/heads/jazzy'
         uses: peaceiris/actions-gh-pages@v4

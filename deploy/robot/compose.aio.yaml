@@ -14,7 +14,7 @@
 # params override that compose.isolated-network.yaml adds and host mode doesn't.
 services:
   dc-ros:
-    image: ${DC_ROS_IMAGE:-ghcr.io/minipada/ros2_data_collection/dc-ros:lyrical}
+    image: ${DC_ROS_IMAGE:-ghcr.io/minipada/ros2_data_collection/dc-ros:rolling}
     container_name: dc_robot_aio
     volumes:
       - dc_robot_aio_buffer:/root/.dc/buffer

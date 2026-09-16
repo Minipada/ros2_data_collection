@@ -43,7 +43,7 @@ jobs:
     # Same distro lever as ci.yaml's build jobs (#530): build.sh forwards it into the
     # Containerfile, and the cache ref below carries it.
     env:
-      ROS_DISTRO: lyrical
+      ROS_DISTRO: rolling
     # The full pass was 63 min on 8 cores; a 4-core runner roughly doubles that, and the
     # earlier stages and the image build come on top. Generous on purpose so a contended
     # runner fails on an assertion rather than on the clock -- but well inside GitHub's

@@ -86,7 +86,7 @@ if [[ -n "$ISSUE_ARG" && ! "$ISSUE_ARG" =~ ^[0-9]+$ ]]; then
 fi
 
 REPO_ROOT="$(git -C "$(dirname "$(realpath "$0")")" rev-parse --show-toplevel)"
-BASE_REF="origin/lyrical"
+BASE_REF="origin/rolling"
 
 AGENT_COLORS=(blue cyan fuchsia green indigo lime magenta orange pink purple rose teal violet yellow)
 
