@@ -11,10 +11,10 @@ on:
   workflow_dispatch:
   pull_request:
     branches:
-      - lyrical
+      - rolling
   push:
     branches:
-      - lyrical
+      - rolling
 
 permissions:
   contents: read
@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 0
 
       # Installs prek, caches hook environments, runs `prek run --show-diff-on-failure`.
-      # A PR is checked over its own diff (`base...HEAD`); a push to lyrical re-checks the
+      # A PR is checked over its own diff (`base...HEAD`); a push to rolling re-checks the
       # whole tree, so nothing a PR never touched can rot unnoticed.
       - uses: j178/prek-action@v3.0.0
         with:

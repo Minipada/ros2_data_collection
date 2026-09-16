@@ -16,11 +16,11 @@
 # already running on the host before calling this script.
 #
 # Env vars (all optional):
-#   ROS_DISTRO     ROS 2 distro to build (default lyrical, #530) — the only input needed
+#   ROS_DISTRO     ROS 2 distro to build (default rolling, #530) — the only input needed
 #                  to build a different distro's workspace image. Forwarded into the
 #                  Containerfile, where it selects the base image, every rosdep/setup
 #                  step, and the distro suffix on the cache mounts. Unset is exactly
-#                  today's lyrical build.
+#                  today's rolling build.
 #   IMAGE_TAG      image tag to build (default dc-workspace:latest)
 #   CCOV           "true" to build with C++ coverage instrumentation (default false)
 #   TARGET         stage to build, e.g. `workspace` or `runtime` — omit to build the
@@ -54,7 +54,7 @@ REPO_ROOT="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
 
 IMAGE_TAG="${IMAGE_TAG:-dc-workspace:latest}"
 CCOV="${CCOV:-false}"
-ROS_DISTRO="${ROS_DISTRO:-lyrical}"
+ROS_DISTRO="${ROS_DISTRO:-rolling}"
 
 if [ -n "${BUILDAH_TMPDIR:-}" ]; then
   mkdir -p "$BUILDAH_TMPDIR"

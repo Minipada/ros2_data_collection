@@ -13,8 +13,8 @@
 # The `robot-a-params` ConfigMap is created from ../params/robot-a-params.yaml before
 # this file is applied.
 #
-# Image refs are real, committed defaults, not a harness-only tag: `dc-ros:lyrical` is
-# the floating branch ref `build-dc-ros-image` pushes on every merge to lyrical — the ref
+# Image refs are real, committed defaults, not a harness-only tag: `dc-ros:rolling` is
+# the floating branch ref `build-dc-ros-image` pushes on every merge to rolling — the ref
 # a real deployment actually pins to (`:latest` isn't a tag this repo relies on). The
 # same literal `vector` version robot-pod.yaml pins — bump both by hand alongside that
 # file's own, per #448. `dc-ros`'s ref is substituted only when overridden (same
@@ -38,7 +38,7 @@ spec:
       hostnames: ["vector"]
   containers:
     - name: dc-ros
-      image: ghcr.io/minipada/ros2_data_collection/dc-ros:lyrical
+      image: ghcr.io/minipada/ros2_data_collection/dc-ros:rolling
       args: ["dc_params_file:=/opt/dc/robot_params.yaml", "run_uploader:=false"]
       volumeMounts:
         - name: config

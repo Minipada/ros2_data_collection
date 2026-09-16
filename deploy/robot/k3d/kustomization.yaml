@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 # k3d dev-loop overlay (#451) over ../kubernetes/robot-pod.yaml (#450): pins dc-ros/
-# dc-uploader to the :lyrical tag (this branch's own published tag — see ../README.md;
+# dc-uploader to the :rolling tag (this branch's own published tag — see ../README.md;
 # never :latest, the same way ROS's own images are tagged by distro codename, not
 # :latest) instead of the base manifest's :latest, and forces imagePullPolicy: Never
 # so the cluster runs entirely off whatever `k3d image import` already placed on the
@@ -10,18 +10,18 @@
 # command sequence (`podman run`, `k3d image import`, `kubectl apply -k`). `vector`
 # keeps pulling the real upstream image unchanged.
 #
-# Building your own image instead of using the published :lyrical tag (to test local
+# Building your own image instead of using the published :rolling tag (to test local
 # changes) needs no change here: tag your build identically
-# (ghcr.io/minipada/ros2_data_collection/dc-ros:lyrical) and it's what `podman save`
+# (ghcr.io/minipada/ros2_data_collection/dc-ros:rolling) and it's what `podman save`
 # picks up in ../README.md's step 3.
 resources:
   - ../kubernetes/robot-pod.yaml
 
 images:
   - name: ghcr.io/minipada/ros2_data_collection/dc-ros
-    newTag: lyrical
+    newTag: rolling
   - name: ghcr.io/minipada/ros2_data_collection/dc-uploader
-    newTag: lyrical
+    newTag: rolling
 
 patches:
   - path: pull-policy.yaml

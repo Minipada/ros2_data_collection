@@ -12,9 +12,9 @@
 #
 # Env vars:
 #   DC_ROS_IMAGE       image ref for the dc-ros container (default: the manifest's own
-#                      committed :lyrical ref). CI passes the :<sha> ref
+#                      committed :rolling ref). CI passes the :<sha> ref
 #                      build-dc-ros-image just pushed, so a PR run tests the image it
-#                      just built, not whatever :lyrical happened to be last.
+#                      just built, not whatever :rolling happened to be last.
 #   DC_UPLOADER_IMAGE  same, for the dc-uploader container.
 #   DC_RELEASE_TIMEOUT_SECONDS  deadline for dc-ros to report ready (default 60).
 set -euo pipefail
@@ -52,14 +52,14 @@ cleanup() {
 trap cleanup EXIT
 
 # Substitute image refs only when overridden — an unset DC_ROS_IMAGE/DC_UPLOADER_IMAGE
-# leaves the manifest's own committed :lyrical refs untouched, so a plain local run
+# leaves the manifest's own committed :rolling refs untouched, so a plain local run
 # behaves exactly as the committed file describes.
 cp "$POD_MANIFEST" "$RUN_MANIFEST"
 if [ -n "${DC_ROS_IMAGE:-}" ]; then
-  sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-ros:lyrical|$DC_ROS_IMAGE|" "$RUN_MANIFEST"
+  sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-ros:rolling|$DC_ROS_IMAGE|" "$RUN_MANIFEST"
 fi
 if [ -n "${DC_UPLOADER_IMAGE:-}" ]; then
-  sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-uploader:lyrical|$DC_UPLOADER_IMAGE|" "$RUN_MANIFEST"
+  sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-uploader:rolling|$DC_UPLOADER_IMAGE|" "$RUN_MANIFEST"
 fi
 
 log "staging robot_params.yaml at $HOST_PARAMS_FILE"
