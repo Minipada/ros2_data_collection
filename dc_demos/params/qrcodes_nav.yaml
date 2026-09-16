@@ -67,9 +67,12 @@ bt_navigator:
     # aborts. 30s and 60s both lost this race on 4-core CI runners (run 35040159939:
     # the "wait" server; run 35073651535: "compute_path_to_pose") -- bringup contends
     # with Gazebo and every sensor there, and the last-created endpoints are the ones
-    # left unmatched. A healthy activation is cheap; the ceiling only bounds a
-    # genuinely-broken bringup, hence the two minutes.
-    wait_for_service_timeout: 120000
+    # left unmatched. navigation2's main adds still more bringup servers (docking,
+    # following, the keepout filter pair), and two minutes lost the same race four
+    # times out of four on the rolling line (runs 35116818485/35128538449). A healthy
+    # activation is cheap; the ceiling only bounds a genuinely-broken bringup, hence
+    # the five minutes.
+    wait_for_service_timeout: 300000
     # 'default_nav_through_poses_bt_xml' and 'default_nav_to_pose_bt_xml' are use defaults:
     # nav2_bt_navigator/navigate_to_pose_w_replanning_and_recovery.xml
     # nav2_bt_navigator/navigate_through_poses_w_replanning_and_recovery.xml
