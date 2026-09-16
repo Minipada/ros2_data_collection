@@ -7,13 +7,14 @@
 #   alone, not on every source edit — without having to hardcode one COPY per package.
 # - `toolchain-base`: a small stable apt layer (git + vcstool), then `vcs import`s
 #   ros2_data_collection.repos — vector_vendor and aws_sdk_vendor (docs/adr/0002,
-#   docs/adr/0012) plus navigation2, which rolling doesn't release at all yet (.repos
-#   for why it is source-built and tracks `main`) — then the daily-busted
-#   dist-upgrade + the remaining OS packages every later stage needs (ccache, lcov,
-#   pip tools). The fetch tools stay above the cache-bust layer; the import itself
-#   sits under it, so it re-resolves every source once per UTC day — that daily
-#   re-resolution is what makes navigation2's branch ref track its head instead of
-#   silently freezing it. Split from `toolchain` below so this stage's cache keys stay
+#   docs/adr/0012), nlohmann_json_schema_validator_vendor (.repos: indexed on rolling
+#   but its .deb isn't published) and navigation2 (.repos: rolling doesn't release it
+#   at all, and it tracks `main`) — then the daily-busted dist-upgrade + the remaining
+#   OS packages every later stage needs (ccache, lcov, pip tools). The fetch tools
+#   stay above the cache-bust layer; the import itself sits under it, so it
+#   re-resolves every source once per UTC day — that daily re-resolution is what
+#   makes navigation2's branch ref track its head instead of silently freezing it.
+#   Split from `toolchain` below so this stage's cache keys stay
 #   `ros2_data_collection.repos`'s own content, not the full-workspace rosdep install
 #   `toolchain` adds on top.
 # - `toolchain`: `toolchain-base` + pre-built aws-sdk-cpp + full-workspace rosdep
@@ -114,8 +115,8 @@ WORKDIR /root/ws
 # reference it. That is wanted for the import, not just tolerated: navigation2's
 # .repos entry is a branch ref (main, its rolling head), and an import layered above
 # the bust would silently re-serve the last-cloned commit from cache forever — the
-# daily re-resolution here is what makes it track rolling head. The two pinned vendor
-# tags re-resolve to the same SHAs for the cost of a shallow clone.
+# daily re-resolution here is what makes it track rolling head. The three pinned
+# vendor tags re-resolve to the same SHAs for the cost of a shallow clone.
 ARG APT_CACHEBUST=unknown
 
 # The .repos sources are fetched into the workspace source tree the same way a
@@ -270,6 +271,12 @@ RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     else \
       CMAKE_ARGS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_LINKER_TYPE=MOLD"; \
     fi && \
+    # CMAKE_POLICY_VERSION_MINIMUM: resolute's CMake 4 removed compatibility with
+    # cmake_minimum_required < 3.5, which the source-built json-schema-validator still
+    # declares. Exported, not a --cmake-args cache var, because the vendor builds the
+    # lib via ExternalProject, which inherits env but not cache vars. No-op on older
+    # CMake and on compliant projects.
+    export CMAKE_POLICY_VERSION_MINIMUM=3.5 && \
     eval colcon build --packages-skip aws_sdk_vendor --cmake-args "$CMAKE_ARGS" --event-handlers desktop_notification- status- && \
     ccache -s && \
     # shellcheck disable=SC1091
@@ -319,7 +326,7 @@ WORKDIR /root/ws
 # dc_* package.xml files tagging deps correctly rather than the catch-all <depend>
 # for anything build-only.
 #
-# --skip-keys for the two vendors and the nav2 packages: dc_bridge/dc_measurements
+# --skip-keys for the three vendors and the nav2 packages: dc_bridge/dc_measurements
 # depend on the vendors, and dc packages declare the nav2 keys, but unlike the
 # toolchain stage above, this stage never `vcs import`s anything (it starts fresh
 # FROM ros-base, deliberately skipping toolchain's git/ccache/build-essential layers),
@@ -347,7 +354,7 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     rosdep update --include-eol-distros && \
     DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} \
       --as-root=apt:false --dependency-types=exec \
-      --skip-keys="aws_sdk_vendor vector_vendor nav2_bringup nav2_common nav2_lifecycle_manager nav2_msgs nav2_ros_common nav2_simple_commander nav2_util" && \
+      --skip-keys="aws_sdk_vendor vector_vendor nlohmann_json_schema_validator_vendor nav2_bringup nav2_common nav2_lifecycle_manager nav2_msgs nav2_ros_common nav2_simple_commander nav2_util" && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial src
 
 COPY --from=workspace /root/ws/install install
