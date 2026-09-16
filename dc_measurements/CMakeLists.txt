@@ -31,6 +31,7 @@ set(dependencies
   std_msgs
   tf2
   tf2_geometry_msgs
+  tf2_ros
   unique_identifier_msgs
   yaml_cpp_vendor
 )
@@ -40,6 +41,14 @@ find_package(ament_cmake_ros REQUIRED)
 foreach(Dependency IN ITEMS ${dependencies})
   find_package(${Dependency} REQUIRED)
 endforeach()
+
+# tf2_ros >= 0.46 removed CreateTimerROS's two-interface constructor (deprecated in
+# 0.45), leaving only the rclcpp NodeInterfaces-bundle form; older lines only have the
+# two-pointer form. Same source, both APIs — the boundary is the upstream version, not
+# a distro.
+if(tf2_ros_VERSION VERSION_GREATER_EQUAL "0.46.0")
+  add_compile_definitions(TF2_ROS_TIMER_TAKES_NODE_INTERFACES)
+endif()
 
 # Message packages have no pkg::pkg umbrella target -- their C++ typesupport target
 # carries the generated code. dc_common/dc_core are header-only
