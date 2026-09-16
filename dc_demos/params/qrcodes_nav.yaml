@@ -64,8 +64,9 @@ bt_navigator:
     # activated moments earlier by the lifecycle manager, and on a loaded runner DDS
     # discovery doesn't always make them visible in 1s -- the activation then fails
     # with "Failed to change state for node: bt_navigator" and the whole bringup
-    # aborts.
-    wait_for_service_timeout: 30000
+    # aborts. 30s was observed losing this race too (the "wait" server, twice in a
+    # row, run 35040159939), hence the minute.
+    wait_for_service_timeout: 60000
     # 'default_nav_through_poses_bt_xml' and 'default_nav_to_pose_bt_xml' are use defaults:
     # nav2_bt_navigator/navigate_to_pose_w_replanning_and_recovery.xml
     # nav2_bt_navigator/navigate_through_poses_w_replanning_and_recovery.xml
