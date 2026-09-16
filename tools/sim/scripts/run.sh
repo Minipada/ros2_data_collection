@@ -140,7 +140,13 @@ SOURCE='source /opt/ros/${ROS_DISTRO:-rolling}/setup.bash && source /root/ws/ins
 start_stack() {
   CONTAINER="dc-sim-$$-$1"
   log "starting $CONTAINER from $IMAGE"
+  # CycloneDDS, not the fastrtps default: under bringup contention on 4-core runners,
+  # fastrtps announces an action server's topics but never its *_action/send_goal
+  # service endpoints, so nav2's bt_navigator never discovers compute_path_to_pose and
+  # bringup aborts — deterministic on CI, converged 2/2 under a 2-CPU cap on
+  # CycloneDDS. The package is baked into the workspace image (tools/e2e/Containerfile).
   podman run -d --name "$CONTAINER" --shm-size=2g \
+    -e RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
     -v "$REPO_ROOT/tools/sim/scripts:/opt/sim:ro,Z" \
     "$IMAGE" sleep infinity >/dev/null
 }
