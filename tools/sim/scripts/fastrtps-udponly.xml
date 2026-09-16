@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+SPDX-License-Identifier: MPL-2.0
+-->
+<!-- UDPv4-only, no SHM transport. run.sh points FASTRTPS_DEFAULT_PROFILES_FILE here:
+     with ~40 participants on the default FastDDS transports, endpoint discovery
+     between already-matched participants intermittently never completes; bt_navigator's
+     action clients sat 30/60/120s without seeing action servers whose nodes had been
+     active for tens of seconds (services, bonds and topics matched fine throughout).
+     Forcing UDPv4 loopback removes the SHM segment/port negotiation those endpoints
+     ride on. UDPv4 narrows the window but does not eliminate it on 4-core CI
+     runners: attempts still lose it, so run.sh brings the stack up three times.
+     Image-heavy topics pay a loopback copy for this; acceptable in the sim
+     harness, which is why this lives here and not in the image or the deploy stacks. -->
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+  <transport_descriptors>
+    <transport_descriptor>
+      <transport_id>udp_only</transport_id>
+      <type>UDPv4</type>
+    </transport_descriptor>
+  </transport_descriptors>
+  <participant profile_name="udp_only_profile" is_default_profile="true">
+    <rtps>
+      <userTransports>
+        <transport_id>udp_only</transport_id>
+      </userTransports>
+      <useBuiltinTransports>false</useBuiltinTransports>
+    </rtps>
+  </participant>
+</profiles>
