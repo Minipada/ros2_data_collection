@@ -233,7 +233,7 @@ export DC_ROS_IMAGE=ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy
 </code></pre>
 <p>CI instead pulls the PR's just-built <code>:&lt;sha&gt;</code> image (<code>build-dc-ros-image</code>'s own output)
 — testing what this run actually built, same as <code>verify-robot-manifests</code>/
-<code>verify-published-images</code>. To reproduce <em>that</em> case locally instead — testing a change
+<code>verify-runtime-images</code>. To reproduce <em>that</em> case locally instead — testing a change
 before it's pushed — build it yourself and point <code>DC_ROS_IMAGE</code> at the local tag:</p>
 <pre><code class="language-sh">TARGET=runtime IMAGE_TAG=dc-runtime:local ./tools/e2e/scripts/build.sh
 podman build -t dc-ros:local -f containers/dc-ros/Containerfile --build-arg BASE_IMAGE=dc-runtime:local containers/dc-ros
