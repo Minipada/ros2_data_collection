@@ -30,7 +30,7 @@ from dc_interfaces.msg import StringStamped
 # anyway. Has to outlast the split harness's deliberate 20s Shipper delay: the pipeline
 # can't subscribe until the bridge readiness gate opens, and under runner load that
 # chain once outlasted the old 30s net, publishing the first ~26 Records into an empty
-# graph — real data loss by the verifier's ledger (e2e-split). A safety net against
+# graph — real data loss by the verifier's ledger (e2e-split-container). A safety net against
 # hanging, not a timing knob: it returns the instant the subscriptions exist.
 PIPELINE_READY_TIMEOUT_S = 120.0
 

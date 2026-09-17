@@ -42,7 +42,7 @@ export DC_ROS_IMAGE=ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy
 
 CI instead pulls the PR's just-built `:<sha>` image (`build-dc-ros-image`'s own output)
 — testing what this run actually built, same as `verify-robot-manifests`/
-`verify-published-images`. To reproduce *that* case locally instead — testing a change
+`verify-runtime-images`. To reproduce *that* case locally instead — testing a change
 before it's pushed — build it yourself and point `DC_ROS_IMAGE` at the local tag:
 
 ```sh

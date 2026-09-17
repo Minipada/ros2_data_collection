@@ -8,7 +8,7 @@ description: >-
   built by `podman build`); any additional refs are `podman tag`-ed from it
   before all of them are pushed. Every ghcr push in ci.yaml goes through this
   (dc-workspace, dc-e2e — single :<sha> ref each — and dc-ros/dc-uploader,
-  #448, which push a second, floating :jazzy branch ref alongside it) instead
+  #448, which push a second, floating :<distro> ref alongside it) instead
   of each job hand-rolling its own retry loop.
 
 inputs:
