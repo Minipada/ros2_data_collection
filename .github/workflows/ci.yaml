@@ -11,25 +11,26 @@
 # One job builds each artifact and pushes it; the others pull and use it (build once, use
 # many). dc-workspace/dc-e2e stay :<sha>-only — they exist purely for CI-internal reuse +
 # traceability, never pulled by anything outside this workflow. dc-ros and dc-uploader
-# (#448) get the same :<sha> build+push on *every* run, PR included — same
+# (#448) get the same build+push on *every* run, PR included — same
 # CI-internal-reuse reasoning as dc-workspace/dc-e2e, and it is what lets
-# verify-published-images/verify-robot-manifests actually pull and run the real images a
+# verify-runtime-images/verify-robot-manifests actually pull and run the real images a
 # PR just built, catching a broken image before merge rather than only after. Their refs
-# come from .github/actions/image-ref (#450, ported from ~/dev/monorepo's action of the
-# same name), which also computes a sluggified branch ref (lyrical -> :lyrical, a PR -> its
-# head branch's slug) — that branch ref, `:lyrical`, is the one a fleet robot actually
-# pins to; this repo pushes no `:latest` tag at all. It's pushed only on `push` to
-# `lyrical`, mirroring monorepo's own podman-push, which withholds branch_ref on
-# pull_request the same way: a not-yet-merged PR must never move that floating ref.
+# come from .github/actions/image-ref (#450, per-distro since #533): an immutable
+# :<distro>-<sha> on every run, plus a floating :<distro> — the ref a fleet robot actually
+# pins to; this repo pushes no `:latest` tag at all. Both tags derive from the same
+# ROS_DISTRO lever as the build below, so the floating tag can never name a distro whose
+# content it doesn't carry (#533). The floating ref is pushed only on `push` to a distro
+# branch, mirroring monorepo's own podman-push, which withholds it on pull_request the
+# same way: a not-yet-merged PR must never move that floating ref.
 #
 #   build-workspace (Release: build + colcon test) ─┬─▶ sim                    (pull dc-workspace, simulation smoke check)
-#                                                    ├─▶ build-e2e-image ────▶ e2e        (pull dc-e2e, zero-loss harness, managed shipper)
-#                                                    │                     └─▶ e2e-split  (same image, unmanaged shipper + passthrough merge)
-#                                                    ├─▶ build-dc-ros-image ─┬─▶ verify-published-images  (pull + run, no build)
+#                                                    ├─▶ build-e2e-image ────▶ e2e-single-container  (pull dc-e2e, zero-loss harness, managed shipper)
+#                                                    │                     └─▶ e2e-split-container (same image, unmanaged shipper + passthrough merge)
+#                                                    ├─▶ build-dc-ros-image ─┬─▶ verify-runtime-images    (pull + run, no build)
 #                                                    │                      ├─▶ verify-kind-networkpolicy (#452: kind + Calico, NetworkPolicy proof)
 #                                                    └─▶ build-dc-uploader-image ─┴─▶ verify-robot-manifests (#450: podman kube play + network isolation)
-#   build-workspace-coverage (CCOV=true, push/workflow_dispatch only) ─┬─▶ build-dc-ros-coverage-image      (dc-ros:lyrical-coverage)
-#                                                                      └─▶ build-dc-uploader-coverage-image (dc-uploader:lyrical-coverage)
+#   build-workspace-coverage (CCOV=true, push/workflow_dispatch only) ─┬─▶ build-dc-ros-coverage-image      (dc-ros:<distro>-<sha>-coverage)
+#                                                                      └─▶ build-dc-uploader-coverage-image (dc-uploader:<distro>-<sha>-coverage)
 #   kpi-views (standalone: SQL + a throwaway Postgres, no workspace image needed)
 #   raw-volume (standalone: stdlib Python fixtures over the shared volume accounting)
 #   vector-pin (standalone: Vector version literals vs the .repos pin, #484)
@@ -41,7 +42,8 @@
 # pushed — only its slim `runtime` derivative is. Skipped on plain `pull_request` —
 # see its own condition — so an ordinary PR pays for one workspace build, not two.
 #
-# e2e calls the same tools/e2e/scripts/run.sh a developer runs locally, driving the
+# e2e-single-container calls the same tools/e2e/scripts/run.sh a developer runs locally,
+# driving the
 # harness with plain podman (no compose) so nothing extra is installed on the runner;
 # build-e2e-image builds/pushes the E2E image directly via `podman build` (no shared
 # script — it's a single `podman build -f Containerfile.e2e` + push, nothing a local
@@ -89,13 +91,16 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The one distro lever (#530): build.sh forwards it into the Containerfile, the cache
+# key/ref and the published image tags (#533) carry it, so two distros can never share
+# cached content — and `:lyrical` below can never contain anything but lyrical content.
+# Declared once at workflow level; every job inherits it.
+env:
+  ROS_DISTRO: lyrical
+
 jobs:
   build-workspace:
     runs-on: ubuntu-latest
-    # The one distro lever (#530): build.sh forwards it into the Containerfile, and the
-    # cache key/ref below carry it so two distros can never share cached content.
-    env:
-      ROS_DISTRO: lyrical
     permissions:
       contents: read
       packages: write
@@ -286,9 +291,6 @@ jobs:
   build-workspace-coverage:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    # Same distro lever as build-workspace above (#530).
-    env:
-      ROS_DISTRO: lyrical
     permissions:
       contents: read
       packages: write
@@ -509,17 +511,16 @@ jobs:
         with:
           refs: ${{ needs.build-workspace.outputs.e2e_ref }}
 
-  # image-ref (#450, ported from ~/dev/monorepo's .github/actions/image-ref) computes
-  # sha_ref and a sluggified branch_ref for each of dc-ros/dc-uploader; podman-push
-  # below pushes sha_ref on every run (PR included — same CI-internal-reuse reasoning
-  # as dc-workspace/dc-e2e above, and what lets verify-published-images/
-  # verify-robot-manifests test the real image a PR just built) and pushes branch_ref
-  # (`:lyrical` — the ref a fleet robot actually pins to; this repo pushes no `:latest`
-  # tag) only on `push` — mirroring monorepo's own podman-push, which withholds
-  # branch_ref on pull_request events the same way. A not-yet-merged PR must never move
-  # that floating ref. Thin `FROM` layers over the already-tested workspace image
-  # (containers/dc-ros, containers/dc-uploader), same shape as build-e2e-image above,
-  # just with no E2E-only content.
+  # image-ref (#450, per-distro since #533) computes sha_ref and floating_ref for each
+  # of dc-ros/dc-uploader; podman-push below pushes sha_ref on every run (PR included —
+  # same CI-internal-reuse reasoning as dc-workspace/dc-e2e above, and what lets
+  # verify-runtime-images/verify-robot-manifests test the real image a PR just built)
+  # and pushes floating_ref (`:lyrical` — the ref a fleet robot actually pins to; this
+  # repo pushes no `:latest` tag) only on `push` — mirroring monorepo's own podman-push,
+  # which withholds it on pull_request events the same way. A not-yet-merged PR must
+  # never move that floating ref. Thin `FROM` layers over the already-tested workspace
+  # image (containers/dc-ros, containers/dc-uploader), same shape as build-e2e-image
+  # above, just with no E2E-only content.
   build-dc-ros-image:
     needs: build-workspace
     runs-on: ubuntu-latest
@@ -539,6 +540,7 @@ jobs:
         uses: ./.github/actions/image-ref
         with:
           name: dc-ros
+          distro: ${{ env.ROS_DISTRO }}
 
       - name: Log in to ghcr.io
         run: |
@@ -550,24 +552,24 @@ jobs:
           SHA_REF: ${{ steps.image.outputs.sha_ref }}
         run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$SHA_REF" -f containers/dc-ros/Containerfile containers/dc-ros
 
-      # branch_ref only on push to lyrical — see this job's header comment. No :latest:
+      # floating_ref only on push to lyrical — see this job's header comment. No :latest:
       # this repo doesn't push that tag.
       - name: Determine refs to push
         id: push_refs
         env:
           SHA_REF: ${{ steps.image.outputs.sha_ref }}
-          BRANCH_REF: ${{ steps.image.outputs.branch_ref }}
+          FLOATING_REF: ${{ steps.image.outputs.floating_ref }}
         run: |
           {
             echo "refs<<PUSH_REFS_EOF"
             echo "$SHA_REF"
             if [ "${{ github.event_name }}" = "push" ]; then
-              echo "$BRANCH_REF"
+              echo "$FLOATING_REF"
             fi
             echo "PUSH_REFS_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Push the dc-ros image (:<sha>, plus branch on push to lyrical)
+      - name: Push the dc-ros image (:<distro>-<sha>, plus :<distro> on push to lyrical
         uses: ./.github/actions/podman-push
         with:
           refs: ${{ steps.push_refs.outputs.refs }}
@@ -591,6 +593,7 @@ jobs:
         uses: ./.github/actions/image-ref
         with:
           name: dc-uploader
+          distro: ${{ env.ROS_DISTRO }}
 
       - name: Log in to ghcr.io
         run: |
@@ -602,24 +605,24 @@ jobs:
           SHA_REF: ${{ steps.image.outputs.sha_ref }}
         run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$SHA_REF" -f containers/dc-uploader/Containerfile containers/dc-uploader
 
-      # branch_ref only on push to lyrical — see build-dc-ros-image's header comment. No
+      # floating_ref only on push to lyrical — see build-dc-ros-image's header comment. No
       # :latest: this repo doesn't push that tag.
       - name: Determine refs to push
         id: push_refs
         env:
           SHA_REF: ${{ steps.image.outputs.sha_ref }}
-          BRANCH_REF: ${{ steps.image.outputs.branch_ref }}
+          FLOATING_REF: ${{ steps.image.outputs.floating_ref }}
         run: |
           {
             echo "refs<<PUSH_REFS_EOF"
             echo "$SHA_REF"
             if [ "${{ github.event_name }}" = "push" ]; then
-              echo "$BRANCH_REF"
+              echo "$FLOATING_REF"
             fi
             echo "PUSH_REFS_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Push the dc-uploader image (:<sha>, plus branch on push to lyrical)
+      - name: Push the dc-uploader image (:<distro>-<sha>, plus :<distro> on push to lyrical
         uses: ./.github/actions/podman-push
         with:
           refs: ${{ steps.push_refs.outputs.refs }}
@@ -646,6 +649,7 @@ jobs:
         uses: ./.github/actions/image-ref
         with:
           name: dc-ros
+          distro: ${{ env.ROS_DISTRO }}
           tag_suffix: -coverage
 
       - name: Log in to ghcr.io
@@ -662,18 +666,18 @@ jobs:
         id: push_refs
         env:
           SHA_REF: ${{ steps.image.outputs.sha_ref }}
-          BRANCH_REF: ${{ steps.image.outputs.branch_ref }}
+          FLOATING_REF: ${{ steps.image.outputs.floating_ref }}
         run: |
           {
             echo "refs<<PUSH_REFS_EOF"
             echo "$SHA_REF"
             if [ "${{ github.event_name }}" = "push" ]; then
-              echo "$BRANCH_REF"
+              echo "$FLOATING_REF"
             fi
             echo "PUSH_REFS_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Push the dc-ros image (:<sha>-coverage, plus branch on push to lyrical)
+      - name: Push the dc-ros image (:<distro>-<sha>-coverage, plus :<distro>-coverage on push)
         uses: ./.github/actions/podman-push
         with:
           refs: ${{ steps.push_refs.outputs.refs }}
@@ -695,6 +699,7 @@ jobs:
         uses: ./.github/actions/image-ref
         with:
           name: dc-uploader
+          distro: ${{ env.ROS_DISTRO }}
           tag_suffix: -coverage
 
       - name: Log in to ghcr.io
@@ -711,18 +716,18 @@ jobs:
         id: push_refs
         env:
           SHA_REF: ${{ steps.image.outputs.sha_ref }}
-          BRANCH_REF: ${{ steps.image.outputs.branch_ref }}
+          FLOATING_REF: ${{ steps.image.outputs.floating_ref }}
         run: |
           {
             echo "refs<<PUSH_REFS_EOF"
             echo "$SHA_REF"
             if [ "${{ github.event_name }}" = "push" ]; then
-              echo "$BRANCH_REF"
+              echo "$FLOATING_REF"
             fi
             echo "PUSH_REFS_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Push the dc-uploader image (:<sha>-coverage, plus branch on push to lyrical)
+      - name: Push the dc-uploader image (:<distro>-<sha>-coverage, plus :<distro>-coverage on push)
         uses: ./.github/actions/podman-push
         with:
           refs: ${{ steps.push_refs.outputs.refs }}
@@ -730,9 +735,10 @@ jobs:
   # Proves the two images build-dc-ros-image/build-dc-uploader-image just pushed are
   # actually runnable as the three-container topology (#448 acceptance criteria) — pull
   # + run only, no podman build. Runs on every build (PR included), always against the
-  # :<sha> ref those jobs always push, never :latest. See
-  # tools/release/scripts/verify_published_images.sh.
-  verify-published-images:
+  # :<distro>-<sha> ref those jobs always push, never a floating tag. See
+  # tools/release/scripts/verify_runtime_images.sh (the same script, run with no
+  # image env, also derives and validates every distro's published floating refs).
+  verify-runtime-images:
     needs: [build-workspace, build-dc-ros-image, build-dc-uploader-image]
     runs-on: ubuntu-latest
     permissions:
@@ -755,18 +761,18 @@ jobs:
         env:
           DC_ROS_IMAGE: ${{ needs.build-dc-ros-image.outputs.sha_ref }}
           DC_UPLOADER_IMAGE: ${{ needs.build-dc-uploader-image.outputs.sha_ref }}
-        run: ./tools/release/scripts/verify_published_images.sh
+        run: ./tools/release/scripts/verify_runtime_images.sh
 
       - name: Upload smoke-check logs (on failure)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: verify-published-images-logs
+          name: verify-runtime-images-logs
           path: tools/release/.run/**
           if-no-files-found: ignore
 
   # Proves the Kubernetes and Podman-network renderings of the robot topology (#450)
-  # against the same published images verify-published-images uses: `podman kube play`
+  # against the same published images verify-runtime-images uses: `podman kube play`
   # runs deploy/robot/kubernetes/robot-pod.yaml with no cluster and it reaches ready,
   # and plain Podman networks demonstrate the robot tier's routing claim (no internet
   # route, outbound-only robot-to-edge connectivity). deploy/robot/compose.yaml and
@@ -845,7 +851,7 @@ jobs:
       # a script wrapping it just to have somewhere to put a name.
 
       # Pulls the PR's just-built image, same as verify-robot-manifests/
-      # verify-published-images — testing what this run actually built, not whatever
+      # verify-runtime-images — testing what this run actually built, not whatever
       # :lyrical happens to be. Exported via GITHUB_ENV: kubernetes/robot-a.yaml commits
       # a real default (ghcr.io/.../dc-ros:lyrical, the same floating ref a real
       # deployment runs), so this is only an override, same convention as
@@ -1023,7 +1029,7 @@ jobs:
       - name: Check Vector version literals against the .repos pin
         run: ./tools/ci/check_vector_pin.sh
 
-  e2e:
+  e2e-single-container:
     needs: [build-workspace, build-e2e-image]
     runs-on: ubuntu-latest
     permissions:
@@ -1056,12 +1062,12 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-harness-logs
+          name: e2e-single-container-harness-logs
           path: tools/e2e/.run/**
           # .run/ is hidden — upload-artifact skips hidden dirs by default (#517)
           include-hidden-files: true
 
-  e2e-split:
+  e2e-split-container:
     needs: [build-workspace, build-e2e-image]
     runs-on: ubuntu-latest
     permissions:
@@ -1104,7 +1110,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-split-harness-logs
+          name: e2e-split-container-harness-logs
           path: tools/e2e/.run/**
           # .run/ is hidden — upload-artifact skips hidden dirs by default (#517)
           include-hidden-files: true
