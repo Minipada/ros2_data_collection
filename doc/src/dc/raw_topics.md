@@ -33,7 +33,7 @@ ros2 launch dc_bringup dc_raw.launch.py
 `dc_raw.launch.py` starts the Bridge **alone** — no `measurement_server`, no
 `group_server`, no lifecycle manager, no readiness gate (there are no collection nodes to
 gate). The default params file is
-[`dc_bringup/params/dc_raw_params.yaml`](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_bringup/params/dc_raw_params.yaml);
+[`dc_bringup/params/dc_raw_params.yaml`](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_bringup/params/dc_raw_params.yaml);
 point the launch file at your own with `dc_params_file:=…`. The same `raw:` block also
 works inside a normal `dc_bringup.launch.py` params file, next to your Measurements.
 

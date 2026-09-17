@@ -14,7 +14,7 @@ Since RViz is pretty verbose, using 2 terminal windows will help reading the JSO
 In each, terminal, source your environment and setup turtlebot configuration:
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source /opt/ros/rolling/setup.bash
 source install/setup.bash
 ```
 

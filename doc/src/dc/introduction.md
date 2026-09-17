@@ -6,21 +6,21 @@
 
 **Source code**: [https://github.com/minipada/ros2_data_collection](https://github.com/minipada/ros2_data_collection)
 
-[![ROS 2](https://img.shields.io/badge/ROS%202-jazzy-informational?style=for-the-badge)](https://docs.ros.org/en/jazzy/index.html) ![python](https://img.shields.io/badge/python-3.12-informational?style=for-the-badge) ![C++](https://img.shields.io/badge/C++-17-informational?style=for-the-badge)
+[![ROS 2](https://img.shields.io/badge/ROS%202-rolling-informational?style=for-the-badge)](https://docs.ros.org/en/rolling/index.html) ![python](https://img.shields.io/badge/python-3.12-informational?style=for-the-badge) ![C++](https://img.shields.io/badge/C++-17-informational?style=for-the-badge)
 
-[![codecov](https://codecov.io/gh/Minipada/ros2_data_collection/branch/jazzy/graph/badge.svg?token=Y2UA5OE0KR)](https://codecov.io/gh/Minipada/ros2_data_collection) [![tests](https://minipada.testspace.com/spaces/219054/badge?token=8214fc76eff8c09b47136742d644d2a1ac0e38e3)](https://minipada.testspace.com/spaces/219054?utm_campaign=badge&utm_medium=referral&utm_source=test)
+[![codecov](https://codecov.io/gh/Minipada/ros2_data_collection/branch/rolling/graph/badge.svg?token=Y2UA5OE0KR)](https://codecov.io/gh/Minipada/ros2_data_collection) [![tests](https://minipada.testspace.com/spaces/219054/badge?token=8214fc76eff8c09b47136742d644d2a1ac0e38e3)](https://minipada.testspace.com/spaces/219054?utm_campaign=badge&utm_medium=referral&utm_source=test)
 
-| Jazzy                                                                                                                                                                                                                        |
+| Rolling                                                                          |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [![prek](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml/badge.svg?branch=jazzy)](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml?query=branch%3Ajazzy)         |
-| [![Documentation](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml/badge.svg?branch=jazzy)](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml?query=branch%3Ajazzy)      |
-| [![Github Pages](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment/badge.svg?branch=jazzy)](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment?query=branch%3Ajazzy) |
-| [![CI](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml/badge.svg?branch=jazzy)](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml?query=branch%3Ajazzy)                   |
+| [![prek](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml/badge.svg?branch=rolling)](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml?query=branch%3Arolling)         |
+| [![Documentation](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml/badge.svg?branch=rolling)](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml?query=branch%3Arolling)      |
+| [![Github Pages](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment/badge.svg?branch=gh-pages)](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment?query=branch%3Agh-pages) |
+| [![CI](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml/badge.svg?branch=rolling)](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml?query=branch%3Arolling)                   |
 
 
 For detailed instructions, see the navigation sidebar, or browse
-[doc/src/dc](https://github.com/Minipada/ros2_data_collection/tree/jazzy/doc/src/dc) on
-GitHub. [Security policy](https://github.com/Minipada/ros2_data_collection/blob/jazzy/SECURITY.md).
+[doc/src/dc](https://github.com/Minipada/ros2_data_collection/tree/rolling/doc/src/dc) on
+GitHub. [Security policy](https://github.com/Minipada/ros2_data_collection/blob/rolling/SECURITY.md).
 
 ## Introduction
 
@@ -70,7 +70,7 @@ Here is an example of a pipeline, for an AGV doing pick-and-drop and inspection 
 
 Found a vulnerability? Do not open a public issue — report it privately through
 [GitHub private vulnerability reporting](https://github.com/Minipada/ros2_data_collection/security/advisories/new).
-The [security policy](https://github.com/Minipada/ros2_data_collection/blob/jazzy/SECURITY.md)
+The [security policy](https://github.com/Minipada/ros2_data_collection/blob/rolling/SECURITY.md)
 covers the supported branches, the response targets, and what is in scope.
 
 # License

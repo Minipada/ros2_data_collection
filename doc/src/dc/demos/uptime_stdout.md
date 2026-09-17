@@ -20,7 +20,7 @@ protocol: `source_type`, `tag`, `host` and `timestamp` are Vector's, not the Bri
 [dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476619.149286,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1609003,"timestamp":"2026-09-03T23:03:39.149286154Z"}
 ```
 
-This launchfile is a wrapper of [dc_bringup/launch/dc_bringup.launch.py](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_bringup/launch/dc_bringup.launch.py) which loads a [custom yaml configuration](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/uptime_stdout.yaml)
+This launchfile is a wrapper of [dc_bringup/launch/dc_bringup.launch.py](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_bringup/launch/dc_bringup.launch.py) which loads a [custom yaml configuration](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/params/uptime_stdout.yaml)
 
 ## Configuration
 ### Measurement
@@ -57,7 +57,7 @@ measurement_server:
 
 **uptime.polling_interval (Optional)**: Interval to which data is collected in milliseconds
 
-**uptime.enable_validator (Optional)**: Will validate the data against a JSON schema. This file is located in the [dc_measurements package](https://github.com/Minipada/ros2_data_collection/tree/jazzy/dc_measurements/plugins/measurements/json). You can provide your own using the `json_schema_path` parameter, which we will explore later on
+**uptime.enable_validator (Optional)**: Will validate the data against a JSON schema. This file is located in the [dc_measurements package](https://github.com/Minipada/ros2_data_collection/tree/rolling/dc_measurements/plugins/measurements/json). You can provide your own using the `json_schema_path` parameter, which we will explore later on
 
 **uptime.debug (Optional)**: More verbose output
 

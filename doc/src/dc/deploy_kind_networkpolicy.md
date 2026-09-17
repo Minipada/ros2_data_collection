@@ -7,7 +7,7 @@ outward (robot -> edge -> hub). Routing alone does not prove that — `NetworkPo
 Kubernetes object, and enforcing it requires a CNI that implements it. This page proves it
 with a real [kind](https://kind.sigs.k8s.io/) cluster (kubeadm, the same tool production
 clusters use) running [Calico](https://docs.tigera.io/calico/latest/), a real
-policy-enforcing CNI — unlike the [k3d dev loop](https://github.com/minipada/ros2_data_collection/tree/jazzy/deploy/robot)'s
+policy-enforcing CNI — unlike the [k3d dev loop](https://github.com/minipada/ros2_data_collection/tree/rolling/deploy/robot)'s
 default Flannel, which silently accepts `NetworkPolicy` objects without enforcing them.
 
 ```admonish info
@@ -23,21 +23,21 @@ locally, or read on for what each does and why.
 - Docker (kind's node runtime — see [Docker dependency](#docker-dependency) below)
 - `kind` (`v0.33.0`) and `kubectl` (`v1.31.4`) on `PATH` — CI installs these via
   [`helm/kind-action`](https://github.com/helm/kind-action)'s `install_only: true` mode;
-  see [`tools/kind/README.md`](https://github.com/minipada/ros2_data_collection/tree/jazzy/tools/kind)
+  see [`tools/kind/README.md`](https://github.com/minipada/ros2_data_collection/tree/rolling/tools/kind)
   for why (`kind create cluster --wait`, which that action otherwise always runs, can't
   succeed before Calico is installed)
 
 ## 1. Get the `dc-ros` image
 
-`kubernetes/robot-a.yaml` commits a real default: `ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy`
-— the same floating ref `build-dc-ros-image` pushes on every merge to `jazzy`, and the
+`kubernetes/robot-a.yaml` commits a real default: `ghcr.io/minipada/ros2_data_collection/dc-ros:rolling`
+— the same floating ref `build-dc-ros-image` pushes on every merge to `rolling`, and the
 same one `deploy/robot/kubernetes/robot-pod.yaml` runs. (Not `:latest` — this repo
-doesn't push that tag; `:jazzy` is the one a real deployment actually pins to.) The
+doesn't push that tag; `:rolling` is the one a real deployment actually pins to.) The
 simplest reproduction just pulls it:
 
 ```sh
-podman pull ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy
-export DC_ROS_IMAGE=ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy
+podman pull ghcr.io/minipada/ros2_data_collection/dc-ros:rolling
+export DC_ROS_IMAGE=ghcr.io/minipada/ros2_data_collection/dc-ros:rolling
 ```
 
 CI instead pulls the PR's just-built `:<sha>` image (`build-dc-ros-image`'s own output)
@@ -52,7 +52,7 @@ export DC_ROS_IMAGE=dc-ros:local
 ```
 
 Either way, step 4 substitutes `DC_ROS_IMAGE` into the manifest's default only when it
-differs from `:jazzy` — one workflow, whichever image you're pointing at.
+differs from `:rolling` — one workflow, whichever image you're pointing at.
 
 ## 2. Bring up the cluster and its CNI
 
@@ -83,10 +83,10 @@ tar round trip is also what keeps this registry-free — the robot Pod below nee
 ## 4. Apply the topology
 
 ```sh
-# robot-a.yaml commits ghcr.io/.../dc-ros:jazzy as dc-ros's real default — patched in
+# robot-a.yaml commits ghcr.io/.../dc-ros:rolling as dc-ros's real default — patched in
 # place only if step 1 pointed DC_ROS_IMAGE somewhere else, before the kustomize build
 # below reads the file.
-sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-ros:jazzy|$DC_ROS_IMAGE|" \
+sed -i "s|ghcr.io/minipada/ros2_data_collection/dc-ros:rolling|$DC_ROS_IMAGE|" \
   tools/kind/kubernetes/robot-a.yaml
 
 # Namespaces, networkpolicies, the hub, edge and robot tiers, the probe Pods, and all
