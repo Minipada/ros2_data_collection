@@ -5,7 +5,7 @@
 # Runtime-free check for the Kubernetes rendering (#450): `podman kube play` runs
 # ../kubernetes/robot-pod.yaml directly — no cluster, possible only because the robot
 # tier is one Pod (see that file's header) — and this asserts it reaches ready the
-# same way tools/release/scripts/verify_published_images.sh does: dc-ros logging
+# same way tools/release/scripts/verify_runtime_images.sh does: dc-ros logging
 # "dc_bridge reports ready", plus every container still running. Cluster-backed
 # validation (a real scheduler, Services, DNS, NetworkPolicy) is #451/#452, not this
 # script.

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-# Minimal params for verify_published_images.sh (#448): proves the published `dc-ros`
+# Minimal params for verify_runtime_images.sh (#448): proves the published `dc-ros`
 # image boots in unmanaged-shipper mode and ships a Record through a real Vector
 # container to Postgres — nothing else. Not the E2E harness's zero-loss proof (that's
 # tools/e2e/params/e2e_split_params.yaml, an existing, separate seam per #440's Testing
