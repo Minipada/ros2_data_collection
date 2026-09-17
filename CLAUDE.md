@@ -13,11 +13,17 @@ are already recorded there rather than in code comments.
 
 ## Branches
 
-- `humble` — legacy/stable line, ROS 2 Humble, embedded Fluent Bit architecture. CI
-  (`.github/workflows/ci.yaml`) still targets this branch.
-- `jazzy` — active development target for the DC 2.0 rewrite (external Vector shipper, C++
-  Bridge, ROS 2 Jazzy). New work — including everything `run_once.sh` picks up — branches from
-  and merges into `jazzy`, not `humble`.
+One branch per ROS 2 distro. Each keeps its own `.github/workflows/`, publishes its runtime
+images as `{distro}-{sha}` plus the floating `{distro}` tag (#533), and its deployment
+manifests default to that same distro — a manifest hardcoding a foreign distro's tag is a bug.
+
+- `rolling` — default branch and development tip: tracks ROS 2 rolling head (external Vector
+  shipper, C++ Bridge). New work — including everything `run_once.sh` picks up — branches from
+  and merges into `rolling`, then gets ported to the distro branches.
+- `jazzy` — ROS 2 Jazzy line (Ubuntu noble).
+- `lyrical` — ROS 2 Lyrical line (Ubuntu resolute).
+- `humble` — legacy/stable line, ROS 2 Humble, embedded Fluent Bit architecture; its own
+  unrelated CI.
 
 ## Repo layout
 
