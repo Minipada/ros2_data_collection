@@ -35,15 +35,13 @@ before completion) is carried on the end Record when available.
 **No per-waypoint outcome is reported.** The acceptance criteria this Measurement was built
 against ask for the final `waypoint_statuses` (which poses in the job succeeded versus failed) to
 be represented on `mission_end`, following an upstream nav2 `NavigateThroughPoses.action` result
-field of that name. That field does not exist on the nav2 release this repository actually
-builds against (`nav2_msgs` on the `jazzy` branch of `ros-navigation/navigation2` -- verified
-directly, not assumed): its `NavigateThroughPoses::Result` carries only `error_code`/`error_msg`,
-the same shape as `NavigateToPose::Result`. It was present in an earlier implementation of this
-plugin (written against the upstream default branch without checking the pinned distro branch
-first) and removed once CI's real Jazzy build caught the mismatch (`fatal error:
-nav2_msgs/msg/waypoint_status.hpp: No such file or directory`). Adding it back is a follow-up for
-whenever nav2 backports per-waypoint result reporting to a distro this repository targets, not
-something this Measurement can honestly do today.
+field of that name. That field exists on the nav2 this repository actually builds against
+(`nav2_msgs` from navigation2's `main` branch, pinned in `ros2_data_collection.repos` -- its
+`NavigateThroughPoses::Result` carries `WaypointStatus[] waypoint_statuses`) but this Measurement
+does not surface it yet: an earlier implementation reported it, and was trimmed when the
+repository tracked a distro branch whose `NavigateThroughPoses::Result` had no such field
+(`fatal error: nav2_msgs/msg/waypoint_status.hpp: No such file or directory`). Surfacing it again
+against the current pin is a follow-up, not something this Measurement does today.
 
 A mission still running when collection stops simply never gets a matching `mission_end` Record:
 nothing downstream can average an interval that was never closed as a zero, because there is no

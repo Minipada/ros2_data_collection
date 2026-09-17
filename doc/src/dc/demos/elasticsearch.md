@@ -145,7 +145,7 @@ because Elasticsearch inferred it from the first document of each index.
 ## Understanding the configuration
 
 ```admonish info
-The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/elasticsearch.yaml), and the passthrough sink config [here](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/config/elasticsearch_sink.toml).
+The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/params/elasticsearch.yaml), and the passthrough sink config [here](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/config/elasticsearch_sink.toml).
 ```
 
 ### Measurements

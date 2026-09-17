@@ -16,6 +16,11 @@ are already recorded there rather than in code comments.
 One branch per ROS 2 distro. Each keeps its own `.github/workflows/`, publishes its runtime
 images as `{distro}-{sha}` plus the floating `{distro}` tag (#533), and its deployment
 manifests default to that same distro — a manifest hardcoding a foreign distro's tag is a bug.
+Each also publishes its docs build to its own `/{distro}/` section of the one GitHub Pages
+site (#534): `doc.yaml` builds with `DISTRO=<branch>` and
+`tools/ci/deploy_doc_site.sh` replaces only that section plus the root landing page —
+`/` redirects to `/rolling/`, and a distro selector on every page switches sections.
+No humble section: that line's docs live on its own branch.
 
 - `rolling` — default branch and development tip: tracks ROS 2 rolling head (external Vector
   shipper, C++ Bridge). New work — including everything `run_once.sh` picks up — branches from
@@ -112,11 +117,10 @@ outright by the jazzy-line Podman CI, and the industrial_ci `ci`/`ci-testing`/`s
 `source-sim` jobs those files served were unreachable anyway on a branch that can't
 build `fluent_bit_plugins`/`dc_destinations` in the first place — both `COLCON_IGNORE`d
 per ADR-0001/#242. `docker/doc/Dockerfile` (the mdbook docs-site builder) was renamed to
-match the Podman convention below (`containers/doc/Containerfile`) but is **not yet
-live** — the `docker.yaml` job that built and pushed its image is gone along with the
-rest, and nothing has replaced it; `.github/workflows/doc.yaml` and
-`tools/ci/pre-commit/build_doc.sh` still point at the now-stale published tag. Wiring a
-real jazzy docs build is tracked at #252 (DC 2.0 S11), not done as part of this cleanup.
+match the Podman convention below (`containers/doc/Containerfile`) and is live:
+`tools/ci/pre-commit/build_doc.sh` (also the `build-doc` pre-commit hook) builds in it,
+and `.github/workflows/doc.yaml` runs that script to publish each distro branch's docs
+section to Pages (#534).
 New Podman-based container tooling otherwise lives under `tools/e2e/` (#249 is the first
 jazzy-line CI/container work).
 

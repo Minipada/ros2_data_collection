@@ -1,6 +1,6 @@
 # Demos
 
-We will go together through some demos to get started with DC. You shall find them in the *[dc_demos](https://github.com/minipada/ros2_data_collection/tree/jazzy/dc_demos)* package
+We will go together through some demos to get started with DC. You shall find them in the *[dc_demos](https://github.com/minipada/ros2_data_collection/tree/rolling/dc_demos)* package
 
 The demos are grouped in three tiers. Start at [Beginner](./demos/beginner.md) and work
 down: each demo assumes the concepts explained in the ones before it.

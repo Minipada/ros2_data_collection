@@ -14,7 +14,7 @@ ros2 launch dc_demos group_memory_uptime_stdout.launch.py
 [dc_bridge-3] {"date":1788476668.5055394,"host":"127.0.0.1","memory":{"flattened":false,"name":"memory","nested":false,"run_id":"169","used":96.04102325439453},"name":"memory_uptime","source_type":"fluent","tag":"dc.group.memory_uptime","tags":[""],"timestamp":"2026-09-03T23:04:28.505539347Z","uptime":{"flattened":false,"name":"uptime","nested":false,"run_id":"169","time":1609053}}
 ```
 
-This launchfile is a wrapper of [dc_bringup/launch/dc_bringup.launch.py](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_bringup/launch/dc_bringup.launch.py) which loads a [custom yaml configuration](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/group_memory_uptime_stdout.yaml)
+This launchfile is a wrapper of [dc_bringup/launch/dc_bringup.launch.py](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_bringup/launch/dc_bringup.launch.py) which loads a [custom yaml configuration](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/params/group_memory_uptime_stdout.yaml)
 
 ```admonish info
 Note that here the group node is started. It is one parameter in the launchfile to enable it. In the [uptime demo](./uptime_stdout.md), it is disabled by default because it is not used.

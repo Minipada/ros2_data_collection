@@ -20,6 +20,12 @@ set -euo pipefail
 # Environment:
 #   IMAGE_TAG   Tag for the builder image (default dc-doc:local; CI passes dc-doc:<sha>)
 #   ENGINE      Container engine (default podman)
+#   DISTRO      Publish this build as one distro's section of the versioned docs site
+#               (issue #534): the book lands in doc/book/html/<DISTRO>/ with site-url
+#               /<DISTRO>/, and the landing page (doc/landing/) is staged at the site
+#               root — the layout tools/ci/deploy_doc_site.sh publishes. Unset (the
+#               pre-commit hook, serve_doc.sh) builds the plain single-site book at
+#               doc/book/html as before.
 #   CACHE_REF   a registry ref (e.g. ghcr.io/<repo>/dc-doc-cache) to use as a podman
 #               --cache-from/--cache-to target. podman's build cache is otherwise
 #               local-only and doesn't survive a fresh machine/runner — CI sets this so a
@@ -34,6 +40,21 @@ build_doc_image
 generate_doc_inputs
 
 echo "==> Building the book"
-run_in_image "/doc" mdbook build
+if [ -n "${DISTRO:-}" ]; then
+    # Site-relative URLs in the built 404 page; everything else already resolves
+    # through per-page relative paths. `podman run` doesn't forward host env, so the
+    # override rides in on the command line.
+    run_in_image "/doc" env "MDBOOK_OUTPUT__HTML__SITE_URL=/${DISTRO}/" mdbook build
+else
+    run_in_image "/doc" mdbook build
+fi
+
+if [ -n "${DISTRO:-}" ]; then
+    echo "==> Staging the ${DISTRO} section"
+    mv doc/book/html "doc/book/html-${DISTRO}"
+    mkdir doc/book/html
+    mv "doc/book/html-${DISTRO}" "doc/book/html/${DISTRO}"
+    cp doc/landing/index.html doc/landing/404.html doc/book/html/
+fi
 
 echo "==> Documentation built in doc/book/html"
