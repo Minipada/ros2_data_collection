@@ -56,16 +56,16 @@ down on a lifecycle transition.
 ## Prerequisites
 
 1. Fast DDS itself built with `-DFASTDDS_STATISTICS=ON` — the Statistics Module is compiled out by
-   default, and most distro/apt Fast DDS builds do not enable it. ROS 2 Jazzy pairs with Fast-DDS
-   2.14.x (`eProsima/Fast-DDS` @ `2.14.x`, `eProsima/Fast-CDR` @ `2.2.x`,
-   `eProsima/foonathan_memory_vendor`, `ros2/rmw_fastrtps` @ `jazzy` — the exact set `ros2.repos`
-   lists) — rebuild these in a colcon workspace overlay with that cmake arg, then source the
-   overlay *before* the rest of the workspace so it shadows the apt-installed Fast DDS.
-2. `fastdds_statistics_backend` built and installed against that same Fast-DDS. **Pin the `v1.1.0`
-   tag** — `main` and every tagged release from `v2.0.0` onward require Fast-DDS **3.0.0**
-   (`find_package(fastdds 3.0.0 REQUIRED)`), which Jazzy doesn't ship; only `v1.0.0`/`v1.1.0`
-   target Fast-DDS `>=2.13.0`. No rosdep/apt key exists for any distro, so `rosdep install` never
-   pulls it in and `dc_measurements/package.xml` deliberately does not list it as a `<depend>`.
+   default, and most distro/apt Fast DDS builds do not enable it. ROS 2 Rolling pairs with
+   Fast-DDS 3.x — rebuild the Fast-DDS set upstream's `ros2.repos` pins for this distro in a
+   colcon workspace overlay with that cmake arg, then source the overlay *before* the rest of
+   the workspace so it shadows the apt-installed Fast DDS.
+2. `fastdds_statistics_backend` built and installed against that same Fast-DDS. **Pin a `v2.x`
+   tag** — that line is what targets Fast-DDS **3.0.0** (`find_package(fastdds 3.0.0
+   REQUIRED)`), which is what Rolling ships; the older `v1.0.0`/`v1.1.0` releases target
+   Fast-DDS `>=2.13.0` and won't build against it. No rosdep/apt key exists for any distro, so
+   `rosdep install` never pulls it in and `dc_measurements/package.xml` deliberately does not
+   list it as a `<depend>`.
 3. The `FASTDDS_STATISTICS` environment variable, set on every process before it creates its
    first DomainParticipant — the library only *emits* the DataKinds named in it (semicolon-
    separated topic aliases), regardless of whether the plugin is built and running:

@@ -40,7 +40,7 @@ The default yaml configuration file does not need change as it also uses default
 In the terminal 1, source your environment:
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source /opt/ros/rolling/setup.bash
 source install/setup.bash
 ```
 
@@ -144,7 +144,7 @@ That's it! Now you can collect your data!
 ## Understanding the configuration
 
 ```admonish info
-The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/tb3_simulation_pgsql_minio.yaml).
+The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/params/tb3_simulation_pgsql_minio.yaml).
 ```
 
 ### Measurement server

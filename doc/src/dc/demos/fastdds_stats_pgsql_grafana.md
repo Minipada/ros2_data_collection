@@ -3,8 +3,8 @@
 ```admonish warning title="Fast DDS-specific"
 This demo only produces data when Fast DDS is the RMW in use **and** it was built with its
 Statistics Module enabled (`-DFASTDDS_STATISTICS=ON`), plus `fastdds_statistics_backend`
-installed against it — pin the `v1.1.0` tag; `v2.0.0` onward requires Fast-DDS 3.0.0, which
-ROS 2 Jazzy's 2.14.x doesn't satisfy. A third, runtime-only prerequisite is easy to miss: the
+installed against it — pin a `v2.x` tag, the line built against the Fast-DDS 3.x that
+ROS 2 Rolling ships. A third, runtime-only prerequisite is easy to miss: the
 `FASTDDS_STATISTICS` environment variable must be set on every process *before* it creates its
 first DomainParticipant, or `latency_ns_mean` and every throughput/RTPS field stay permanently
 absent even though the plugin itself runs fine. See [the Fast DDS statistics Measurement
@@ -93,7 +93,7 @@ exact query.
 ## Understanding the configuration
 
 ```admonish info
-The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_demos/params/fastdds_stats_pgsql_grafana.yaml).
+The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/params/fastdds_stats_pgsql_grafana.yaml).
 ```
 
 ```yaml
