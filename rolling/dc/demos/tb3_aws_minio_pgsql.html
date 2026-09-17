@@ -1,0 +1,567 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Turtlebot3 AWS Warehouse RustFS PostgreSQL - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../open-in.css">
+        <link rel="stylesheet" href="../.././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../../css/logo.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/rolling/doc/src/dc/demos/tb3_aws_minio_pgsql.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="turtlebot3"><a class="header" href="#turtlebot3">Turtlebot3</a></h1>
+<p>In this example, we add a robot and start collecting robot data to Stdout.</p>
+<p>You will also need 3 terminal windows, to:</p>
+<ol>
+<li>Run the Nav2 turtlebot3 launchfile: it starts localization, navigation and RViz</li>
+<li>Run navigation inspection demo</li>
+<li>Run DC</li>
+</ol>
+<p>Using a different terminal window for DC helps reading its information.</p>
+<h2 id="setup-the-environment"><a class="header" href="#setup-the-environment">Setup the environment</a></h2>
+<h3 id="python-dependencies"><a class="header" href="#python-dependencies">Python dependencies</a></h3>
+<p>For this tutorial, we will need to install all dependencies, the demo dashboard's
+included (<a href="https://docs.astral.sh/uv/">uv</a> owns them; see <a href="../setup.html">Setup</a>):</p>
+<pre><code class="language-bash">uv sync
+</code></pre>
+<h3 id="setup-infrastructure"><a class="header" href="#setup-infrastructure">Setup Infrastructure</a></h3>
+<h4 id="rustfs"><a class="header" href="#rustfs">RustFS</a></h4>
+<p>RustFS will be used as storage for images and other files. To start it, <a href="../infrastructure_setup/rustfs.html">follow the steps</a> — a single RustFS container plus a one-shot container that bootstraps the <code>dc-files</code> bucket, using the default <code>rustfsadmin</code>/<code>rustfsadmin</code> credentials this demo's params file already assumes. No manual bucket or key setup is needed, unlike the old 4-node MinIO cluster + nginx console this replaces.</p>
+<h4 id="postgresql"><a class="header" href="#postgresql">PostgreSQL</a></h4>
+<p>PostgreSQL will be used as database storage for our JSON. Later on, backend engineers can make requests on those JSON based on measurement requested and time range. To start it, <a href="../infrastructure_setup/postgresql.html">follow the steps</a></p>
+<p>The default yaml configuration file does not need change as it also uses default values.</p>
+<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<div class="admonition-title">
+<div id="admonition-info-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info"></a>
+</div>
+<div>
+<p><code>tools/infrastructure/docker/config/postgresql/init.sql</code> pre-creates the <code>dc</code> and <code>dc_files</code> tables Vector's <code>postgres</code> sink writes into — it maps each Record's top-level JSON keys onto existing columns of the same name rather than creating them itself. See the file's header comment for the full column reference.</p>
+</div>
+</div>
+<h3 id="setup-simulation-environment"><a class="header" href="#setup-simulation-environment">Setup simulation environment</a></h3>
+<p>In the terminal 1, source your environment:</p>
+<pre><code class="language-bash">source /opt/ros/rolling/setup.bash
+source install/setup.bash
+</code></pre>
+<p>Nothing else has to be exported. <code>dc_simulation</code> puts its own models and worlds on
+<code>GZ_SIM_RESOURCE_PATH</code> through its environment hook.</p>
+<div id="admonition-info-1" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-1-title">
+<div class="admonition-title">
+<div id="admonition-info-1-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info-1"></a>
+</div>
+<div>
+<p>This demo used to run <code>aws_robomaker_small_warehouse_world</code> under Gazebo Classic. That
+package has no Jazzy release — its own jazzy branch still hard-depends on <code>gazebo_ros</code>,
+which was never published for Jazzy. The warehouse now comes from <code>dc_simulation</code>
+instead, which vendors the same AWS RoboMaker props (shelves, clutter, trash cans) into
+a gz-sim world of its own.</p>
+</div>
+</div>
+<h2 id="terminal-1-start-navigation"><a class="header" href="#terminal-1-start-navigation">Terminal 1: Start Navigation</a></h2>
+<p>Then, in the same terminal (1), start the simulation and Nav2. DC comes up separately in
+terminal 2, so turn it off here:</p>
+<pre><code class="language-bash">ros2 launch dc_demos tb3_qrcodes.launch.py \
+    headless:=False \
+    use_dc:=False
+</code></pre>
+<p>RViz and gz-sim will start: now you see the robot in the warehouse, and the map on RViz.
+AMCL sets the initial pose itself, so there is no need to click "2D Pose Estimate".</p>
+<div id="admonition-warning" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-title">
+<div class="admonition-title">
+<div id="admonition-warning-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning"></a>
+</div>
+<div>
+<p>The warehouse world is heavy — 317 model instances. Expect a slow start and a real-time
+factor well under 1 without a GPU; see <code>dc_simulation/README.md</code> for measured numbers.</p>
+</div>
+</div>
+<p><img src="../../images/demos-tb3_aws_minio_pgsql-rviz-1.png" alt="RViz" />
+<img src="../../images/demos-tb3_aws_minio_pgsql-gz-1.png" alt="Gazebo" /></p>
+<h2 id="terminal-2-start-dc"><a class="header" href="#terminal-2-start-dc">Terminal 2: Start DC</a></h2>
+<p>Run colcon build to compile the workspace:</p>
+<pre><code class="language-bash">colcon build
+</code></pre>
+<p>Now, start the demo:</p>
+<pre><code class="language-bash">ros2 launch dc_demos tb3_simulation_pgsql_minio.launch.py use_sim_time:=True
+</code></pre>
+<div id="admonition-warning-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-1-title">
+<div class="admonition-title">
+<div id="admonition-warning-1-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning-1"></a>
+</div>
+<div>
+<p><code>use_sim_time</code> defaults to <code>False</code> — without the override above, DC's Position
+measurement looks up TF transforms on the wall clock while the simulation publishes
+them on Gazebo's sim clock, which throws "extrapolation into the past"/"transform does
+not exist" errors and can crash <code>measurement_server</code> outright (<code>std::overflow_error</code> in
+<code>tf2::Duration</code>) once the two clocks drift far enough apart.</p>
+</div>
+</div>
+<p>The robot will start collecting data.</p>
+<h2 id="terminal-3-start-autonomous-navigation"><a class="header" href="#terminal-3-start-autonomous-navigation">Terminal 3: Start autonomous navigation</a></h2>
+<p>Execute</p>
+<pre><code class="language-bash">ros2 run nav2_simple_commander demo_security
+</code></pre>
+<p>The robot will start moving and you will be able to see all visualizations activated in RViz:</p>
+<p><img src="../../images/demos-tb3_aws_minio_pgsql-rviz-2.png" alt="RViz-moving" /></p>
+<h2 id="visualize-the-data"><a class="header" href="#visualize-the-data">Visualize the data</a></h2>
+<h3 id="in-the-database"><a class="header" href="#in-the-database">In the database</a></h3>
+<p>Navigate to <a href="http://localhost:8080">localhost:8080</a></p>
+<ol>
+<li>Select <em>dc</em> database</li>
+<li>Select <em>dc</em> table</li>
+<li>Click on <em>Select data</em></li>
+</ol>
+<p>You will see rows filling the database. You can click on one to see its content:</p>
+<p><img src="../../images/demos-tb3_aws_minio_pgsql-result-pgsql.gif" alt="Adminer-gif" /></p>
+<h3 id="with-grafana"><a class="header" href="#with-grafana">With Grafana</a></h3>
+<p>Four Grafana dashboards ship with the DC 2.0 infrastructure now — <strong>Home</strong>, <strong>Robot</strong>, <strong>KPI</strong> and <strong>Fast DDS statistics</strong> (the System/Environment/Infrastructure dashboards were dropped as out of scope for this minimal rework). Open <a href="http://localhost:3000">http://localhost:3000</a> (admin/admin) and pick the <strong>Robot</strong> dashboard: its panels are backed by SQL queries against the <code>dc</code>/<code>dc_files</code> PostgreSQL tables — the Grafana datasource is PostgreSQL (uid <code>dc_postgres</code>) now, not InfluxDB. It shows, among other things, speed/command velocity over time and a table of uploaded inspection files with their RustFS + PostgreSQL upload status:</p>
+<pre><code class="language-sql">SELECT to_timestamp(updated_at) AS "time", group_name, robot_name, storage_type, remote_path, content_type, size, uploaded
+FROM dc_files WHERE kind = 'file_status' ORDER BY updated_at DESC LIMIT 100
+</code></pre>
+<p>See <code>tools/infrastructure/docker/config/grafana/dashboards/robot.json</code> for every panel's exact query.</p>
+<p>The <strong>KPI</strong> dashboard is the operations view of the same data: availability and uptime per robot over whatever time range the dashboard is set to, computed by the <a href="../kpi_views.html">KPI views</a> rather than by any panel query of its own. It populates from this demo's <code>uptime</code> Measurement with no extra configuration.</p>
+<p>That's it! Now you can collect your data!</p>
+<h2 id="understanding-the-configuration"><a class="header" href="#understanding-the-configuration">Understanding the configuration</a></h2>
+<div id="admonition-info-2" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-2-title">
+<div class="admonition-title">
+<div id="admonition-info-2-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info-2"></a>
+</div>
+<div>
+<p>The full configuration file can be found <a href="https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/params/tb3_simulation_pgsql_minio.yaml">here</a>.</p>
+</div>
+</div>
+<h3 id="measurement-server"><a class="header" href="#measurement-server">Measurement server</a></h3>
+<h4 id="measurements"><a class="header" href="#measurements">Measurements</a></h4>
+<p><code>measurement_plugins</code> sets which plugin to load. We collect</p>
+<p>System measurements:</p>
+<ol>
+<li><a href="../measurements/cpu.html">CPU</a></li>
+<li><a href="../measurements/os.html">OS</a></li>
+<li><a href="../measurements/memory.html">Memory</a></li>
+<li><a href="../measurements/uptime.html">Uptime</a></li>
+</ol>
+<p>Robot measurements:</p>
+<ol>
+<li><a href="../measurements/camera.html">Camera images</a></li>
+<li><a href="../measurements/cmd_vel.html">Command velocities</a></li>
+<li><a href="../measurements/distance_traveled.html">Distance traveled</a></li>
+<li><a href="../measurements/driving_type.html">Driving type</a></li>
+<li><a href="../measurements/position.html">Positions</a></li>
+<li><a href="../measurements/speed.html">Speed</a></li>
+</ol>
+<p>Environment measurements:</p>
+<ol>
+<li><a href="../measurements/map.html">Map</a></li>
+</ol>
+<p>Infrastructure measurements:</p>
+<ol>
+<li><a href="../measurements/tcp_health.html">RustFS health</a></li>
+<li><a href="../measurements/tcp_health.html">PostgreSQL health</a></li>
+</ol>
+<p>Each has their own configuration: polling interval, source topic, destination paths, topics used as input etc. Going through each of them would be too long here but you can check for each measurement its documentation and the general <a href="../measurements.html">documentation of measurements</a></p>
+<div id="admonition-info-3" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-3-title">
+<div class="admonition-title">
+<div id="admonition-info-3-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info-3"></a>
+</div>
+<div>
+<p>The old MinIO setup needed two separate TCP health checks — <code>minio_api_health</code> (port 9000) and <code>minio_dashboard_health</code> (port 9001) — because it ran a 4-node MinIO cluster fronted by an nginx console. This demo's single RustFS container exposes only its API port, so it collapses to one <code>rustfs_health</code> check on port 9000; there is no separate console port to probe here.</p>
+</div>
+</div>
+<pre><code class="language-yaml">measurement_server:
+  ros__parameters:
+    ...
+    camera:
+      plugin: "dc_measurements/Camera"
+      cam_topic: "/intel_realsense_r200_depth/image_raw"
+      cam_name: "Intel Realsense"
+      save_raw_img: true
+      save_raw_path: "camera/raw/%Y-%m-%dT%H-%M-%S"
+      remote_prefixes: [""]
+      remote_keys: ["rustfs"]
+      ...
+    map:
+      plugin: "dc_measurements/Map"
+      save_path: "map/%Y-%m-%dT%H-%M-%S"
+      topic_output: "/dc/measurement/map"
+      remote_prefixes: [""]
+      remote_keys: ["rustfs"]
+      ...
+    rustfs_health:
+      plugin: "dc_measurements/TCPHealth"
+      topic_output: "/dc/measurement/rustfs_health"
+      polling_interval: 5000
+      host: "127.0.0.1"
+      port: 9000
+      name: "RustFS"
+      include_measurement_plugin: true
+    pgsql_health:
+      plugin: "dc_measurements/TCPHealth"
+      topic_output: "/dc/measurement/pgsql_health"
+      polling_interval: 5000
+      host: "127.0.0.1"
+      port: 5432
+      name: "PostgreSQL"
+      include_measurement_plugin: true
+</code></pre>
+<h4 id="conditions"><a class="header" href="#conditions">Conditions</a></h4>
+<p>We also initialize conditions:</p>
+<ol>
+<li>min_distance_traveled</li>
+<li>max_distance_traveled</li>
+</ol>
+<p>They are used in the distance traveled measurement to only take values in a certain range.</p>
+<h3 id="destination-server"><a class="header" href="#destination-server">Destination server</a></h3>
+<p>Here we enable the <code>records_log</code> and <code>rustfs</code> Destinations, plus a passthrough for PostgreSQL:</p>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["records_log", "rustfs"]
+    records_log:
+      type: file
+      receives: records
+      inputs: [
+          # System
+          "/dc/measurement/cpu",
+          "/dc/measurement/memory",
+          "/dc/measurement/os",
+          "/dc/measurement/uptime",
+          # Robot
+          "/dc/measurement/camera",
+          "/dc/measurement/cmd_vel",
+          "/dc/measurement/distance_traveled",
+          "/dc/measurement/driving_type",
+          "/dc/measurement/position",
+          "/dc/measurement/speed",
+          # Environment
+          "/dc/measurement/map",
+          # Infrastructure
+          "/dc/measurement/rustfs_health",
+          "/dc/measurement/pgsql_health",
+        ]
+      path: "/tmp/dc/tb3_simulation_pgsql_minio_records.ndjson"
+      time_key: "date"
+    rustfs:
+      type: s3
+      receives: files
+      inputs: ["/dc/measurement/map", "/dc/measurement/camera"]
+      bucket: "dc-files"
+      endpoint: "http://127.0.0.1:9000"
+      region: "us-east-1"
+      access_key_id: "rustfsadmin"
+      secret_access_key: "rustfsadmin"
+      force_path_style: true
+    files:
+      delete_when_sent: true
+      metadata_destination: "records_log"
+    custom_config_files: ["$HOME/.dc/tb3_simulation_pgsql_minio_sink.toml"]
+</code></pre>
+<pre><code class="language-toml"># ~/.dc/tb3_simulation_pgsql_minio_sink.toml
+[sinks.pgsql]
+type = "postgres"
+inputs = [
+  "dc.dc.measurement.cpu", "dc.dc.measurement.memory", "dc.dc.measurement.os",
+  "dc.dc.measurement.uptime", "dc.dc.measurement.camera", "dc.dc.measurement.cmd_vel",
+  "dc.dc.measurement.distance_traveled", "dc.dc.measurement.driving_type",
+  "dc.dc.measurement.position", "dc.dc.measurement.speed", "dc.dc.measurement.map",
+  "dc.dc.measurement.rustfs_health", "dc.dc.measurement.pgsql_health",
+]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc"
+
+[sinks.pgsql.buffer]
+type = "disk"
+max_size = 268435488
+
+[sinks.pgsql_files]
+type = "postgres"
+inputs = ["dc.dc.files"]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc_files"
+
+[sinks.pgsql_files.buffer]
+type = "disk"
+max_size = 268435488
+</code></pre>
+<p>Copy the snippet into place before launching:</p>
+<pre><code class="language-bash">mkdir -p ~/.dc &amp;&amp; cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/tb3_simulation_pgsql_minio_sink.toml" ~/.dc/
+</code></pre>
+<h4 id="postgresql-destinations"><a class="header" href="#postgresql-destinations">PostgreSQL Destinations</a></h4>
+<p>PostgreSQL is reached through the <a href="../adr/0003-blessed-destinations-plus-passthrough.html">ADR-0003</a>
+passthrough now, not a blessed <code>postgres</code> Destination — see
+<a href="../destinations.html#recipes-postgres-s3-console-via-passthrough">Destinations: Recipes</a>. The
+passthrough <code>pgsql</code> sink carries almost every measurement and the two infrastructure health
+checks as plain Records. Note that not all data needs to go to PostgreSQL — only topics whose
+<code>dc.&lt;tag&gt;</code> route exists (i.e. listed in <code>records_log</code>'s <code>inputs</code>) reach it.</p>
+<p><code>pgsql_files</code> is a second, dedicated <code>postgres</code> sink in the same passthrough snippet for
+<code>dc_uploader</code>'s status Records — it has no ROS topic <code>inputs</code> of its own; it consumes the
+<code>dc.dc.files</code> route instead, which <code>records_log</code> gains from being named as
+<code>files.metadata_destination</code> (that parameter must name a configured <code>receives: records</code>
+Destination, so it can't point at a passthrough-only sink id directly). See
+<a href="../destinations.html">Destinations</a>, <a href="../adr/0005-file-uploads-are-bridge-responsibility.html">ADR-0005</a>
+and <a href="../adr/0014-uploader-runs-as-its-own-process.html">ADR-0014</a> for the full split, and the
+<a href="./qrcodes_minio_pgsql.html">QR codes demo</a> for a worked example of the same pattern.</p>
+<h4 id="rustfs-destination"><a class="header" href="#rustfs-destination">RustFS Destination</a></h4>
+<p>We list only <code>map</code> and <code>camera</code> in <code>rustfs</code>'s <code>inputs</code> since those are the only measurements referencing Files. <code>rustfs</code>'s <code>type: s3</code> and <code>receives: files</code> mark it as owned by <code>dc_uploader</code> — a separate process from <code>dc_bridge</code> (<a href="../adr/0014-uploader-runs-as-its-own-process.html">ADR-0014</a>) — rather than a Vector sink target: it uploads whatever File the measurement's <code>remote_keys: ["rustfs"]</code> pointed at it, verifies the object landed, and (with <code>files.delete_when_sent: true</code>) deletes the local copy only once that's confirmed. Unlike PostgreSQL, <code>rustfs</code> stays a blessed Destination: <code>receives: files</code> is served entirely by <code>dc_uploader</code> reading these same ROS params, never by a Vector sink, so there is no passthrough equivalent for it to migrate to.</p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/demos/tb3_aws_minio_pgsql.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../dc/demos/elasticsearch.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../dc/demos/tb3_aws_influxdb.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../dc/demos/elasticsearch.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../dc/demos/tb3_aws_influxdb.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../../ace.js"></script>
+        <script src="../../editor.js"></script>
+        <script src="../../mode-rust.js"></script>
+        <script src="../../theme-dawn.js"></script>
+        <script src="../../theme-tomorrow_night.js"></script>
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../js/mermaid.js"></script>
+        <script src="../../js/mermaid-init.js"></script>
+        <script src="../../js/theme.js"></script>
+        <script src="../../js/distro.js"></script>
+
+
+    </body>
+</html>

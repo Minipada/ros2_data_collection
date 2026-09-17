@@ -1,0 +1,707 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>QRcodes to PostgreSQL/RustFS - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../open-in.css">
+        <link rel="stylesheet" href="../.././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../../css/logo.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/rolling/doc/src/dc/demos/qrcodes_minio_pgsql.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="qrcodes"><a class="header" href="#qrcodes">QRCodes</a></h1>
+<p>In this example, we add a robot and start collecting robot data to PostgreSQL, and maps and scanned QR codes to RustFS as image files.</p>
+<p>You will also need 3 terminal windows, to:</p>
+<ol>
+<li>Run the simulation + Nav2 launchfile: it starts gz-sim, localization, navigation and RViz</li>
+<li>Run DC</li>
+<li>Drive the robot past the QR codes</li>
+</ol>
+<p>Keeping them separate helps reading the JSON printed on the DC terminal, which
+RViz and gz-sim would otherwise drown out.</p>
+<div class="table-wrapper"><table><thead><tr><th>Terminal</th><th>Description</th></tr></thead><tbody>
+<tr><td>Nav2</td><td>gz-sim, localization, navigation and RViz</td></tr>
+<tr><td>DC</td><td>Data collection</td></tr>
+<tr><td>Run</td><td>Waypoint follower driving past every QR-coded pallet</td></tr>
+</tbody></table>
+</div>
+<h2 id="setup-rustfs-and-postgresql"><a class="header" href="#setup-rustfs-and-postgresql">Setup RustFS and PostgreSQL</a></h2>
+<h3 id="rustfs"><a class="header" href="#rustfs">RustFS</a></h3>
+<p>RustFS will be used as storage for the map and camera image Files. To start it, <a href="../infrastructure_setup/rustfs.html">follow the steps</a> — a single RustFS container plus a one-shot container that bootstraps the <code>dc-files</code> bucket the Destinations below upload into, using the default <code>rustfsadmin</code>/<code>rustfsadmin</code> credentials this demo's params file already assumes.</p>
+<h3 id="postgresql"><a class="header" href="#postgresql">PostgreSQL</a></h3>
+<p>PostgreSQL will be used as database storage for our JSON. Later on, backend engineers can make requests on those JSON based on measurement requested and time range. To start it, <a href="../infrastructure_setup/postgresql.html">follow the steps</a></p>
+<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<div class="admonition-title">
+<div id="admonition-info-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info"></a>
+</div>
+<div>
+<p>Vector's <code>postgres</code> sink maps each top-level key of a Record's JSON payload onto an existing column of the same name — it does not create tables or columns itself. <code>tools/infrastructure/docker/config/postgresql/init.sql</code> pre-creates the <code>dc</code> and <code>dc_files</code> tables this demo writes into; see its header comment for the full column reference if you add a measurement whose fields aren't already columns.</p>
+</div>
+</div>
+<h2 id="setup-the-ros-environment"><a class="header" href="#setup-the-ros-environment">Setup the ROS environment</a></h2>
+<p>In each terminal, source your environment:</p>
+<pre><code class="language-bash">source /opt/ros/rolling/setup.bash
+source install/setup.bash
+</code></pre>
+<p>Nothing else has to be exported. <code>dc_simulation</code>'s environment hook puts its own
+<code>models/</code> and <code>worlds/</code> on <code>GZ_SIM_RESOURCE_PATH</code>, and <code>warehouse.launch.py</code> adds
+<code>nav2_minimal_tb3_sim</code>'s models (where the TurtleBot3 meshes live now — the
+Gazebo Classic <code>turtlebot3_gazebo</code> package has no Jazzy release).</p>
+<h2 id="start-navigation"><a class="header" href="#start-navigation">Start Navigation</a></h2>
+<p><code>dc_demos</code>' own launch file brings up gz-sim with the QR-code warehouse world,
+spawns <code>dc_simulation</code>'s TurtleBot3-Waffle with its <code>ros_gz_bridge</code>, and starts
+Nav2 (<code>map_server</code> + AMCL + planners) against <code>dc_simulation/maps/qrcodes.yaml</code>.
+It also starts DC, which this demo drives separately, so turn that off here:</p>
+<pre><code class="language-bash">ros2 launch dc_demos tb3_qrcodes.launch.py \
+    headless:=False \
+    use_dc:=False
+</code></pre>
+<p>gz-sim and RViz will start: you should see the robot in the warehouse, and the
+map in RViz. AMCL sets the demo's initial pose itself (<code>set_initial_pose</code> in
+<code>qrcodes_nav.yaml</code>), so there is no need to click "2D Pose Estimate" — wait until
+the laser scan lines up with the map before starting the run below.</p>
+<div id="admonition-warning" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-title">
+<div class="admonition-title">
+<div id="admonition-warning-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning"></a>
+</div>
+<div>
+<p>The warehouse world is heavy: 238 model instances, most of them the QR-coded
+pallets and the props stacked on them. Expect a slow start on a machine without a GPU:
+gz-sim, the robot and Nav2 come up in well under a minute, but with the real-time factor
+well under 1 (~0.11-0.2, see <a href="https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_simulation/README.md">dc_simulation's README</a>
+for the measured breakdown), reaching the first QR-coded pallet and getting the first
+Record out of the demo can take several minutes of wall clock, and the full 60-waypoint
+pass over an hour. See <a href="https://github.com/Minipada/ros2_data_collection/issues/52">#52</a>.</p>
+</div>
+</div>
+<h2 id="start-dc"><a class="header" href="#start-dc">Start DC</a></h2>
+<p>Execute</p>
+<pre><code class="language-bash">ros2 launch dc_demos tb3_qrcodes_minio_pgsql.launch.py use_sim_time:=True
+</code></pre>
+<div id="admonition-warning-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-1-title">
+<div class="admonition-title">
+<div id="admonition-warning-1-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning-1"></a>
+</div>
+<div>
+<p><code>use_sim_time</code> defaults to <code>False</code> — without the override above, DC's Position
+measurement looks up TF transforms on the wall clock while the simulation publishes
+them on Gazebo's sim clock, which throws "extrapolation into the past"/"transform does
+not exist" errors and can crash <code>measurement_server</code> outright once the two clocks
+drift far enough apart (same issue as the <a href="./tb3_aws_minio_pgsql.html">PostgreSQL/RustFS</a>
+and <a href="./tb3_aws_influxdb.html">InfluxDB</a> demos).</p>
+</div>
+</div>
+<p>With this, all data will be transmitted</p>
+<h2 id="drive-the-robot-past-the-qr-codes"><a class="header" href="#drive-the-robot-past-the-qr-codes">Drive the robot past the QR codes</a></h2>
+<p>In a fourth terminal, run the waypoint follower. It sends the robot down each
+aisle, stopping in front of every QR-coded pallet so both cameras can read them,
+and exits once the pass is complete:</p>
+<pre><code class="language-bash">ros2 run dc_demos qrcodes_waypoint_follower
+</code></pre>
+<div id="admonition-info-1" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-1-title">
+<div class="admonition-title">
+<div id="admonition-info-1-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info-1"></a>
+</div>
+<div>
+<p>The waypoints are camera stations, and the aisles are narrow enough that positioning
+accuracy matters: a code is only readable while</p>
+<pre><code>|lateral error| + standoff * tan(|yaw error|) + 0.181 &lt;= standoff * tan(30°)
+</code></pre>
+<p>where 0.181 m is half a rendered QR symbol and 30° is half the cameras' field of view.
+The tightest station has a 0.73 m standoff, which is why <code>qrcodes_nav.yaml</code> stops the
+robot within 0.1 m and 0.1 rad rather than Nav2's more usual tolerances. If you move the
+waypoints, the pallets or the cameras, re-run <code>./tools/sim/scripts/run.sh</code> — its <code>lint</code>
+stage re-derives that inequality from the world, the robot model, the waypoints and the
+nav params, and its <code>detect</code> stage checks that codes really do come back. See
+<a href="https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_simulation/README.md">dc_simulation's README</a>
+for the measured geometry.</p>
+</div>
+</div>
+<h2 id="understanding-the-configuration"><a class="header" href="#understanding-the-configuration">Understanding the configuration</a></h2>
+<div id="admonition-info-2" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-2-title">
+<div class="admonition-title">
+<div id="admonition-info-2-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info-2"></a>
+</div>
+<div>
+<p>The full configuration file can be found <a href="https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/params/qrcodes_minio_pgsql.yaml">here</a>.</p>
+</div>
+</div>
+<p>For this demo, we will reconstruct the yaml configuration element by element, given how large it is. Go through the explanation to understand how it works.</p>
+<h3 id="collect-command-velocity-position-and-speed-to-postgresql-as-a-group"><a class="header" href="#collect-command-velocity-position-and-speed-to-postgresql-as-a-group">Collect command velocity, position and speed to PostgreSQL as a group</a></h3>
+<p>Similarly to the previous tutorial:</p>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["records_log", "rustfs"]
+    records_log:
+      type: file
+      receives: records
+      inputs:
+        [
+          "/dc/measurement/map",
+          "/dc/measurement/right_camera",
+          "/dc/measurement/left_camera",
+          "/dc/group/robot",
+        ]
+      path: "/tmp/dc/qrcodes_minio_pgsql_records.ndjson"
+      time_key: "date"
+    custom_config_files: ["$HOME/.dc/qrcodes_minio_pgsql_sink.toml"]
+
+group_server:
+  ros__parameters:
+    groups: ["robot"]
+    robot:
+      inputs:
+        [
+          "/dc/measurement/cmd_vel",
+          "/dc/measurement/position",
+          "/dc/measurement/speed",
+        ]
+      output: "/dc/group/robot"
+      sync_delay: 5.0
+      group_key: "robot"
+
+measurement_server:
+  ros__parameters:
+    custom_keys_str: ["robot_name"]
+    robot_name: "C3PO"
+    measurement_plugins: ["cmd_vel", "position", "speed"]
+    custom_key_str_list: ["robot_name", "id"]
+    custom_keys_str:
+      robot_name:
+        name: robot_name
+        value: "C3PO"
+      # Requires systemd package
+      id:
+        name: id
+        value_from_file: /etc/machine-id
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: "$HOME/run_id"
+      uuid: false
+    moving:
+      plugin: "dc_conditions/Moving"
+    cmd_vel:
+      plugin: "dc_measurements/CmdVel"
+      group_key: "cmd_vel"
+      enable_validator: true
+      topic_output: "/dc/measurement/cmd_vel"
+      include_measurement_name: true
+    position:
+      plugin: "dc_measurements/Position"
+      group_key: "position"
+      topic_output: "/dc/measurement/position"
+      enable_validator: true
+      global_frame: "map"
+      robot_base_frame: "base_link"
+      transform_timeout: 0.1
+      include_measurement_name: true
+    speed:
+      plugin: "dc_measurements/Speed"
+      group_key: "speed"
+      odom_topic: "/odom"
+      topic_output: "/dc/measurement/speed"
+      include_measurement_name: true
+</code></pre>
+<p>In the measurement server, we set 3 measurements: cmd_vel, position and speed being collected once per second, are validated with their respective JSON schemas and publish on their own topics.</p>
+<p>Note the <code>include_measurement_name</code> which include measurement name in the JSON, which is used when grouping. The group collects the data from those 3 measurement and republishes it on the group topic <code>/dc/group/robot</code>.</p>
+<p><code>dc_bridge</code> owns every Destination this demo uses. <code>records_log</code>'s <code>inputs</code> list already
+names every topic this demo produces (<code>/dc/group/robot</code> for this section, plus
+<code>/dc/measurement/map</code>, <code>/dc/measurement/right_camera</code> and <code>/dc/measurement/left_camera</code> for
+the sections below): unlike the retired per-measurement <code>tags: [...]</code> mechanism, a
+Destination's <code>inputs</code> is the single place that decides what reaches it, so we declare it
+once and simply grow the measurements that feed those topics as we go.</p>
+<p><code>records_log</code> is a <code>file</code> Destination, not <code>postgres</code> — PostgreSQL is reached through the
+<a href="../adr/0003-blessed-destinations-plus-passthrough.html">ADR-0003</a> passthrough instead. The
+actual <code>postgres</code> sink lives in <code>qrcodes_minio_pgsql_sink.toml</code>, a raw Vector config
+snippet loaded via <code>custom_config_files</code>:</p>
+<pre><code class="language-toml"># ~/.dc/qrcodes_minio_pgsql_sink.toml
+[sinks.pgsql]
+type = "postgres"
+inputs = [
+  "dc.dc.measurement.map",
+  "dc.dc.measurement.right_camera",
+  "dc.dc.measurement.left_camera",
+  "dc.dc.group.robot",
+]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc"
+
+[sinks.pgsql.buffer]
+type = "disk"
+max_size = 268435488
+</code></pre>
+<p><code>dc_bridge</code> derives its ROS subscriptions and <code>dc.&lt;tag&gt;</code> routes from <code>destinations</code> alone,
+never from a passthrough snippet's <code>inputs</code> — that's why <code>records_log</code> still lists every
+topic even though the snippet above is what actually reaches PostgreSQL. Copy the snippet
+into place before launching:</p>
+<pre><code class="language-bash">mkdir -p ~/.dc &amp;&amp; cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/qrcodes_minio_pgsql_sink.toml" ~/.dc/
+</code></pre>
+<div id="admonition-warning-2" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-2-title">
+<div class="admonition-title">
+<div id="admonition-warning-2-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning-2"></a>
+</div>
+<div>
+<p>Be sure to change the login and password to your current infrastructure configuration. Do it in production setup!</p>
+</div>
+</div>
+<p>You can find more about the <code>postgres</code> sink recipe <a href="../destinations.html#recipes-postgres-s3-console-via-passthrough">here</a></p>
+<p>To take a look at records, go to Adminer. It is by default started at <a href="http://localhost:8080">http://localhost:8080</a>, it is a database GUI.:</p>
+<p><img src="../../images/qrcodes_pgsql_adminer.png" alt="Adminer" /></p>
+<p>You can then click on a record, to take a look, edit or delete it:</p>
+<p><img src="../../images/qrcodes_pgsql_adminer_record.png" alt="Adminer" /></p>
+<h3 id="send-the-map-image-and-yaml-from-nav2_map_server-to-rustfs"><a class="header" href="#send-the-map-image-and-yaml-from-nav2_map_server-to-rustfs">Send the map image and YAML from nav2_map_server to RustFS</a></h3>
+<p>First, we add the map measurement. Its <code>remote_keys</code> names the <code>rustfs</code> Destination, which is what actually uploads the pgm/yaml Files — the map measurement only records where they are, locally and (once uploaded) remotely:</p>
+<pre><code class="language-yaml">measurement_server:
+  ros__parameters:
+  ...
+  measurement_plugins: ["map"]
+  map:
+    plugin: "dc_measurements/Map"
+    group_key: "map"
+    polling_interval: 5000
+    save_path: "map/%Y-%m-%dT%H:%M:%S"
+    topic_output: "/dc/measurement/map"
+    save_map_timeout: 4.0
+    remote_prefixes: [""]
+    remote_keys: ["rustfs"]
+    enable_validator: true
+    include_measurement_name: true
+  ...
+</code></pre>
+<p>Then, the Destinations that make this work:</p>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    ...
+    destinations: ["records_log", "rustfs"]
+    rustfs:
+      type: s3
+      receives: files
+      inputs:
+        [
+          "/dc/measurement/map",
+          "/dc/measurement/right_camera",
+          "/dc/measurement/left_camera",
+        ]
+      bucket: "dc-files"
+      endpoint: "http://127.0.0.1:9000"
+      region: "us-east-1"
+      access_key_id: "rustfsadmin"
+      secret_access_key: "rustfsadmin"
+      force_path_style: true
+    files:
+      delete_when_sent: true
+      metadata_destination: "records_log"
+</code></pre>
+<pre><code class="language-toml"># ~/.dc/qrcodes_minio_pgsql_sink.toml (continued)
+[sinks.pgsql_files]
+type = "postgres"
+inputs = ["dc.dc.files"]
+endpoint = "postgres://dc:password@127.0.0.1:5432/dc"
+table = "dc_files"
+
+[sinks.pgsql_files.buffer]
+type = "disk"
+max_size = 268435488
+</code></pre>
+<p>This introduces the two-way PostgreSQL split this demo relies on:</p>
+<ul>
+<li><strong><code>pgsql</code></strong> (the passthrough sink declared above) carries the map's own metadata Record (dimensions, resolution, local/remote paths) like any other measurement.</li>
+<li><strong><code>pgsql_files</code></strong> is a <em>second</em> <code>postgres</code> sink in the same passthrough snippet, dedicated to the Uploader's own bookkeeping. It has no ROS topic <code>inputs</code> of its own — it consumes the <code>dc.dc.files</code> route instead, which <code>records_log</code> gains from being named as <code>files.metadata_destination</code> below. <code>files.metadata_destination</code> must name a configured <code>receives: records</code> Destination (<code>dc_bridge</code> rejects anything else at startup), which is why it names <code>records_log</code> rather than the passthrough sink directly — a passthrough-only sink id isn't eligible.</li>
+<li><strong><code>rustfs</code></strong> is the <code>s3</code> Destination that actually uploads the pgm/yaml bytes. <code>receives: files</code> marks it as owned by <strong><code>dc_uploader</code></strong> — a separate process from <code>dc_bridge</code> (<a href="../adr/0014-uploader-runs-as-its-own-process.html">ADR-0014</a>) — rather than a Vector sink: <code>dc_bridge</code> subscribes to <code>rustfs</code>'s <code>inputs</code>, and durably enqueues an intent for any Record with <code>remote_paths</code> entries whose key matches a Destination name — here <code>rustfs</code>, matching the map measurement's <code>remote_keys</code> above. <code>dc_uploader</code> reads that intent, uploads the referenced Files, verifies they landed, and emits a status Record under <code>dc.files</code>, routed to <code>records_log</code> (and, from there, consumed by the <code>pgsql_files</code> passthrough sink). Unlike <code>pgsql</code>/<code>pgsql_files</code>, <code>rustfs</code> stays blessed: <code>receives: files</code> is served entirely by <code>dc_uploader</code> reading these same ROS params, never by a Vector sink, so there is no passthrough equivalent for it to migrate to.</li>
+</ul>
+<p>See <a href="../destinations.html">Destinations</a> for the full <code>files:</code>/Uploader contract, and <a href="../adr/0005-file-uploads-are-bridge-responsibility.html">ADR-0005</a> / <a href="../adr/0014-uploader-runs-as-its-own-process.html">ADR-0014</a> for why file uploads are a DC responsibility rather than a Vector sink, and why that logic now runs as its own process.</p>
+<p><code>files.delete_when_sent: true</code> means the local pgm/yaml are removed only once RustFS confirms the upload — never before.</p>
+<p>You can check upload status and completion in Grafana's <strong>Robot</strong> dashboard, whose "Uploaded inspection files" and "Group completion status" panels query the <code>dc_files</code> table <code>pgsql_files</code> writes into:</p>
+<pre><code class="language-sql">SELECT to_timestamp(updated_at) AS "time", group_name, robot_name, storage_type, remote_path, content_type, size, uploaded
+FROM dc_files WHERE kind = 'file_status' ORDER BY updated_at DESC LIMIT 100
+</code></pre>
+<p>Then, similarly, on Adminer, you can browse the <code>dc</code> table's map rows.</p>
+<h3 id="send-qr-code-images-to-rustfs"><a class="header" href="#send-qr-code-images-to-rustfs">Send QR code images to RustFS</a></h3>
+<p>We want to collect pictures taken by the cameras</p>
+<pre><code class="language-yaml">measurement_server:
+  ros__parameters:
+  ...
+  measurement_plugins: ["cmd_vel", "position", "speed", "map", "right_camera", "left_camera"]
+  condition_plugins: ["moving", "inspected_exists"]
+  custom_key_str_list: ["robot_name", "id"]
+  custom_keys_str:
+    robot_name:
+      name: robot_name
+      value: "C3PO"
+    # Requires systemd package
+    id:
+      name: id
+      value_from_file: /etc/machine-id
+  run_id:
+    enabled: true
+    counter: true
+    counter_path: "$HOME/run_id"
+    uuid: false
+  moving:
+    plugin: "dc_conditions/Moving"
+  inspected_exists:
+    plugin: "dc_conditions/Compare"
+    key: "inspected"
+    comparison: "exists"
+  right_camera:
+    plugin: "dc_measurements/Camera"
+    group_key: "right_camera"
+    if_none_conditions: ["moving"]
+    if_all_conditions: ["inspected_exists"]
+    topic_output: "/dc/measurement/right_camera"
+    init_collect: false
+    init_max_measurements: -1
+    condition_max_measurements: 1
+    node_name: "dc_measurement_camera"
+    cam_topic: "/right_intel_realsense_r200_depth/image_raw"
+    cam_name: right_camera
+    enable_validator: true
+    draw_det_barcodes: true
+    save_raw_img: false
+    save_rotated_img: false
+    save_detections_img: true
+    save_inspected_path: "right_camera/inspected/%Y-%m-%dT%H-%M-%S"
+    rotation_angle: 0
+    detection_modules: ["barcode"]
+    remote_prefixes: [""]
+    remote_keys: ["rustfs"]
+    include_measurement_name: true
+  left_camera:
+    plugin: "dc_measurements/Camera"
+    group_key: "left_camera"
+    if_none_conditions: ["moving"]
+    if_all_conditions: ["inspected_exists"]
+    topic_output: "/dc/measurement/left_camera"
+    init_collect: true
+    init_max_measurements: -1
+    condition_max_measurements: 1
+    node_name: "dc_measurement_camera"
+    cam_topic: "/left_intel_realsense_r200_depth/image_raw"
+    cam_name: left_camera
+    enable_validator: true
+    draw_det_barcodes: true
+    save_raw_img: false
+    save_rotated_img: false
+    save_detections_img: true
+    save_inspected_path: "left_camera/inspected/%Y-%m-%dT%H-%M-%S"
+    rotation_angle: 0
+    detection_modules: ["barcode"]
+    remote_prefixes: [""]
+    remote_keys: ["rustfs"]
+    include_measurement_name: true
+  ...
+</code></pre>
+<p>Taking a look at the cameras, we can understand that:</p>
+<ol>
+<li>Data is only collected when the robot is not moving: <code>if_none_conditions: ["moving"]</code></li>
+<li>Data is only collected when there is inspected data, so only when a QR code is detected: <code>if_all_conditions: ["inspected_exists"]</code></li>
+<li>Data is not collected constantly: <code>init_max_measurements: -1</code></li>
+<li>Only one record is collected when conditions are triggered: <code>condition_max_measurements: 1</code></li>
+<li>Only images with inspected data are collected:
+<ol>
+<li><code>save_raw_img: false</code></li>
+<li><code>save_rotated_img: false</code></li>
+<li><code>save_detections_img: true</code></li>
+</ol>
+</li>
+<li>Barcodes are scanned in each image: <code>detection_modules: ["barcode"]</code></li>
+</ol>
+<p><code>include_measurement_name</code> matters here too: the Uploader relies on it to know which top-level field of the Record holds the <code>local_paths</code>/<code>remote_paths</code> it should act on.</p>
+<p>No new Destination block is needed for the cameras: <code>records_log</code> and <code>rustfs</code> already list <code>/dc/measurement/right_camera</code> and <code>/dc/measurement/left_camera</code> in their <code>inputs</code> (see the first section above), and the passthrough <code>pgsql</code> sink already consumes the matching <code>dc.&lt;tag&gt;</code> routes those <code>inputs</code> create — a Destination's <code>inputs</code> is a single, global list of topics rather than something declared per measurement, so adding a measurement that feeds an already-configured Destination requires no <code>dc_bridge</code> change at all.</p>
+<p>Here, we collect images with the <code>rustfs</code> Destination, and their metadata (which record they belong to, remote path once uploaded, image dimensions where relevant) through the passthrough <code>pgsql</code> sink. <code>pgsql_files</code>, fed by the Uploader, tracks when each image is sent to RustFS and — with <code>files.delete_when_sent: true</code> — is deleted locally once confirmed. Note that a Record's <code>remote_paths</code> can name several Destinations at once; the Uploader sends to every one whose name appears there.</p>
+<p>An example Record for <code>right_camera</code>, once the image is inspected:</p>
+<pre><code class="language-json">{
+  "camera_name": "right_camera",
+  "date": 1677668926.700422,
+  "flattened": false,
+  "id": "be781e5ffb1e7ee4f817fe7b63e92c32",
+  "nested": false,
+  "robot_name": "C3PO",
+  "run_id": "218",
+  "local_img_paths": {
+    "inspected": "/root/dc_data/C3PO/2023/03/01/17/right_camera/inspected/2023-03-01T17-12-57.jpg"
+  },
+  "remote_paths": {
+    "rustfs": {
+      "inspected": "C3PO/2023/03/01/17/right_camera/inspected/2023-03-01T17-12-57.jpg"
+    }
+  },
+  "inspected": {
+    "barcode": [
+      {
+        "data": [81, 82, 99, 111, 100, 101, 45, 49],
+        "height": 40,
+        "width": 40,
+        "top": 120,
+        "left": 200,
+        "type": "QRCODE"
+      }
+    ]
+  }
+}
+</code></pre>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/demos/qrcodes_minio_pgsql.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../dc/demos/advanced.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../dc/demos/fastdds_stats_pgsql_grafana.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../dc/demos/advanced.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../dc/demos/fastdds_stats_pgsql_grafana.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../../ace.js"></script>
+        <script src="../../editor.js"></script>
+        <script src="../../mode-rust.js"></script>
+        <script src="../../theme-dawn.js"></script>
+        <script src="../../theme-tomorrow_night.js"></script>
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../js/mermaid.js"></script>
+        <script src="../../js/mermaid-init.js"></script>
+        <script src="../../js/theme.js"></script>
+        <script src="../../js/distro.js"></script>
+
+
+    </body>
+</html>

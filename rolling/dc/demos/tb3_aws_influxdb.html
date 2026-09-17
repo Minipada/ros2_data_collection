@@ -1,0 +1,555 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Turtlebot3 AWS Warehouse InfluxDB (passthrough) - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../open-in.css">
+        <link rel="stylesheet" href="../.././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../../css/logo.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/rolling/doc/src/dc/demos/tb3_aws_influxdb.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="turtlebot3-aws-warehouse-influxdb"><a class="header" href="#turtlebot3-aws-warehouse-influxdb">Turtlebot3 AWS Warehouse InfluxDB</a></h1>
+<p><code>dc_bridge</code> blesses exactly five Destination types — <code>postgres</code>, <code>s3</code>, <code>file</code>, <code>console</code>,
+<code>vector</code> (see <a href="../destinations.html">Destinations</a>) — and InfluxDB is not one of them. This demo is
+not a peer of the <a href="./tb3_aws_minio_pgsql.html">PostgreSQL/RustFS demos</a>: it exists to show
+how to reach a destination <code>dc_bridge</code> doesn't bless directly, via the
+<a href="../adr/0003-blessed-destinations-plus-passthrough.html">ADR-0003</a> <strong>passthrough</strong> escape
+hatch — a raw <a href="https://vector.dev">Vector</a> sink config loaded
+through <code>custom_config_files</code>, consuming the same public <code>dc.&lt;tag&gt;</code> routes a blessed
+Destination would. Read <a href="../destinations.html">Destinations</a>'s "Passthrough" section first
+if you haven't already; this page only covers what's specific to InfluxDB.</p>
+<p>You will also need 3 terminal windows, to:</p>
+<ol>
+<li>Run the Nav2 turtlebot3 launchfile: it starts localization, navigation and RViz</li>
+<li>Run navigation inspection demo</li>
+<li>Run DC</li>
+</ol>
+<p>Using a different terminal window for DC helps reading its information.</p>
+<h2 id="setup-the-environment"><a class="header" href="#setup-the-environment">Setup the environment</a></h2>
+<h3 id="python-dependencies"><a class="header" href="#python-dependencies">Python dependencies</a></h3>
+<p>For this tutorial, we will need to install all dependencies, the demo dashboard's
+included (<a href="https://docs.astral.sh/uv/">uv</a> owns them; see <a href="../setup.html">Setup</a>):</p>
+<pre><code class="language-bash">uv sync
+</code></pre>
+<h3 id="setup-the-infrastructure"><a class="header" href="#setup-the-infrastructure">Setup the infrastructure</a></h3>
+<h4 id="influxdb"><a class="header" href="#influxdb">InfluxDB</a></h4>
+<p><a href="https://www.influxdata.com/">InfluxDB</a> will be used to store our data and timestamps. To start it, <a href="../infrastructure_setup/influxdb.html">follow the steps</a> (<code>tools/infrastructure/docker/docker-compose.influxdb.yaml</code>, unchanged by the DC 2.0 rework — this demo still needs a real InfluxDB instance to point the passthrough sink at).</p>
+<h4 id="one-time-install-the-passthrough-sink-config"><a class="header" href="#one-time-install-the-passthrough-sink-config">One-time: install the passthrough sink config</a></h4>
+<p><code>dc_bridge</code> has no InfluxDB Destination to configure through ROS parameters, so the
+Vector sink itself ships as a plain file in this package,
+<code>dc_demos/config/tb3_simulation_influxdb_sink.toml</code>, installed to the package's share
+directory. Copy it into place once before the first launch:</p>
+<pre><code class="language-bash">mkdir -p ~/.dc
+cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/tb3_simulation_influxdb_sink.toml" ~/.dc/
+</code></pre>
+<p><code>dc_params_file</code>'s <code>custom_config_files</code> (see below) points at this path.</p>
+<h3 id="setup-simulation-environment"><a class="header" href="#setup-simulation-environment">Setup simulation environment</a></h3>
+<p>In the terminal 1, source your environment:</p>
+<pre><code class="language-bash">source /opt/ros/rolling/setup.bash
+source install/setup.bash
+</code></pre>
+<p>Nothing else has to be exported. <code>dc_simulation</code> puts its own models and worlds on
+<code>GZ_SIM_RESOURCE_PATH</code> through its environment hook.</p>
+<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<div class="admonition-title">
+<div id="admonition-info-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info"></a>
+</div>
+<div>
+<p>This demo used to run <code>aws_robomaker_small_warehouse_world</code> under Gazebo Classic. That
+package has no Jazzy release — its own jazzy branch still hard-depends on <code>gazebo_ros</code>,
+which was never published for Jazzy. The warehouse now comes from <code>dc_simulation</code>
+instead, which vendors the same AWS RoboMaker props (shelves, clutter, trash cans) into
+a gz-sim world of its own.</p>
+</div>
+</div>
+<h2 id="terminal-1-start-navigation"><a class="header" href="#terminal-1-start-navigation">Terminal 1: Start Navigation</a></h2>
+<p>Then, in the same terminal (1), start the simulation and Nav2. DC comes up separately in
+terminal 2, so turn it off here:</p>
+<pre><code class="language-bash">ros2 launch dc_demos tb3_qrcodes.launch.py \
+    headless:=False \
+    use_dc:=False
+</code></pre>
+<p>RViz and gz-sim will start: now you see the robot in the warehouse, and the map on RViz.
+AMCL sets the initial pose itself, so there is no need to click "2D Pose Estimate".</p>
+<div id="admonition-warning" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-title">
+<div class="admonition-title">
+<div id="admonition-warning-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning"></a>
+</div>
+<div>
+<p>The warehouse world is heavy — 317 model instances. Expect a slow start and a real-time
+factor well under 1 without a GPU; see <code>dc_simulation/README.md</code> for measured numbers.</p>
+</div>
+</div>
+<p><img src="../../images/demos-tb3_aws_minio_pgsql-rviz-1.png" alt="RViz" />
+<img src="../../images/demos-tb3_aws_minio_pgsql-gz-1.png" alt="Gazebo" /></p>
+<h2 id="terminal-2-start-dc"><a class="header" href="#terminal-2-start-dc">Terminal 2: Start DC</a></h2>
+<p>Run colcon build to compile the workspace:</p>
+<pre><code class="language-bash">colcon build
+</code></pre>
+<p>Now, start the demo:</p>
+<pre><code class="language-bash">ros2 launch dc_demos tb3_simulation_influxdb.launch.py use_sim_time:=True
+</code></pre>
+<div id="admonition-warning-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-1-title">
+<div class="admonition-title">
+<div id="admonition-warning-1-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning-1"></a>
+</div>
+<div>
+<p><code>use_sim_time</code> defaults to <code>False</code> — without the override above, DC's Position
+measurement looks up TF transforms on the wall clock while the simulation publishes
+them on Gazebo's sim clock, which throws "extrapolation into the past"/"transform does
+not exist" errors and can crash <code>measurement_server</code> outright once the two clocks
+drift far enough apart.</p>
+</div>
+</div>
+<p>The robot will start collecting data.</p>
+<div id="admonition-known-issue-a-field-can-silently-stop-landing" class="admonition admonish-warning" role="note" aria-labelledby="admonition-known-issue-a-field-can-silently-stop-landing-title">
+<div class="admonition-title">
+<div id="admonition-known-issue-a-field-can-silently-stop-landing-title">
+<p>Known issue: a field can silently stop landing</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-known-issue-a-field-can-silently-stop-landing"></a>
+</div>
+<div>
+<p>InfluxDB 1.x's line protocol locks a field's type from its <em>first</em> write for the life
+of the database. <code>cpu.average</code> is <code>0</code> (a bare JSON integer, not <code>0.0</code>) on its very
+first sample — before the plugin has two polls to compute a delta from — so Vector's
+<code>influxdb_logs</code> sink writes it as an integer; every later float sample then fails with
+<code>field type conflict: ... is type float, already exists as type integer</code> and is
+silently dropped, forever, for that field in that database. Verified: after a full
+demo run, <code>SELECT count("/cpu/average") FROM dc</code> returns nothing at all. This isn't
+DC-specific — it's InfluxDB 1.x line protocol meeting JSON's <code>0</code>/<code>0.0</code> ambiguity — and
+the only fix is dropping and recreating the <code>dc</code> database (<code>influx -execute "DROP DATABASE dc; CREATE DATABASE dc"</code>) before a run where you need that field.</p>
+</div>
+</div>
+<h2 id="terminal-3-start-autonomous-navigation"><a class="header" href="#terminal-3-start-autonomous-navigation">Terminal 3: Start autonomous navigation</a></h2>
+<p>Execute</p>
+<pre><code class="language-bash">ros2 run nav2_simple_commander demo_security
+</code></pre>
+<p>The robot will start moving and you will be able to see all visualizations activated in RViz:</p>
+<p><img src="../../images/demos-tb3_aws_minio_pgsql-rviz-2.png" alt="RViz-moving" /></p>
+<h2 id="visualize-the-data"><a class="header" href="#visualize-the-data">Visualize the data</a></h2>
+<p>Grafana's own datasource is PostgreSQL now (see <a href="./tb3_aws_minio_pgsql.html">PostgreSQL/RustFS demo</a>), and every dashboard shipped with the DC 2.0 infrastructure — <strong>Home</strong>, <strong>Robot</strong>, <strong>KPI</strong> and <strong>Fast DDS statistics</strong> — is backed by it: there is no Grafana dashboard for this demo's data, since it never touches PostgreSQL. To look at what landed in InfluxDB, use InfluxDB's own tooling instead:</p>
+<pre><code class="language-bash">influx -database dc -execute "SELECT * FROM dc ORDER BY time DESC LIMIT 20"
+</code></pre>
+<p>or query its HTTP API directly:</p>
+<pre><code class="language-bash">curl -G 'http://127.0.0.1:8086/query' --data-urlencode "db=dc" --data-urlencode "q=SELECT * FROM dc ORDER BY time DESC LIMIT 20"
+</code></pre>
+<h2 id="understanding-the-configuration"><a class="header" href="#understanding-the-configuration">Understanding the configuration</a></h2>
+<div id="admonition-info-1" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-1-title">
+<div class="admonition-title">
+<div id="admonition-info-1-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info-1"></a>
+</div>
+<div>
+<p>The full configuration file can be found <a href="https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/params/tb3_simulation_influxdb.yaml">here</a>, and the passthrough sink config <a href="https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/config/tb3_simulation_influxdb_sink.toml">here</a>.</p>
+</div>
+</div>
+<h3 id="measurement-server"><a class="header" href="#measurement-server">Measurement server</a></h3>
+<h4 id="measurements"><a class="header" href="#measurements">Measurements</a></h4>
+<p><code>measurement_plugins</code> sets which plugin to load. We collect</p>
+<p>System measurements:</p>
+<ol>
+<li><a href="../measurements/cpu.html">CPU</a></li>
+<li><a href="../measurements/os.html">OS</a></li>
+<li><a href="../measurements/memory.html">Memory</a></li>
+<li><a href="../measurements/uptime.html">Uptime</a></li>
+</ol>
+<p>Robot measurements:</p>
+<ol>
+<li><a href="../measurements/camera.html">Camera images</a></li>
+<li><a href="../measurements/cmd_vel.html">Command velocities</a></li>
+<li><a href="../measurements/distance_traveled.html">Distance traveled</a></li>
+<li><a href="../measurements/position.html">Positions</a></li>
+<li><a href="../measurements/speed.html">Speed</a></li>
+</ol>
+<p>Environment measurements:</p>
+<ol>
+<li><a href="../measurements/map.html">Map</a></li>
+</ol>
+<p>Infrastructure measurements:</p>
+<ol>
+<li><a href="../measurements/tcp_health.html">InfluxDB health</a>, a <code>TCPHealth</code> check against InfluxDB's own port (8086) — unrelated to the passthrough mechanism, this is the same kind of infrastructure health-check measurement the PostgreSQL/RustFS demo uses for its own destinations.</li>
+</ol>
+<p>None of this changed from the destination-agnostic measurement configuration used elsewhere in DC 2.0 — <code>nested</code>/<code>flatten</code> still shape the JSON for InfluxDB's line-protocol-oriented storage, and images (map, camera) are still stored as base64 strings since that's the only field type Grafana (or any consumer reading straight out of InfluxDB) can render from a database column. What changed is only how the Records reach InfluxDB in the first place — see the Destination section below.</p>
+<pre><code class="language-yaml">measurement_server:
+  ros__parameters:
+    ...
+    camera:
+      plugin: "dc_measurements/Camera"
+      topic_output: "/dc/measurement/camera"
+      save_raw_base64: true
+      nested: true
+      flatten: true
+      ...
+    influxdb_health:
+      plugin: "dc_measurements/TCPHealth"
+      topic_output: "/dc/measurement/influxdb_health"
+      polling_interval: 5000
+      host: "127.0.0.1"
+      port: 8086
+      name: "InfluxDB"
+      include_measurement_plugin: true
+      nested: true
+      flatten: true
+</code></pre>
+<p>An example <code>camera</code> Record, now without a <code>tags</code> field (that mechanism no longer exists — a Destination's <code>inputs</code> list decides routing instead). <code>nested: true</code> + <code>flatten: true</code> together produce <code>/</code>-prefixed dotted-path keys such as <code>/camera/camera_name</code>, which is also exactly what lands as the InfluxDB column name, since nothing downstream renames them:</p>
+<pre><code class="language-json">{
+  "/camera/base64/raw": "/9j/4AAQSkZJRgABAQAA...",
+  "/camera/camera_name": "Intel Realsense",
+  "custom_keys": ["robot_name", "id"],
+  "date": 1677668926.700422,
+  "flattened": true,
+  "host": "127.0.0.1",
+  "id": "be781e5ffb1e7ee4f817fe7b63e92c32",
+  "name": "camera",
+  "nested": true,
+  "robot_name": "Turtlebot",
+  "run_id": "218",
+  "source_type": "fluent",
+  "tag": "dc.measurement.camera",
+  "timestamp": "2026-09-04T00:00:40.252Z"
+}
+</code></pre>
+<h4 id="conditions"><a class="header" href="#conditions">Conditions</a></h4>
+<p>We also initialize conditions:</p>
+<ol>
+<li>min_distance_traveled</li>
+<li>max_distance_traveled</li>
+</ol>
+<p>They are used in the distance traveled measurement to only take values in a certain range.</p>
+<h3 id="destination-the-passthrough"><a class="header" href="#destination-the-passthrough">Destination: the passthrough</a></h3>
+<p>There is no InfluxDB Destination to bless, but <code>destinations</code> is <strong>not</strong> empty — it names a
+<code>file</code> Destination whose <code>inputs</code> are what put these topics on the <code>dc.&lt;tag&gt;</code> routes the
+snippet consumes:</p>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["records_log"]
+    records_log:
+      type: file
+      receives: records
+      inputs: ["/dc/measurement/cpu", "/dc/measurement/memory", ...]
+      path: "/tmp/dc/tb3_simulation_influxdb_records.ndjson"
+      time_key: "date"
+      time_format: "double"
+    custom_config_files: ["$HOME/.dc/tb3_simulation_influxdb_sink.toml"]
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
+</code></pre>
+<p><code>dc_bridge</code> derives both its ROS subscriptions and its <code>dc.&lt;tag&gt;</code> route branches from
+<code>destinations</code>, and never reads a passthrough snippet's <code>inputs</code> — so a passthrough always
+accompanies at least one blessed Destination covering the same topics. <code>file</code> is the
+anchor in every passthrough demo in this repo now, including this one — blessed <code>console</code>
+moved to a passthrough recipe of its own (<a href="../adr/0003-blessed-destinations-plus-passthrough.html">ADR-0003</a>,
+<a href="../destinations.html#recipes-postgres-s3-console-via-passthrough">Destinations: Recipes</a>) —
+but it would have been the wrong anchor for this demo regardless, even back when it was
+still blessed: this demo collects base64 camera and map images, which make for unreadable
+terminal output. The <a href="./elasticsearch.html">Elasticsearch tutorial</a> explains the <code>file</code>
+anchor mechanics in more detail.</p>
+<div id="admonition-warning-2" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-2-title">
+<div class="admonition-title">
+<div id="admonition-warning-2-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning-2"></a>
+</div>
+<div>
+<p><code>destinations: []</code> does not work as a way to say "passthrough only". rclcpp cannot load an
+empty YAML sequence (no inferable element type), so the Bridge dies at startup with
+<code>parameter_value_from failed for parameter 'destinations': No parameter value set</code> and
+never reads <code>custom_config_files</code> at all.</p>
+</div>
+</div>
+<p><code>custom_config_files</code> lists raw Vector config snippets that are merged as-is alongside whatever <code>dc_bridge</code> itself renders (here, nothing) — see <a href="../destinations.html">Destinations</a>'s passthrough section for the full contract (naming collisions, <code>vector validate</code> as a startup backstop, etc.). The snippet installed above:</p>
+<pre><code class="language-toml"># ~/.dc/tb3_simulation_influxdb_sink.toml
+[sinks.influxdb]
+type = "influxdb_logs"
+inputs = [
+  "dc.dc.measurement.cpu",
+  "dc.dc.measurement.memory",
+  "dc.dc.measurement.os",
+  "dc.dc.measurement.uptime",
+  "dc.dc.measurement.camera",
+  "dc.dc.measurement.cmd_vel",
+  "dc.dc.measurement.distance_traveled",
+  "dc.dc.measurement.position",
+  "dc.dc.measurement.speed",
+  "dc.dc.measurement.map",
+  "dc.dc.measurement.influxdb_health",
+]
+endpoint = "http://127.0.0.1:8086"
+measurement = "dc"
+
+[sinks.influxdb.influxdb1_settings]
+database = "dc"
+username = "dc"
+</code></pre>
+<p>Each <code>inputs</code> entry is one of the stable <code>dc.&lt;tag&gt;</code> routes <code>dc_bridge</code> exposes for every topic that appears in <em>any</em> Destination's <code>inputs</code> or, as here, any <code>custom_config_files</code> snippet's <code>inputs</code> — the Tag is the topic name with the leading <code>/</code> dropped and the rest of the <code>/</code>s turned into <code>.</code> (<code>/dc/measurement/cpu</code> → <code>dc.measurement.cpu</code>), and the route is <code>dc.&lt;tag&gt;</code> (so <code>dc.dc.measurement.cpu</code>). Vector's <code>influxdb_logs</code> sink type is what actually understands InfluxDB 1.x's write API; nothing in this snippet is DC-specific beyond the <code>dc.&lt;tag&gt;</code> inputs.</p>
+<div id="admonition-warning-3" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-3-title">
+<div class="admonition-title">
+<div id="admonition-warning-3-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning-3"></a>
+</div>
+<div>
+<p>Set real InfluxDB credentials (or an auth token, depending on your InfluxDB version) in the snippet before pointing this at anything but the demo's own local, unauthenticated-by-default instance.</p>
+</div>
+</div>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/demos/tb3_aws_influxdb.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../dc/demos/tb3_aws_minio_pgsql.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../dc/demos/advanced.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../dc/demos/tb3_aws_minio_pgsql.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../dc/demos/advanced.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../../ace.js"></script>
+        <script src="../../editor.js"></script>
+        <script src="../../mode-rust.js"></script>
+        <script src="../../theme-dawn.js"></script>
+        <script src="../../theme-tomorrow_night.js"></script>
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../js/mermaid.js"></script>
+        <script src="../../js/mermaid-init.js"></script>
+        <script src="../../js/theme.js"></script>
+        <script src="../../js/distro.js"></script>
+
+
+    </body>
+</html>

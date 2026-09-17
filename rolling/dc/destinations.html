@@ -1,0 +1,805 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Destinations - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/lineicon.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../open-in.css">
+        <link rel="stylesheet" href=".././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../css/logo.css">
+        <link rel="stylesheet" href="../css/lineicon.css">
+        <link rel="stylesheet" href="../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/rolling/doc/src/dc/destinations.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="destinations"><a class="header" href="#destinations">Destinations</a></h1>
+<p>A <strong>Destination</strong> is an external system that receives Records or Files. In the DC 2.0
+architecture (<a href="./adr/0003-blessed-destinations-plus-passthrough.html">ADR-0003</a>), the
+pluginlib destination-plugin layer is retired. The Bridge (<code>dc_bridge</code>) renders the
+external Vector <strong>Shipper's</strong> configuration from plain ROS parameters for a <strong>blessed
+set</strong> of <code>receives: records</code> Destination types — <code>file</code>, <code>vector</code> — and every other
+destination in Vector's sink catalog, including <code>postgres</code>, <code>s3</code> and <code>console</code>, is
+available through the <strong>passthrough</strong>: raw Vector config snippets listed in the
+<code>custom_config_files</code> parameter, merged into the same rendered config (see
+<a href="#passthrough-custom_config_files">Passthrough</a> below).</p>
+<p><code>type: s3</code> also stays blessed, but only for <code>receives: files</code> Destinations — object
+storage there is served entirely by the separate Uploader process reading these same ROS
+params (<a href="./adr/0005-file-uploads-are-bridge-responsibility.html">ADR-0005</a>), never by a
+Vector sink, so there is no passthrough equivalent for it (see
+<a href="#file-uploads-receives-files-the-uploader-adr-0005">File uploads</a> below).
+<code>postgres</code>/<code>s3</code> (for <code>receives: records</code>)/<code>console</code> were blessed types through DC 2.0's
+early releases; their dedicated ROS-param templating was removed in
+<a href="https://github.com/minipada/ros2_data_collection/issues/471">#471</a>/<a href="https://github.com/minipada/ros2_data_collection/issues/472">#472</a>
+once passthrough recipes for all three shipped
+(<a href="https://github.com/minipada/ros2_data_collection/issues/470">#470</a>) — see
+<a href="#recipes-postgres-s3-console-via-passthrough">Recipes</a> below for the equivalent
+snippets.</p>
+<h2 id="verified-sink-versions"><a class="header" href="#verified-sink-versions">Verified sink versions</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Sink</th><th>Version verified</th></tr></thead><tbody>
+<tr><td>Vector (the Shipper itself)</td><td>0.57.0 (vendored by <code>vector_vendor</code>)</td></tr>
+<tr><td>PostgreSQL (<code>postgres</code>)</td><td>13.23</td></tr>
+<tr><td>RustFS (<code>s3</code>)</td><td>v1.0.0-beta.11</td></tr>
+<tr><td>Elasticsearch (passthrough)</td><td>8.19.5</td></tr>
+<tr><td>InfluxDB (passthrough)</td><td>1.8.10</td></tr>
+</tbody></table>
+</div>
+<p><code>console</code> and <code>file</code> write to local stdout/disk — no external version to track. Any
+other passthrough sink is whatever's current in
+<a href="https://vector.dev/docs/reference/configuration/sinks/">Vector's own sink catalog</a> for
+the pinned 0.57.0 release above.</p>
+<div id="admonition-what-is-public-api-here" class="admonition admonish-abstract" role="note" aria-labelledby="admonition-what-is-public-api-here-title">
+<div class="admonition-title">
+<div id="admonition-what-is-public-api-here-title">
+<p>What is public API here</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-what-is-public-api-here"></a>
+</div>
+<div>
+<p>Three things on this page are a stable contract you can build against, not
+implementation detail:</p>
+<ol>
+<li><strong>The configuration shape</strong> — <code>destinations: [...]</code> plus one block per Destination
+with <code>type</code>, <code>receives</code>, <code>inputs</code>, and that type's own fields.</li>
+<li><strong>The <code>dc.&lt;tag&gt;</code> routes</strong> — one Shipper route per Tag, named deterministically from
+the topic. Passthrough snippets consume these.</li>
+<li><strong>The File status Record</strong> — the fields the Uploader writes under the <code>dc.files</code> Tag.</li>
+</ol>
+<p>Everything else the renderer emits (component ids other than the reserved ones, the
+exact TOML layout, Vector's own defaults) may change.</p>
+</div>
+</div>
+<h2 id="bridge-node-parameters"><a class="header" href="#bridge-node-parameters">Bridge node parameters</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
+<tr><td><code>destinations</code></td><td>Names of the Destinations to enable</td><td>list[str]</td><td>N/A (mandatory)</td></tr>
+<tr><td><code>shipper.data_dir</code></td><td>Directory for the Shipper's persistent disk buffer</td><td>str</td><td><code>"$HOME/.dc/buffer"</code></td></tr>
+<tr><td><code>shipper.buffer_max_bytes</code></td><td>Disk-buffer size; Vector rejects anything below ~256 MiB</td><td>int</td><td>Vector's minimum</td></tr>
+<tr><td><code>shipper.managed</code></td><td><code>true</code>: the Bridge locates, spawns and supervises the Shipper. <code>false</code> (unmanaged, #444): the Bridge only renders the config and connects — an orchestrator owns the Shipper's lifecycle</td><td>bool</td><td><code>true</code></td></tr>
+<tr><td><code>shipper.config_path</code></td><td>Where the rendered Shipper config is written (atomically: write then rename); shared with the Shipper container/pod in unmanaged mode</td><td>str</td><td>a temp-file path</td></tr>
+<tr><td><code>shipper.bind_host</code></td><td>The fluent source's own listen address, embedded verbatim into the rendered config — distinct from <code>vector_forward_host</code> (below), which is where <em>this</em> Bridge process connects. Coincide in managed/native mode; diverge in split mode (#445/#447), where the Shipper binds <code>0.0.0.0</code> inside its own container while the Bridge connects by that container's DNS name</td><td>str</td><td><code>vector_forward_host</code>'s value</td></tr>
+<tr><td><code>uploader.data_dir</code></td><td>Directory for the Uploader's own durable intent queue and multipart-resume state (#441) — need not share a directory with the Shipper's disk buffer</td><td>str</td><td><code>shipper.data_dir</code>'s value</td></tr>
+<tr><td><code>custom_config_files</code></td><td>Raw Vector config snippets (TOML) to merge — the passthrough</td><td>list[str]</td><td><code>[]</code></td></tr>
+<tr><td><code>vector_forward_host</code></td><td>Host <em>this</em> Bridge process's Forwarder and readiness prober connect to — not necessarily where the Shipper itself listens (see <code>shipper.bind_host</code>)</td><td>str</td><td><code>"127.0.0.1"</code></td></tr>
+<tr><td><code>vector_forward_port</code></td><td>Port <em>this</em> Bridge process's Forwarder and readiness prober connect to</td><td>int</td><td><code>24224</code></td></tr>
+<tr><td><code>files.*</code></td><td>Uploader settings; see <a href="#file-uploads-receives-files-the-uploader-adr-0005">File uploads</a></td><td>—</td><td>—</td></tr>
+</tbody></table>
+</div>
+<h2 id="deployment-modes-shippermanaged"><a class="header" href="#deployment-modes-shippermanaged">Deployment modes: <code>shipper.managed</code></a></h2>
+<p><code>shipper.managed</code> picks who owns the Shipper's process lifecycle. The Bridge renders the
+same config and connects over the shipper ingest protocol the same way in both modes —
+only whether it also locates, spawns and supervises the Vector binary changes.</p>
+<div class="table-wrapper"><table><thead><tr><th></th><th><code>shipper.managed: true</code> (default)</th><th><code>shipper.managed: false</code></th></tr></thead><tbody>
+<tr><td>Shipper supervised by</td><td>the Bridge (<code>fork</code>/<code>exec</code> + <code>PR_SET_PDEATHSIG</code>)</td><td>an external orchestrator (container runtime, Kubernetes, systemd, …)</td></tr>
+<tr><td>Vector binary</td><td>the vendored one, located on <code>AMENT_PREFIX_PATH</code></td><td>not located at all — the orchestrator runs its own (e.g. the upstream Vector image)</td></tr>
+<tr><td><code>vector validate</code> at startup</td><td>yes, against the merged config</td><td>no — nothing to validate against without a binary</td></tr>
+<tr><td><code>shipper.config_path</code></td><td>usually left at its temp-file default</td><td>set to a path on a volume shared with the Shipper container/pod</td></tr>
+<tr><td><code>~/ready</code> semantics</td><td>ready once the supervised Shipper accepts connections</td><td>identical: a TCP probe against <code>vector_forward_host:vector_forward_port</code>, independent of who spawned it</td></tr>
+</tbody></table>
+</div>
+<p><strong>Use <code>shipper.managed: true</code> (the default) for:</strong></p>
+<ul>
+<li><strong>Single-robot / simulation / demos</strong> — one process tree on one machine, <code>apt install</code>
+or a workspace build, nothing else to run or orchestrate. This is what every demo under
+<a href="./demos.html">Demos</a> and the <code>dc_simulation</code> warehouse simulation use.</li>
+<li><strong>Local development and testing</strong> — fewer moving parts: no container runtime, no
+volumes to wire up, <code>ros2 launch dc_bringup dc_bringup.launch.py</code> is the whole story.</li>
+</ul>
+<p>Nothing about this mode changes with <code>shipper.managed</code> added — it is, and remains, the
+default, and an existing deployment that never sets the parameter is unaffected.</p>
+<p><strong>Use <code>shipper.managed: false</code> for:</strong></p>
+<ul>
+<li><strong>Multi-container / orchestrator-managed deployments</strong> — Vector runs as its own
+container (the upstream image, not the vendored binary) under Compose, Podman Quadlet
+or Kubernetes, alongside the ROS/Bridge container on the same host. Set
+<code>shipper.config_path</code> to a path on a volume both containers mount, so the Bridge writes
+the config where the Shipper container reads it; the atomic write (below) is what makes
+that handoff safe even while the Shipper is already watching the file.</li>
+<li><strong>Per-component operations</strong> — separate logs (no ROS/Vector log interleaving),
+independent restarts, and orchestrator-native resource limits/credentials for the
+Shipper, without changing anything about how the Bridge renders or validates its
+config.</li>
+</ul>
+<p>This parameter is the Bridge-side building block for the larger split-deployment and
+fleet topologies tracked in #440. <code>dc_uploader</code> as its own process
+(<a href="./adr/0014-uploader-runs-as-its-own-process.html">ADR-0014</a>) and the blessed <code>vector</code>
+Destination type for robot→edge forwarding have both since shipped; running <code>dc_uploader</code>
+as its own <em>container</em>, with its own volumes and credentials, remains #447's work, not
+shipped by <code>shipper.managed</code> alone.</p>
+<h3 id="atomic-config-write"><a class="header" href="#atomic-config-write">Atomic config write</a></h3>
+<p>The rendered config is always written atomically — a full write to
+<code>&lt;shipper.config_path&gt;.tmp</code>, then <code>rename()</code> over the real path — in both modes. A reader
+polling the path (an unmanaged Shipper container watching a shared volume; <code>vector validate</code> in managed mode) can therefore never observe a partial write, regardless of how
+large the config is or how the two containers' write/read timing lines up.</p>
+<h2 id="configuration-contract"><a class="header" href="#configuration-contract">Configuration contract</a></h2>
+<p>Every Destination is declared in the <code>destinations</code> list of the <code>dc_bridge</code> node's
+parameters, with a parameter block named after it (see
+<code>dc_bringup/params/dc_params.yaml</code> for a complete commented example):</p>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"   # Vector's disk-buffer directory
+      # buffer_max_bytes: 268435488  # optional; Vector's disk-buffer minimum
+    destinations: ["records_log", "to_aggregator", "rustfs"]
+    records_log:
+      type: file
+      receives: records
+      inputs: ["/dc/measurement/uptime"]   # ROS topics feeding this Destination
+      path: "/var/log/dc/records-%Y-%m-%d.log"   # Vector template syntax allowed
+    to_aggregator:
+      type: vector
+      receives: records
+      inputs: ["/dc/measurement/uptime"]
+      host: "edge-aggregator.local"
+      port: 6000
+    rustfs:
+      type: s3               # blessed only for `receives: files` — see below
+      receives: files
+      bucket: "dc-records"
+      endpoint: "http://127.0.0.1:9000"    # omit for AWS S3
+      region: "us-east-1"
+      access_key_id: "rustfsadmin"         # omit both to use ambient AWS credentials
+      secret_access_key: "$DC_S3_SECRET"
+      force_path_style: true               # path-style addressing for self-hosted stores
+      key_prefix: "robot1/"
+</code></pre>
+<p>The <code>vector</code> type forwards to another Shipper over Vector's own native inter-instance
+protocol (<code>type = "vector"</code> sink → <code>type = "vector"</code> source) — the standard way to chain
+a robot's local Shipper to an edge aggregator's Shipper in a fleet deployment. <code>host</code> and
+<code>port</code> name the downstream Shipper; there is no default for either, since there's no
+sensible address to assume for another Shipper.</p>
+<p>The <code>s3</code> type — used above with <code>receives: files</code> — works with any S3-compatible store.
+For self-hosting, <a href="https://rustfs.com/">RustFS</a> (Apache 2.0, S3-compatible, a drop-in
+MinIO replacement) is the recommended choice — MinIO's community edition was archived
+upstream in 2026 and no longer receives maintenance — but existing MinIO or Ceph RGW
+deployments work identically: set <code>endpoint</code>, explicit credentials, and (typically)
+<code>force_path_style: true</code>. See <a href="#file-uploads-receives-files-the-uploader-adr-0005">File uploads</a>
+below for the full <code>receives: files</code> contract; <code>batch_timeout_secs</code> above is a
+<code>receives: records</code> passthrough recipe field only (see
+<a href="#recipes-postgres-s3-console-via-passthrough">Recipes</a>), not something the Uploader's
+own S3 client uses.</p>
+<p>Common parameters for every blessed type: <code>type</code>, <code>receives</code> (<code>records</code> | <code>files</code>, see
+the File uploads section below), <code>inputs</code> (ROS topic names — required for <code>receives: records</code>; optional for <code>receives: files</code>, see below), <code>time_key</code> (default <code>date</code>) and
+<code>time_format</code> (default <code>epoch_nanos</code>, <code>receives: records</code> only) controlling the
+normalized timestamp field written into each Record before routing.</p>
+<h3 id="time_format"><a class="header" href="#time_format"><code>time_format</code></a></h3>
+<p>The Bridge forwards each Record's timestamp at full nanosecond resolution, taken from the
+ROS message header. <code>time_format</code> decides how that is written into the Record:</p>
+<div class="table-wrapper"><table><thead><tr><th>Value</th><th>Written as</th><th>Resolution kept</th></tr></thead><tbody>
+<tr><td><code>epoch_nanos</code></td><td>integer nanoseconds since the epoch (default)</td><td>nanosecond — exact</td></tr>
+<tr><td><code>iso8601</code></td><td><code>2026-08-09T11:36:28.123456789</code> string</td><td>nanosecond</td></tr>
+<tr><td><code>double</code></td><td>fractional seconds as a float64</td><td>~microsecond, rounds</td></tr>
+</tbody></table>
+</div>
+<p><code>double</code> is lossy by construction, not by implementation: a float64 has ~15–16 significant
+digits and current epoch seconds already consume 10 of them. It remains available for
+consumers that want a fractional-seconds column, but it cannot represent the resolution
+the pipeline delivers.</p>
+<div id="admonition-warning" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-title">
+<div class="admonition-title">
+<div id="admonition-warning-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning"></a>
+</div>
+<div>
+<p>The destination's own column type can truncate independently of <code>time_format</code>. A
+<code>double precision</code> column rounds an <code>epoch_nanos</code> value back off; PostgreSQL's native
+<code>timestamptz</code> is microseconds internally; Elasticsearch's <code>date</code> type is milliseconds
+(use <code>date_nanos</code> for the full value). Choose the column to match — <code>bigint</code> for
+<code>epoch_nanos</code> is exact, sortable and indexable.</p>
+</div>
+</div>
+<h3 id="incident_id"><a class="header" href="#incident_id"><code>incident_id</code></a></h3>
+<p>A Measurement configured for <a href="./measurements.html">incident capture</a> tags every Record it
+releases with the <code>incident_id</code> of the <code>FlushEvent</code> that released it. That field is typed on
+the <code>StringStamped</code> Record envelope (#506), and the Bridge lifts it into a top-level key of
+the payload JSON before handing a Record to its Destinations — no per-Destination
+configuration is needed to expose it. A <code>postgres</code> sink (via the
+<a href="#recipes-postgres-s3-console-via-passthrough">passthrough recipe</a> below) can therefore
+write it straight into its own <strong><code>incident_id</code> column</strong> with no extra mapping —
+"everything from this one event" is a plain <code>WHERE incident_id = '…'</code> query — since
+Vector's <code>postgres</code> sink has no column options of its own: a top-level event key lands in
+the same-named column and everything else is dropped. The column has to exist in the
+table before the first incident, exactly like every other column (<code>tools/e2e/sql/init.sql</code>
+and <code>tools/infrastructure/docker/config/postgresql/init.sql</code> both carry it):</p>
+<pre><code class="language-sql">ALTER TABLE dc ADD COLUMN incident_id text;
+</code></pre>
+<p>Records collected outside an incident carry an empty <code>incident_id</code>, and an empty envelope
+field is never lifted, leaving the column NULL.</p>
+<div id="admonition-note" class="admonition admonish-note" role="note" aria-labelledby="admonition-note-title">
+<div class="admonition-title">
+<div id="admonition-note-title">
+<p>Note</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-note"></a>
+</div>
+<div>
+<p>Through <a href="https://github.com/minipada/ros2_data_collection/issues/471">#471</a>, the blessed
+<code>postgres</code> Destination additionally coerced <code>incident_id</code> to a string (or <code>null</code>) before
+insertion, so a Measurement whose own payload happened to set a non-string <code>incident_id</code>
+couldn't fail the whole insert batch. That coercion was Bridge-side templating specific
+to the now-removed blessed <code>postgres</code> type and is not reproduced by the passthrough
+recipe — in the (narrow) case where a Measurement's payload sets a non-string
+<code>incident_id</code>, add your own <code>remap</code> transform ahead of the passthrough sink if this
+matters for your data.</p>
+</div>
+</div>
+<p>Type-specific parameters:</p>
+<div class="table-wrapper"><table><thead><tr><th>Type</th><th><code>receives</code></th><th>Required</th><th>Optional</th></tr></thead><tbody>
+<tr><td><code>file</code></td><td><code>records</code></td><td><code>path</code> (Vector template syntax allowed)</td><td></td></tr>
+<tr><td><code>vector</code></td><td><code>records</code></td><td><code>host</code>, <code>port</code></td><td></td></tr>
+<tr><td><code>s3</code></td><td><code>files</code></td><td><code>bucket</code></td><td><code>region</code>, <code>endpoint</code>, <code>key_prefix</code>, <code>access_key_id</code> + <code>secret_access_key</code> (together), <code>force_path_style</code></td></tr>
+</tbody></table>
+</div>
+<p><code>postgres</code>, <code>s3</code> (for <code>receives: records</code>) and <code>console</code> are configured via the
+<a href="#passthrough-custom_config_files">passthrough</a> instead — see
+<a href="#recipes-postgres-s3-console-via-passthrough">Recipes</a> below.</p>
+<p>Invalid parameters (unknown <code>type</code>, missing required field, half a credential pair, an
+out-of-range port…) are rejected with a clear error at Bridge startup — before Vector
+is ever started.</p>
+<p><code>$VAR</code> environment references are expanded by the Bridge in <code>shipper.data_dir</code>,
+<code>custom_config_files</code>, and the <code>secret_access_key</code> credential — and <strong>nowhere else</strong>. In
+particular <code>file</code>'s <code>path</code> is handed to Vector verbatim, and Vector does not expand
+environment variables there: <code>path: "$HOME/records.ndjson"</code> silently writes to a literal
+<code>$HOME</code> directory beside the Bridge's working directory. Use an absolute path (Vector
+creates missing parent directories).</p>
+<h2 id="the-dctag-routing-contract-public-api"><a class="header" href="#the-dctag-routing-contract-public-api">The <code>dc.&lt;tag&gt;</code> routing contract (public API)</a></h2>
+<p>The Bridge exposes one Shipper route per <strong>Tag</strong>. The Tag for a topic is its name with
+the leading <code>/</code> dropped and the remaining <code>/</code> turned into <code>.</code>
+(<code>/dc/measurement/uptime</code> → <code>dc.measurement.uptime</code>), and its route is named
+<strong><code>dc.&lt;tag&gt;</code></strong> — the leading <code>dc.</code> names the Bridge's route transform, the rest is the
+Tag verbatim (so <code>/dc/measurement/uptime</code>'s Records are consumable as
+<code>dc.dc.measurement.uptime</code>). These names are <strong>stable public API</strong>: blessed sinks are
+wired to them internally, and custom snippets consume them the same way. A route
+exists for every topic listed in any configured Destination's <code>inputs</code>.</p>
+<p>One route is not per-Tag: <strong><code>dc.dc.raw</code></strong> carries the whole <code>dc.raw.</code> Tag namespace when
+<a href="./raw_topics.html">raw topic collection</a> is enabled. Raw mode discovers topics — and so
+mints Tags — while the Shipper is already running, which no fixed set of exact-Tag
+branches can cover, so that branch matches on the Tag <em>prefix</em> instead. It is consumable
+from a snippet exactly like the others; each event still carries its own <code>tag</code> field.</p>
+<h2 id="passthrough-custom_config_files"><a class="header" href="#passthrough-custom_config_files">Passthrough: <code>custom_config_files</code></a></h2>
+<p>Any Vector sink type ships Records with zero DC code by consuming <code>dc.&lt;tag&gt;</code> routes
+from a raw Vector config snippet (TOML):</p>
+<pre><code class="language-toml"># ~/.dc/custom_sinks.toml — an un-blessed sink type (http), pure Vector config
+[sinks.my_http]
+type = "http"
+inputs = ["dc.dc.measurement.uptime"]   # the public dc.&lt;tag&gt; route
+uri = "http://127.0.0.1:8080/ingest"
+encoding.codec = "json"
+</code></pre>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    custom_config_files: ["$HOME/.dc/custom_sinks.toml"]
+</code></pre>
+<p>Snippets must not re-define component ids owned by the generated config (the
+<code>dc_bridge_in</code> source, the <code>dc_bridge_normalize</code> and <code>dc</code> transforms, or any configured
+Destination's name) or by another snippet. An invalid or colliding snippet is a loud
+Bridge startup error naming the offending file. The Bridge then folds every validated
+snippet into the same file it writes to <code>shipper.config_path</code> — one self-contained file
+regardless of <a href="#deployment-modes-shippermanaged">deployment mode</a>, since in unmanaged mode
+a snippet's own filesystem path is never wired into the separately-run Shipper container —
+and, in managed mode, runs <code>vector validate</code> over that merged file as a backstop before
+starting Vector. A snippet may define transforms as well as sinks — only <em>defining</em> a
+reserved id is rejected, consuming one is not.</p>
+<p>A snippet cannot route a topic on its own. The Bridge derives both its ROS subscriptions
+and its <code>dc.&lt;tag&gt;</code> route branches from <code>destinations</code>, and never reads a snippet's
+<code>inputs</code> — so every topic a snippet consumes must also appear in some blessed
+Destination's <code>inputs</code>, and <code>destinations</code> must name at least one (a <code>file</code> Destination is
+the cheapest way to satisfy that). Two consequences follow from the passthrough being
+outside the rendered config: the snippet's sink gets Vector's <strong>default in-memory
+buffer</strong>, not the disk buffer <code>dc_bridge</code> gives every blessed sink, and it is the
+snippet's job to make re-delivery idempotent if the store cares — the Shipper is
+at-least-once (<a href="./adr/0002-vector-as-default-shipper.html">ADR-0002</a>) either way.</p>
+<p>The <a href="./demos/elasticsearch.html">Elasticsearch tutorial</a> is the worked example for all of
+this, end to end; the <a href="./demos/tb3_aws_influxdb.html">InfluxDB demo</a> is the same mechanism
+against a simulated robot. <a href="./demos/mcap_recording.html">MCAP recording</a>
+(<a href="./adr/0009-mcap-as-a-passthrough-destination.html">ADR-0009</a>, issue #210) is the same
+passthrough consumed by a standalone process instead of a Vector-native sink — the shape
+to follow for any store Vector has no sink for at all.</p>
+<h3 id="recipes-postgres-s3-console-via-passthrough"><a class="header" href="#recipes-postgres-s3-console-via-passthrough">Recipes: <code>postgres</code>, <code>s3</code>, <code>console</code> via passthrough</a></h3>
+<p>Per ADR-0003, <code>postgres</code>, <code>s3</code> (for <code>receives: records</code>) and <code>console</code> are pure
+Vector-sink wrappers with no DC-specific logic layered on top — Vector's own <code>vector validate</code> already gives clear, field-level errors for these three sinks, so passthrough
+loses nothing on the validation front for this subset. This is now the <strong>only</strong> way to
+configure them: their dedicated ROS-param templating was removed in
+<a href="https://github.com/minipada/ros2_data_collection/issues/471">#471</a>/<a href="https://github.com/minipada/ros2_data_collection/issues/472">#472</a>.
+Each recipe below reproduces exactly what <code>dc_bridge</code> used to render for the equivalent
+formerly-blessed configuration — confirmed by running Vector 0.57.0 against a live
+PostgreSQL and RustFS instance, not just written by inspection.</p>
+<p>As with any passthrough, at least one blessed Destination is still needed to create the
+<code>dc.&lt;tag&gt;</code> route the snippet consumes — <code>file</code> is the cheapest (see
+<a href="#passthrough-custom_config_files">above</a>). If you're migrating the <code>console</code> Destination
+itself, keep a <code>file</code> Destination (or another cheap blessed type) as the route anchor
+instead.</p>
+<p><strong><code>postgres</code></strong> — the former blessed form's <code>host</code>/<code>port</code>/<code>user</code>/<code>password</code>/<code>database</code>
+collapse into a single connection-string <code>endpoint</code>; <code>table</code> is unchanged:</p>
+<pre><code class="language-toml"># ~/.dc/postgres_sink.toml — passthrough equivalent of the blessed `pgsql` Destination
+[sinks.pgsql]
+type = "postgres"
+inputs = ["dc.dc.measurement.uptime"]   # the public dc.&lt;tag&gt; route
+endpoint = "postgres://dc:${DC_PG_PASSWORD}@127.0.0.1:5432/dc"  # user:password@host:port/database
+table = "dc"
+
+[sinks.pgsql.buffer]
+type = "disk"
+max_size = 268435488   # Vector's disk-buffer minimum; a passthrough sink gets none by default
+</code></pre>
+<p>If <code>user</code> or <code>password</code> contain characters reserved in a URI (<code>:</code>, <code>@</code>, <code>/</code>, <code>%</code>),
+percent-encode them yourself — the former blessed form did this automatically, but a
+passthrough <code>endpoint</code> is handed to Vector verbatim.</p>
+<p><strong><code>s3</code></strong> — Vector's own sink id is <code>aws_s3</code>, not <code>s3</code>; credentials move under
+<code>[sinks.&lt;name&gt;.auth]</code> and <code>batch_timeout_secs</code> becomes <code>[sinks.&lt;name&gt;.batch] timeout_secs</code>:</p>
+<pre><code class="language-toml"># ~/.dc/s3_sink.toml — passthrough equivalent of the blessed `rustfs` Destination
+[sinks.rustfs]
+type = "aws_s3"                          # Vector's sink id — not "s3"
+inputs = ["dc.dc.measurement.uptime"]
+bucket = "dc-records"
+endpoint = "http://127.0.0.1:9000"       # omit for AWS S3
+region = "us-east-1"
+key_prefix = "robot1/"
+force_path_style = true                  # path-style addressing for self-hosted stores
+
+[sinks.rustfs.auth]
+access_key_id = "rustfsadmin"
+secret_access_key = "${DC_S3_SECRET}"
+
+[sinks.rustfs.batch]
+timeout_secs = 60                        # object write interval; Vector default 300
+
+[sinks.rustfs.buffer]
+type = "disk"
+max_size = 268435488
+
+[sinks.rustfs.encoding]
+codec = "json"
+</code></pre>
+<p><strong><code>console</code></strong> — had no required fields either way, so this recipe mostly matters for
+consistency with the other two:</p>
+<pre><code class="language-toml"># ~/.dc/console_sink.toml — passthrough equivalent of the blessed `console` Destination
+[sinks.debug_console]
+type = "console"
+inputs = ["dc.dc.measurement.uptime"]
+target = "stdout"                        # or "stderr"
+
+[sinks.debug_console.encoding]
+codec = "json"
+</code></pre>
+<div id="admonition-warning-1" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-1-title">
+<div class="admonition-title">
+<div id="admonition-warning-1-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning-1"></a>
+</div>
+<div>
+<p>Unlike the blessed form's <code>password</code>/<code>secret_access_key</code> (expanded by <code>dc_bridge</code> itself
+before it ever writes a config file), the <code>${VAR}</code> references above are Vector's <em>own</em>
+interpolation and are otherwise off in the vendored Vector 0.57.0 binary <code>dc_bridge</code>
+spawns — a snippet's <code>${VAR}</code> is left as a literal string, silently sent as the password
+verbatim (or rejected outright, if it contains a reserved URI character like the braces
+here). Set <code>VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION=true</code> in the environment that
+launches the Bridge process itself (the vendored Vector inherits it) to make Vector honor
+<code>${VAR}</code> inside passthrough snippet content. Without it, put the literal secret in the
+file and rely on filesystem permissions instead.</p>
+</div>
+</div>
+<h2 id="file-uploads-receives-files-the-uploader-adr-0005-adr-0014"><a class="header" href="#file-uploads-receives-files-the-uploader-adr-0005-adr-0014">File uploads: <code>receives: files</code> (the Uploader, <a href="./adr/0005-file-uploads-are-bridge-responsibility.html">ADR-0005</a>, <a href="./adr/0014-uploader-runs-as-its-own-process.html">ADR-0014</a>)</a></h2>
+<p>A Destination with <code>receives: files</code> (only <code>type: s3</code> qualifies) is served by the
+<strong>Uploader</strong> — <code>dc_uploader</code>, a separate process with its own Shipper connection
+(<a href="./adr/0014-uploader-runs-as-its-own-process.html">ADR-0014</a>) — not by a Vector sink:
+Records arriving on its <code>inputs</code> topics are durably enqueued by the Bridge, then scanned
+by <code>dc_uploader</code> for the <code>local_paths</code>/<code>remote_paths</code> File references Measurements embed
+(camera, map, …), and each referenced File is uploaded (multipart + resumable for large
+Files) to every <code>receives: files</code> Destination whose <strong>name appears as a key in
+the Record's <code>remote_paths</code></strong> — so the Destination name in the params file must match
+the remote key the Measurement is configured with. The YAML config shape below is
+unchanged by the split: <code>dc_bringup.launch.py</code> reads these same <code>files.*</code>/<code>uploader.*</code>
+parameters from the <code>dc_bridge</code> params block and translates them into <code>dc_uploader</code>'s own
+<code>DC_UPLOADER_*</code> environment variables when it starts that process.</p>
+<pre><code class="language-json">{
+  "name": "map",
+  "local_paths":  { "yaml": "/tmp/map.yaml", "pgm": "/tmp/map.pgm" },
+  "remote_paths": { "rustfs": { "yaml": "robot/map.yaml", "pgm": "robot/map.pgm" } }
+}
+</code></pre>
+<p>Per File the Uploader: uploads (<strong>multipart and resumable</strong> for large Files — an
+interrupted transfer picks up from the last completed part after a reconnect or Bridge
+restart, using progress checkpointed under <code>&lt;shipper.data_dir&gt;/uploader/</code>), <strong>verifies</strong>
+the object landed (<code>head</code> + size comparison), extracts metadata (content type, size,
+and duration via ffprobe for <code>video/*</code> Files), and emits a <strong>status Record</strong> under the
+<code>dc.files</code> Tag, routed like any Record to the Destination named by
+<code>files.metadata_destination</code>. Status rows preserve the Humble <code>files_metrics</code> shape —
+<code>group_name</code>, <code>robot_name</code>/<code>robot_id</code> (when present in the Record), <code>local_path</code>,
+<code>remote_path</code> (<code>s3://bucket/key</code>), <code>storage_type</code>, <code>uploaded</code>, <code>on_filesystem</code>,
+<code>deleted</code>, <code>content_type</code>, <code>size</code>, <code>duration</code>, <code>updated_at</code>, plus <code>thumbnail_path</code> when
+<a href="#thumbnails-optional-previews-for-image-and-video-files">thumbnails</a> are enabled — but
+the log is
+<strong>append-only</strong>: deletion appends a <code>deleted: true</code> row instead of updating one, and
+PostgreSQL is only ever written through the Shipper's parameterized sink (no SQL
+strings anywhere in DC).</p>
+<p>Two guarantees consumers can rely on:</p>
+<ul>
+<li><strong>Group completion markers</strong>: when one Record references several Files (map =
+pgm+yaml, camera batches), a <code>kind: group_complete</code> Record listing every File is
+emitted only after <strong>all</strong> of them are verified on <strong>all</strong> their Destinations — a
+consumer querying mid-upload sees per-File rows but no marker, and never has to guess
+whether a group fully arrived.</li>
+<li><strong>Deletion only after verified upload</strong>: with <code>files.delete_when_sent: true</code>, a local
+File is removed only once it is verified on every Destination that receives it.
+Retries are idempotent — already-verified objects are not re-uploaded and status rows
+are never duplicated.</li>
+</ul>
+<h3 id="durability-the-disk-backed-intent-queue"><a class="header" href="#durability-the-disk-backed-intent-queue">Durability: the disk-backed intent queue</a></h3>
+<p>Neither a Bridge nor a <code>dc_uploader</code> restart ever forgets a pending upload — the intent
+queue is a shared on-disk directory, not in-process state either owns exclusively.
+Before a files-Destination's Record is ever handed to the Uploader, it is written to
+disk as one <strong>intent</strong> — a JSON file
+(<code>{version: 1, tag, timestamp, payload}</code>) at
+<code>&lt;shipper.data_dir&gt;/queue/upload/&lt;monotonic_ts&gt;-&lt;seq&gt;.json</code>, via tmp-write-then-rename
+(crash-atomic; no <code>fsync</code>, matching Humble Fluent Bit's own <code>storage.sync normal</code>). The
+intent leaves the queue <strong>only</strong> when its Record has been fully processed — every File
+verified everywhere, or reported missing — never on a timer, a cap, or a drop-oldest
+policy: an upload intent and its Files live and die together. On startup every intent
+left over from a previous run is replayed, oldest-first, alongside live traffic; because
+processing is idempotent (an already-verified object short-circuits, multipart resumes
+from its checkpointed sidecar), a replayed intent can never re-upload or duplicate a
+status row.</p>
+<p>A permanently-failing intent cannot starve the rest of the backlog: each intent gets its
+own exponential backoff (5 s, doubling, capped at 2000 s — Humble Fluent Bit's own
+scheduler defaults) and the worker sweeps oldest-first, skipping whatever is still
+backing off rather than retrying the same head-of-line entry forever. The queue's depth
+is surfaced as a cheap observability hook in the <code>~/ready</code> service's message text.</p>
+<p>This is <strong>at-least-once</strong>, not exactly-once: a crash between a status Record being
+forwarded and its intent being acked can replay that status Record after restart (the
+Uploader's own dedup set is in-memory, so a fresh process may re-emit one it already
+sent). Consumers should key on the latest row per <code>(local_path, storage_type)</code>, same as
+the Records path.</p>
+<p>A Record referencing no Files is enqueued and acked in the same pass with no retries, so
+it never lingers in the queue's steady state. Note that <code>base64</code>-heavy Records (e.g. a
+map's <code>save_base64: on</code>) inline file content directly into the payload and so consume
+queue-directory bytes proportionally faster than a plain File reference.</p>
+<h3 id="thumbnails-optional-previews-for-image-and-video-files"><a class="header" href="#thumbnails-optional-previews-for-image-and-video-files">Thumbnails: optional previews for image and video Files</a></h3>
+<p>A dashboard drawing a grid of inspection photos otherwise pulls every full-size camera
+JPEG — and every video file — just to render tiles. With <code>files.thumbnails</code> enabled, the
+Uploader derives a small JPEG preview from each image or video File and uploads it next
+to the original as <code>&lt;remote_path&gt;.thumb.jpg</code>, recording it in that File's status Record
+as <code>thumbnail_path</code> (same <code>s3://bucket/key</code> shape as <code>remote_path</code>; the field is simply
+absent when there is no preview).</p>
+<p><strong>Default is off</strong>, and enabling it cannot change what happens to your data:</p>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    files:
+      thumbnails:
+        enabled: true
+        max_dimension: 320       # bound on the preview's longest side, in pixels
+        ffmpeg_binary: "ffmpeg"  # override if it isn't on PATH
+</code></pre>
+<p>A preview is a <strong>derived</strong> artefact and is treated as strictly secondary to the File it
+comes from:</p>
+<ul>
+<li>It is generated only <strong>after</strong> the original is uploaded and verified on that
+Destination, never before or in parallel.</li>
+<li>Every failure — no <code>ffmpeg</code> on <code>PATH</code>, an undecodable File, a store that rejects the
+preview — is swallowed. It never fails, delays, retries, or blocks the primary upload;
+the File uploads exactly as it would with the feature off, and the only visible
+difference is a missing <code>thumbnail_path</code> plus a Bridge warning counting how many
+previews couldn't be generated.</li>
+<li>Local previews are scratch files under <code>&lt;shipper.data_dir&gt;/uploader/thumbs/</code>, removed
+before the Record finishes processing. So a preview never joins the un-uploaded pool
+<a href="#retention-bounded-local-storage-for-un-uploaded-files">retention</a> measures and can
+never outlive its original: an intent retention sheds never uploaded, so no preview
+was ever derived from it.</li>
+<li>Remote previews are idempotent by key. A Bridge restart mid-upload replays the intent,
+finds the preview already on the store, and neither re-decodes nor re-uploads it.</li>
+</ul>
+<p><code>max_dimension</code> bounds the <strong>longest side</strong>; aspect ratio is preserved and a File already
+smaller than the bound is never upscaled. Images become a scaled still; videos become
+their first frame. Files that are neither (map YAML, logs) are skipped entirely rather
+than handed to a decoder.</p>
+<p><strong>The decode dependency</strong>: previews are generated by shelling out to the <strong>ffmpeg CLI</strong>,
+the same toolchain <code>files.ffprobe_binary</code> already uses for the <code>duration</code> column — one
+tool covering both stills and video first-frames, kept out of <code>dc_uploader</code>'s link line,
+and crash-isolated in a child process. <code>dc_uploader</code> is built from the <code>dc_bridge</code>
+colcon package, and that package's <code>package.xml</code> declares <code>ffmpeg</code> as an <code>exec_depend</code>,
+so <code>rosdep install</code> provides it; if it is missing at runtime <code>dc_uploader</code> still uploads
+normally and simply produces no previews.</p>
+<h3 id="retention-bounded-local-storage-for-un-uploaded-files"><a class="header" href="#retention-bounded-local-storage-for-un-uploaded-files">Retention: bounded local storage for un-uploaded Files</a></h3>
+<p>The intent queue above never abandons an intent by design — an intent and its Files
+live and die together, and deleting the only copy of data as a side effect of queue
+management is forbidden. That means a robot offline for weeks, or pointed at a store
+that's unreachable for weeks, accumulates un-uploaded Files on disk <strong>without bound</strong>,
+same as Humble did. A full disk takes down more than DC, so <code>files.retention</code> is the
+<strong>one, explicit, opt-in, audited</strong> mechanism allowed to abandon data under disk
+pressure — nothing else in the system deletes a File it hasn't verified was uploaded.</p>
+<p><strong>Default is off</strong>: with <code>files.retention</code> absent (or both limits at their defaults),
+behavior is unchanged — accumulation, matching Humble. Configuring it is a deliberate
+choice to shed data rather than run out of disk:</p>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    files:
+      retention:
+        max_bytes: 10737418240   # cap on the un-uploaded Files pool; 0/absent = unlimited (default)
+        max_age_days: 30         # optional; whichever limit is hit first
+</code></pre>
+<p>Scope is exactly the pool of Files referenced by intents still pending in
+<code>&lt;shipper.data_dir&gt;/queue/upload/</code> — the same disk-backed queue the durability section
+above describes. A File the Uploader has already verified everywhere but is still
+waiting to physically delete (<code>files.delete_when_sent</code>, e.g. after a filesystem error)
+is <strong>never</strong> retention's victim; that's <code>delete_when_sent</code>'s own retry loop to resolve,
+not retention's.</p>
+<p>When either limit is exceeded, <code>dc_uploader</code> sheds the <strong>oldest</strong> eligible intent — its
+File(s) and its queue entry, always together, never one without the other — and repeats
+until back under both limits. Each shed File gets its own audit row through the normal
+<code>dc.files</code> metadata path: <code>deleted: true, uploaded: false</code> is the queryable "shed
+without upload" signature, distinct from a normal <code>delete_when_sent</code> deletion (which is
+always <code>uploaded: true</code>, since that path only ever deletes a File already confirmed on
+every Destination). Emitting the audit row is best-effort — a Shipper outage doesn't
+block the shed itself — but every shed always logs a rate-limited warning, since data
+was just abandoned without ever leaving the robot.</p>
+<p>A Destination named by <code>metadata_destination</code> may declare <strong>no <code>inputs</code> at all</strong> — being
+named there is itself what routes the <code>dc.files</code> Tag to it. That is the usual shape when
+the status log lives in its own table: one blessed <code>file</code> Destination (typically anchoring
+a passthrough <code>postgres</code> sink, <a href="#recipes-postgres-s3-console-via-passthrough">Recipes</a>
+above) with <code>inputs</code> for the Records, and a second one with no <code>inputs</code> for the File
+status log.</p>
+<p><code>inputs</code> is otherwise mandatory: a Destination that neither lists a topic nor receives
+<code>dc.files</code> would have nothing to deliver, and is rejected at Bridge startup.</p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/destinations.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../dc/triggers/edge_trigger.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../dc/raw_topics.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../dc/triggers/edge_trigger.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../dc/raw_topics.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../js/mermaid.js"></script>
+        <script src="../js/mermaid-init.js"></script>
+        <script src="../js/theme.js"></script>
+        <script src="../js/distro.js"></script>
+
+
+    </body>
+</html>

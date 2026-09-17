@@ -1,311 +1,89 @@
-<!DOCTYPE HTML>
-<html lang="en" class="sidebar-visible no-js navy">
-    <head>
-        <!-- Book generated using mdBook -->
-        <meta charset="UTF-8">
-        <title>Introduction - Data Collection for ROS 2</title>
-
-
-        <!-- Custom HTML head -->
-
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#ffffff" />
-
-        <link rel="icon" href="favicon.svg">
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
-        <link rel="stylesheet" href="css/lineicon.css">
-        <link rel="stylesheet" href="css/print.css" media="print">
-
-        <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="fonts/fonts.css">
-
-        <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
-
-        <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="open-in.css">
-        <link rel="stylesheet" href="./css/mdbook-admonish.css">
-        <link rel="stylesheet" href="css/logo.css">
-        <link rel="stylesheet" href="css/lineicon.css">
-        <link rel="stylesheet" href="css/theme.css">
-
-        <!-- MathJax -->
-        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-        <!-- Hotjar -->
-        <script>
-            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
-            (function(h,o,t,j,a,r){
-                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
-                h._hjSettings={hjid:3435761,hjsv:6};
-                a=o.getElementsByTagName('head')[0];
-                r=o.createElement('script');r.async=1;
-                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
-                a.appendChild(r);
-            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
-            }
-        </script>
-    </head>
-    <body>
-        <!-- Provide site root to javascript -->
-        <script>
-            var path_to_root = "";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
-        </script>
-        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
-             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
-             the site root page itself. -->
-        <script src="toc.js"></script>
-
-        <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script>
-            try {
-                var theme = localStorage.getItem('mdbook-theme');
-                var sidebar = localStorage.getItem('mdbook-sidebar');
-
-                if (theme.startsWith('"') && theme.endsWith('"')) {
-                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
-                }
-
-                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
-                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
-                }
-            } catch (e) { }
-        </script>
-
-        <!-- Set the theme before any content is loaded, prevents flash -->
-        <script>
-            var theme;
-            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
-            if (theme === null || theme === undefined) { theme = default_theme; }
-            var html = document.querySelector('html');
-            html.classList.remove('no-js')
-            html.classList.remove('navy')
-            html.classList.add(theme);
-            html.classList.add('js');
-        </script>
-
-        <!-- Hide / unhide sidebar before it is displayed -->
-        <script>
-            var html = document.querySelector('html');
-            var sidebar = 'hidden';
-            if (document.body.clientWidth >= 1080) {
-                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
-                sidebar = sidebar || 'visible';
-            }
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
-        </script>
-
-        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
-            <div class="sidebar-scrollbox">
-                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
-                <noscript>
-                    <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
-                </noscript>
-                <footer id="nav-separator"></footer>
-                <div class="sidebar-footer">
-                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
-                        <i class="lni lni-github"></i>
-                    </a>
-                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
-                        <i class="lni lni-envelope"></i>
-                    </a>
-                    <a class="sidebar-license" target="_blank"
-                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
-                </div>
-            </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
-        </nav>
-
-        <div id="page-wrapper" class="page-wrapper">
-
-            <div class="page">
-                <div id="menu-bar-hover-placeholder"></div>
-                <div id="menu-bar" class="menu-bar sticky bordered">
-                    <div class="left-buttons">
-                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
-                            <i class="fa fa-bars"></i>
-                        </button>
-                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
-                            <i class="fa fa-paint-brush"></i>
-                        </button>
-                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
-                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
-                        </ul>
-                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
-                            <i class="fa fa-search"></i>
-                        </button>
-                    </div>
-
-                    <h1 class="menu-title">Data Collection for ROS 2</h1>
-
-                    <div class="right-buttons">
-                        <a href="print.html" title="Print this book" aria-label="Print this book">
-                            <i id="print-button" class="fa fa-print"></i>
-                        </a>
-                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
-                            <i id="git-repository-button" class="fa fa-github"></i>
-                        </a>
-                        <a href="https://github.com/minipada/ros2_data_collection/edit/jazzy/doc/src/dc/introduction.md" title="Suggest an edit" aria-label="Suggest an edit">
-                            <i id="git-edit-button" class="fa fa-edit"></i>
-                        </a>
-
-                    </div>
-                </div>
-
-                <div id="search-wrapper" class="hidden">
-                    <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
-                    </form>
-                    <div id="searchresults-outer" class="searchresults-outer hidden">
-                        <div id="searchresults-header" class="searchresults-header"></div>
-                        <ul id="searchresults">
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script>
-                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
-                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
-                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
-                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
-                    });
-                </script>
-
-                <div id="content" class="content">
-                    <main>
-                        <h1 id="dc"><a class="header" href="#dc">DC</a></h1>
-<p class="github-only" align="center">
-  <img height="300" src="./doc/src/images/dc.png" />
-</p>
-<p><strong>Source code</strong>: <a href="https://github.com/minipada/ros2_data_collection">https://github.com/minipada/ros2_data_collection</a></p>
-<p><a href="https://docs.ros.org/en/jazzy/index.html"><img src="https://img.shields.io/badge/ROS%202-jazzy-informational?style=for-the-badge" alt="ROS 2" /></a> <img src="https://img.shields.io/badge/python-3.12-informational?style=for-the-badge" alt="python" /> <img src="https://img.shields.io/badge/C++-17-informational?style=for-the-badge" alt="C++" /></p>
-<p><a href="https://codecov.io/gh/Minipada/ros2_data_collection"><img src="https://codecov.io/gh/Minipada/ros2_data_collection/branch/jazzy/graph/badge.svg?token=Y2UA5OE0KR" alt="codecov" /></a> <a href="https://minipada.testspace.com/spaces/219054?utm_campaign=badge&amp;utm_medium=referral&amp;utm_source=test"><img src="https://minipada.testspace.com/spaces/219054/badge?token=8214fc76eff8c09b47136742d644d2a1ac0e38e3" alt="tests" /></a></p>
-<div class="table-wrapper"><table><thead><tr><th>Jazzy</th></tr></thead><tbody>
-<tr><td><a href="https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml?query=branch%3Ajazzy"><img src="https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml/badge.svg?branch=jazzy" alt="prek" /></a></td></tr>
-<tr><td><a href="https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml?query=branch%3Ajazzy"><img src="https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml/badge.svg?branch=jazzy" alt="Documentation" /></a></td></tr>
-<tr><td><a href="https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment?query=branch%3Ajazzy"><img src="https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment/badge.svg?branch=jazzy" alt="Github Pages" /></a></td></tr>
-<tr><td><a href="https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml?query=branch%3Ajazzy"><img src="https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml/badge.svg?branch=jazzy" alt="CI" /></a></td></tr>
-</tbody></table>
-</div>
-<p>For detailed instructions, see the navigation sidebar, or browse
-<a href="https://github.com/Minipada/ros2_data_collection/tree/jazzy/doc/src/dc">doc/src/dc</a> on
-GitHub. <a href="https://github.com/Minipada/ros2_data_collection/blob/jazzy/SECURITY.md">Security policy</a>.</p>
-<h2 id="introduction"><a class="header" href="#introduction">Introduction</a></h2>
-<p>The DC (Data Collection) project aims at integrating data collection pipelines into ROS 2. The goal is to integrate data collection pipelines with existing APIs to enable data analytics, rather than live monitoring, which already has excellent tools available. As companies increasingly turn to autonomous robots, the ability to understand and improve operations for any type of machine in any environment has become crucial. This involves mostly pick and drop and inspection operations. This framework aims at helping collecting, validating (through JSON schemas) and sending reliably the data to create such APIs and dashboards.</p>
-<p>DC uses a modular approach, based on <a href="https://index.ros.org/p/pluginlib/">pluginlib</a> and greatly inspired by <a href="https://navigation.ros.org/">Nav2</a> for its architecture. Pluginlib is used to configure which <strong>Measurements</strong> are collected. Data leaves the robot through the <strong>Bridge</strong> (<code>dc_bridge</code>), a thin ROS 2 node that renders and supervises an external <strong>Shipper</strong>, <a href="https://vector.dev/">Vector</a>: <em>Vector is a fast, lightweight observability data pipeline, distributed as a single static binary, with native sinks for PostgreSQL, S3-compatible storage, and many more. DC gets its performance, reliability, and data integrity (backpressure handling and disk buffering) without embedding or forking it</em>. Five <strong>Destination</strong> types are configured natively from ROS parameters; every other Vector sink is reachable by passing raw Shipper configuration through, with no DC code.</p>
-<h2 id="why-collect-data-from-robots"><a class="header" href="#why-collect-data-from-robots">Why collect data from robots?</a></h2>
-<ol>
-<li><strong>Performance Monitoring</strong>: Collecting data from a robot allows you to monitor its performance and identify areas for improvement. For example, you can use data to analyze the robot's motion and identify areas where it may be experiencing issues or inefficiencies.</li>
-<li><strong>Fault Diagnosis</strong>: Data collection can also be used to diagnose faults and troubleshoot issues with the robot. By collecting data on various aspects of the robot's behavior, you can identify patterns or anomalies that may indicate problems with the system.</li>
-<li><strong>Machine Learning</strong>: Data collected from robots can be used to train machine learning models, which can be used to improve the robot's performance and behavior. For example, you can use data collected from sensors to train models for object detection or path planning.</li>
-<li><strong>Research and Development</strong>: Data collection is important for research and development in robotics. By collecting data on the behavior of robots in different scenarios, researchers can gain insights into how robots can be designed and optimized for different applications.</li>
-<li><strong>Inventory Management</strong>: Data collection can be used to monitor inventory levels and track the movement of goods within a warehouse. This can help managers identify which products are in high demand and optimize the placement of products to improve order fulfillment times.</li>
-<li><strong>Resource Allocation</strong>: Data collection can also help managers allocate resources more efficiently. For example, by monitoring the movement of people and goods within a warehouse, managers can identify bottlenecks and areas of congestion and adjust staffing and equipment allocation to address these issues.</li>
-<li><strong>Process Improvement</strong>: Data collection can be used to monitor and analyze the performance of various processes within a warehouse. By identifying areas of inefficiency or errors, managers can develop strategies for improving these processes and increasing productivity.</li>
-<li><strong>Predictive Maintenance</strong>: Data collection can be used to monitor the performance of equipment and identify potential maintenance issues before they occur. This can help managers schedule maintenance more effectively and avoid costly downtime due to equipment failure.</li>
-</ol>
-<h2 id="main-features"><a class="header" href="#main-features">Main features</a></h2>
-<ul>
-<li><strong>Open source</strong>: Currently all tools on the market are not open source. This project is in <a href="https://www.mozilla.org/en-US/MPL/2.0/">MPL-2.0 license</a>, in summary you can use without asking permission and without paying</li>
-<li><strong>Modular approach</strong>: based on pluginlib and greatly inspired by Nav2 for its architecture</li>
-<li><strong>Reliable data collection</strong>: validate and send Records to create APIs and dashboards</li>
-<li><strong>Flexible data collection</strong>: set polling interval for each Measurement or collect every Measurement with StringStamped messages</li>
-<li><strong>Customizable validation</strong>: validate Records using existing or customized JSON schemas</li>
-<li><strong>Easy to extend</strong>: add new Measurements by writing a plugin; add new Destinations with configuration alone</li>
-<li><strong>Flexible data collection conditions</strong>: collect data based on conditions such as whether the robot is moving or if a field is equal to a value</li>
-<li><strong>Condition-based data collection</strong>: collect data when a defined set of combination of all, any, or no condition are met</li>
-<li><strong>Customizable record collection</strong>: configure the number of records to collect at the start and when a condition is activated.</li>
-<li><strong>Data inspection</strong>: inspect data from camera input including barcode and QR codes</li>
-<li><strong>Fast and efficient</strong>: high performance, using an external Shipper for delivery, and designed to minimize code duplication and reduce human errors</li>
-<li><strong>Grouped Measurements</strong>: Records can be merged into Groups using the group node, based on the ApproximateTimeSynchronizer</li>
-<li><strong>File uploads</strong>: Files — <code>map_server</code> maps, camera images, videos, anything a Measurement produces — are uploaded to object storage with verified, resumable transfers, and their metadata is recorded as a Record</li>
-<li><strong>Easy to use</strong>: designed to be easy to learn and use</li>
-<li><strong>No C++ 3rd party library required</strong>: all 3rd party libraries have a vendor package in the repository</li>
-</ul>
-<p>And inherited from the Vector shipper:</p>
-<ul>
-<li>Backpressure handling</li>
-<li><a href="https://vector.dev/docs/reference/configuration/global-options/#data_dir">Disk buffering</a>, persisting Records across Destination outages and reboots</li>
-</ul>
-<p>Here is an example of a pipeline, for an AGV doing pick-and-drop and inspection work:</p>
-<p><img src="../images/agv-data-pipeline.svg" alt="AGV data pipeline: Operations and Pick/drop &amp; inspect Measurements through the Bridge + Shipper to PostgreSQL and object storage" /></p>
-<h1 id="security"><a class="header" href="#security">Security</a></h1>
-<p>Found a vulnerability? Do not open a public issue — report it privately through
-<a href="https://github.com/Minipada/ros2_data_collection/security/advisories/new">GitHub private vulnerability reporting</a>.
-The <a href="https://github.com/Minipada/ros2_data_collection/blob/jazzy/SECURITY.md">security policy</a>
-covers the supported branches, the response targets, and what is in scope.</p>
-<h1 id="license"><a class="header" href="#license">License</a></h1>
-<p>This program is under the terms of the <a href="https://www.mozilla.org/en-US/MPL/2.0/">Mozilla Public License Version 2.0</a>.</p>
-<h1 id="about-and-contact"><a class="header" href="#about-and-contact">About and Contact</a></h1>
-<p>For any inquiry, please contact David (<a href="mailto:d.bensoussan@proton.me">d.bensoussan@proton.me</a>). If your inquiry relates to bugs or open-source feature requests, consider posting a ticket on our GitHub project. If your inquiry relates to configuration support or private feature development, reach out and we will be able to support you in your projects.</p>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/introduction.md">Edit this page on GitHub.</a></footer>
-                    </main>
-
-                    <nav class="nav-wrapper" aria-label="Page navigation">
-                        <!-- Mobile navigation buttons -->
-
-                            <a rel="next" href="dc/setup.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
-
-                        <div style="clear: both"></div>
-                    </nav>
-                </div>
-            </div>
-
-            <nav class="nav-wide-wrapper" aria-label="Page navigation">
-
-                    <a rel="next" href="dc/setup.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
-            </nav>
-
-        </div>
-
-
-
-        <script>
-            window.playground_line_numbers = true;
-        </script>
-
-        <script>
-            window.playground_copyable = true;
-        </script>
-
-        <script src="ace.js"></script>
-        <script src="editor.js"></script>
-        <script src="mode-rust.js"></script>
-        <script src="theme-dawn.js"></script>
-        <script src="theme-tomorrow_night.js"></script>
-
-        <script src="elasticlunr.min.js"></script>
-        <script src="mark.min.js"></script>
-        <script src="searcher.js"></script>
-
-        <script src="clipboard.min.js"></script>
-        <script src="highlight.js"></script>
-        <script src="book.js"></script>
-
-        <!-- Custom JS scripts -->
-        <script src="js/mermaid.js"></script>
-        <script src="js/mermaid-init.js"></script>
-        <script src="js/theme.js"></script>
-
-
-    </body>
+<!DOCTYPE html>
+<!-- SPDX-FileCopyrightText: 2022-2026 David Bensoussan -->
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Data Collection for ROS 2 — pick your distro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Direct hits land on Rolling by default; the cards below are the picker. -->
+    <meta http-equiv="refresh" content="5; url=rolling/">
+    <style>
+        body {
+            font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f6f7;
+            color: #212a33;
+        }
+        main {
+            text-align: center;
+            padding: 2rem;
+            max-width: 46rem;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.4rem;
+        }
+        .sub {
+            opacity: 0.75;
+            margin-bottom: 2rem;
+        }
+        .cards {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .distro-card {
+            display: block;
+            min-width: 12rem;
+            padding: 1.2rem 1.4rem;
+            border: 1px solid #d3d8dd;
+            border-radius: 8px;
+            background: #fff;
+            text-decoration: none;
+            color: inherit;
+        }
+        .distro-card:hover {
+            border-color: #2b5d8a;
+        }
+        .distro-card h2 {
+            margin: 0 0 0.3rem;
+            font-size: 1.15rem;
+            color: #2b5d8a;
+        }
+        .distro-card p {
+            margin: 0;
+            font-size: 0.85rem;
+            opacity: 0.75;
+        }
+        .cards ul {
+            list-style: none;
+            padding: 0;
+            line-height: 1.9;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Data Collection for ROS 2</h1>
+    <p class="sub">Documentation, one set per ROS 2 distro. Taking you to the
+        <a href="rolling/">Rolling</a> docs in a few seconds.</p>
+    <div class="cards" data-distro-cards>
+        <!-- No-JS fallback; doc/js/distro.js replaces this list with cards. -->
+        <noscript>
+            <ul>
+                <li><a href="rolling/">Rolling</a> — development tip, tracks ROS 2 rolling head</li>
+                <li><a href="lyrical/">Lyrical</a> — ROS 2 Lyrical (Ubuntu resolute)</li>
+                <li><a href="jazzy/">Jazzy</a> — ROS 2 Jazzy (Ubuntu noble)</li>
+            </ul>
+        </noscript>
+    </div>
+</main>
+<script src="rolling/js/distro.js"></script>
+</body>
 </html>

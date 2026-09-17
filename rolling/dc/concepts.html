@@ -1,0 +1,457 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Concepts - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/lineicon.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../open-in.css">
+        <link rel="stylesheet" href=".././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../css/logo.css">
+        <link rel="stylesheet" href="../css/lineicon.css">
+        <link rel="stylesheet" href="../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/rolling/doc/src/dc/concepts.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="concepts"><a class="header" href="#concepts">Concepts</a></h1>
+<p>DC has a small, fixed vocabulary. Using it precisely makes the rest of the documentation
+— and the configuration files — unambiguous.</p>
+<h2 id="glossary"><a class="header" href="#glossary">Glossary</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Term</th><th>Definition</th></tr></thead><tbody>
+<tr><td><strong>Measurement</strong></td><td>A source of sampled data (CPU, position, camera inspection…) that emits Records.</td></tr>
+<tr><td><strong>Record</strong></td><td>One timestamped JSON document flowing through the pipeline.</td></tr>
+<tr><td><strong>Condition</strong></td><td>A boolean predicate on robot state that gates whether a Measurement's Records are collected.</td></tr>
+<tr><td><strong>Trigger</strong></td><td>A plugin that fires a one-shot signal on the false→true edge of a Condition composition, releasing a Measurement's pre-event buffer. Distinct from a Condition, which gates continuously.</td></tr>
+<tr><td><strong>FlushEvent</strong></td><td>The message a Trigger broadcast node publishes when its Trigger fires, carrying the <code>incident_id</code> subscribed Measurements adopt.</td></tr>
+<tr><td><strong>Incident</strong></td><td>One flush cycle — the pre-event window a Trigger released plus its post-roll — identified by the <code>incident_id</code> every Record and File of that cycle carries.</td></tr>
+<tr><td><strong>Group</strong></td><td>A merge of Records from several Measurements into one Record, based on time proximity.</td></tr>
+<tr><td><strong>File</strong></td><td>A binary artifact produced by a Measurement (image, video, map), uploaded to object storage as-is; only its metadata travels as a Record.</td></tr>
+<tr><td><strong>Destination</strong></td><td>An external system that receives Records or Files (PostgreSQL, S3-compatible storage, console…).</td></tr>
+<tr><td><strong>Blessed Destination</strong></td><td>A Destination DC configures natively from ROS parameters: <code>postgres</code>, <code>s3</code>, <code>file</code>, <code>console</code>, <code>vector</code>.</td></tr>
+<tr><td><strong>Passthrough Destination</strong></td><td>A Destination configured by handing raw Shipper configuration through DC, unlocking the Shipper's full catalog without DC code.</td></tr>
+<tr><td><strong>Bridge</strong></td><td>The DC component (<code>dc_bridge</code>) that receives Records from ROS topics and hands them to the Shipper.</td></tr>
+<tr><td><strong>Shipper</strong></td><td>The external process (Vector by default) that buffers, transforms, and reliably delivers Records to Destinations.</td></tr>
+<tr><td><strong>Tag</strong></td><td>A label carried by a Record naming the route it is delivered on.</td></tr>
+</tbody></table>
+</div>
+<p>Relationships between them:</p>
+<ul>
+<li>A <strong>Measurement</strong> emits <strong>Records</strong>, optionally gated by one or more <strong>Conditions</strong></li>
+<li>A <strong>Group</strong> merges Records from several <strong>Measurements</strong> into one <strong>Record</strong></li>
+<li>The <strong>Bridge</strong> forwards every <strong>Record</strong> to the <strong>Shipper</strong></li>
+<li>The <strong>Shipper</strong> delivers Records to one or more <strong>Destinations</strong></li>
+<li>A <strong>File</strong> is uploaded to an object-storage <strong>Destination</strong>; its metadata becomes a <strong>Record</strong></li>
+<li>A <strong>Record</strong> carries a <strong>Tag</strong>; each Tag names a route Destinations subscribe to</li>
+<li>A <strong>Trigger</strong> fires a <strong>FlushEvent</strong>; every Measurement listening for it releases its
+buffered window as one <strong>Incident</strong></li>
+</ul>
+<div id="admonition-words-that-mean-something-specific-here" class="admonition admonish-example" role="note" aria-labelledby="admonition-words-that-mean-something-specific-here-title">
+<div class="admonition-title">
+<div id="admonition-words-that-mean-something-specific-here-title">
+<p>Words that mean something specific here</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-words-that-mean-something-specific-here"></a>
+</div>
+<div>
+<p>"Sink" is Vector's own term for an output configuration unit; DC's term for the same idea
+is <strong>Destination</strong>. "Route" is the Shipper-side path a <strong>Tag</strong> selects. A camera image is a
+<strong>File</strong>; the Record is the separate JSON document describing where that File went. A
+<strong>Condition</strong> is a level that gates collection while true; a <strong>Trigger</strong> is an edge that
+fires once, when a Condition composition flips from false to true.</p>
+</div>
+</div>
+<h2 id="ros-2"><a class="header" href="#ros-2">ROS 2</a></h2>
+<p>ROS 2 is the core middleware used for DC. If you are unfamiliar with it, visit
+<a href="https://docs.ros.org/en/rolling/">the ROS 2 documentation</a> before continuing.</p>
+<h2 id="records"><a class="header" href="#records">Records</a></h2>
+<p>A Record is a single data unit in JSON, published on a ROS topic as a
+<code>dc_interfaces/msg/StringStamped</code> message. For example, a Record from the Memory
+Measurement:</p>
+<pre><code class="language-json">{
+    "date": "2022-12-04T14:16:06.810999008",
+    "flattened": false,
+    "memory": {
+        "used": 76.007431
+    },
+    "nested": true
+}
+</code></pre>
+<p><code>flattened</code> and <code>nested</code> are added to every Record unconditionally by the base
+Measurement class — they report whether <code>nested</code>/<code>flatten</code> were configured for this
+plugin, not something you opt out of showing.</p>
+<p>The <code>StringStamped</code> message carries:</p>
+<ol>
+<li><strong>header</strong>: ROS timestamp as <code>std_msgs/Header</code></li>
+<li><strong>data</strong>: the Record, as a JSON string</li>
+<li><strong>group_key</strong>: the key this Record is nested under when merged into a Group</li>
+<li><strong>incident_id</strong>: the <a href="#triggers-and-incidents">Incident</a> a released Record belongs to;
+empty outside an incident</li>
+</ol>
+<p>The <code>data</code> string <strong>must</strong> be valid JSON:</p>
+<pre><code class="language-bash">"Robot_X:1.5, Robot_Y:1.8" # Not a valid Record
+"{'x': 1.5, 'y': 1.8}"     # Valid Record
+</code></pre>
+<h3 id="timestamps"><a class="header" href="#timestamps">Timestamps</a></h3>
+<p>The timestamp is the time the Record was created. Measurements convert ROS time to a
+UTC timestamp. Each Destination normalizes it into one field before delivery, controlled
+by <code>time_key</code> (default <code>date</code>) and <code>time_format</code> (<code>epoch_nanos</code>, the default, for exact
+integer nanoseconds since the epoch; <code>iso8601</code> for a string; <code>double</code> for fractional
+seconds, which rounds — see <a href="./destinations.html#time_format">Destinations</a>).</p>
+<h3 id="json-validation"><a class="header" href="#json-validation">JSON validation</a></h3>
+<p>Each Record is validated against a JSON schema by default, following the
+<a href="https://json-schema.org/draft/2020-12/json-schema-validation.html">JSON Schema Validation</a>
+specification. Each Measurement ships its own schema, which can be overridden from a
+custom package or disabled per Measurement with <code>enable_validator: false</code>. See
+<a href="./data_validation.html">Data validation</a>.</p>
+<h2 id="bridge-and-shipper"><a class="header" href="#bridge-and-shipper">Bridge and Shipper</a></h2>
+<p>DC's data plane is an external <strong>Shipper</strong> process, <a href="https://vector.dev/">Vector</a>, fed
+by the <strong>Bridge</strong> (<code>dc_bridge</code>) over a local socket. The Bridge renders the Shipper's
+entire configuration from plain ROS parameters — see <a href="./destinations.html">Destinations</a> —
+spawns and supervises the Shipper process, and forwards every Record it receives on its
+configured input topics.</p>
+<p>DC gets the Shipper's disk buffering, backpressure handling, retries, and native
+Destination support (PostgreSQL, S3-compatible storage, and many more) without embedding
+or forking it (<a href="./adr/0001-external-shipper-replaces-embedded-fluent-bit.html">ADR-0001</a>,
+<a href="./adr/0002-vector-as-default-shipper.html">ADR-0002</a>).</p>
+<div id="admonition-shipper-ingest-protocol" class="admonition admonish-info" role="note" aria-labelledby="admonition-shipper-ingest-protocol-title">
+<div class="admonition-title">
+<div id="admonition-shipper-ingest-protocol-title">
+<p>Shipper ingest protocol</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-shipper-ingest-protocol"></a>
+</div>
+<div>
+<p>The wire format on the local Bridge↔Shipper socket (default port 24224) is Fluentd's
+open "Forward" specification — chosen as the cheapest Shipper-native listener with
+built-in receipt acknowledgement (<a href="./adr/0002-vector-as-default-shipper.html">ADR-0002</a>).
+<strong>No Fluentd or Fluent Bit software runs
+anywhere in DC 2.0</strong>: the Bridge implements the sender side itself in a few hundred
+lines of msgpack. The word "fluent" only appears in the generated Shipper config
+(<code>type = "fluent"</code>).</p>
+</div>
+</div>
+<h2 id="tags"><a class="header" href="#tags">Tags</a></h2>
+<p>Every Record carries a <strong>Tag</strong>, derived mechanically from the topic it was published on:
+the leading <code>/</code> is dropped and the remaining <code>/</code> become <code>.</code>.</p>
+<div class="table-wrapper"><table><thead><tr><th>Topic</th><th>Tag</th><th>Public Shipper route</th></tr></thead><tbody>
+<tr><td><code>/dc/measurement/uptime</code></td><td><code>dc.measurement.uptime</code></td><td><code>dc.dc.measurement.uptime</code></td></tr>
+<tr><td><code>/dc/group/robot</code></td><td><code>dc.group.robot</code></td><td><code>dc.dc.group.robot</code></td></tr>
+<tr><td><em>(Uploader-internal)</em></td><td><code>dc.files</code></td><td><code>dc.dc.files</code></td></tr>
+</tbody></table>
+</div>
+<p>Tags are what the Shipper routes on, and the <code>dc.&lt;tag&gt;</code> route names are
+<a href="./destinations.html#the-dctag-routing-contract-public-api">stable public API</a> that
+passthrough Destinations consume. A Destination selects what it receives through its own
+<code>inputs</code> list of topics — Tags are derived from that, not configured directly.</p>
+<h2 id="destinations"><a class="header" href="#destinations">Destinations</a></h2>
+<p>A Destination is where data ends up: a file is <strong>blessed</strong> (rendered from plain ROS
+parameters), and so is another Shipper, and (only for File uploads, not Records)
+S3-compatible storage. PostgreSQL, S3-compatible storage for Records, and the console
+are reached through a <a href="./destinations.html#recipes-postgres-s3-console-via-passthrough">passthrough recipe</a>
+instead of the ROS-param form (per <a href="./adr/0003-blessed-destinations-plus-passthrough.html">ADR-0003</a>);
+any other Vector sink is reachable through the <strong>passthrough</strong> too. See
+<a href="./destinations.html">Destinations</a> for the full contract.</p>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    destinations: ["records_log"]             # Destination names to enable
+    records_log:                              # a name you choose
+      type: file                              # a blessed type
+      receives: records
+      inputs: ["/dc/measurement/uptime"]      # the topics this Destination receives
+      path: "/tmp/dc/records.ndjson"
+
+measurement_server:
+  ros__parameters:
+    measurement_plugins: ["uptime"]
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      topic_output: "/dc/measurement/uptime"  # matched by the Destination's `inputs`
+</code></pre>
+<h2 id="conditions"><a class="header" href="#conditions">Conditions</a></h2>
+<p>A Condition enables or disables one or more Measurements. For example, collect camera
+images only when the robot is stopped. A Measurement can require that all, any, or none
+of a set of Conditions are active. See <a href="./conditions.html">Conditions</a>.</p>
+<h2 id="triggers-and-incidents"><a class="header" href="#triggers-and-incidents">Triggers and incidents</a></h2>
+<p>A Condition can only give you data from the moment it turned true. When what matters is the
+run-up to an event — the seconds before an emergency brake — a <strong>Trigger</strong> is the mechanism:
+a Measurement holds its recent output in a rolling buffer instead of publishing it, and a
+Trigger firing on the false→true edge of a Condition composition broadcasts a <strong>FlushEvent</strong>
+that releases that buffer. Everything released by one firing, across every Measurement
+listening, shares one <code>incident_id</code>. See <a href="./triggers.html">Triggers</a>.</p>
+<h2 id="lifecycle-nodes-and-bond"><a class="header" href="#lifecycle-nodes-and-bond">Lifecycle Nodes and Bond</a></h2>
+<p><em>(Source: <a href="https://navigation.ros.org/concepts/index.html">Nav2 documentation</a>)</em></p>
+<p>Lifecycle (or Managed, more correctly) nodes are unique to ROS 2. More information can be <a href="https://design.ros2.org/articles/node_lifecycle.html">found here</a>. They are nodes that contain state machine transitions for bringup and teardown of ROS 2 servers. This helps in deterministic behavior of ROS systems in startup and shutdown. It also helps users structure their programs in reasonable ways for commercial uses and debugging.</p>
+<p>When a node is started, it is in the unconfigured state, only processing the node's constructor which should not contain any ROS networking setup or parameter reading. By the launch system, or the supplied lifecycle manager, the nodes need to be transitioned to inactive by configuring. After, it is possible to activate the node by transitioning through the activating stage.</p>
+<p>This state will allow the node to process information and be fully setup to run. The configuration stage, triggering the on_configure() method, will setup all parameters, ROS networking interfaces, and for safety systems, all dynamically allocated memory. The activation stage, triggering the on_activate() method, will active the ROS networking interfaces and set any states in the program to start processing information.</p>
+<p>To shutdown, we transition into deactivating, cleaning up, shutting down and end in the finalized state. The networking interfaces are deactivated and stop processing, deallocate memory, exit cleanly, in those stages, respectively.</p>
+<p>The lifecycle node framework is used extensively through out this project and all servers utilize it. It is best convention for all ROS systems to use lifecycle nodes if it is possible.</p>
+<p>Within DC, we use a wrapper of LifecycleNodes, nav2_util LifecycleNode from Nav2. This wrapper wraps much of the complexities of LifecycleNodes for typical applications. It also includes a bond connection for the lifecycle manager to ensure that after a server transitions up, it also remains active. If a server crashes, it lets the lifecycle manager know and transition down the system to prevent a critical failure. See <a href="https://navigation.ros.org/migration/Eloquent.html#eloquent-migration">Eloquent to Foxy</a> for details.</p>
+<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<div class="admonition-title">
+<div id="admonition-info-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info"></a>
+</div>
+<div>
+<p>The Bridge is deliberately <strong>not</strong> a lifecycle node and <strong>not</strong> under the lifecycle
+manager (<a href="./adr/0006-bridge-outside-lifecycle-manager.html">ADR-0006</a>): it must be up and
+its Shipper ready <em>before</em> the collection nodes
+are allowed to activate. See <a href="./data_pipeline.html">Data Pipeline</a>.</p>
+</div>
+</div>
+<p>See <a href="./lifecycle_manager.html">Lifecycle Manager</a> for the managed-node list, the bond
+heartbeat and state-transition diagrams, and the autostart flow that ties into the
+Bridge readiness gate above.</p>
+<h2 id="buffering-and-data-persistence"><a class="header" href="#buffering-and-data-persistence">Buffering and data persistence</a></h2>
+<p>The Shipper manages its own disk buffer (<code>shipper.data_dir</code> on the Bridge's parameters)
+with a documented minimum size (<code>shipper.buffer_max_bytes</code>). This buffer persists across
+reboots: Records accepted by the Bridge but not yet delivered to a Destination survive an
+outage of that Destination, a robot reboot, or a Bridge restart, and are delivered — with
+end-to-end acknowledgements — once the Destination is reachable again.</p>
+<h2 id="scheduling-and-retries"><a class="header" href="#scheduling-and-retries">Scheduling and retries</a></h2>
+<p>The Shipper retries delivery to a Destination on failure with its own backoff,
+independent of DC code; see <a href="https://vector.dev/docs/">Vector's documentation</a> for
+details. The Bridge itself is supervised by DC (launch respawn) and, in turn, supervises
+its own Shipper child process — including a Linux parent-death signal so the Shipper can
+never outlive the Bridge across a crash or SIGKILL.</p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/concepts.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../dc/demos/custom_stdout.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../dc/data_pipeline.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../dc/demos/custom_stdout.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../dc/data_pipeline.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../js/mermaid.js"></script>
+        <script src="../js/mermaid-init.js"></script>
+        <script src="../js/theme.js"></script>
+        <script src="../js/distro.js"></script>
+
+
+    </body>
+</html>

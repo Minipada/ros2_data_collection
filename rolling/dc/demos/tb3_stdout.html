@@ -1,0 +1,529 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Turtlebot3 - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../open-in.css">
+        <link rel="stylesheet" href="../.././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../../css/logo.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/rolling/doc/src/dc/demos/tb3_stdout.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="turtlebot3"><a class="header" href="#turtlebot3">Turtlebot3</a></h1>
+<p>In this example, we add a robot and start collecting robot data to Stdout.</p>
+<p>You will also need 2 terminal windows, to:</p>
+<ol>
+<li>Run the Nav2 turtlebot3 launchfile: it starts localization, navigation and RViz</li>
+<li>Run DC</li>
+</ol>
+<p>Since RViz is pretty verbose, using 2 terminal windows will help reading the JSON printed on the terminal window.</p>
+<h2 id="setup-the-environment"><a class="header" href="#setup-the-environment">Setup the environment</a></h2>
+<p>In each, terminal, source your environment and setup turtlebot configuration:</p>
+<pre><code class="language-bash">source /opt/ros/rolling/setup.bash
+source install/setup.bash
+</code></pre>
+<p>Nothing else has to be exported. Nav2's own <code>nav2_minimal_tb3_sim</code> ships the world, the
+robot and its <code>ros_gz_bridge</code> config, and puts them on <code>GZ_SIM_RESOURCE_PATH</code> itself —
+the Gazebo Classic <code>GAZEBO_MODEL_PATH</code> and <code>TURTLEBOT3_MODEL</code> variables are gone along
+with Classic.</p>
+<h2 id="start-navigation"><a class="header" href="#start-navigation">Start Navigation</a></h2>
+<p>Then, start the Turtlebot launchfile:</p>
+<pre><code class="language-bash">ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False
+</code></pre>
+<p>RViz and Gazebo will start: you should now see the robot in Gazebo, and the map on RViz.</p>
+<p>Set the robot position using the "2D Pose Estimate" button.</p>
+<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<div class="admonition-title">
+<div id="admonition-info-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info"></a>
+</div>
+<div>
+<p>If any problem occur, please take a look at the <a href="https://navigation.ros.org/getting_started/index.html#running-the-example">nav2 official documentation</a> which covers the case.</p>
+</div>
+</div>
+<h2 id="start-dc"><a class="header" href="#start-dc">Start DC</a></h2>
+<p>Execute</p>
+<pre><code class="language-bash">ros2 launch dc_demos tb3_simulation_stdout.launch.py
+</code></pre>
+<p>At the end, the data is displayed. Every Destination — <code>console</code> included — goes
+through the external Vector Shipper (<a href="../adr/0002-vector-as-default-shipper.html">ADR-0002</a>,
+<a href="../destinations.html">Destinations</a>), so
+each line below is Vector's own event object, one bare JSON object per line (not an
+array):</p>
+<pre><code>[dc_bridge-3] {"custom_keys":["robot_name","id"],"date":1788479117.6297202,"flattened":false,"height":384,"host":"127.0.0.1","id":"e110a88ba1c24602bd2c116daf5b8287","local_paths":{"pgm":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.pgm","png":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.png","yaml":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.yaml"},"name":"map","nested":false,"origin":{"x":-10,"y":-10},"resolution":0.05000000074505806,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.map","timestamp":"2026-09-03T23:45:17.629720410Z","width":384}
+[dc_bridge-3] {"cmd_vel":{"angular":{"x":0,"y":0,"z":0.0299867},"computed":0.42023804783821106,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0.420238,"y":0,"z":0},"name":"cmd_vel","nested":false,"robot_name":"C3PO","run_id":"170"},"date":1788479127.1009243,"host":"127.0.0.1","name":"robot","position":{"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","name":"position","nested":false,"robot_name":"C3PO","run_id":"170","x":-1.0834591164924419,"y":0.5133007443427651,"yaw":-0.008814692701341621},"source_type":"fluent","speed":{"angular":{"x":0,"y":0,"z":0.027356281873875128},"computed":0.33021257209388344,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0.33021257209388344,"y":0,"z":0},"name":"speed","nested":false,"robot_name":"C3PO","run_id":"170"},"tag":"dc.group.robot","tags":[""],"timestamp":"2026-09-03T23:45:27.100924197Z"}
+</code></pre>
+<p>Given the JSON is quite large, let's analyze 2 different records:</p>
+<p>The first one being the data published on the robot group. Note it's deeply nested now —
+each of <code>cmd_vel</code>, <code>position</code> and <code>speed</code> carries its own copy of the custom keys
+(<code>robot_name</code>, <code>id</code>, <code>run_id</code>), since those are applied per-measurement before the
+group node merges them, not once at the top level:</p>
+<pre><code class="language-json">{
+  "cmd_vel": {
+    "angular": {
+      "x": 0,
+      "y": 0,
+      "z": 0.0299867
+    },
+    "computed": 0.42023804783821106,
+    "custom_keys": [
+      "robot_name",
+      "id"
+    ],
+    "flattened": false,
+    "id": "e110a88ba1c24602bd2c116daf5b8287",
+    "linear": {
+      "x": 0.420238,
+      "y": 0,
+      "z": 0
+    },
+    "name": "cmd_vel",
+    "nested": false,
+    "robot_name": "C3PO",
+    "run_id": "170"
+  },
+  "date": 1788479127.1009243,
+  "host": "127.0.0.1",
+  "name": "robot",
+  "position": {
+    "custom_keys": [
+      "robot_name",
+      "id"
+    ],
+    "flattened": false,
+    "id": "e110a88ba1c24602bd2c116daf5b8287",
+    "name": "position",
+    "nested": false,
+    "robot_name": "C3PO",
+    "run_id": "170",
+    "x": -1.0834591164924419,
+    "y": 0.5133007443427651,
+    "yaw": -0.008814692701341621
+  },
+  "source_type": "fluent",
+  "speed": {
+    "angular": {
+      "x": 0,
+      "y": 0,
+      "z": 0.027356281873875128
+    },
+    "computed": 0.33021257209388344,
+    "custom_keys": [
+      "robot_name",
+      "id"
+    ],
+    "flattened": false,
+    "id": "e110a88ba1c24602bd2c116daf5b8287",
+    "linear": {
+      "x": 0.33021257209388344,
+      "y": 0,
+      "z": 0
+    },
+    "name": "speed",
+    "nested": false,
+    "robot_name": "C3PO",
+    "run_id": "170"
+  },
+  "tag": "dc.group.robot",
+  "tags": [
+    ""
+  ],
+  "timestamp": "2026-09-03T23:45:27.100924197Z"
+}
+</code></pre>
+<p>This record contains the speed, cmd_vel and position from the group "robot".</p>
+<pre><code class="language-json">{
+  "custom_keys": [
+    "robot_name",
+    "id"
+  ],
+  "date": 1788479117.6297202,
+  "flattened": false,
+  "height": 384,
+  "host": "127.0.0.1",
+  "id": "e110a88ba1c24602bd2c116daf5b8287",
+  "local_paths": {
+    "pgm": "/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.pgm",
+    "png": "/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.png",
+    "yaml": "/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.yaml"
+  },
+  "name": "map",
+  "nested": false,
+  "origin": {
+    "x": -10,
+    "y": -10
+  },
+  "resolution": 0.05000000074505806,
+  "robot_name": "C3PO",
+  "run_id": "170",
+  "source_type": "fluent",
+  "tag": "dc.measurement.map",
+  "timestamp": "2026-09-03T23:45:17.629720410Z",
+  "width": 384
+}
+</code></pre>
+<p>This record contains the map data from the measurement. There's no <code>remote_paths</code> key —
+this demo's <code>dc_bridge</code> block only declares the <code>console</code> Destination below, not a
+<code>rustfs</code> one, so nothing actually matches <code>map.remote_keys: ["rustfs"]</code> and the Bridge
+never populates it.</p>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<h3 id="measurement"><a class="header" href="#measurement">Measurement</a></h3>
+<pre><code class="language-yaml">measurement_server:
+  ros__parameters:
+    custom_keys_str: ["robot_name"]
+    robot_name: "C3PO"
+    measurement_plugins: ["cmd_vel", "map", "position", "speed"]
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: "$HOME/run_id"
+      uuid: false
+    save_local_base_path: "$HOME/dc_data/"
+    all_base_path: "=robot_name/%Y/%m/%d/%H"
+    cmd_vel:
+      plugin: "dc_measurements/CmdVel"
+      group_key: "cmd_vel"
+      enable_validator: true
+      topic_output: "/dc/measurement/cmd_vel"
+    position:
+      plugin: "dc_measurements/Position"
+      group_key: "position"
+      topic_output: "/dc/measurement/position"
+      polling_interval: 1000
+      enable_validator: true
+      init_collect: true
+      global_frame: "map"
+      robot_base_frame: "base_link"
+      transform_timeout: 0.1
+    speed:
+      plugin: "dc_measurements/Speed"
+      group_key: "speed"
+      odom_topic: "/odom"
+      topic_output: "/dc/measurement/speed"
+    map:
+      plugin: "dc_measurements/Map"
+      group_key: "map"
+      polling_interval: 5000
+      save_path: "map/%Y-%m-%dT%H:%M:%S"
+      topic_output: "/dc/measurement/map"
+      save_map_timeout: 4.0
+      remote_prefixes: [""]
+      remote_keys: ["rustfs"]
+</code></pre>
+<p><strong>save_local_base_path (Optional)</strong>: Used as a common base for all saved files from measurement plugins. <em>all_base_path</em> is concatenated to it afterwards for defining the path where files are saved.</p>
+<p><strong>all_base_path (Optional)</strong>: Used as a common base for some measurements to save files. Is concatenated to <em>save_local_base_path</em>. Note the =robot_name, which is later replaced by C3PO (the variable defined in custom_keys_str)</p>
+<p><strong>map.remote_keys</strong>: creates a dictionary inside <strong>remote_paths</strong> which is named by the strings in this field — each name must match a <code>receives: files</code> Destination in the <code>dc_bridge</code> block below, so <code>dc_uploader</code> (a separate process from the Bridge, see <a href="../adr/0014-uploader-runs-as-its-own-process.html">ADR-0014</a>) knows where to send the file.</p>
+<h3 id="group"><a class="header" href="#group">Group</a></h3>
+<pre><code class="language-yaml">group_server:
+  ros__parameters:
+    groups: ["robot"]
+    robot:
+      inputs:
+        [
+          "/dc/measurement/cmd_vel",
+          "/dc/measurement/position",
+          "/dc/measurement/speed",
+        ]
+      output: "/dc/group/robot"
+      sync_delay: 5.0
+      group_key: "robot"
+      include_group_name: true
+</code></pre>
+<p>Create a group with data from cmd_vel, position and speed. Even though it appears there is nothing new here, I shall like to precise something important. In the previous demo, we mentioned that if all messages are not received by the group, it will drop it. It matters in this case because cmd_vel is not published all the time in this example (not when it is not moving), this means the data will be collected <strong>only</strong> when the robot moves (when a controller sends a command).</p>
+<p>If you wished to collect the position and the speed constantly, you could take cmd_vel out of this group and add it in the destination.</p>
+<h4 id="destinations"><a class="header" href="#destinations">Destinations</a></h4>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["console"]
+    console:
+      type: console
+      receives: records
+      inputs: ["/dc/group/robot", "/dc/measurement/map"]
+      time_key: "date"
+      time_format: "double"
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
+
+measurement_server:
+  ros__parameters:
+    custom_key_str_list: ["robot_name", "id"]
+    custom_keys_str:
+      robot_name:
+        name: robot_name
+        value: "C3PO"
+      # Requires systemd package
+      id:
+        name: id
+        value_from_file: /etc/machine-id
+</code></pre>
+<p>Nothing new here, we simply edited the <code>console</code> Destination's <code>inputs</code> to <code>["/dc/group/robot", "/dc/measurement/map"]</code> to get the data from the robot group and the map.</p>
+<h2 id="console-output"><a class="header" href="#console-output">Console output</a></h2>
+<p>Now that the node started, let us see what's displayed in the console. Measurement server and <code>dc_bridge</code> are started in the Lifecycle, you can read more about it <a href="../concepts.html#lifecycle-nodes-and-bond">here</a>.</p>
+<p>"Base save path" and "All Base path" are also saved and expanded. Note "=robot_name" has been replaced by C3PO. <code>measurement_server</code> runs composed inside the same process as every other DC node here, so the prefix is the container's, not the node's own name:</p>
+<pre><code>[component_container_isolated-1] [INFO] [1788479023.671013064] [measurement_server]: Base save path expanded to /root/dc_data/
+[component_container_isolated-1] [INFO] [1788479023.671095239] [measurement_server]: All Base path expanded to C3PO/%Y/%m/%d/%H
+</code></pre>
+<p>Once <code>dc_bridge</code> reports ready (per <a href="../adr/0006-bridge-outside-lifecycle-manager.html">ADR-0006</a>'s <code>bridge_ready_gate</code>), the measurement plugins and the "robot" group start publishing, and we see the data on Vector's <code>console</code> sink:</p>
+<pre><code>[dc_bridge-3] {"custom_keys":["robot_name","id"],"date":1788479117.6297202,"flattened":false,"height":384,"host":"127.0.0.1","id":"e110a88ba1c24602bd2c116daf5b8287","local_paths":{"pgm":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.pgm","png":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.png","yaml":"/root/dc_data/C3PO/2026/09/03/23/map/2026-09-03T23:45:17.yaml"},"name":"map","nested":false,"origin":{"x":-10,"y":-10},"resolution":0.05000000074505806,"robot_name":"C3PO","run_id":"170","source_type":"fluent","tag":"dc.measurement.map","timestamp":"2026-09-03T23:45:17.629720410Z","width":384}
+[dc_bridge-3] {"cmd_vel":{"angular":{"x":0,"y":0,"z":0.0131854},"computed":0.17549346387386322,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0.175493,"y":0,"z":0},"name":"cmd_vel","nested":false,"robot_name":"C3PO","run_id":"170"},"date":1788479126.1020856,"host":"127.0.0.1","name":"robot","position":{"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","name":"position","nested":false,"robot_name":"C3PO","run_id":"170","x":-1.1893664880015578,"y":0.5148037648787771,"yaw":-0.02119602699838526},"source_type":"fluent","speed":{"angular":{"x":0,"y":0,"z":0},"computed":0,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0,"y":0,"z":0},"name":"speed","nested":false,"robot_name":"C3PO","run_id":"170"},"tag":"dc.group.robot","tags":[""],"timestamp":"2026-09-03T23:45:26.102085677Z"}
+[dc_bridge-3] {"cmd_vel":{"angular":{"x":0,"y":0,"z":0.0299867},"computed":0.42023804783821106,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0.420238,"y":0,"z":0},"name":"cmd_vel","nested":false,"robot_name":"C3PO","run_id":"170"},"date":1788479127.1009243,"host":"127.0.0.1","name":"robot","position":{"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","name":"position","nested":false,"robot_name":"C3PO","run_id":"170","x":-1.0834591164924419,"y":0.5133007443427651,"yaw":-0.008814692701341621},"source_type":"fluent","speed":{"angular":{"x":0,"y":0,"z":0.027356281873875128},"computed":0.33021257209388344,"custom_keys":["robot_name","id"],"flattened":false,"id":"e110a88ba1c24602bd2c116daf5b8287","linear":{"x":0.33021257209388344,"y":0,"z":0},"name":"speed","nested":false,"robot_name":"C3PO","run_id":"170"},"tag":"dc.group.robot","tags":[""],"timestamp":"2026-09-03T23:45:27.100924197Z"}
+</code></pre>
+<p>So...what happened?</p>
+<ol>
+<li>The Nav2 turtlebot3 simulation starts, a robot is able to localize and move (once you use the 2-D pose estimate on RViz)</li>
+<li>The measurement plugins start publishing data to /dc/measurement/map, /dc/measurement/cmd_vel, /dc/measurement/position and /dc/measurement/speed, which contain the JSON and timestamp of the message</li>
+<li>In parallel, each time the map plugin sends a ROS message, it also saves the files on the filesystem. Open a file browser to the path you set in the configuration to a path mentioned in the map JSON</li>
+<li>The "robot" group node subscribes to /dc/measurement/cmd_vel, /dc/measurement/position and /dc/measurement/speed and publish on /dc/group/robot when it collects data from all 3 topics</li>
+<li>Run ID and robot_name is appended in the JSON of each</li>
+<li><code>dc_bridge</code>, which subscribes to <code>/dc/group/robot</code> and <code>/dc/measurement/map</code> directly, receives the data and forwards it to the external Vector process over the shipper ingest protocol</li>
+<li>Vector's generated config applies a <code>remap</code> transform that writes the configured <code>time_key</code> in the requested <code>time_format</code></li>
+<li>Vector's <code>console</code> sink, the only one matching the <code>console</code> Destination we configured, prints the JSON to stdout</li>
+</ol>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/demos/tb3_stdout.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../dc/demos/memory_uptime_stdout.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../dc/demos/intermediate.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../dc/demos/memory_uptime_stdout.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../dc/demos/intermediate.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../../ace.js"></script>
+        <script src="../../editor.js"></script>
+        <script src="../../mode-rust.js"></script>
+        <script src="../../theme-dawn.js"></script>
+        <script src="../../theme-tomorrow_night.js"></script>
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../js/mermaid.js"></script>
+        <script src="../../js/mermaid-init.js"></script>
+        <script src="../../js/theme.js"></script>
+        <script src="../../js/distro.js"></script>
+
+
+    </body>
+</html>

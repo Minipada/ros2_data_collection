@@ -1,0 +1,368 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Mission (nav2 FollowWaypoints) - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../open-in.css">
+        <link rel="stylesheet" href="../.././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../../css/logo.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/rolling/doc/src/dc/measurements/mission_nav2_follow_waypoints.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="mission-nav2-followwaypoints"><a class="header" href="#mission-nav2-followwaypoints">Mission (nav2 FollowWaypoints)</a></h1>
+<h2 id="description"><a class="header" href="#description">Description</a></h2>
+<p>Reports the outcome of a nav2 <code>FollowWaypoints</code> mission -- a patrol or waypoint-following run,
+including nav2's own per-waypoint failure reporting -- as one <code>mission_start</code> Record when a goal is
+accepted and one <code>mission_end</code> Record when it reaches a terminal state. It is the <code>FollowWaypoints</code>
+sibling of the <code>NavigateToPose</code> Mission Measurement (#387): same Record schema, same
+<code>mission_id</code>/<code>sequence</code> conventions, its own <code>mission_type</code>.</p>
+<p>This Measurement is a <strong>passive watcher</strong>: it never sends a <code>FollowWaypoints</code> goal
+itself. Whatever already dispatches waypoint-following missions on the robot --
+<a href="https://docs.nav2.org/commander_api/index.html"><code>nav2_simple_commander</code></a>, a WMS integration, a
+teleop panel -- keeps doing exactly that; this Measurement only observes. That is a deliberate
+match to every other Measurement's read-only relationship to the systems it reports on, and it is
+also why it does not use <code>rclcpp_action::Client</code>'s typed goal-tracking API: that API only reports
+on goals the client itself sent. Instead it subscribes directly to the action's <code>_action/status</code>
+topic (<code>action_msgs/msg/GoalStatusArray</code>, the same message type for every action) to see a goal get
+accepted or reach a terminal state, and calls the action's <code>_action/get_result</code> service directly
+once it does, to fetch the Result -- both standard, public parts of the ROS 2 action wire protocol
+that any client may use, sender or not.</p>
+<h2 id="known-limitation-number_of_loops"><a class="header" href="#known-limitation-number_of_loops">Known limitation: <code>number_of_loops</code></a></h2>
+<p>nav2's <code>FollowWaypoints</code> goal carries a <code>number_of_loops</code> field (how many times to repeat the
+route), but the goal itself is never re-published anywhere a third party can observe it -- only the
+sender and the action server ever see it, and nothing in the ROS 2 action protocol (nor
+<code>rclcpp_action::Client</code>'s public API) lets a client that did not send a goal read it back. A
+passive watcher therefore cannot report <code>number_of_loops</code>, and this Measurement's Records do not
+carry it. Sending the goal itself instead of watching it would make this Measurement responsible
+for driving navigation, contradicting DC's role as a telemetry pipeline (see <code>CONTEXT.md</code>) and
+directly competing with whatever else already commands the same action -- e.g.
+<code>dc_demos/dc_demos/qrcodes_waypoint_follower.py</code>, which already sends <code>FollowWaypoints</code> goals of
+its own. If a deployment needs <code>number_of_loops</code> on this Record, it has to come from the mission
+commander via a documented escape hatch (#305's territory), not from this adapter.</p>
+<h2 id="parameters"><a class="header" href="#parameters">Parameters</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>action_name</code></td><td>string</td><td><code>follow_waypoints</code></td><td>The nav2 <code>FollowWaypoints</code> action to watch</td></tr>
+</tbody></table>
+</div>
+<h2 id="schema"><a class="header" href="#schema">Schema</a></h2>
+<pre><code class="language-json">{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MissionNav2FollowWaypoints",
+  "properties": {
+    "event": { "type": "string", "enum": ["mission_start", "mission_end"] },
+    "mission_id": { "type": "string" },
+    "mission_type": { "type": "string", "const": "follow_waypoints" },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "outcome": { "type": "string", "enum": ["succeeded", "failed", "cancelled", "aborted"] },
+    "reason": { "type": "string" },
+    "error_code": { "type": "integer", "minimum": 0 },
+    "duration_sec": { "type": "number", "minimum": 0 },
+    "missed_waypoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": { "type": "integer", "minimum": 0 },
+          "error_code": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["index", "error_code"]
+      }
+    }
+  },
+  "required": ["event", "mission_id", "mission_type", "sequence"],
+  "type": "object"
+}
+</code></pre>
+<p><code>outcome</code>, <code>duration_sec</code> and <code>missed_waypoints</code> are required on <code>mission_end</code> only. <code>reason</code> and
+<code>error_code</code> are required on <code>mission_end</code> when <code>outcome</code> is <code>failed</code> or <code>aborted</code>: <code>failed</code> is a
+goal that reached nav2's <code>GoalStatus.SUCCEEDED</code> but whose <code>FollowWaypoints::Result.error_code</code> is
+still non-zero -- nav2's <code>WaypointFollower</code> can finish a route having missed a waypoint without the
+action itself aborting.</p>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<pre><code class="language-yaml">...
+mission:
+  plugin: "dc_measurements/MissionNav2FollowWaypoints"
+  topic_output: "/dc/measurement/mission"
+  group_key: "mission"
+  action_name: "follow_waypoints"
+</code></pre>
+<h2 id="example-output"><a class="header" href="#example-output">Example output</a></h2>
+<p>Start:</p>
+<pre><code class="language-json">{
+  "event": "mission_start",
+  "mission_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "mission_type": "follow_waypoints",
+  "sequence": 5
+}
+</code></pre>
+<p>end, succeeded:</p>
+<pre><code class="language-json">{
+  "event": "mission_end",
+  "mission_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "mission_type": "follow_waypoints",
+  "sequence": 6,
+  "outcome": "succeeded",
+  "duration_sec": 184.2,
+  "missed_waypoints": []
+}
+</code></pre>
+<p>and end, failed on a missed waypoint:</p>
+<pre><code class="language-json">{
+  "event": "mission_end",
+  "mission_id": "6c9f6a3e-2d1a-4e3a-9f7a-1b2c3d4e5f60",
+  "mission_type": "follow_waypoints",
+  "sequence": 8,
+  "outcome": "failed",
+  "reason": "task executor failed",
+  "error_code": 601,
+  "duration_sec": 92.6,
+  "missed_waypoints": [
+    { "index": 2, "error_code": 601 }
+  ]
+}
+</code></pre>
+<p><code>error_code</code> is <code>FollowWaypoints::Result.error_code</code> verbatim -- in <code>nav2_msgs</code>, its only non-zero values are <code>UNKNOWN</code> (600) and <code>TASK_EXECUTOR_FAILED</code> (601); <code>missed_waypoints[].error_code</code> is nav2's per-waypoint <code>error_code</code> from the same table. nav2's <code>WaypointStatus</code> (new since Lyrical) also carries the waypoint's pose, a status enum and a free-text <code>error_msg</code> -- none part of this schema (the <code>index</code> key keeps the Jazzy-line Record shape downstream consumers already receive); <code>reason</code>/<code>error_msg</code> above are always the mission-level <code>FollowWaypoints::Result.error_msg</code>, not anything per-waypoint.</p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/mission_nav2_follow_waypoints.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../dc/measurements/memory.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../dc/measurements/mission_nav2.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../dc/measurements/memory.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../dc/measurements/mission_nav2.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../../ace.js"></script>
+        <script src="../../editor.js"></script>
+        <script src="../../mode-rust.js"></script>
+        <script src="../../theme-dawn.js"></script>
+        <script src="../../theme-tomorrow_night.js"></script>
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../js/mermaid.js"></script>
+        <script src="../../js/mermaid-init.js"></script>
+        <script src="../../js/theme.js"></script>
+        <script src="../../js/distro.js"></script>
+
+
+    </body>
+</html>
