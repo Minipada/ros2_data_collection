@@ -68,3 +68,36 @@
     color: var(--sidebar-active);
     margin-right: 0.4rem;
 }
+
+/* Distro version selector (doc/js/distro.js) */
+.distro-selector:empty {
+    display: none;
+}
+
+.distro-selector {
+    display: flex;
+    gap: 0.3rem;
+    padding: 0.6rem 1rem;
+}
+
+.distro-selector a {
+    flex: 1;
+    padding: 0.25rem 0.4rem;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.9em;
+    color: var(--sidebar-fg);
+    opacity: 0.65;
+}
+
+.distro-selector a:hover {
+    opacity: 1;
+    color: var(--sidebar-active);
+}
+
+.distro-selector a.current {
+    opacity: 1;
+    font-weight: 600;
+    background-color: var(--sidebar-active);
+    color: var(--sidebar-bg);
+}
