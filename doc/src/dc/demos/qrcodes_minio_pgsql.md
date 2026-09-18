@@ -36,7 +36,7 @@ Vector's `postgres` sink maps each top-level key of a Record's JSON payload onto
 In each terminal, source your environment:
 
 ```bash
-source /opt/ros/rolling/setup.bash
+source /opt/ros/lyrical/setup.bash
 source install/setup.bash
 ```
 
@@ -67,7 +67,7 @@ the laser scan lines up with the map before starting the run below.
 The warehouse world is heavy: 238 model instances, most of them the QR-coded
 pallets and the props stacked on them. Expect a slow start on a machine without a GPU:
 gz-sim, the robot and Nav2 come up in well under a minute, but with the real-time factor
-well under 1 (~0.11-0.2, see [dc_simulation's README](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_simulation/README.md)
+well under 1 (~0.11-0.2, see [dc_simulation's README](https://github.com/Minipada/ros2_data_collection/blob/lyrical/dc_simulation/README.md)
 for the measured breakdown), reaching the first QR-coded pallet and getting the first
 Record out of the demo can take several minutes of wall clock, and the full 60-waypoint
 pass over an hour. See [#52](https://github.com/Minipada/ros2_data_collection/issues/52).
@@ -114,14 +114,14 @@ robot within 0.1 m and 0.1 rad rather than Nav2's more usual tolerances. If you 
 waypoints, the pallets or the cameras, re-run `./tools/sim/scripts/run.sh` — its `lint`
 stage re-derives that inequality from the world, the robot model, the waypoints and the
 nav params, and its `detect` stage checks that codes really do come back. See
-[dc_simulation's README](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_simulation/README.md)
+[dc_simulation's README](https://github.com/Minipada/ros2_data_collection/blob/lyrical/dc_simulation/README.md)
 for the measured geometry.
 ```
 
 ## Understanding the configuration
 
 ```admonish info
-The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/params/qrcodes_minio_pgsql.yaml).
+The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/lyrical/dc_demos/params/qrcodes_minio_pgsql.yaml).
 ```
 
 For this demo, we will reconstruct the yaml configuration element by element, given how large it is. Go through the explanation to understand how it works.

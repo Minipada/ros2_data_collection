@@ -25,7 +25,7 @@ If you find a problem, first search if an issue already exists. If a related iss
 
 Do not open a public issue, discussion or pull request. Report it through
 [GitHub private vulnerability reporting](https://github.com/Minipada/ros2_data_collection/security/advisories/new)
-instead; the [security policy](https://github.com/Minipada/ros2_data_collection/blob/rolling/SECURITY.md)
+instead; the [security policy](https://github.com/Minipada/ros2_data_collection/blob/lyrical/SECURITY.md)
 states the supported branches, the response targets and what is in scope.
 
 ### General guidelines
