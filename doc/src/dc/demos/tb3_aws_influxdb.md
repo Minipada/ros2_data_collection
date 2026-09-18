@@ -53,7 +53,7 @@ cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/tb3_simulation_influxdb_si
 In the terminal 1, source your environment:
 
 ```bash
-source /opt/ros/rolling/setup.bash
+source /opt/ros/lyrical/setup.bash
 source install/setup.bash
 ```
 
@@ -154,7 +154,7 @@ curl -G 'http://127.0.0.1:8086/query' --data-urlencode "db=dc" --data-urlencode 
 
 ## Understanding the configuration
 ```admonish info
-The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/params/tb3_simulation_influxdb.yaml), and the passthrough sink config [here](https://github.com/Minipada/ros2_data_collection/blob/rolling/dc_demos/config/tb3_simulation_influxdb_sink.toml).
+The full configuration file can be found [here](https://github.com/Minipada/ros2_data_collection/blob/lyrical/dc_demos/params/tb3_simulation_influxdb.yaml), and the passthrough sink config [here](https://github.com/Minipada/ros2_data_collection/blob/lyrical/dc_demos/config/tb3_simulation_influxdb_sink.toml).
 ```
 
 ### Measurement server

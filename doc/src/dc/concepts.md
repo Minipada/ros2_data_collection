@@ -44,7 +44,7 @@ fires once, when a Condition composition flips from false to true.
 ## ROS 2
 
 ROS 2 is the core middleware used for DC. If you are unfamiliar with it, visit
-[the ROS 2 documentation](https://docs.ros.org/en/rolling/) before continuing.
+[the ROS 2 documentation](https://docs.ros.org/en/lyrical/) before continuing.
 
 ## Records
 
