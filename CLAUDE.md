@@ -16,6 +16,11 @@ are already recorded there rather than in code comments.
 One branch per ROS 2 distro. Each keeps its own `.github/workflows/`, publishes its runtime
 images as `{distro}-{sha}` plus the floating `{distro}` tag (#533), and its deployment
 manifests default to that same distro — a manifest hardcoding a foreign distro's tag is a bug.
+Each also publishes its docs build to its own `/{distro}/` section of the one GitHub Pages
+site (#534): `doc.yaml` builds with `DISTRO=<branch>` and
+`tools/ci/deploy_doc_site.sh` replaces only that section plus the root redirect page —
+`/` goes straight to `/rolling/`, and a distro selector on every page switches sections.
+No humble section: that line's docs live on its own branch.
 
 - `rolling` — default branch and development tip: tracks ROS 2 rolling head (external Vector
   shipper, C++ Bridge). New work — including everything `run_once.sh` picks up — branches from

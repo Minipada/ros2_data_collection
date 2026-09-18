@@ -14,7 +14,7 @@
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [![prek](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml/badge.svg?branch=jazzy)](https://github.com/minipada/ros2_data_collection/actions/workflows/format.yaml?query=branch%3Ajazzy)         |
 | [![Documentation](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml/badge.svg?branch=jazzy)](https://github.com/minipada/ros2_data_collection/actions/workflows/doc.yaml?query=branch%3Ajazzy)      |
-| [![Github Pages](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment/badge.svg?branch=jazzy)](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment?query=branch%3Ajazzy) |
+| [![Github Pages](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment/badge.svg?branch=gh-pages)](https://github.com/Minipada/ros2_data_collection/actions/workflows/pages/pages-build-deployment?query=branch%3Agh-pages) |
 | [![CI](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml/badge.svg?branch=jazzy)](https://github.com/Minipada/ros2_data_collection/actions/workflows/ci.yaml?query=branch%3Ajazzy)                   |
 
 
