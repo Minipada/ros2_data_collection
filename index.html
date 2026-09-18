@@ -4,86 +4,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Data Collection for ROS 2 — pick your distro</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Direct hits land on Rolling by default; the cards below are the picker. -->
-    <meta http-equiv="refresh" content="5; url=rolling/">
-    <style>
-        body {
-            font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f5f6f7;
-            color: #212a33;
-        }
-        main {
-            text-align: center;
-            padding: 2rem;
-            max-width: 46rem;
-        }
-        h1 {
-            font-size: 1.8rem;
-            margin-bottom: 0.4rem;
-        }
-        .sub {
-            opacity: 0.75;
-            margin-bottom: 2rem;
-        }
-        .cards {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .distro-card {
-            display: block;
-            min-width: 12rem;
-            padding: 1.2rem 1.4rem;
-            border: 1px solid #d3d8dd;
-            border-radius: 8px;
-            background: #fff;
-            text-decoration: none;
-            color: inherit;
-        }
-        .distro-card:hover {
-            border-color: #2b5d8a;
-        }
-        .distro-card h2 {
-            margin: 0 0 0.3rem;
-            font-size: 1.15rem;
-            color: #2b5d8a;
-        }
-        .distro-card p {
-            margin: 0;
-            font-size: 0.85rem;
-            opacity: 0.75;
-        }
-        .cards ul {
-            list-style: none;
-            padding: 0;
-            line-height: 1.9;
-        }
-    </style>
+    <title>Data Collection for ROS 2</title>
+    <!-- Straight to the default distro's docs; the per-page sidebar selector handles
+         switching distro from there. -->
+    <script>location.replace("rolling/");</script>
+    <meta http-equiv="refresh" content="0; url=rolling/">
 </head>
 <body>
-<main>
-    <h1>Data Collection for ROS 2</h1>
-    <p class="sub">Documentation, one set per ROS 2 distro. Taking you to the
-        <a href="rolling/">Rolling</a> docs in a few seconds.</p>
-    <div class="cards" data-distro-cards>
-        <!-- No-JS fallback; doc/js/distro.js replaces this list with cards. -->
-        <noscript>
-            <ul>
-                <li><a href="rolling/">Rolling</a> — development tip, tracks ROS 2 rolling head</li>
-                <li><a href="lyrical/">Lyrical</a> — ROS 2 Lyrical (Ubuntu resolute)</li>
-                <li><a href="jazzy/">Jazzy</a> — ROS 2 Jazzy (Ubuntu noble)</li>
-            </ul>
-        </noscript>
-    </div>
-</main>
-<script src="rolling/js/distro.js"></script>
+<p>Redirecting to the <a href="rolling/">Rolling docs</a>.</p>
 </body>
 </html>

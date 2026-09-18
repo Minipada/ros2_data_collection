@@ -1,0 +1,391 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Uptime - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../open-in.css">
+        <link rel="stylesheet" href="../.././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../../css/logo.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/lyrical/doc/src/dc/demos/uptime_stdout.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="uptime-to-stdout"><a class="header" href="#uptime-to-stdout">Uptime to stdout</a></h1>
+<p>This is the most minimal example to run DC, it collects the system uptime every 5 seconds and sends it to Stdout.</p>
+<p>Copy the passthrough sink into place, then run it:</p>
+<pre><code class="language-bash">mkdir -p ~/.dc &amp;&amp; cp "$(ros2 pkg prefix dc_demos)/share/dc_demos/config/uptime_stdout_sink.toml" ~/.dc/
+ros2 launch dc_demos uptime_stdout.launch.py
+</code></pre>
+<p>At the end, the data is displayed. Every Destination — the passthrough <code>console</code> sink
+below included — goes through the external Vector Shipper
+(<a href="../adr/0002-vector-as-default-shipper.html">ADR-0002</a>, <a href="../destinations.html">Destinations</a>),
+so this is Vector's own event object after ingesting the Record over the Fluent-forward
+protocol: <code>source_type</code>, <code>tag</code>, <code>host</code> and <code>timestamp</code> are Vector's, not the Bridge's:</p>
+<pre><code>[dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476609.152106,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1608993,"timestamp":"2026-09-03T23:03:29.152105868Z"}
+[dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476614.1494331,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1608998,"timestamp":"2026-09-03T23:03:34.149433151Z"}
+[dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476619.149286,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1609003,"timestamp":"2026-09-03T23:03:39.149286154Z"}
+</code></pre>
+<p>This launchfile is a wrapper of <a href="https://github.com/Minipada/ros2_data_collection/blob/lyrical/dc_bringup/launch/dc_bringup.launch.py">dc_bringup/launch/dc_bringup.launch.py</a> which loads a <a href="https://github.com/Minipada/ros2_data_collection/blob/lyrical/dc_demos/params/uptime_stdout.yaml">custom yaml configuration</a></p>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<h3 id="measurement"><a class="header" href="#measurement">Measurement</a></h3>
+<pre><code class="language-yaml">measurement_server:
+  ros__parameters:
+    measurement_plugins: ["uptime"]
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      topic_output: "/dc/measurement/uptime"
+      polling_interval: 5000
+      enable_validator: true
+      debug: true
+      init_collect: true
+    custom_key_str_list: ["robot_name", "id"]
+    custom_keys_str:
+      robot_name:
+        name: robot_name
+        value: C3PO
+      id:
+        name: id
+        value_from_file: /etc/machine-id
+    run_id:
+      enabled: true
+      counter: true
+      counter_path: "$HOME/run_id"
+      uuid: false
+</code></pre>
+<p><strong>measurement_plugins (Mandatory)</strong>: List all the plugins to enable. This is a custom string that is equal to the measurement plugin dictionary present in the same level. If not listed, will not be loaded.</p>
+<p><strong>uptime.plugin (Mandatory)</strong>: Name of the plugin, if you are not sure which plugin is available, <a href="../cli.html">use the CLI tool</a> to list them</p>
+<p><strong>uptime.polling_interval (Optional)</strong>: Interval to which data is collected in milliseconds</p>
+<p><strong>uptime.enable_validator (Optional)</strong>: Will validate the data against a JSON schema. This file is located in the <a href="https://github.com/Minipada/ros2_data_collection/tree/lyrical/dc_measurements/plugins/measurements/json">dc_measurements package</a>. You can provide your own using the <code>json_schema_path</code> parameter, which we will explore later on</p>
+<p><strong>uptime.debug (Optional)</strong>: More verbose output</p>
+<p><strong>uptime.init_collect (Optional)</strong>: Collect when the node starts instead of waiting for the polling_interval time to pass</p>
+<p><strong>run_id.enabled (Optional)</strong>: Identify which run the robot is. A new one is generated at every start of the node. Uses either a counter that increment at each restart of the node or UUID</p>
+<p><strong>run_id.counter (Optional)</strong>: Enable counter for the run_id</p>
+<p><strong>run_id.counter_path (Optional)</strong>: Path to store the last run. It is expanded with environment variables id</p>
+<p><strong>run_id.uuid (Optional)</strong>: Generate a new run ID by using a random UUID</p>
+<p>This will collect the uptime every 5 seconds (including when the node starts), will forward it to the <em>console</em> passthrough sink below.</p>
+<h4 id="inject-custom-data-for-each-record"><a class="header" href="#inject-custom-data-for-each-record">Inject custom data for each record</a></h4>
+<p>Here, we want to append some content in every record: the robot name and its ID. While the robot name comes from a fixed variable in the parameter file, the id comes from the machine-id file.</p>
+<p><strong>custom_key_str_list (Optional)</strong>: Look for those keys in this configuration to add them as keys and values in each record.</p>
+<p><strong>custom_keys_str.robot_name (Optional)</strong>: This parameter is loaded since it is mentioned in custom_key_str_list</p>
+<p><strong>custom_keys_str.robot_name.name (Optional)</strong>: Key in the dictionary to add</p>
+<p><strong>custom_keys_str.robot_name.value (Optional)</strong>: Value associated to the key in the dictionary to add</p>
+<p><strong>custom_keys_str.id.name (Optional)</strong>: Key in the dictionary to add</p>
+<p><strong>custom_keys_str.id.value_from_file (Optional)</strong>: Value associated to the key in the dictionary to add taken from the content of a file</p>
+<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<div class="admonition-title">
+<div id="admonition-info-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info"></a>
+</div>
+<div>
+<p>Note that this configuration alone will not display the JSON on stdout since it requires the dc_bridge configuration below</p>
+</div>
+</div>
+<p>Find the complete measurements documentation <a href="../measurements.html">here</a></p>
+<h3 id="destination"><a class="header" href="#destination">Destination</a></h3>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["records_log"]
+    records_log:
+      type: file
+      receives: records
+      inputs: ["/dc/measurement/uptime"]
+      path: "/tmp/dc/uptime_stdout_records.ndjson"
+      time_key: "date"
+      time_format: "double"
+    custom_config_files: ["$HOME/.dc/uptime_stdout_sink.toml"]
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
+</code></pre>
+<pre><code class="language-toml"># ~/.dc/uptime_stdout_sink.toml
+[sinks.debug_console]
+type = "console"
+inputs = ["dc.dc.measurement.uptime"]
+target = "stdout"
+
+[sinks.debug_console.encoding]
+codec = "json"
+</code></pre>
+<h4 id="destinations"><a class="header" href="#destinations">Destinations</a></h4>
+<p>Let's analyze piece by piece. <code>dc_bridge</code> is the single C++ node that owns every Destination; each entry in the <code>destinations</code> list names a section, defined below it, that describes where data goes. We need the topic list on each Destination because the Bridge subscribes to those topics itself and forwards what it receives to an external <a href="https://vector.dev">Vector</a> process over the shipper ingest protocol.</p>
+<p><strong>destinations (Mandatory)</strong>: List all the Destinations to enable. Each name must have a matching section at the same level.</p>
+<p><strong>records_log.type (Mandatory)</strong>: One of the blessed Destination types (<code>postgres</code>, <code>s3</code>, <code>file</code>, <code>console</code>, <code>vector</code>). <code>file</code> writes each Record as a JSON line to <code>path</code>, and is the cheapest anchor to give <code>destinations</code> when the actual output you want comes from a <code>custom_config_files</code> passthrough sink below — dc_bridge derives its ROS subscriptions and <code>dc.&lt;tag&gt;</code> routes from <code>destinations</code> alone, never from a passthrough snippet's <code>inputs</code>. (Printing straight to stdout used a blessed <code>console</code> Destination in earlier versions of this demo; per <a href="../adr/0003-blessed-destinations-plus-passthrough.html">ADR-0003</a>, <code>console</code> — along with <code>postgres</code> and <code>s3</code> — has moved to the passthrough recipe below, since it's a pure Vector-sink wrapper with no DC-specific logic. See <a href="../destinations.html#recipes-postgres-s3-console-via-passthrough">Destinations: Recipes</a>.)</p>
+<p><strong>records_log.receives (Optional)</strong>: <code>records</code> (default) or <code>files</code>.</p>
+<p><strong>records_log.inputs (Mandatory)</strong>: Topics to which to listen to get the data.</p>
+<p><strong>records_log.path (Mandatory for <code>file</code>)</strong>: Absolute path Vector writes each JSON line to (Vector, not the Bridge, expands this — no <code>$HOME</code>).</p>
+<p><strong>records_log.time_format (Optional)</strong>: Format the data's timestamp will be printed as (<code>epoch_nanos</code> (default), <code>iso8601</code> or <code>double</code>).</p>
+<p><strong>records_log.time_key (Optional)</strong>: Dictionary key the timestamp is written under.</p>
+<p><strong>custom_config_files (Optional)</strong>: Raw Vector config snippets, merged as-is alongside what <code>dc_bridge</code> itself renders. The <code>uptime_stdout_sink.toml</code> above defines a plain Vector <code>console</code> sink consuming the public <code>dc.dc.measurement.uptime</code> route that <code>records_log</code>'s <code>inputs</code> created — this is what actually prints to stdout; <code>records_log</code> itself just writes the same Records to disk as the passthrough's required anchor. See <a href="../destinations.html#passthrough-custom_config_files">Destinations: Passthrough</a>.</p>
+<p><code>dc_bridge</code> itself needs no engine tuning of the kind the old embedded Fluent Bit shipper required (buffering, scheduler backoff, HTTP stats server, …) — Vector, the external shipper process it forwards to, owns its own on-disk buffering and is configured from the <code>dc_bridge</code>/<code>destinations</code> block above; see <a href="../adr/0002-vector-as-default-shipper.html">ADR-0002</a> for why that split exists.</p>
+<h4 id="inject-run-id-at-each-record"><a class="header" href="#inject-run-id-at-each-record">Inject run id at each record</a></h4>
+<p>Finally, we set the run id. This is used later on when fetching data for a run. It can come from a counter which is incremented at each start of the node or from a random UUID generated. The counter mechanism writes and read on a file on the system (take care of not deleting it), you can set its path as a parameter.</p>
+<p>Find the complete destinations documentation <a href="../destinations.html">here</a></p>
+<h2 id="console-output"><a class="header" href="#console-output">Console output</a></h2>
+<p>Now that the node started, let us see what's displayed in the console.</p>
+<p>Measurement server and <code>dc_bridge</code> are started in the Lifecycle, you can read more about it <a href="../concepts.html#lifecycle-nodes-and-bond">here</a>. Per <a href="../adr/0006-bridge-outside-lifecycle-manager.html">ADR-0006</a>, the lifecycle manager waits on a <code>bridge_ready_gate</code> before activating the collection nodes:</p>
+<pre><code>[INFO] [bridge_ready_gate-3]: process started with pid [31]
+[dc_bridge-2] [INFO] [1788478636.751773322] [dc_bridge]: dc_bridge up: 1 subscribed topic(s), supervising /root/ws/install/vector_vendor/lib/vector_vendor/vector
+[bridge_ready_gate-3] [INFO] [1788478637.212874385] [bridge_ready_gate]: Bridge is ready: vector is accepting connections
+[INFO] [bridge_ready_gate-3]: process has finished cleanly [pid 31]
+[INFO] [launch.user]: dc_bridge reports ready; activating collection nodes.
+</code></pre>
+<p><code>dc_bridge</code> renders the <code>destinations</code> block above into a Vector config and launches (or reloads) the external Vector process pointed at it; <code>bridge_ready_gate</code> only lets the launch continue once Vector is actually accepting connections — see <a href="../adr/0002-vector-as-default-shipper.html">ADR-0002</a> for why Vector runs as its own process rather than embedded in the Bridge.</p>
+<p>Finally, we see the data, now printed by the passthrough <code>console</code> sink rather than by the Bridge itself:</p>
+<pre><code>[dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476609.152106,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1608993,"timestamp":"2026-09-03T23:03:29.152105868Z"}
+[dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476614.1494331,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1608998,"timestamp":"2026-09-03T23:03:34.149433151Z"}
+[dc_bridge-2] {"custom_keys":["robot_name","time"],"date":1788476619.149286,"flattened":false,"host":"127.0.0.1","name":"uptime","nested":false,"robot_name":"C3PO","run_id":"169","source_type":"fluent","tag":"dc.measurement.uptime","time":1609003,"timestamp":"2026-09-03T23:03:39.149286154Z"}
+</code></pre>
+<p>So...what happened?</p>
+<ol>
+<li>The measurement plugin starts publishing data to /dc/measurement/uptime, which contains the JSON and timestamp of the message</li>
+<li>Run ID and robot_name is appended in the JSON</li>
+<li><code>dc_bridge</code>, which subscribes to this topic directly, receives the data and forwards it to Vector over the shipper ingest protocol</li>
+<li>Vector's generated config applies a <code>remap</code> transform that writes the configured <code>time_key</code> in the requested <code>time_format</code>, and routes the Record onto its public <code>dc.dc.measurement.uptime</code> route</li>
+<li>The passthrough <code>console</code> sink from <code>uptime_stdout_sink.toml</code>, consuming that route, prints the JSON to stdout — <code>records_log</code>'s own <code>file</code> sink writes the same Record to disk in parallel</li>
+</ol>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/demos/uptime_stdout.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../dc/demos/beginner.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../dc/demos/memory_uptime_stdout.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../dc/demos/beginner.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../dc/demos/memory_uptime_stdout.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../../ace.js"></script>
+        <script src="../../editor.js"></script>
+        <script src="../../mode-rust.js"></script>
+        <script src="../../theme-dawn.js"></script>
+        <script src="../../theme-tomorrow_night.js"></script>
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../js/mermaid.js"></script>
+        <script src="../../js/mermaid-init.js"></script>
+        <script src="../../js/theme.js"></script>
+        <script src="../../js/distro.js"></script>
+
+
+    </body>
+</html>

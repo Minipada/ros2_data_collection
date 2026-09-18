@@ -1,0 +1,122 @@
+turbo-frame {
+  display: contents;
+}
+
+sdoc-node {
+  display: block;
+  position: relative;
+}
+
+/* sdoc-node */
+
+sdoc-node {
+  background-color: var(--color-bg-contrast);
+  border-radius: 3px;
+
+  padding: calc(var(--base-padding)*2) calc(var(--base-padding)*2);
+}
+
+/* editable_node */
+
+sdoc-node[node-style="card"][node-role="requirement"],
+[data-editable_node="on"] {
+  box-shadow: var(--base-elevation-0);
+  transition: box-shadow .5s;
+}
+
+sdoc-node[node-style="card"][node-role="requirement"]:hover,
+[data-editable_node="on"]:hover {
+  box-shadow: var(--base-elevation-node);
+  z-index: 10;
+}
+
+/* sdoc-node[node-style="card"] */
+
+sdoc-node[node-style="card"] {
+  background-color: var(--color-bg-contrast);
+  border-radius: 3px;
+  /* compensate outline: */
+  padding: 1px;
+}
+
+sdoc-node[node-style="card"][node-role="section"] {
+  background-color: var(--color-bg-contrast);
+  padding: calc(var(--base-rhythm)) calc(var(--base-rhythm)*2);
+}
+
+[data-role='current'] sdoc-node[node-style="card"] {
+  background-color: var(--color-bg-contrast);
+}
+
+[data-role='current'] [node-role="requirement"] {
+
+}
+
+[data-role='parents'] sdoc-node[node-style="card"],
+[data-role='children'] sdoc-node[node-style="card"] {
+  background-color: var(--color-bg-secondary);
+  width: var(--card-width);
+}
+
+sdoc-node[node-style="card"].highlighted {
+  background-color: var(--color-highlight);
+}
+
+[data-viewtype="traceability"] sdoc-node[node-style="card"] + sdoc-node[node-style="card"] {
+  margin-top: var(--base-padding);
+}
+
+[data-viewtype="deep_traceability"] sdoc-node[node-style="card"] {
+  /* width: var(--card-width); */
+  /* flex-grow: 1; */
+}
+
+[data-viewtype="requirements-coverage"] sdoc-node[node-style="card"] {
+  width: calc(var(--card-width)*0.75);
+  /* width: auto; */
+  font-size: .85em;
+  line-height: 1.4;
+}
+
+/* nouid */
+
+sdoc-node.nouid {
+  background-color: rgb(240, 220, 220);
+}
+
+.nouid sdoc-requirement-title,
+.nouid .requirement__title {
+  color: #502222;
+}
+
+/* sdoc-node-controls */
+
+sdoc-node-controls {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  transition: .5s ease-out;
+  opacity: 0;
+  /* HACK: [sdoc-node outline hack] */
+  left: calc(100% + 1px);
+  top: -2px;
+}
+
+sdoc-main-placeholder + sdoc-node-controls {
+  opacity: 1;
+}
+
+sdoc-node:hover sdoc-node-controls {
+  opacity: 1;
+}
+
+sdoc-node:hover sdoc-node-controls:hover {
+  opacity: 1;
+}
+
+sdoc-node-controls-line {
+  display: flex;
+}

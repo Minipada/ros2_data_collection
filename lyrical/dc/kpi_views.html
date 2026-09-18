@@ -1,0 +1,515 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>KPI views - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/lineicon.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../open-in.css">
+        <link rel="stylesheet" href=".././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../css/logo.css">
+        <link rel="stylesheet" href="../css/lineicon.css">
+        <link rel="stylesheet" href="../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/lyrical/doc/src/dc/kpi_views.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="kpi-views"><a class="header" href="#kpi-views">KPI views</a></h1>
+<p>DC collects Records; the numbers an operations team reports on are computed from those
+Records in SQL, on the database, never on the robot. The window is a query parameter, so
+changing a KPI definition is re-applying one file — not redeploying a fleet.</p>
+<p>The set covers <strong>availability and uptime</strong>, <strong>utilisation</strong>, <strong>intervention rate</strong>,
+<strong>MTBF/MTTR</strong> and <strong>loop closure rate</strong>. It lives in <code>tools/infrastructure/sql/kpi_views.sql</code>
+and reads the <code>dc</code> table the <a href="./infrastructure_setup/postgresql.html">PostgreSQL</a> Destination
+writes into.</p>
+<h2 id="what-it-defines"><a class="header" href="#what-it-defines">What it defines</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Object</th><th>Kind</th><th>Reports</th></tr></thead><tbody>
+<tr><td><code>dc_kpi_uptime_samples</code></td><td>view</td><td>One row per uptime Record: <code>robot_name</code>, <code>sample_time</code>, <code>uptime_seconds</code>, <code>run_id</code>, <code>prev_sample_time</code></td></tr>
+<tr><td><code>dc_kpi_availability(from, to [, max_gap])</code></td><td>function</td><td>Per robot: <code>samples</code>, <code>first_sample</code>, <code>last_sample</code>, <code>uptime_seconds</code>, <code>covered_seconds</code>, <code>window_seconds</code>, <code>availability</code></td></tr>
+<tr><td><code>dc_kpi_availability_5m</code></td><td>view</td><td>The same metric in 5-minute buckets, for charting — filter on <code>bucket_start</code></td></tr>
+<tr><td><code>dc_kpi_driving_samples</code></td><td>view</td><td>One row per driving_type Record: <code>robot_name</code>, <code>sample_time</code>, <code>mode</code>, <code>prev_sample_time</code>, and the <code>speed</code> last reported at or before it</td></tr>
+<tr><td><code>dc_kpi_utilisation(from, to [, max_gap [, min_speed]])</code></td><td>function</td><td>Per robot: <code>samples</code>, <code>speed_samples</code>, <code>reported_seconds</code>, <code>autonomous_seconds</code>, <code>manual_seconds</code>, <code>teleop_seconds</code>, <code>unknown_seconds</code>, <code>productive_seconds</code>, <code>window_seconds</code>, <code>utilisation</code></td></tr>
+<tr><td><code>dc_kpi_utilisation_5m</code></td><td>view</td><td>Utilisation in 5-minute buckets</td></tr>
+<tr><td><code>dc_kpi_intervention_events</code></td><td>view</td><td>One row per intervention Record, with <code>is_start</code>/<code>is_end</code> derived from the modes it names</td></tr>
+<tr><td><code>dc_kpi_intervention_rate(from, to [, max_gap])</code></td><td>function</td><td>Per robot: <code>interventions</code>, <code>open_interventions</code>, <code>ended_interventions</code>, <code>autonomous_seconds</code>, <code>distance_km</code>, <code>per_autonomous_hour</code>, <code>per_km</code>, <code>mean_intervention_seconds</code>, <code>total_intervention_seconds</code></td></tr>
+<tr><td><code>dc_kpi_interventions_1h</code></td><td>view</td><td>Interventions in 1-hour buckets</td></tr>
+<tr><td><code>dc_kpi_fault_events</code></td><td>view</td><td>One row per fault Record: <code>component</code>, <code>from_level</code>, <code>to_level</code>, <code>previous_duration</code>, <code>sequence</code>, <code>reason</code>, <code>open</code></td></tr>
+<tr><td><code>dc_kpi_reliability(from, to [, failure_levels])</code></td><td>function</td><td>Per component: <code>failures</code>, <code>repairs</code>, <code>open_faults</code>, <code>operating_seconds</code>, <code>downtime_seconds</code>, <code>mtbf_seconds</code>, <code>mttr_seconds</code></td></tr>
+<tr><td><code>dc_kpi_faults_1h</code></td><td>view</td><td>Failures, repairs and downtime in 1-hour buckets</td></tr>
+<tr><td><code>dc_kpi_loop_closure_events</code></td><td>view</td><td>One row per slam_toolbox_quality <code>loop_closure</code> Record (<a href="https://github.com/Minipada/ros2_data_collection/issues/394">#394</a>)</td></tr>
+<tr><td><code>dc_kpi_loop_closure_rate(from, to)</code></td><td>function</td><td>Per robot: <code>loop_closures</code>, <code>window_seconds</code>, <code>per_hour</code>, <code>last_loop_closure</code>, <code>seconds_since_last</code></td></tr>
+<tr><td><code>dc_kpi_loop_closures_1h</code></td><td>view</td><td>Loop closures in 1-hour buckets</td></tr>
+<tr><td><code>dc_kpi_max_gap()</code></td><td>function</td><td>The grace period every definition above shares (30 s)</td></tr>
+<tr><td><code>dc_kpi_min_speed()</code></td><td>function</td><td>The speed at or above which the robot counts as moving (0.05 m/s)</td></tr>
+<tr><td><code>dc_kpi_failure_levels()</code></td><td>function</td><td>The diagnostic levels that count as broken (<code>ERROR</code>, <code>STALE</code>)</td></tr>
+</tbody></table>
+</div>
+<pre><code class="language-sql">-- Every metric for the last 24 hours, per robot.
+SELECT * FROM dc_kpi_availability(now() - INTERVAL '24 hours', now());
+SELECT * FROM dc_kpi_utilisation(now() - INTERVAL '24 hours', now());
+SELECT * FROM dc_kpi_intervention_rate(now() - INTERVAL '24 hours', now());
+SELECT * FROM dc_kpi_reliability(now() - INTERVAL '24 hours', now());
+
+-- Any of them as a chart series.
+SELECT bucket_start, robot_name, availability FROM dc_kpi_availability_5m
+WHERE bucket_start &gt;= now() - INTERVAL '24 hours' ORDER BY 1;
+</code></pre>
+<h2 id="availability-and-uptime"><a class="header" href="#availability-and-uptime">Availability and uptime</a></h2>
+<p>Reads the <a href="./measurements/uptime.html">uptime Measurement</a>. Each uptime Record vouches for
+the time back to the previous one, capped at the grace period and clipped to the window. A
+robot polling uptime every 5 s therefore reports 100 % availability, and only a silence
+longer than the grace period costs anything: a 5-minute outage in a 15-minute window leaves
+630 of 900 seconds covered, so 70 %.</p>
+<p>Consequences worth knowing before you put the number on a report:</p>
+<ul>
+<li>Availability is <em>reported</em> availability. It answers "was the robot up and shipping data",
+which is what an operations team can act on — not "was the robot doing useful work".</li>
+<li>A window longer than DC has been running reads low, because the time before the first
+Record is genuinely unreported.</li>
+<li>A robot whose Records stopped before the window starts drops out of the result entirely
+rather than reporting 0 %: nothing in the database distinguishes it from a robot that was
+never deployed. A fleet registry is what would fix that, and DC has none.</li>
+</ul>
+<h2 id="utilisation"><a class="header" href="#utilisation">Utilisation</a></h2>
+<p>Reads the <a href="./measurements/driving_type.html">driving_type</a> and <a href="./measurements/speed.html">speed</a>
+Measurements. Time is credited exactly the way availability credits it — back to the
+previous driving_type Record, capped at the grace period, clipped to the window — and
+attributed to the mode of the Record that closes the interval. Of that reported time, the
+share spent <strong>moving under a known mode</strong> is productive:</p>
+<pre><code class="language-text">utilisation = productive_seconds / reported_seconds
+</code></pre>
+<p><code>manual</code> and <code>teleop</code> count as productive: a human driving the robot is still the robot
+being used. Only <code>unknown</code> — no command source has published within <code>velocity_timeout_s</code>,
+or no mode has ever been observed — does not.</p>
+<p>What it deliberately does not claim:</p>
+<ul>
+<li><strong>Not "useful work".</strong> A robot standing still while it inspects something reads as idle,
+and a robot driving in circles reads as productive. Distinguishing the two needs the
+Mission Measurement, which does not exist yet (see below).</li>
+<li><strong>No speed Record in the window means <code>utilisation</code> is NULL.</strong> A deployment that
+collects <code>driving_type</code> but not <code>speed</code> has unreported movement rather than zero movement.
+<code>speed_samples</code> is in the output so a NULL can be told from an empty range.</li>
+<li><strong>A speed Record vouches for the grace period after it, no longer.</strong> Movement reported
+once and then never again buys only 30 seconds of productive time, however long the
+window actually runs.</li>
+<li>The per-mode seconds add up to <code>reported_seconds</code>, so the ratio can always be checked
+against its parts.</li>
+</ul>
+<h2 id="intervention-rate"><a class="header" href="#intervention-rate">Intervention rate</a></h2>
+<p>Reads the <code>intervention</code> Measurement (<a href="https://github.com/Minipada/ros2_data_collection/issues/362">#362</a>) for the numerator and <code>driving_type</code> plus
+<a href="./measurements/distance_traveled.html">distance_traveled</a> for the denominators. An
+intervention starts when a Record leaves <code>autonomous</code> for <code>manual</code> or <code>teleop</code>, and ends
+when one returns to <code>autonomous</code>; the end Record's <code>previous_duration</code> is the takeover's own
+length.</p>
+<pre><code class="language-text">per_autonomous_hour = interventions / (autonomous_seconds / 3600)
+per_km              = interventions / distance_km
+</code></pre>
+<p>Two denominators rather than one because they fail differently: a robot that spends a shift
+parked has few autonomous hours and no kilometres, and a robot doing tight manoeuvring has
+plenty of hours and few kilometres. Reporting both makes the difference visible instead of
+picking a winner.</p>
+<p>What it deliberately does not claim:</p>
+<ul>
+<li><strong>A denominator nothing reported gives a NULL rate.</strong> A robot with
+no <code>driving_type</code> Records has <code>autonomous_seconds</code> NULL and <code>per_autonomous_hour</code> NULL;
+the same holds for <code>distance_traveled</code> and <code>per_km</code>.</li>
+<li><strong>A takeover still running is counted but never timed.</strong> Only an end Record carries a
+duration, so an open interval is absent from <code>mean_intervention_seconds</code> and
+<code>total_intervention_seconds</code> rather than a zero in them. <code>open_interventions</code> counts the
+Records the Measurement flagged open.</li>
+<li><strong>A takeover that starts before the window or ends after it is counted in the window its
+Record falls in.</strong> The window selects events, not intervals.</li>
+</ul>
+<h2 id="mtbf-and-mttr"><a class="header" href="#mtbf-and-mttr">MTBF and MTTR</a></h2>
+<p>Reads the <code>fault</code> Measurement (<a href="https://github.com/Minipada/ros2_data_collection/issues/365">#365</a>). A <strong>raise</strong> is a Record entering a failure level
+from a healthy one; a <strong>clear</strong> is one leaving a failure level for a healthy one. Both carry
+<code>previous_duration</code> — how long the level just left was held — which is what the two averages
+are averages of:</p>
+<pre><code class="language-text">mtbf_seconds = mean healthy time preceding a raise
+mttr_seconds = mean time in a failure level preceding a clear
+</code></pre>
+<p>Failure levels default to <code>ERROR</code> and <code>STALE</code> and are a query parameter:
+<code>dc_kpi_reliability(from, to, ARRAY['ERROR'])</code> treats a silent component as reportable but
+not broken. <code>WARN</code> is not a failure by default, so <code>OK → WARN → ERROR</code> is one failure, timed
+from the last healthy state.</p>
+<p>What it deliberately does not claim:</p>
+<ul>
+<li><strong>A change inside the failure set is not a second failure.</strong> <code>ERROR → STALE</code> is neither a
+raise nor a clear: a component that goes quiet while already broken is still one fault.</li>
+<li><strong>A fault never cleared has no repair time.</strong> It counts in <code>failures</code> and <code>open_faults</code>,
+and is absent from <code>mttr_seconds</code> rather than averaged in as an instant repair.</li>
+<li><strong>Grouped by component, never rolled up per robot.</strong> "The robot is down" is a policy over
+components that nothing here knows, and averaging independent components together reports
+a number for a failure mode no component has.</li>
+<li><strong>The durations come from the Records, so they can reach outside the window.</strong> A failure
+after eight healthy hours reports eight hours of MTBF in a one-hour window; the window
+chooses which events count, not how long their intervals were.</li>
+</ul>
+<h2 id="loop-closure-rate"><a class="header" href="#loop-closure-rate">Loop closure rate</a></h2>
+<p>Reads the <code>slam_toolbox_quality</code> Measurement (<a href="https://github.com/Minipada/ros2_data_collection/issues/394">#394</a>). <code>slam_toolbox/LoopClosureEvent</code> carries
+nothing but its own occurrence, so the KPI value is entirely in Record timing:</p>
+<pre><code class="language-text">per_hour = loop_closures / (window_seconds / 3600)
+</code></pre>
+<p>alongside <code>seconds_since_last</code> — how long it's been since the most recent loop closure as of
+<code>window_end</code>, a localization-drift risk indicator distinct from the rate: a robot can have a
+healthy rate over a long window and still be mid-drift right now if its last correction was a
+while ago.</p>
+<p>What it deliberately does not claim:</p>
+<ul>
+<li><strong><code>seconds_since_last</code> looks past <code>window_start</code>.</strong> Clipped to the window it would read a
+robot with no loop closure yet in a short window as "just corrected" instead of "never
+corrected" — the other rate functions clip strictly to the window, this one deliberately
+doesn't, for this one column.</li>
+<li><strong>A robot with no loop closure Record at all, ever, is absent from the result</strong> — same as
+every other rate function here: nothing distinguishes "never ran slam_toolbox" from "ran it
+and never closed a loop" without a fleet registry.</li>
+</ul>
+<h2 id="mission-success-rate-is-not-here-yet"><a class="header" href="#mission-success-rate-is-not-here-yet">Mission success rate is not here yet</a></h2>
+<p>The fourth starter metric — completed, failed, cancelled and aborted missions as a share of
+missions started — has no KPI view yet, but the design decision that used to block it
+(<a href="https://github.com/Minipada/ros2_data_collection/issues/305">#305</a>) is resolved: <a href="./measurements/mission_nav2.html">Mission (Nav2 NavigateToPose)</a>,
+<a href="./measurements/mission_nav2_follow_waypoints.html">Mission (Nav2 FollowWaypoints)</a>, <a href="./measurements/mission_nav2_through_poses.html">Mission
+(Nav2 NavigateThroughPoses)</a> and <a href="./measurements/mission_open_rmf.html">Mission
+(Open-RMF)</a> are all implemented Measurements today,
+emitting outcome Records DC already collects. Writing the <code>dc_kpi_mission_*</code> view/function
+pair on top of that data — the same shape as every other metric on this page — is what's
+still open; the source data it would read from already exists.</p>
+<h2 id="what-the-data-has-to-look-like"><a class="header" href="#what-the-data-has-to-look-like">What the data has to look like</a></h2>
+<p>The views read the <code>dc</code> table's columns directly, so the robot's configuration has to fill
+them:</p>
+<ul>
+<li>every Measurement the views read runs with <code>include_measurement_name: true</code> — <code>name</code> is
+what tells one Measurement's Records apart from another's;</li>
+<li><code>robot_name</code> is set, through <code>custom_keys_str</code> — Records without it are grouped under
+<code>unknown</code>;</li>
+<li>the <code>postgres</code> Destination writes to the <code>dc</code> table with <code>time_key: "date"</code>, whose default
+format is epoch nanoseconds.</li>
+</ul>
+<div class="table-wrapper"><table><thead><tr><th>Metric</th><th>Measurements it needs</th></tr></thead><tbody>
+<tr><td>Availability</td><td><code>uptime</code></td></tr>
+<tr><td>Utilisation</td><td><code>driving_type</code>, <code>speed</code></td></tr>
+<tr><td>Intervention rate</td><td><code>intervention</code> (<a href="https://github.com/Minipada/ros2_data_collection/issues/362">#362</a>), <code>driving_type</code>, <code>distance_traveled</code></td></tr>
+<tr><td>MTBF / MTTR</td><td><code>fault</code> (<a href="https://github.com/Minipada/ros2_data_collection/issues/365">#365</a>)</td></tr>
+<tr><td>Loop closure rate</td><td><code>slam_toolbox_quality</code> (<a href="https://github.com/Minipada/ros2_data_collection/issues/394">#394</a>)</td></tr>
+</tbody></table>
+</div>
+<p><code>dc_demos/params/tb3_simulation_pgsql_minio.yaml</code> is a working example of the
+<code>uptime</code>/<code>driving_type</code>/<code>speed</code>/<code>distance_traveled</code> set. <code>intervention</code> and <code>fault</code>
+(<a href="https://github.com/Minipada/ros2_data_collection/issues/362">#362</a>, <a href="https://github.com/Minipada/ros2_data_collection/issues/365">#365</a>) are implemented Measurements too, but no shipped demo params file
+configures either yet — their views return no rows until a deployment enables them. The
+columns they write into are already in
+<code>tools/infrastructure/docker/config/postgresql/init.sql</code>, since Vector's <code>postgres</code> sink
+maps a Record's keys onto existing columns and silently drops the rest.</p>
+<h2 id="in-the-demo"><a class="header" href="#in-the-demo">In the demo</a></h2>
+<p><code>tools/infrastructure/docker/docker-compose.postgresql.yaml</code> mounts the tables and the KPI
+definitions into PostgreSQL's init directory, so
+<a href="./infrastructure_setup/postgresql.html">bringing PostgreSQL up</a> applies both. Grafana's
+provisioning ships a <strong>ROS 2 Data Collection - KPI</strong> dashboard reading them. Start the demo,
+open <a href="http://localhost:3000">http://localhost:3000</a> (admin/admin), and the availability and
+utilisation panels populate as Records arrive; nothing has to be imported by hand.</p>
+<p>The demo runs <code>driving_type</code> off Nav2's <code>/cmd_vel</code>, which is the only command source the
+simulation has: the mode is <code>autonomous</code> while Nav2 publishes and <code>unknown</code> otherwise. A
+real deployment adds its teleop topic to <code>velocity_topics</code> — that is also what makes an
+intervention distinguishable from an idle robot.</p>
+<div id="admonition-warning" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-title">
+<div class="admonition-title">
+<div id="admonition-warning-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning"></a>
+</div>
+<div>
+<p>PostgreSQL runs its init directory only on an empty data directory. A database container
+that already existed before this file did needs the views applied explicitly — that is what
+the script below is for.</p>
+</div>
+</div>
+<h2 id="pointing-the-views-at-a-real-deployment"><a class="header" href="#pointing-the-views-at-a-real-deployment">Pointing the views at a real deployment</a></h2>
+<p>The definitions have nothing demo-specific in them. Apply them to any PostgreSQL that holds
+DC Records:</p>
+<pre><code class="language-bash">PGPASSWORD=... ./tools/infrastructure/scripts/apply_kpi_views.bash \
+  --host=db.example.com \
+  --port=5432 \
+  --user=dc \
+  --database=dc
+</code></pre>
+<p>The script uses <code>psql</code> when it is installed and a <code>postgres</code> container otherwise. Every
+object is <code>CREATE OR REPLACE</code>, so re-running it is how a changed definition ships — no robot
+is touched, and the next dashboard refresh picks up the new numbers.</p>
+<p>Then, on the reporting side:</p>
+<ul>
+<li>
+<p><strong>Grafana</strong>: point the PostgreSQL datasource at the deployment
+(<code>tools/infrastructure/docker/config/grafana/provisioning/grafana-datasource.yml</code>, uid
+<code>dc_postgres</code>) and the dashboard follows, since every panel queries by name. Grafana that
+isn't provisioned from this repo can import
+<code>tools/infrastructure/docker/config/grafana/dashboards/kpi.json</code> instead.</p>
+</li>
+<li>
+<p><strong>A read-only dashboard user</strong> needs no more than:</p>
+<pre><code class="language-sql">GRANT SELECT ON dc_kpi_uptime_samples, dc_kpi_availability_5m, dc_kpi_driving_samples,
+                dc_kpi_utilisation_5m, dc_kpi_intervention_events, dc_kpi_interventions_1h,
+                dc_kpi_fault_events, dc_kpi_faults_1h, dc_kpi_loop_closure_events,
+                dc_kpi_loop_closures_1h TO grafana;
+GRANT EXECUTE ON FUNCTION dc_kpi_availability(timestamptz, timestamptz, interval),
+                          dc_kpi_utilisation(timestamptz, timestamptz, interval, double precision),
+                          dc_kpi_intervention_rate(timestamptz, timestamptz, interval),
+                          dc_kpi_reliability(timestamptz, timestamptz, text[]),
+                          dc_kpi_loop_closure_rate(timestamptz, timestamptz) TO grafana;
+</code></pre>
+</li>
+<li>
+<p><strong>Records stored elsewhere</strong> — another schema, another table name — only affect the four
+sample/event views: they are the only objects that name the <code>dc</code> table, and everything
+else is defined on top of them.</p>
+</li>
+</ul>
+<h2 id="testing-a-change"><a class="header" href="#testing-a-change">Testing a change</a></h2>
+<p>The fixture test seeds PostgreSQL with a known Record sequence and asserts what the
+definitions report over it, including the outage, open-interval and missing-denominator
+cases that are awkward to reproduce by hand:</p>
+<pre><code class="language-bash">./tools/infrastructure/scripts/test_kpi_views.sh
+</code></pre>
+<p>It brings up a throwaway PostgreSQL with Podman, applies these same SQL files into a schema
+of its own, and runs <code>tools/infrastructure/test</code>. The intervention and fault cases seed the
+Records their Measurements will emit, so a definition change breaks a test here rather than
+a dashboard later. Add a case for every definition you add.</p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/kpi_views.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../dc/raw_topics.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../dc/configuration_examples.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../dc/raw_topics.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../dc/configuration_examples.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../js/mermaid.js"></script>
+        <script src="../js/mermaid-init.js"></script>
+        <script src="../js/theme.js"></script>
+        <script src="../js/distro.js"></script>
+
+
+    </body>
+</html>

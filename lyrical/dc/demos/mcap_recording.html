@@ -1,0 +1,434 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>MCAP recording (passthrough) - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../open-in.css">
+        <link rel="stylesheet" href="../.././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../../css/logo.css">
+        <link rel="stylesheet" href="../../css/lineicon.css">
+        <link rel="stylesheet" href="../../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/lyrical/doc/src/dc/demos/mcap_recording.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="mcap-recording-passthrough"><a class="header" href="#mcap-recording-passthrough">MCAP recording (passthrough)</a></h1>
+<p><code>dc_bridge</code> blesses exactly five Destination types — <code>postgres</code>, <code>s3</code>, <code>file</code>, <code>console</code>,
+<code>vector</code> (see <a href="../destinations.html">Destinations</a>) — and MCAP is not one of them; Vector, the
+Shipper, has no MCAP sink at all. This tutorial is the worked example for #210: the
+<a href="../adr/0003-blessed-destinations-plus-passthrough.html">ADR-0003</a> <strong>passthrough</strong> plus a
+small standalone process, <code>dc_mcap_writer</code>
+(<a href="../adr/0009-mcap-as-a-passthrough-destination.html">ADR-0009</a>),
+that consumes the same public <code>dc.&lt;tag&gt;</code> routes a blessed Destination consumes and
+writes them as rotated <code>.mcap</code> files, ready to open with <code>ros2 bag info</code> or
+<a href="https://foxglove.dev/">Foxglove</a>.</p>
+<p>Unlike the <a href="./elasticsearch.html">Elasticsearch</a>/<a href="./tb3_aws_influxdb.html">InfluxDB</a>
+passthrough demos, there is no raw Vector TOML to hand-author and no second terminal to
+start a companion process in: <code>dc_bringup.launch.py</code> reads a <code>dc_mcap_writer:</code> block
+from the same params file every other node's parameters live in, generates the
+passthrough sink from it, and starts <code>dc_mcap_writer</code> itself automatically. From the
+params file it <em>looks</em> like configuring a Destination — one block, <code>inputs</code>, done —
+even though it structurally isn't one (see "Understanding the configuration" below for
+why).</p>
+<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<div class="admonition-title">
+<div id="admonition-info-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info"></a>
+</div>
+<div>
+<p>Each Record is written as a JSON-schema-encoded MCAP message — one Channel per Tag,
+schema <code>{"type": "object"}</code> — the pattern in the
+<a href="https://github.com/foxglove/mcap/blob/main/cpp/examples/jsonschema/writer.cpp"><code>foxglove/mcap</code> <code>jsonschema/writer.cpp</code></a>
+example issue #210 links to. This is not a <code>ros2 bag record</code> capture of typed ROS
+messages: Records are DC's own JSON payloads, not (de)serialized ROS message types, so
+there is nothing to generate <code>.msg</code>/<code>.idl</code> schemas from. <code>ros2 bag info</code> reads the
+file's Channel/Statistics records regardless of encoding; Foxglove additionally
+understands <code>jsonschema</code> channels well enough to plot and inspect fields directly.</p>
+</div>
+</div>
+<h2 id="run-it"><a class="header" href="#run-it">Run it</a></h2>
+<p>Hardware-free: four system Measurements, one <code>dc_mcap_writer:</code> block in the params
+file (<code>dc_demos/params/mcap_recording.yaml</code>), one launch command:</p>
+<pre><code class="language-bash">colcon build
+ros2 launch dc_demos mcap_recording.launch.py
+</code></pre>
+<p><code>dc_bringup.launch.py</code> starts <code>dc_mcap_writer</code> before the rest of the stack, so its TCP
+listener is up before Vector's generated <code>socket</code> sink (re)connects to it — the very
+first Record lands instead of relying on Vector's own retry. The <code>records_log</code> <code>file</code>
+Destination writes every Record as it is shipped to <code>/tmp/dc/mcap_recording_records.ndjson</code>,
+so <code>tail -f</code> on that path doubles as a local view of what <code>dc_mcap_writer</code> is receiving
+(an earlier version of this demo used a blessed <code>console</code> Destination for the same job —
+see <a href="../destinations.html#recipes-postgres-s3-console-via-passthrough">Destinations: Recipes</a>
+for why that moved to a passthrough recipe); <code>dc_mcap_writer</code>'s own log lines (on this
+terminal — it runs alongside <code>dc_bridge</code>, not in the background) show each file it opens
+and closes.</p>
+<h2 id="verify-the-recording"><a class="header" href="#verify-the-recording">Verify the recording</a></h2>
+<p>Stop the stack (<code>Ctrl-C</code>) once a few Records have been collected — <code>dc_mcap_writer</code>
+finishes the file it has open on shutdown, so every <code>.mcap</code> under the configured
+<code>output_dir</code> (<code>~/dc_mcap_out</code> in the demo params) is independently valid, including every
+earlier rotation:</p>
+<pre><code class="language-bash">ros2 bag info ~/dc_mcap_out/records_&lt;timestamp&gt;_&lt;pid&gt;_0001.mcap
+</code></pre>
+<pre><code>Files:             /root/dc_mcap_out/records_20260904T064025Z_40_0001.mcap
+Bag size:          3.8 KiB
+Storage id:        mcap
+ROS Distro:        unknown
+Duration:          9.998903549s
+Start:             Sep  4 2026 06:40:26.274123868 (1788504026.274123868)
+End:               Sep  4 2026 06:40:36.273027417 (1788504036.273027417)
+Messages:          10
+Topic information: Topic: dc.measurement.cpu | Type: dc/record | Count: 3 | Serialization Format: json
+                    Topic: dc.measurement.memory | Type: dc/record | Count: 3 | Serialization Format: json
+                    Topic: dc.measurement.os | Type: dc/record | Count: 1 | Serialization Format: json
+                    Topic: dc.measurement.uptime | Type: dc/record | Count: 3 | Serialization Format: json
+Service:           0
+Service information:
+</code></pre>
+<p><code>Type: dc/record</code> — not <code>unknown</code> — because <code>dc_mcap_writer</code> registers its JSON-schema
+Channels under that schema name (<code>writer.py</code>'s <code>register_schema(name="dc/record", ...)</code>);
+<code>ros2 bag info</code> shows it verbatim rather than resolving a ROS message type, since there
+isn't one. Message counts and per-topic breakdown come from the file's
+Statistics/Channel records regardless. Also note the topic name is <code>dc.measurement.cpu</code>,
+not <code>dc.dc.measurement.cpu</code> — a single <code>dc.</code> prefix, matching the <code>dc.&lt;tag&gt;</code> routing
+contract in <a href="../destinations.html">Destinations</a>.</p>
+<p>Opening the same file in <a href="https://foxglove.dev/">Foxglove Studio</a> (<strong>Open local
+file…</strong>) lists each <code>dc.&lt;tag&gt;</code> Channel and renders its JSON fields (<code>cpu.average</code>,
+<code>memory.used</code>, <code>uptime.time</code>, …) in the Raw Messages and Plot panels like any other
+topic.</p>
+<h2 id="rotation"><a class="header" href="#rotation">Rotation</a></h2>
+<p><code>dc_mcap_writer</code> rotates to a new <code>.mcap</code> file once the current one hits <code>max_bytes</code>
+(default 128 MiB) or has been open <code>max_duration_secs</code> (default 300s), whichever comes
+first — the same "whichever limit first" shape used for <code>files.retention</code>
+(<a href="../adr/0005-file-uploads-are-bridge-responsibility.html">ADR-0005</a>),
+applied here to <code>dc_mcap_writer</code>'s own output rather than <code>dc_uploader</code>'s intent queue
+(<a href="../adr/0009-mcap-as-a-passthrough-destination.html">ADR-0009</a> explains why this stays
+outside <code>dc_bridge</code>). Filenames are
+<code>&lt;prefix&gt;_&lt;UTC timestamp&gt;_&lt;pid&gt;_&lt;rotation index&gt;.mcap</code>; the PID and counter together
+guarantee a unique name even across a process restart landing in the same wall-clock
+second as the previous process's last rotation — without both, the new process could
+compute the identical name and its <code>open(..., "wb")</code> would silently truncate the file
+the previous process had already finished.</p>
+<div id="admonition-warning" class="admonition admonish-warning" role="note" aria-labelledby="admonition-warning-title">
+<div class="admonition-title">
+<div id="admonition-warning-title">
+<p>Warning</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-warning"></a>
+</div>
+<div>
+<p>A <code>.mcap</code> file only becomes readable once its rotation finishes — writing the file's
+closing footer is what <code>max_bytes</code>/<code>max_duration_secs</code> triggers, not something every
+individual Record write does. A process that never gets to shut down gracefully
+(<code>SIGKILL</code>, or a container/orchestrator grace period too short for the clean-shutdown
+path to complete) loses whatever is in the file still open at that moment; every
+already-finished rotation stays valid and readable regardless. <code>max_duration_secs</code>'s
+default balances this against not producing too many small files — lower it for
+tighter durability, raise it for fewer files, per your own tolerance for that
+loss window.</p>
+</div>
+</div>
+<h2 id="understanding-the-configuration"><a class="header" href="#understanding-the-configuration">Understanding the configuration</a></h2>
+<div id="admonition-info-1" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-1-title">
+<div class="admonition-title">
+<div id="admonition-info-1-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info-1"></a>
+</div>
+<div>
+<p>See the <a href="./elasticsearch.html">Elasticsearch tutorial</a> for the full
+<a href="../adr/0003-blessed-destinations-plus-passthrough.html">ADR-0003</a> passthrough
+mechanics — routing, buffering, the <code>dc.&lt;tag&gt;</code> contract. This section only covers
+what's specific to how MCAP recording is wired up.</p>
+</div>
+</div>
+<p><code>dc_demos/params/mcap_recording.yaml</code>'s <code>dc_mcap_writer:</code> block is <strong>not</strong> nested
+inside <code>dc_bridge</code>'s <code>destinations</code> list, and can't be made to look exactly like
+<code>postgres</code>/<code>s3</code>/<code>file</code>/<code>console</code>/<code>vector</code> there: <code>destinations</code> is parsed and validated by
+<code>dc_bridge</code> itself, in C++, and an unrecognized <code>type</code> is a hard startup error by
+design (see <a href="../destinations.html">Destinations</a>) — teaching it a sixth type would mean
+changing <code>dc_bridge</code>, which <a href="../adr/0009-mcap-as-a-passthrough-destination.html">ADR-0009</a>
+explicitly decided against (Vector's own
+at-least-once/disk-buffered guarantees already cover what would have justified that).
+So it's a sibling top-level block instead, structurally shaped like a Destination
+(<code>inputs</code>, a handful of scalar settings) without literally being one.</p>
+<p><code>dc_bringup.launch.py</code>'s <code>build_bridge_and_mcap_actions()</code> reads that block at launch
+time (not compiled in — editing the params file and relaunching is how you change it)
+and, when <code>enabled: true</code>:</p>
+<ol>
+<li>Renders a Vector <code>socket</code> sink (<code>mode = "tcp"</code>, <code>encoding.codec = "json"</code>,
+<code>framing.method = "newline_delimited"</code>) from <code>inputs</code>, converting each ROS topic to
+its public <code>dc.&lt;tag&gt;</code> route the same way the Bridge itself does, to
+<code>~/.dc/generated_mcap_sink.toml</code> — regenerated every launch, not meant to be
+hand-edited — and merges that path into whatever <code>dc_bridge.custom_config_files</code>
+the params file already lists (a second <code>parameters=[...]</code> entry for a list-valued
+ROS parameter <em>replaces</em> the file's value rather than appending to it, so this merge
+has to happen in the launch file's own Python, not by relying on <code>launch_ros</code>).</li>
+<li>Starts <code>dc_mcap_writer</code> as a plain <code>ExecuteProcess</code> — deliberately not
+<code>ros2 run dc_mcap_writer dc_mcap_writer</code>: <code>ros2 run</code> spawns its target as a <em>child</em>
+of its own process and does not forward signals to it, so <code>launch</code>'s own
+respawn/shutdown handling would only ever reach the <code>ros2 run</code> wrapper, leaving the
+real <code>dc_mcap_writer</code> process running, orphaned, never getting the chance to finish
+its currently-open <code>.mcap</code> file. <code>dc_mcap_writer</code> has no <code>rclpy</code>/ROS-node dependency
+of its own, so nothing here actually needs <code>ros2 run</code>'s node-launching machinery —
+a sourced workspace already puts it on <code>PYTHONPATH</code>, so <code>python3 -m dc_mcap_writer.cli</code> runs it directly.</li>
+</ol>
+<p>Like every passthrough sink, the generated Vector sink gets Vector's default in-memory
+buffer, not the disk buffer blessed sinks get — see the "Passthrough:
+<code>custom_config_files</code>" section of <a href="../destinations.html#passthrough-custom_config_files">Destinations</a>.</p>
+<p><code>dc_mcap_writer</code> itself routes each incoming Record to a Channel by its <code>tag</code> field
+(falling back to <code>name</code>, then a fixed <code>dc.unknown</code> catch-all), and reads the Record's
+normalized timestamp from its own <code>--time-key</code> (default <code>date</code>, matching the Bridge's
+own <code>time_key</code> parameter — not currently exposed as its own <code>dc_mcap_writer:</code> field,
+set it via <code>ros2 launch</code>'s underlying <code>ExecuteProcess</code> if you need a non-default value)
+to set the MCAP message's <code>log_time</code>/<code>publish_time</code> — it understands all three
+<code>time_format</code> values (<code>epoch_nanos</code>, <code>iso8601</code>, <code>double</code>), same as
+<a href="../destinations.html#time_format">documented for Destinations</a>.</p>
+<h2 id="running-dc_mcap_writer-outside-dc_bringup"><a class="header" href="#running-dc_mcap_writer-outside-dc_bringup">Running <code>dc_mcap_writer</code> outside <code>dc_bringup</code></a></h2>
+<p>The launch integration above covers the common case; <code>python3 -m dc_mcap_writer.cli</code>
+(see <code>--help</code>) is still the standalone entrypoint underneath it, useful for converting
+an existing NDJSON capture (<code>--stdin</code>) or running it against a hand-authored passthrough
+snippet the way the <a href="./elasticsearch.html">Elasticsearch tutorial</a> shows for other sinks.</p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/demos/mcap_recording.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../dc/demos/intermediate.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../../dc/demos/elasticsearch.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../dc/demos/intermediate.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../../dc/demos/elasticsearch.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../../ace.js"></script>
+        <script src="../../editor.js"></script>
+        <script src="../../mode-rust.js"></script>
+        <script src="../../theme-dawn.js"></script>
+        <script src="../../theme-tomorrow_night.js"></script>
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../js/mermaid.js"></script>
+        <script src="../../js/mermaid-init.js"></script>
+        <script src="../../js/theme.js"></script>
+        <script src="../../js/distro.js"></script>
+
+
+    </body>
+</html>

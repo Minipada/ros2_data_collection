@@ -1,0 +1,383 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="UTF-8"/>
+
+  <link rel="shortcut icon" href="../_static/favicon.ico" type="image/x-icon"/>
+
+  
+  <link rel="stylesheet" href="../_static/base.css"/>
+  <link rel="stylesheet" href="../_static/layout.css"/>
+  <link rel="stylesheet" href="../_static/content.css"/>
+  <link rel="stylesheet" href="../_static/node.css"/>
+  <link rel="stylesheet" href="../_static/requirement.css"/>
+  <link rel="stylesheet" href="../_static/requirement__temporary.css"/>
+  <link rel="stylesheet" href="../_static/element.css"/>
+  <link rel="stylesheet" href="../_static/form.css"/>
+  
+
+  
+  <script type="text/javascript" src="../_static/viewtype_menu.js"></script>
+  <script type="text/javascript" src="../_static/toc.js"></script><script id="MathJax-script" async src="../_static/mathjax/tex-mml-chtml.js"></script>
+  
+  
+  
+
+
+  <title>Tooling - Table</title>
+
+  
+</head>
+
+<body data-viewtype="table" data-turbo="false">
+<script>document.body.dataset.toc_state = sessionStorage.getItem('tocState') || 'open';</script><div class="layout" id="layout">
+
+    <nav class="layout_nav">
+      <div class="nav">
+
+
+
+  <a
+    data-link="index"
+    class="nav_button"
+    href="../index.html"
+    title="Project index">
+    <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <line x1="9" y1="4" x2="7" y2="4"></line>
+  <line x1="12" y1="9" x2="12" y2="7"></line>
+  <line x1="6" y1="10" x2="10" y2="6"></line>
+  <circle cx="4" cy="12" r="2.25"></circle>
+  <circle cx="12" cy="4" r="2.25"></circle>
+  <circle cx="4" cy="4" r="2.25"></circle>
+  <circle cx="12" cy="12" r="2.25"></circle>
+</svg>
+  </a><a
+    data-link="requirements_coverage"
+    class="nav_button"
+    href="../requirements_coverage.html"
+    title="Requirements coverage">
+    
+<svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <line x1="2" y1="11" x2="14" y2="11"></line>
+    <line x1="10" y1="8" x2="14" y2="8"></line>
+    <line x1="2" y1="14" x2="14" y2="14"></line>
+    <polyline points="2 6 4.5 8 9.5 2"></polyline>
+</svg>
+  </a>
+  <a
+    data-link="source_coverage"
+    class="nav_button"
+    href="../source_coverage.html"
+    title="Source coverage">
+    
+<svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <path d="M6,2 C5.5,2 5,2 5,2 C4.5,2 4,2.5 4,3 C4,5 4,6 4,6 C4,6.5 3.5,7.5 2,8 C3.5,8.5 4,9.5 4,10 C4,10 4,11 4,13 C4,13.5 4.5,14 5,14 C5,14 5.5,14 6,14"></path>
+    <line x1="8" y1="8" x2="14" y2="8"></line>
+    <line x1="10" y1="4" x2="14" y2="4"></line>
+    <line x1="10" y1="12" x2="14" y2="12"></line>
+</svg>
+  </a></div>
+    </nav>
+
+    <div class="layout_toc">
+      
+  
+
+
+
+<div class="toc_panel">
+
+<div
+  data-testid="toc-handler"
+  js-toc-handler='true' 
+  class="toc_handler nav_button"
+>
+  <svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+            <line class="horz" x1="2" y1="12" x2="14" y2="12" id="q3"></line>
+            <line x1="2" y1="8" x2="14" y2="8" id="q2"></line>
+            <line class="horz" x1="2" y1="4" x2="14" y2="4" id="q1"></line>
+            <line class="arrw" x1="2" y1="8" x2="8" y2="14" id="q33"></line>
+            <line class="arrw" x1="2" y1="8" x2="8" y2="2" id="q11"></line>
+</svg>
+</div>
+
+<turbo-frame
+  id="frame-toc"
+  style="display: contents"
+  js-collapsible_list='true' 
+  data-controller="collapsible_list"
+>
+
+  <div class="toc_panel__overlay">
+    <div class="toc_panel__control">
+      <div
+        js-collapsible_list-control='true' 
+      ></div>
+    </div>
+  </div>
+
+  <div
+    js-collapsible_list-container='true' 
+    class="toc_panel__content"
+  >
+
+    <ul
+      data-testid="toc-list"
+      js-collapsible_list-list='true' 
+      class="toc"
+    ><li><a href="#1-Monitoring" data-turbo="false">
+              <span class="section-number">1</span>
+              Monitoring
+            </a><ul><li>
+        <a href="#1.1-TOOL-MON-001" data-turbo="false">
+          <span class="section-number">1.1</span>Can monitor system performance and health</a></li></ul>
+            </li><li><a href="#2-Reports" data-turbo="false">
+              <span class="section-number">2</span>
+              Reports
+            </a><ul><li>
+        <a href="#2.1-TOOL-REP-001" data-turbo="false">
+          <span class="section-number">2.1</span>Can generate reports and statistics on data usage and performance</a></li></ul>
+            </li><li><a href="#3-CLI" data-turbo="false">
+              <span class="section-number">3</span>
+              CLI
+            </a><ul><li>
+        <a href="#3.1-TOOL-CLI-001" data-turbo="false">
+          <span class="section-number">3.1</span>Can list plugins from CLI</a></li></ul>
+            </li></ul>
+  </div>
+</turbo-frame>
+</div>
+
+    </div>
+
+    <header class="layout_header">
+      
+<div class="header">
+  <div class="header__document">
+  <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <path d=" M13,13 L13,8 C13,7.5 12.6,7 12,7 L9,7 C8.5,7 8,6.5 8,6 L8,3 C8,2.5 7.5,2 7,2 L4,2 C3.5,2 3,2.5 3,3 L3,13 C3,13.5 3.5,14 4,14 L12,14 C12.6,14 13,13.5 13,13 Z M13,9 L13,8 C13,7.5 13,7 12.5,6.5 L8.5,2.5 C8,2 7.5,2 7,2 L6,2"></path>
+</svg>
+  <turbo-frame id="document_title">
+<div
+  class="header__document_title"
+  title="Tooling"
+>
+  Tooling
+</div>
+</turbo-frame>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" class="sc-gLvsXj bpkaBy"><path stroke="currentColor" d="M12.5 4.5l-5 11" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  <div class="viewtype">
+  <div
+    id="viewtype_handler"
+    class="viewtype__handler"
+    aria-expanded="false"
+    aria-controls="viewtype_menu"
+  >
+    <span>Table</span>
+    <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" >
+  <path d="M5 10l3 3 3-3M5 6l3-3 3 3"></path>
+</svg>
+  </div>
+  <menu
+    id="viewtype_menu"
+    class="viewtype__menu"
+    aria-hidden="true"
+    aria-labelledby="viewtype_handler"
+  >
+    <li class="viewtype__menu_header">VIEWS</li>
+    <li>
+      <a
+        data-viewtype_link="document"
+        class="viewtype__menu_item"
+        title="Go to Document view"
+        href="../requirements/tooling.html">
+        Document</a>
+    </li>
+    <li>
+      <a
+        data-viewtype_link="table"
+        class="viewtype__menu_item"
+        title="Go to Table view"
+        href="../requirements/tooling-TABLE.html">
+        Table</a>
+    </li>
+    <li>
+      <a
+        data-viewtype_link="traceability"
+        class="viewtype__menu_item"
+        title="Go to Traceability view"
+        href="../requirements/tooling-TRACE.html">
+        Traceability</a>
+    </li>
+    <li>
+      <a
+        data-viewtype_link="deep_traceability"
+        class="viewtype__menu_item"
+        title="Go to Deep Traceability view"
+        href="../requirements/tooling-DEEP-TRACE.html">
+      Deep traceability</a>
+    </li>
+  </menu>
+</div>
+</div>
+</div>
+
+    </header>
+
+    <main class="layout_main" id="pan_with_space">
+      
+
+      <div class="content">
+    <sdoc-node>
+      <h1>Tooling</h1></sdoc-node>
+
+    <table class="content-view-table">
+
+      <thead>
+        <tr>
+          <th class="content-view-th">Type</th>
+          <th class="content-view-th">Level</th><th class="content-view-th">UID</th><th class="content-view-th">STATUS</th><th class="content-view-th">TAGS</th><th class="content-view-th">REFS</th>
+          <th class="content-view-th">Title</th>
+          <th class="content-view-th">Statement</th>
+          <th class="content-view-th">Rationale</th>
+          <th class="content-view-th">Comment</th></tr>
+      </thead>
+      <tr>
+      <td class="content-view-td content-view-td-type">Section</td>
+      <td class="content-view-td content-view-td-meta">
+        1
+      </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="1-Monitoring"></sdoc-anchor>
+          <div class="requirement__title">
+            Monitoring
+          </div></td>
+      </tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        1.1
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            TOOL-MON-001</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="1.1-TOOL-MON-001"></sdoc-anchor>
+          <div class="requirement__title">
+            Can monitor system performance and health
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The system should be able to monitor its own performance and health, such as CPU usage, memory usage, network usage, and report any issues or errors to a logging system.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">Section</td>
+      <td class="content-view-td content-view-td-meta">
+        2
+      </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="2-Reports"></sdoc-anchor>
+          <div class="requirement__title">
+            Reports
+          </div></td>
+      </tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        2.1
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            TOOL-REP-001</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="2.1-TOOL-REP-001"></sdoc-anchor>
+          <div class="requirement__title">
+            Can generate reports and statistics on data usage and performance
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>The system should be able to generate reports and statistics on data usage and performance to help users optimize their data collection and analysis processes.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">Section</td>
+      <td class="content-view-td content-view-td-meta">
+        3
+      </td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta"></td>
+        <td class="content-view-td content-view-td-title" colspan="4"><sdoc-anchor id="3-CLI"></sdoc-anchor>
+          <div class="requirement__title">
+            CLI
+          </div></td>
+      </tr>
+      <tr>
+      <td class="content-view-td content-view-td-type">
+        Requirement</td>
+      <td class="content-view-td content-view-td-meta">
+        3.1
+      </td>
+          <td class="content-view-td content-view-td-meta">
+            TOOL-CLI-001</td>
+          <td class="content-view-td content-view-td-meta"></td>
+          <td class="content-view-td content-view-td-meta"></td><td class="content-view-td content-view-td-meta content-view-td-related">
+        </td>
+        <td class="content-view-td content-view-td-title"><sdoc-anchor id="3.1-TOOL-CLI-001"></sdoc-anchor>
+          <div class="requirement__title">
+            Can list plugins from CLI
+          </div></td>
+        <td class="content-view-td content-view-td-content"><div class="document">
+<p>Plugins defined in xml files can be fetched and listed so the user knows which ones are available.</p>
+</div>
+</td>
+        <td class="content-view-td content-view-td-content"></td>
+        <td class="content-view-td content-view-td-content">
+        </td></tr>
+
+    </table>
+  </div>
+    </main>
+
+    <footer class="layout_footer">
+    
+      <div class="footer">
+        Built with
+        <a
+          class="strictdoc__link"
+          href="https://github.com/strictdoc-project/strictdoc"
+          target="_blank"
+        >StrictDoc</a>
+        <a
+          class="strictdoc__version"
+          href="https://github.com/strictdoc-project/strictdoc/releases/tag/0.0.40"
+          target="_blank"
+        >
+          <svg height="16" viewBox="0 0 16 16" version="1.1" width="16" >
+            <path fill-rule="evenodd" d="M2.5 7.775V2.75a.25.25 0 01.25-.25h5.025a.25.25 0 01.177.073l6.25 6.25a.25.25 0 010 .354l-5.025 5.025a.25.25 0 01-.354 0l-6.25-6.25a.25.25 0 01-.073-.177zm-1.5 0V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 010 2.474l-5.026 5.026a1.75 1.75 0 01-2.474 0l-6.25-6.25A1.75 1.75 0 011 7.775zM6 5a1 1 0 100 2 1 1 0 000-2z"></path>
+          </svg>
+          0.0.40
+        </a>
+      </div>
+    
+    </footer>
+
+    <aside class="layout_aside">
+      
+    </aside>
+
+  </div>
+  
+  <div id="modal"></div>
+  <div id="confirm"></div>
+  
+</body>
+</html>

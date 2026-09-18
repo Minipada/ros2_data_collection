@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="1600" height="1200" font-family="'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+        <defs>
+          <marker id="d1ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0.5,1 L9,5 L0.5,9 Z" fill="#94A0B0"></path></marker>
+        </defs>
+        <rect x="0" y="0" width="1600" height="1200" fill="#F7F8FA"></rect>
+
+        <text x="56" y="84" font-size="38" font-weight="600" fill="#1B2430" letter-spacing="-0.5">System Context</text>
+        <text x="56" y="120" font-size="21" fill="#6B7688">DC (Data Collection) and the systems it exchanges data with</text>
+
+        <circle cx="430" cy="196" r="26" fill="#6E6494"></circle>
+        <path d="M386 272 C386 244 405 228 430 228 C455 228 474 244 474 272 Z" fill="#6E6494"></path>
+        <text x="430" y="322" font-size="28" font-weight="600" fill="#1B2430" text-anchor="middle">Robot Operator</text>
+        <text x="430" y="350" font-size="19" fill="#8A94A3" text-anchor="middle">[Person]</text>
+        <text x="430" y="380" font-size="20" fill="#6B7688" text-anchor="middle">Configures collection and delivery</text>
+
+        <polyline points="430,400 430,458" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" marker-end="url(#d1ah)"></polyline>
+        <text x="448" y="436" font-size="21" fill="#5C6779" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">configures</text>
+
+        <rect x="180" y="460" width="820" height="260" rx="8" fill="#2B5A82"></rect>
+        <text x="590" y="540" font-size="40" font-weight="600" fill="#FFFFFF" text-anchor="middle">DC (Data Collection)</text>
+        <text x="590" y="574" font-size="20" fill="#A9CBE4" text-anchor="middle">[Software System]</text>
+        <text x="590" y="622" font-size="22" fill="#D9E8F3" text-anchor="middle">Collects operational data from a robot, processes it,</text>
+        <text x="590" y="652" font-size="22" fill="#D9E8F3" text-anchor="middle">and routes it to external infrastructure</text>
+
+        <polyline points="225,720 225,828" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" marker-end="url(#d1ah)"></polyline>
+        <text x="243" y="782" font-size="21" fill="#5C6779" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">delivers records</text>
+
+        <polyline points="580,720 580,828" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" marker-end="url(#d1ah)"></polyline>
+        <text x="598" y="770" font-size="21" fill="#A0663F" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">uploads files</text>
+        <text x="598" y="798" font-size="21" fill="#5C6779" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">delivers records</text>
+
+        <polyline points="935,720 935,828" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" marker-end="url(#d1ah)"></polyline>
+        <text x="953" y="782" font-size="21" fill="#5C6779" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">delivers records</text>
+
+        <rect x="70" y="830" width="310" height="220" rx="7" fill="#FFFFFF" stroke="#C3C9D4" stroke-width="1.75"></rect>
+        <text x="225" y="900" font-size="26" font-weight="600" fill="#3D4756" text-anchor="middle">Other destinations</text>
+        <text x="225" y="930" font-size="18" fill="#8A94A3" text-anchor="middle">[Software System]</text>
+        <text x="225" y="968" font-size="19" fill="#6B7688" text-anchor="middle">Any configured sink —</text>
+        <text x="225" y="994" font-size="19" fill="#6B7688" text-anchor="middle">Kafka, InfluxDB, HTTP</text>
+
+        <rect x="425" y="830" width="310" height="220" rx="7" fill="#FFFFFF" stroke="#C3C9D4" stroke-width="1.75"></rect>
+        <text x="580" y="900" font-size="26" font-weight="600" fill="#3D4756" text-anchor="middle">S3-compatible storage</text>
+        <text x="580" y="930" font-size="18" fill="#8A94A3" text-anchor="middle">[Software System]</text>
+        <text x="580" y="968" font-size="19" fill="#6B7688" text-anchor="middle">Images, video, maps</text>
+        <text x="580" y="994" font-size="19" fill="#6B7688" text-anchor="middle">and records</text>
+
+        <rect x="780" y="830" width="310" height="220" rx="7" fill="#FFFFFF" stroke="#C3C9D4" stroke-width="1.75"></rect>
+        <text x="935" y="900" font-size="26" font-weight="600" fill="#3D4756" text-anchor="middle">PostgreSQL</text>
+        <text x="935" y="930" font-size="18" fill="#8A94A3" text-anchor="middle">[Software System]</text>
+        <text x="935" y="972" font-size="19" fill="#6B7688" text-anchor="middle">Structured records storage</text>
+
+        <circle cx="1300" cy="876" r="26" fill="#6E6494"></circle>
+        <path d="M1256 952 C1256 924 1275 908 1300 908 C1325 908 1344 924 1344 952 Z" fill="#6E6494"></path>
+        <text x="1300" y="1000" font-size="26" font-weight="600" fill="#1B2430" text-anchor="middle">Analytics Consumer</text>
+        <text x="1300" y="1026" font-size="18" fill="#8A94A3" text-anchor="middle">[Person]</text>
+        <text x="1300" y="1056" font-size="19" fill="#6B7688" text-anchor="middle">Queries DC's destinations</text>
+
+        <polyline points="1150,940 1094,940" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" marker-end="url(#d1ah)"></polyline>
+        <text x="1104" y="916" font-size="21" fill="#5C6779" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">queries</text>
+
+        <polyline points="1300,1078 1300,1130 580,1130 580,1054" fill="none" stroke="#94A0B0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#d1ah)"></polyline>
+        <text x="940" y="1106" font-size="21" fill="#5C6779" text-anchor="middle" paint-order="stroke" stroke="#F7F8FA" stroke-width="7" stroke-linejoin="round">retrieves files</text>
+      </svg>

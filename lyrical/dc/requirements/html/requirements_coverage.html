@@ -1,0 +1,4483 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="UTF-8"/>
+
+  <link rel="shortcut icon" href="_static/favicon.ico" type="image/x-icon"/>
+
+  
+  
+  <link rel="stylesheet" href="_static/base.css"/>
+  <link rel="stylesheet" href="_static/layout.css"/>
+  <link rel="stylesheet" href="_static/content.css"/>
+  <link rel="stylesheet" href="_static/node.css"/>
+  <link rel="stylesheet" href="_static/requirement.css"/>
+  <link rel="stylesheet" href="_static/requirement__temporary.css"/>
+  <link rel="stylesheet" href="_static/element.css"/>
+  <link rel="stylesheet" href="_static/form.css"/>
+  
+  <link rel="stylesheet" href="_static/requirement-tree.css"/>
+
+
+  
+  
+  
+  
+  
+  <script type="text/javascript" src="_static/pan_with_space.js"></script>
+  <script type="text/javascript" src="_static/requirements-coverage.js"></script>
+
+
+  <title>
+  ROS 2 Data Collection - Requirements coverage
+</title>
+
+  
+</head>
+
+<body data-viewtype="requirements-coverage" data-turbo="false">
+<script>document.body.dataset.toc_state = sessionStorage.getItem('tocState') || 'open';</script><div class="layout" id="layout">
+
+    <nav class="layout_nav">
+      
+  <div class="nav">
+
+
+
+  <a
+    data-link="index"
+    class="nav_button"
+    href="index.html"
+    title="Project index">
+    <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <line x1="9" y1="4" x2="7" y2="4"></line>
+  <line x1="12" y1="9" x2="12" y2="7"></line>
+  <line x1="6" y1="10" x2="10" y2="6"></line>
+  <circle cx="4" cy="12" r="2.25"></circle>
+  <circle cx="12" cy="4" r="2.25"></circle>
+  <circle cx="4" cy="4" r="2.25"></circle>
+  <circle cx="12" cy="12" r="2.25"></circle>
+</svg>
+  </a><a
+    data-link="requirements_coverage"
+    class="nav_button"
+    href="requirements_coverage.html"
+    title="Requirements coverage">
+    
+<svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <line x1="2" y1="11" x2="14" y2="11"></line>
+    <line x1="10" y1="8" x2="14" y2="8"></line>
+    <line x1="2" y1="14" x2="14" y2="14"></line>
+    <polyline points="2 6 4.5 8 9.5 2"></polyline>
+</svg>
+  </a>
+  <a
+    data-link="source_coverage"
+    class="nav_button"
+    href="source_coverage.html"
+    title="Source coverage">
+    
+<svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <path d="M6,2 C5.5,2 5,2 5,2 C4.5,2 4,2.5 4,3 C4,5 4,6 4,6 C4,6.5 3.5,7.5 2,8 C3.5,8.5 4,9.5 4,10 C4,10 4,11 4,13 C4,13.5 4.5,14 5,14 C5,14 5.5,14 6,14"></path>
+    <line x1="8" y1="8" x2="14" y2="8"></line>
+    <line x1="10" y1="4" x2="14" y2="4"></line>
+    <line x1="10" y1="12" x2="14" y2="12"></line>
+</svg>
+  </a></div>
+
+    </nav>
+
+    <div class="layout_toc">
+      
+  
+  <div class="nav_panel">
+    
+    <ul class="nav_list"><li>
+          <a class="nav_list__link" href="#1">
+            <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <path d=" M13,13 L13,8 C13,7.5 12.6,7 12,7 L9,7 C8.5,7 8,6.5 8,6 L8,3 C8,2.5 7.5,2 7,2 L4,2 C3.5,2 3,2.5 3,3 L3,13 C3,13.5 3.5,14 4,14 L12,14 C12.6,14 13,13.5 13,13 Z M13,9 L13,8 C13,7.5 13,7 12.5,6.5 L8.5,2.5 C8,2 7.5,2 7,2 L6,2"></path>
+</svg>
+            API
+          </a>
+        </li><li>
+          <a class="nav_list__link" href="#2">
+            <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <path d=" M13,13 L13,8 C13,7.5 12.6,7 12,7 L9,7 C8.5,7 8,6.5 8,6 L8,3 C8,2.5 7.5,2 7,2 L4,2 C3.5,2 3,2.5 3,3 L3,13 C3,13.5 3.5,14 4,14 L12,14 C12.6,14 13,13.5 13,13 Z M13,9 L13,8 C13,7.5 13,7 12.5,6.5 L8.5,2.5 C8,2 7.5,2 7,2 L6,2"></path>
+</svg>
+            Condition plugins
+          </a>
+        </li><li>
+          <a class="nav_list__link" href="#3">
+            <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <path d=" M13,13 L13,8 C13,7.5 12.6,7 12,7 L9,7 C8.5,7 8,6.5 8,6 L8,3 C8,2.5 7.5,2 7,2 L4,2 C3.5,2 3,2.5 3,3 L3,13 C3,13.5 3.5,14 4,14 L12,14 C12.6,14 13,13.5 13,13 Z M13,9 L13,8 C13,7.5 13,7 12.5,6.5 L8.5,2.5 C8,2 7.5,2 7,2 L6,2"></path>
+</svg>
+            General
+          </a>
+        </li><li>
+          <a class="nav_list__link" href="#4">
+            <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <path d=" M13,13 L13,8 C13,7.5 12.6,7 12,7 L9,7 C8.5,7 8,6.5 8,6 L8,3 C8,2.5 7.5,2 7,2 L4,2 C3.5,2 3,2.5 3,3 L3,13 C3,13.5 3.5,14 4,14 L12,14 C12.6,14 13,13.5 13,13 Z M13,9 L13,8 C13,7.5 13,7 12.5,6.5 L8.5,2.5 C8,2 7.5,2 7,2 L6,2"></path>
+</svg>
+            Measurement plugins
+          </a>
+        </li><li>
+          <a class="nav_list__link" href="#5">
+            <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <path d=" M13,13 L13,8 C13,7.5 12.6,7 12,7 L9,7 C8.5,7 8,6.5 8,6 L8,3 C8,2.5 7.5,2 7,2 L4,2 C3.5,2 3,2.5 3,3 L3,13 C3,13.5 3.5,14 4,14 L12,14 C12.6,14 13,13.5 13,13 Z M13,9 L13,8 C13,7.5 13,7 12.5,6.5 L8.5,2.5 C8,2 7.5,2 7,2 L6,2"></path>
+</svg>
+            Measurement server
+          </a>
+        </li><li>
+          <a class="nav_list__link" href="#6">
+            <svg class="svg_icon" width="16" height="16" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <path d=" M13,13 L13,8 C13,7.5 12.6,7 12,7 L9,7 C8.5,7 8,6.5 8,6 L8,3 C8,2.5 7.5,2 7,2 L4,2 C3.5,2 3,2.5 3,3 L3,13 C3,13.5 3.5,14 4,14 L12,14 C12.6,14 13,13.5 13,13 Z M13,9 L13,8 C13,7.5 13,7 12.5,6.5 L8.5,2.5 C8,2 7.5,2 7,2 L6,2"></path>
+</svg>
+            Tooling
+          </a>
+        </li></ul>
+  </div>
+
+    </div>
+
+    <header class="layout_header">
+      
+<div class="header">
+  <div class="header__project">
+  <svg class="svg_icon" width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <polyline points="14 5 14 10.5 8 15 2 10.5 2 5 8 1 14 5 8 9.5"></polyline>
+  <polyline points="2.5 5.5 8 9.5 8 15"></polyline>
+</svg>
+  <div class="header__project_name">ROS 2 Data Collection</div>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" class="sc-gLvsXj bpkaBy"><path stroke="currentColor" d="M12.5 4.5l-5 11" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  <div class="pagetype">Requirements coverage</div>
+</div>
+</div>
+
+    </header>
+
+    <main class="layout_main" id="pan_with_space">
+      <h3 class="requirements-coverage-document-title" id="1">API</h3><div class="content">
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-GEN-001'
+>
+  <div
+  class="requirement__title"
+  data-level="1.1"
+>API-GEN-001</div><div>
+  1.1.&nbsp;Provide an API
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-GEN-002'
+>
+  <div
+  class="requirement__title"
+  data-level="1.2"
+>API-GEN-002</div><div>
+  1.2.&nbsp;Can provide historical data retrieval
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-GEN-003'
+>
+  <div
+  class="requirement__title"
+  data-level="1.3"
+>API-GEN-003</div><div>
+  1.3.&nbsp;Can handle requests for specific data fields
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-GEN-004'
+>
+  <div
+  class="requirement__title"
+  data-level="1.4"
+>API-GEN-004</div><div>
+  1.4.&nbsp;Can handle requests for data within a specific time range
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-GEN-005'
+>
+  <div
+  class="requirement__title"
+  data-level="1.5"
+>API-GEN-005</div><div>
+  1.5.&nbsp;Can filter data by measurement type
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-GEN-006'
+>
+  <div
+  class="requirement__title"
+  data-level="1.6"
+>API-GEN-006</div><div>
+  1.6.&nbsp;Can filter data by robot ID
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-GEN-007'
+>
+  <div
+  class="requirement__title"
+  data-level="1.7"
+>API-GEN-007</div><div>
+  1.7.&nbsp;Can filter data by robot name
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-GEN-008'
+>
+  <div
+  class="requirement__title"
+  data-level="1.8"
+>API-GEN-008</div><div>
+  1.8.&nbsp;Can paginate data results
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-GEN-009'
+>
+  <div
+  class="requirement__title"
+  data-level="1.9"
+>API-GEN-009</div><div>
+  1.9.&nbsp;Can retrieve data in different formats
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-OPENAPI-001'
+>
+  <div
+  class="requirement__title"
+  data-level="2.1"
+>API-OPENAPI-001</div><div>
+  2.1.&nbsp;Provide OpenAPI documentation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-OPENAPI-002'
+>
+  <div
+  class="requirement__title"
+  data-level="2.2"
+>API-OPENAPI-002</div><div>
+  2.2.&nbsp;Conform to OpenAPI specification
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-OPENAPI-003'
+>
+  <div
+  class="requirement__title"
+  data-level="2.3"
+>API-OPENAPI-003</div><div>
+  2.3.&nbsp;Support OpenAPI security definitions
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-OPENAPI-004'
+>
+  <div
+  class="requirement__title"
+  data-level="2.4"
+>API-OPENAPI-004</div><div>
+  2.4.&nbsp;Support OpenAPI response codes
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-BAC-001'
+>
+  <div
+  class="requirement__title"
+  data-level="3.1"
+>API-BAC-001</div><div>
+  3.1.&nbsp;Can fetch data from PostgreSQL
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-BAC-002'
+>
+  <div
+  class="requirement__title"
+  data-level="3.2"
+>API-BAC-002</div><div>
+  3.2.&nbsp;Can fetch data from MongoDB
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-BAC-003'
+>
+  <div
+  class="requirement__title"
+  data-level="3.3"
+>API-BAC-003</div><div>
+  3.3.&nbsp;Can fetch data from InfluxDB
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-DB-001'
+>
+  <div
+  class="requirement__title"
+  data-level="4.1"
+>API-DB-001</div><div>
+  4.1.&nbsp;Support for multiple database systems
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-DB-002'
+>
+  <div
+  class="requirement__title"
+  data-level="4.2"
+>API-DB-002</div><div>
+  4.2.&nbsp;Secure database connections
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-DB-003'
+>
+  <div
+  class="requirement__title"
+  data-level="4.3"
+>API-DB-003</div><div>
+  4.3.&nbsp;Connection pooling
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-DB-004'
+>
+  <div
+  class="requirement__title"
+  data-level="4.4"
+>API-DB-004</div><div>
+  4.4.&nbsp;Support for connection parameters
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-DB-005'
+>
+  <div
+  class="requirement__title"
+  data-level="4.5"
+>API-DB-005</div><div>
+  4.5.&nbsp;Support for connection parameters through configuration file
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-DB-006'
+>
+  <div
+  class="requirement__title"
+  data-level="4.6"
+>API-DB-006</div><div>
+  4.6.&nbsp;Support for connection parameters through environment variables
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-AUT-001'
+>
+  <div
+  class="requirement__title"
+  data-level="5.1"
+>API-AUT-001</div><div>
+  5.1.&nbsp;Can authenticate users
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-AUT-002'
+>
+  <div
+  class="requirement__title"
+  data-level="5.2"
+>API-AUT-002</div><div>
+  5.2.&nbsp;Can provide rate limiting
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-AUT-003'
+>
+  <div
+  class="requirement__title"
+  data-level="5.3"
+>API-AUT-003</div><div>
+  5.3.&nbsp;Can provide encrypted data transmission
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-DOC-001'
+>
+  <div
+  class="requirement__title"
+  data-level="6.1"
+>API-DOC-001</div><div>
+  6.1.&nbsp;OpenAPI Specification
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-DOC-002'
+>
+  <div
+  class="requirement__title"
+  data-level="6.2"
+>API-DOC-002</div><div>
+  6.2.&nbsp;Comprehensive documentation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-DOC-003'
+>
+  <div
+  class="requirement__title"
+  data-level="6.3"
+>API-DOC-003</div><div>
+  6.3.&nbsp;Up-to-date documentation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-DOC-004'
+>
+  <div
+  class="requirement__title"
+  data-level="6.4"
+>API-DOC-004</div><div>
+  6.4.&nbsp;User-friendly documentation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-SWA-001'
+>
+  <div
+  class="requirement__title"
+  data-level="7.1"
+>API-SWA-001</div><div>
+  7.1.&nbsp;Support OpenAPI Specification (Swagger)
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-SWA-002'
+>
+  <div
+  class="requirement__title"
+  data-level="7.2"
+>API-SWA-002</div><div>
+  7.2.&nbsp;Provide Swagger documentation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-SWA-003'
+>
+  <div
+  class="requirement__title"
+  data-level="7.3"
+>API-SWA-003</div><div>
+  7.3.&nbsp;Keep Swagger documentation up-to-date
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='API-SWA-004'
+>
+  <div
+  class="requirement__title"
+  data-level="7.4"
+>API-SWA-004</div><div>
+  7.4.&nbsp;Validate API requests and responses using Swagger
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+      </div><h3 class="requirements-coverage-document-title" id="2">Condition plugins</h3><div class="content">
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-001'
+>
+  <div
+  class="requirement__title"
+  data-level="1.1"
+>MS-CON-VC-001</div><div>
+  1.1.&nbsp;Bool equal
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-002'
+>
+  <div
+  class="requirement__title"
+  data-level="1.2"
+>MS-CON-VC-002</div><div>
+  1.2.&nbsp;Double equal
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-003'
+>
+  <div
+  class="requirement__title"
+  data-level="1.3"
+>MS-CON-VC-003</div><div>
+  1.3.&nbsp;Double inferior
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-004'
+>
+  <div
+  class="requirement__title"
+  data-level="1.4"
+>MS-CON-VC-004</div><div>
+  1.4.&nbsp;Double superior
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-005'
+>
+  <div
+  class="requirement__title"
+  data-level="1.5"
+>MS-CON-VC-005</div><div>
+  1.5.&nbsp;Exist
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-006'
+>
+  <div
+  class="requirement__title"
+  data-level="1.6"
+>MS-CON-VC-006</div><div>
+  1.6.&nbsp;Integer equal
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-007'
+>
+  <div
+  class="requirement__title"
+  data-level="1.7"
+>MS-CON-VC-007</div><div>
+  1.7.&nbsp;Integer inferior
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-008'
+>
+  <div
+  class="requirement__title"
+  data-level="1.8"
+>MS-CON-VC-008</div><div>
+  1.8.&nbsp;Integer superior
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-009'
+>
+  <div
+  class="requirement__title"
+  data-level="1.9"
+>MS-CON-VC-009</div><div>
+  1.9.&nbsp;List bool equal
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-010'
+>
+  <div
+  class="requirement__title"
+  data-level="1.10"
+>MS-CON-VC-010</div><div>
+  1.10.&nbsp;List double equal
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-011'
+>
+  <div
+  class="requirement__title"
+  data-level="1.11"
+>MS-CON-VC-011</div><div>
+  1.11.&nbsp;List integer equal
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-012'
+>
+  <div
+  class="requirement__title"
+  data-level="1.12"
+>MS-CON-VC-012</div><div>
+  1.12.&nbsp;List string equal
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-013'
+>
+  <div
+  class="requirement__title"
+  data-level="1.13"
+>MS-CON-VC-013</div><div>
+  1.13.&nbsp;Same as previous
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-VC-014'
+>
+  <div
+  class="requirement__title"
+  data-level="1.14"
+>MS-CON-VC-014</div><div>
+  1.14.&nbsp;String match
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-ACT-001'
+>
+  <div
+  class="requirement__title"
+  data-level="2.1"
+>MS-CON-ACT-001</div><div>
+  2.1.&nbsp;Moving robot
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+      </div><h3 class="requirements-coverage-document-title" id="3">General</h3><div class="content">
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='GEN-USAB-001'
+>
+  <div
+  class="requirement__title"
+  data-level="1.1"
+>GEN-USAB-001</div><div>
+  1.1.&nbsp;Can load configuration from YAML
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='GEN-DEP-001'
+>
+  <div
+  class="requirement__title"
+  data-level="2.1"
+>GEN-DEP-001</div><div>
+  2.1.&nbsp;Container deployment
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='GEN-DEP-002'
+>
+  <div
+  class="requirement__title"
+  data-level="2.2"
+>GEN-DEP-002</div><div>
+  2.2.&nbsp;Native deployment
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='GEN-DEP-003'
+>
+  <div
+  class="requirement__title"
+  data-level="2.3"
+>GEN-DEP-003</div><div>
+  2.3.&nbsp;Easy configuration and management
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='GEN-DEP-004'
+>
+  <div
+  class="requirement__title"
+  data-level="2.4"
+>GEN-DEP-004</div><div>
+  2.4.&nbsp;Fault tolerance and error handling
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+      </div><h3 class="requirements-coverage-document-title" id="4">Measurement plugins</h3><div class="content">
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PLU-001'
+>
+  <div
+  class="requirement__title"
+  data-level="1.1"
+>MP-PLU-001</div><div>
+  1.1.&nbsp;Can collect images from camera
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PLU-002'
+>
+  <div
+  class="requirement__title"
+  data-level="1.2"
+>MP-PLU-002</div><div>
+  1.2.&nbsp;Can collect video from camera
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PLU-003'
+>
+  <div
+  class="requirement__title"
+  data-level="1.3"
+>MP-PLU-003</div><div>
+  1.3.&nbsp;Can collect command velocity
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PLU-004'
+>
+  <div
+  class="requirement__title"
+  data-level="1.4"
+>MP-PLU-004</div><div>
+  1.4.&nbsp;Can collect CPU data
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PLU-005'
+>
+  <div
+  class="requirement__title"
+  data-level="1.5"
+>MP-PLU-005</div><div>
+  1.5.&nbsp;Can collect distance traveled
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PLU-006'
+>
+  <div
+  class="requirement__title"
+  data-level="1.6"
+>MP-PLU-006</div><div>
+  1.6.&nbsp;Can collect IP camera image
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PLU-007'
+>
+  <div
+  class="requirement__title"
+  data-level="1.7"
+>MP-PLU-007</div><div>
+  1.7.&nbsp;Can collect IP camera video
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PLU-008'
+>
+  <div
+  class="requirement__title"
+  data-level="1.8"
+>MP-PLU-008</div><div>
+  1.8.&nbsp;Can collect ROS 2 map
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PLU-009'
+>
+  <div
+  class="requirement__title"
+  data-level="1.9"
+>MP-PLU-009</div><div>
+  1.9.&nbsp;Can collect network data
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PLU-010'
+>
+  <div
+  class="requirement__title"
+  data-level="1.10"
+>MP-PLU-010</div><div>
+  1.10.&nbsp;Can collect OS data
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PLU-011'
+>
+  <div
+  class="requirement__title"
+  data-level="1.11"
+>MP-PLU-011</div><div>
+  1.11.&nbsp;Can collect permission data
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PLU-012'
+>
+  <div
+  class="requirement__title"
+  data-level="1.12"
+>MP-PLU-012</div><div>
+  1.12.&nbsp;Can collect position data
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-001'
+>
+  <div
+  class="requirement__title"
+  data-level="2.1"
+>MP-CAM-001</div><div>
+  2.1.&nbsp;Can set camera name
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-002'
+>
+  <div
+  class="requirement__title"
+  data-level="2.2"
+>MP-CAM-002</div><div>
+  2.2.&nbsp;Can set camera topic
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-003'
+>
+  <div
+  class="requirement__title"
+  data-level="2.3"
+>MP-CAM-003</div><div>
+  2.3.&nbsp;Can apply transformations to an image
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-004'
+>
+  <div
+  class="requirement__title"
+  data-level="2.4"
+>MP-CAM-004</div><div>
+  2.4.&nbsp;Can apply rotation transformation to an image
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-005'
+>
+  <div
+  class="requirement__title"
+  data-level="2.5"
+>MP-CAM-005</div><div>
+  2.5.&nbsp;Can save raw image
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-006'
+>
+  <div
+  class="requirement__title"
+  data-level="2.6"
+>MP-CAM-006</div><div>
+  2.6.&nbsp;Can save transformed image
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-007'
+>
+  <div
+  class="requirement__title"
+  data-level="2.7"
+>MP-CAM-007</div><div>
+  2.7.&nbsp;Can save inspected image
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-008'
+>
+  <div
+  class="requirement__title"
+  data-level="2.8"
+>MP-CAM-008</div><div>
+  2.8.&nbsp;Can set path for where to save raw image
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-009'
+>
+  <div
+  class="requirement__title"
+  data-level="2.9"
+>MP-CAM-009</div><div>
+  2.9.&nbsp;Can set path for where to save transformed image.
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-010'
+>
+  <div
+  class="requirement__title"
+  data-level="2.10"
+>MP-CAM-010</div><div>
+  2.10.&nbsp;Can set path for where to save inspected image
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-011'
+>
+  <div
+  class="requirement__title"
+  data-level="2.11"
+>MP-CAM-011</div><div>
+  2.11.&nbsp;Can set path for where to save inspected image
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-012'
+>
+  <div
+  class="requirement__title"
+  data-level="2.12"
+>MP-CAM-012</div><div>
+  2.12.&nbsp;Can apply translation image transformation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-013'
+>
+  <div
+  class="requirement__title"
+  data-level="2.13"
+>MP-CAM-013</div><div>
+  2.13.&nbsp;Can apply scale image transformation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-014'
+>
+  <div
+  class="requirement__title"
+  data-level="2.14"
+>MP-CAM-014</div><div>
+  2.14.&nbsp;Can apply flipping image transformation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-015'
+>
+  <div
+  class="requirement__title"
+  data-level="2.15"
+>MP-CAM-015</div><div>
+  2.15.&nbsp;Can apply image arithmetic image transformation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-016'
+>
+  <div
+  class="requirement__title"
+  data-level="2.16"
+>MP-CAM-016</div><div>
+  2.16.&nbsp;Can apply masking image transformation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CAM-017'
+>
+  <div
+  class="requirement__title"
+  data-level="2.17"
+>MP-CAM-017</div><div>
+  2.17.&nbsp;Can apply affine image transformation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CMV-001'
+>
+  <div
+  class="requirement__title"
+  data-level="3.1"
+>MP-CMV-001</div><div>
+  3.1.&nbsp;Get command velocity sent by the robot
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CMV-002'
+>
+  <div
+  class="requirement__title"
+  data-level="3.2"
+>MP-CMV-002</div><div>
+  3.2.&nbsp;Can set topic where command velocity is published
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CPU-001'
+>
+  <div
+  class="requirement__title"
+  data-level="4.1"
+>MP-CPU-001</div><div>
+  4.1.&nbsp;Get average cpu
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CPU-002'
+>
+  <div
+  class="requirement__title"
+  data-level="4.2"
+>MP-CPU-002</div><div>
+  4.2.&nbsp;Get cpu per processes
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CPU-003'
+>
+  <div
+  class="requirement__title"
+  data-level="4.3"
+>MP-CPU-003</div><div>
+  4.3.&nbsp;Can set maximum processes to store in sample
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-CPU-004'
+>
+  <div
+  class="requirement__title"
+  data-level="4.4"
+>MP-CPU-004</div><div>
+  4.4.&nbsp;Can set cpu minimum to store its information
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-DST-001'
+>
+  <div
+  class="requirement__title"
+  data-level="5.1"
+>MP-DST-001</div><div>
+  5.1.&nbsp;Can get distance traveled in meters
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-001'
+>
+  <div
+  class="requirement__title"
+  data-level="6.1"
+>MP-IPC-001</div><div>
+  6.1.&nbsp;Can connect to IP cameras
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-002'
+>
+  <div
+  class="requirement__title"
+  data-level="6.2"
+>MP-IPC-002</div><div>
+  6.2.&nbsp;Can configure camera parameters
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-003'
+>
+  <div
+  class="requirement__title"
+  data-level="6.3"
+>MP-IPC-003</div><div>
+  6.3.&nbsp;Can support multiple camera brands and models
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-004'
+>
+  <div
+  class="requirement__title"
+  data-level="6.4"
+>MP-IPC-004</div><div>
+  6.4.&nbsp;Can handle network interruptions
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-005'
+>
+  <div
+  class="requirement__title"
+  data-level="6.5"
+>MP-IPC-005</div><div>
+  6.5.&nbsp;Can handle camera disconnections
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-006'
+>
+  <div
+  class="requirement__title"
+  data-level="6.6"
+>MP-IPC-006</div><div>
+  6.6.&nbsp;Can provide video stream metadata
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-007'
+>
+  <div
+  class="requirement__title"
+  data-level="6.7"
+>MP-IPC-007</div><div>
+  6.7.&nbsp;Supports video data
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-008'
+>
+  <div
+  class="requirement__title"
+  data-level="6.8"
+>MP-IPC-008</div><div>
+  6.8.&nbsp;Supports audio data
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-009'
+>
+  <div
+  class="requirement__title"
+  data-level="6.9"
+>MP-IPC-009</div><div>
+  6.9.&nbsp;Supports video resolution configuration
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-010'
+>
+  <div
+  class="requirement__title"
+  data-level="6.10"
+>MP-IPC-010</div><div>
+  6.10.&nbsp;Supports audio bitrate configuration
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-011'
+>
+  <div
+  class="requirement__title"
+  data-level="6.11"
+>MP-IPC-011</div><div>
+  6.11.&nbsp;Supports video segmentations
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-012'
+>
+  <div
+  class="requirement__title"
+  data-level="6.12"
+>MP-IPC-012</div><div>
+  6.12.&nbsp;Supports video frame rate configuration
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-IPC-013'
+>
+  <div
+  class="requirement__title"
+  data-level="6.13"
+>MP-IPC-013</div><div>
+  6.13.&nbsp;Supports authentication for accessing the IP camera
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-MAP-001'
+>
+  <div
+  class="requirement__title"
+  data-level="7.1"
+>MP-MAP-001</div><div>
+  7.1.&nbsp;Can collect ROS 2 Map data
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-MAP-002'
+>
+  <div
+  class="requirement__title"
+  data-level="7.2"
+>MP-MAP-002</div><div>
+  7.2.&nbsp;Supports multiple file formats
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-MAP-003'
+>
+  <div
+  class="requirement__title"
+  data-level="7.3"
+>MP-MAP-003</div><div>
+  7.3.&nbsp;Set maximum timeout to save image
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-MAP-004'
+>
+  <div
+  class="requirement__title"
+  data-level="7.4"
+>MP-MAP-004</div><div>
+  7.4.&nbsp;Timeout for save map
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-MAP-005'
+>
+  <div
+  class="requirement__title"
+  data-level="7.5"
+>MP-MAP-005</div><div>
+  7.5.&nbsp;Control path to save map data
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-MEM-001'
+>
+  <div
+  class="requirement__title"
+  data-level="8.1"
+>MP-MEM-001</div><div>
+  8.1.&nbsp;Can collect memory usage data
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-NET-001'
+>
+  <div
+  class="requirement__title"
+  data-level="9.1"
+>MP-NET-001</div><div>
+  9.1.&nbsp;Network plugin
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-NET-02'
+>
+  <div
+  class="requirement__title"
+  data-level="9.2"
+>MP-NET-02</div><div>
+  9.2.&nbsp;Network Plugin Timeout
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-OSP-001'
+>
+  <div
+  class="requirement__title"
+  data-level="10.1"
+>MP-OSP-001</div><div>
+  10.1.&nbsp;Can collect OS name
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-OSP-002'
+>
+  <div
+  class="requirement__title"
+  data-level="10.2"
+>MP-OSP-002</div><div>
+  10.2.&nbsp;Can collect kernel version and name
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-OSP-003'
+>
+  <div
+  class="requirement__title"
+  data-level="10.3"
+>MP-OSP-003</div><div>
+  10.3.&nbsp;Can collect available memory
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-OSP-004'
+>
+  <div
+  class="requirement__title"
+  data-level="10.4"
+>MP-OSP-004</div><div>
+  10.4.&nbsp;Can collect CPU count
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-PER-001'
+>
+  <div
+  class="requirement__title"
+  data-level="11.1"
+>MP-PER-001</div><div>
+  11.1.&nbsp;Check file/directory permissions
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-POS-001'
+>
+  <div
+  class="requirement__title"
+  data-level="12.1"
+>MP-POS-001</div><div>
+  12.1.&nbsp;Collect robot position
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-SPE-001'
+>
+  <div
+  class="requirement__title"
+  data-level="13.1"
+>MP-SPE-001</div><div>
+  13.1.&nbsp;Can collect speed data
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-STO-001'
+>
+  <div
+  class="requirement__title"
+  data-level="14.1"
+>MS-STO-001</div><div>
+  14.1.&nbsp;Can determine available disk space
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-STR-001'
+>
+  <div
+  class="requirement__title"
+  data-level="15.1"
+>MP-STR-001</div><div>
+  15.1.&nbsp;Can collect generic data from a topic publishing a StringStamped message
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-TCP-001'
+>
+  <div
+  class="requirement__title"
+  data-level="16.1"
+>MP-TCP-001</div><div>
+  16.1.&nbsp;Can connect to a TCP server
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-TCP-002'
+>
+  <div
+  class="requirement__title"
+  data-level="16.2"
+>MP-TCP-002</div><div>
+  16.2.&nbsp;Can collect TCP server status
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-TCP-003'
+>
+  <div
+  class="requirement__title"
+  data-level="16.3"
+>MP-TCP-003</div><div>
+  16.3.&nbsp;Can set connection timeout
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MP-UPT-001'
+>
+  <div
+  class="requirement__title"
+  data-level="17.1"
+>MP-UPT-001</div><div>
+  17.1.&nbsp;Can collect OS uptime
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+      </div><h3 class="requirements-coverage-document-title" id="5">Measurement server</h3><div class="content">
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-USAB-001'
+>
+  <div
+  class="requirement__title"
+  data-level="1.1"
+>MS-USAB-001</div><div>
+  1.1.&nbsp;Can load configuration from YAML
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-PLU-001'
+>
+  <div
+  class="requirement__title"
+  data-level="2.1"
+>MS-PLU-001</div><div>
+  2.1.&nbsp;Can load any number of measurement plugins
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-PLU-002'
+>
+  <div
+  class="requirement__title"
+  data-level="2.2"
+>MS-PLU-002</div><div>
+  2.2.&nbsp;Can handle errors when loading measurement plugins
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-PLU-003'
+>
+  <div
+  class="requirement__title"
+  data-level="2.3"
+>MS-PLU-003</div><div>
+  2.3.&nbsp;Can load any number of condition plugins
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-PLU-004'
+>
+  <div
+  class="requirement__title"
+  data-level="2.4"
+>MS-PLU-004</div><div>
+  2.4.&nbsp;Can handle errors when loading condition plugins
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-PLU-005'
+>
+  <div
+  class="requirement__title"
+  data-level="2.5"
+>MS-PLU-005</div><div>
+  2.5.&nbsp;Extensibility and customizability
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-PLU-006'
+>
+  <div
+  class="requirement__title"
+  data-level="2.6"
+>MS-PLU-006</div><div>
+  2.6.&nbsp;External extensibility and customizability
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-PLU-007'
+>
+  <div
+  class="requirement__title"
+  data-level="2.7"
+>MS-PLU-007</div><div>
+  2.7.&nbsp;Can reload plugins without restarting the node
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-PLU-008'
+>
+  <div
+  class="requirement__title"
+  data-level="2.8"
+>MS-PLU-008</div><div>
+  2.8.&nbsp;Can unload plugins
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-PLU-08'
+>
+  <div
+  class="requirement__title"
+  data-level="2.9"
+>MS-PLU-08</div><div>
+  2.9.&nbsp;Can provide information about loaded plugins
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COL-001'
+>
+  <div
+  class="requirement__title"
+  data-level="3.1"
+>MS-COL-001</div><div>
+  3.1.&nbsp;Polling intervals
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COL-002'
+>
+  <div
+  class="requirement__title"
+  data-level="3.2"
+>MS-COL-002</div><div>
+  3.2.&nbsp;Dynamic polling intervals
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COL-003'
+>
+  <div
+  class="requirement__title"
+  data-level="3.3"
+>MS-COL-003</div><div>
+  3.3.&nbsp;Real-time data processing
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COL-004'
+>
+  <div
+  class="requirement__title"
+  data-level="3.4"
+>MS-COL-004</div><div>
+  3.4.&nbsp;Concurrent data retrieval by plugins
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COL-005'
+>
+  <div
+  class="requirement__title"
+  data-level="3.5"
+>MS-COL-005</div><div>
+  3.5.&nbsp;Can enable/disable sample buffering
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COL-006'
+>
+  <div
+  class="requirement__title"
+  data-level="3.6"
+>MS-COL-006</div><div>
+  3.6.&nbsp;Ability to set a maximum time to collect samples
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-FIL-001'
+>
+  <div
+  class="requirement__title"
+  data-level="4.1"
+>MS-FIL-001</div><div>
+  4.1.&nbsp;Can set local base path used by all nodes
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-FIL-002'
+>
+  <div
+  class="requirement__title"
+  data-level="4.2"
+>MS-FIL-002</div><div>
+  4.2.&nbsp;Can expand time variables in the local base path
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-FIL-003'
+>
+  <div
+  class="requirement__title"
+  data-level="4.3"
+>MS-FIL-003</div><div>
+  4.3.&nbsp;Can expand environment variables in the local base path
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-VAR-001'
+>
+  <div
+  class="requirement__title"
+  data-level="5.1"
+>MS-VAR-001</div><div>
+  5.1.&nbsp;Can load custom variables
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-VAR-002'
+>
+  <div
+  class="requirement__title"
+  data-level="5.2"
+>MS-VAR-002</div><div>
+  5.2.&nbsp;Can load custom variables from a file
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-VAR-03'
+>
+  <div
+  class="requirement__title"
+  data-level="5.3"
+>MS-VAR-03</div><div>
+  5.3.&nbsp;Can load custom variables from a fixed string
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-AGG-001'
+>
+  <div
+  class="requirement__title"
+  data-level="6.1"
+>MS-AGG-001</div><div>
+  6.1.&nbsp;Can handle data aggregation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-AGG-002'
+>
+  <div
+  class="requirement__title"
+  data-level="6.2"
+>MS-AGG-002</div><div>
+  6.2.&nbsp;Ability to aggregate samples based on tags
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-VAL-001'
+>
+  <div
+  class="requirement__title"
+  data-level="7.1"
+>MS-VAL-001</div><div>
+  7.1.&nbsp;Validation of data samples through JSON schema
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-VAL-002'
+>
+  <div
+  class="requirement__title"
+  data-level="7.2"
+>MS-VAL-002</div><div>
+  7.2.&nbsp;Ability to pass a custom JSON schema for validation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-VAL-003'
+>
+  <div
+  class="requirement__title"
+  data-level="7.3"
+>MS-VAL-003</div><div>
+  7.3.&nbsp;Error reporting for failed validation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-FILT-001'
+>
+  <div
+  class="requirement__title"
+  data-level="8.1"
+>MS-FILT-001</div><div>
+  8.1.&nbsp;Ability to filter a sample by keeping only certain key values before validation
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-FILT-002'
+>
+  <div
+  class="requirement__title"
+  data-level="8.2"
+>MS-FILT-002</div><div>
+  8.2.&nbsp;Ability to exclude a field through a filter
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-FILT-003'
+>
+  <div
+  class="requirement__title"
+  data-level="8.3"
+>MS-FILT-003</div><div>
+  8.3.&nbsp;Ability to filter samples based on a regular expression pattern
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-FILT-004'
+>
+  <div
+  class="requirement__title"
+  data-level="8.4"
+>MS-FILT-004</div><div>
+  8.4.&nbsp;Ability to chain multiple filters together
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-MAT-001'
+>
+  <div
+  class="requirement__title"
+  data-level="9.1"
+>MS-MAT-001</div><div>
+  9.1.&nbsp;Ability to match measurement samples to a specific destination using tags
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-MAT-002'
+>
+  <div
+  class="requirement__title"
+  data-level="9.2"
+>MS-MAT-002</div><div>
+  9.2.&nbsp;Can send data to multiple destinations simultaneously
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-MAX-001'
+>
+  <div
+  class="requirement__title"
+  data-level="10.1"
+>MS-MAX-001</div><div>
+  10.1.&nbsp;Ability to collect a certain amount of samples when the node starts
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-MAX-002'
+>
+  <div
+  class="requirement__title"
+  data-level="10.2"
+>MS-MAX-002</div><div>
+  10.2.&nbsp;Ability to delete the publisher when the maximum amount of samples has been reached
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-MAX-003'
+>
+  <div
+  class="requirement__title"
+  data-level="10.3"
+>MS-MAX-003</div><div>
+  10.3.&nbsp;Ability to delete the subscriber when the maximum amount of samples has been reached
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-MAX-004'
+>
+  <div
+  class="requirement__title"
+  data-level="10.4"
+>MS-MAX-004</div><div>
+  10.4.&nbsp;Ability to collect samples when the node starts
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-MAX-005'
+>
+  <div
+  class="requirement__title"
+  data-level="10.5"
+>MS-MAX-005</div><div>
+  10.5.&nbsp;Can send a maximum number of samples when conditions are met
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-MET-001'
+>
+  <div
+  class="requirement__title"
+  data-level="11.1"
+>MS-MET-001</div><div>
+  11.1.&nbsp;Ability to include measurement name in sample
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-MET-002'
+>
+  <div
+  class="requirement__title"
+  data-level="11.2"
+>MS-MET-002</div><div>
+  11.2.&nbsp;Can include measurement plugin name in sample
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-MET-003'
+>
+  <div
+  class="requirement__title"
+  data-level="11.3"
+>MS-MET-003</div><div>
+  11.3.&nbsp;Add timestamp to sample
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-PAT-001'
+>
+  <div
+  class="requirement__title"
+  data-level="12.1"
+>MS-PAT-001</div><div>
+  12.1.&nbsp;Can pass remote keys
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-PAT-002'
+>
+  <div
+  class="requirement__title"
+  data-level="12.2"
+>MS-PAT-002</div><div>
+  12.2.&nbsp;Can apply a prefix to the remote key
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-001'
+>
+  <div
+  class="requirement__title"
+  data-level="13.1"
+>MS-CON-001</div><div>
+  13.1.&nbsp;Can send samples if all conditions are respected (from a list of condition)
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-002'
+>
+  <div
+  class="requirement__title"
+  data-level="13.2"
+>MS-CON-002</div><div>
+  13.2.&nbsp;Can send samples if any conditions is respected (from a list of condition)
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-003'
+>
+  <div
+  class="requirement__title"
+  data-level="13.3"
+>MS-CON-003</div><div>
+  13.3.&nbsp;Can send samples if no conditions are not respected (from a list of condition)
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-CON-004'
+>
+  <div
+  class="requirement__title"
+  data-level="13.4"
+>MS-CON-004</div><div>
+  13.4.&nbsp;Can access condition state from measurements
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-LIF-001'
+>
+  <div
+  class="requirement__title"
+  data-level="14.1"
+>MS-LIF-001</div><div>
+  14.1.&nbsp;Stop all nodes if one fails
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COMP-001'
+>
+  <div
+  class="requirement__title"
+  data-level="15.1"
+>MS-COMP-001</div><div>
+  15.1.&nbsp;Can compress samples before publishing
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COMP-002'
+>
+  <div
+  class="requirement__title"
+  data-level="15.2"
+>MS-COMP-002</div><div>
+  15.2.&nbsp;Support for gzip compression
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COMP-003'
+>
+  <div
+  class="requirement__title"
+  data-level="15.3"
+>MS-COMP-003</div><div>
+  15.3.&nbsp;Support for deflate compression
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COMP-004'
+>
+  <div
+  class="requirement__title"
+  data-level="15.4"
+>MS-COMP-004</div><div>
+  15.4.&nbsp;Support for Brotli compression
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COMP-005'
+>
+  <div
+  class="requirement__title"
+  data-level="15.5"
+>MS-COMP-005</div><div>
+  15.5.&nbsp;Support for LZ77 compression
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COMP-006'
+>
+  <div
+  class="requirement__title"
+  data-level="15.6"
+>MS-COMP-006</div><div>
+  15.6.&nbsp;Support for LZ4 compression
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COMP-007'
+>
+  <div
+  class="requirement__title"
+  data-level="15.7"
+>MS-COMP-007</div><div>
+  15.7.&nbsp;Ability to choose compression algorithm
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COMP-008'
+>
+  <div
+  class="requirement__title"
+  data-level="15.8"
+>MS-COMP-008</div><div>
+  15.8.&nbsp;Performance benchmarking
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COMP-009'
+>
+  <div
+  class="requirement__title"
+  data-level="15.9"
+>MS-COMP-009</div><div>
+  15.9.&nbsp;Configurable compression level
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COMP-010'
+>
+  <div
+  class="requirement__title"
+  data-level="15.10"
+>MS-COMP-010</div><div>
+  15.10.&nbsp;Compression compatibility with JSON schema
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-COMP-011'
+>
+  <div
+  class="requirement__title"
+  data-level="15.11"
+>MS-COMP-011</div><div>
+  15.11.&nbsp;Compression and decompression efficiency
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='MS-LIM-001'
+>
+  <div
+  class="requirement__title"
+  data-level="16.1"
+>MS-LIM-001</div><div>
+  16.1.&nbsp;Can limit bandwidth usage for remote connections
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+      </div><h3 class="requirements-coverage-document-title" id="6">Tooling</h3><div class="content">
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='TOOL-MON-001'
+>
+  <div
+  class="requirement__title"
+  data-level="1.1"
+>TOOL-MON-001</div><div>
+  1.1.&nbsp;Can monitor system performance and health
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='TOOL-REP-001'
+>
+  <div
+  class="requirement__title"
+  data-level="2.1"
+>TOOL-REP-001</div><div>
+  2.1.&nbsp;Can generate reports and statistics on data usage and performance
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+        <section class="content_section">
+          <div class="content_item" data-role="current"><sdoc-node
+  node-style="card"
+  node-role="requirement"
+  js-requirements-coverage
+  data-uid='TOOL-CLI-001'
+>
+  <div
+  class="requirement__title"
+  data-level="3.1"
+>TOOL-CLI-001</div><div>
+  3.1.&nbsp;Can list plugins from CLI
+</div>
+</sdoc-node>
+
+
+
+</div>
+
+          <div class="content_item" data-role="children">
+</div>
+
+        </section>
+      </div>
+
+
+    </main>
+
+    <footer class="layout_footer">
+    
+      <div class="footer">
+        Built with
+        <a
+          class="strictdoc__link"
+          href="https://github.com/strictdoc-project/strictdoc"
+          target="_blank"
+        >StrictDoc</a>
+        <a
+          class="strictdoc__version"
+          href="https://github.com/strictdoc-project/strictdoc/releases/tag/0.0.40"
+          target="_blank"
+        >
+          <svg height="16" viewBox="0 0 16 16" version="1.1" width="16" >
+            <path fill-rule="evenodd" d="M2.5 7.775V2.75a.25.25 0 01.25-.25h5.025a.25.25 0 01.177.073l6.25 6.25a.25.25 0 010 .354l-5.025 5.025a.25.25 0 01-.354 0l-6.25-6.25a.25.25 0 01-.073-.177zm-1.5 0V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 010 2.474l-5.026 5.026a1.75 1.75 0 01-2.474 0l-6.25-6.25A1.75 1.75 0 011 7.775zM6 5a1 1 0 100 2 1 1 0 000-2z"></path>
+          </svg>
+          0.0.40
+        </a>
+      </div>
+    
+    </footer>
+
+    <aside class="layout_aside">
+      
+    </aside>
+
+  </div>
+  
+  <div id="modal"></div>
+  <div id="confirm"></div>
+  
+</body>
+</html>
