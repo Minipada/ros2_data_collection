@@ -101,3 +101,19 @@
     background-color: var(--sidebar-active);
     color: var(--sidebar-bg);
 }
+
+/* mdbook pins .sidebar-scrollbox over the whole sidebar (absolute, all four edges), so
+   it paints over and swallows clicks on the logo and the distro selector above it — they
+   render through its transparent background but never receive the events. Make the
+   sidebar a normal flex column instead: logo and selector take their own height, the
+   scrollbox gets the rest and keeps scrolling internally. */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar .sidebar-scrollbox {
+    position: static;
+    flex: 1;
+    min-height: 0;
+}
