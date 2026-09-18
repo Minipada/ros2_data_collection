@@ -1,0 +1,515 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Raw topic collection - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/lineicon.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../open-in.css">
+        <link rel="stylesheet" href=".././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../css/logo.css">
+        <link rel="stylesheet" href="../css/lineicon.css">
+        <link rel="stylesheet" href="../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/jazzy/doc/src/dc/raw_topics.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="raw-topic-collection"><a class="header" href="#raw-topic-collection">Raw topic collection</a></h1>
+<p>Sometimes the point is not to measure three specific things well, but to capture
+<em>everything on the ROS graph</em> and put it somewhere — a bring-up session, a field
+incident, a robot whose interesting topics you don't know yet.</p>
+<p>For that, <code>dc_bridge</code> has a <strong>generic-subscription mode</strong>. It subscribes to topics it
+was never compiled against, converts each message to JSON, and ships it to a Destination
+like any other Record. No Measurement plugin, no <code>.msg</code> header, no rebuild of DC when
+the robot's message packages change.</p>
+<pre><code class="language-yaml">dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/buffer"
+    destinations: ["raw_log"]
+    raw_log:
+      type: file              # blessed types: file | vector — or postgres/s3/console via
+                               # its passthrough recipe (destinations.md#recipes-postgres-s3-console-via-passthrough)
+      receives: records
+      path: "/tmp/dc/raw_records.ndjson"
+      time_key: "date"
+    raw:
+      enabled: true
+      destination: "raw_log"
+</code></pre>
+<pre><code class="language-bash">ros2 launch dc_bringup dc_raw.launch.py
+</code></pre>
+<p><code>dc_raw.launch.py</code> starts the Bridge <strong>alone</strong> — no <code>measurement_server</code>, no
+<code>group_server</code>, no lifecycle manager, no readiness gate (there are no collection nodes to
+gate). The default params file is
+<a href="https://github.com/Minipada/ros2_data_collection/blob/jazzy/dc_bringup/params/dc_raw_params.yaml"><code>dc_bringup/params/dc_raw_params.yaml</code></a>;
+point the launch file at your own with <code>dc_params_file:=…</code>. The same <code>raw:</code> block also
+works inside a normal <code>dc_bringup.launch.py</code> params file, next to your Measurements.</p>
+<h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>
+<p>DC uses exactly what ROS 2 offers for this — the same mechanism <code>ros2 bag record -a</code> and
+PlotJuggler use:</p>
+<ol>
+<li><code>get_topic_names_and_types()</code> lists the graph. Topics are filtered by the
+include/exclude patterns below.</li>
+<li><code>rclcpp::GenericSubscription</code> subscribes to a topic given only its <em>name</em> and <em>type
+string</em>, receiving raw serialized bytes.</li>
+<li>The type's two type support libraries are loaded at run time —
+<code>rosidl_typesupport_cpp</code> to deserialize, <code>rosidl_typesupport_introspection_cpp</code> to
+describe the fields — and the message is walked into JSON.</li>
+<li>The Record is Tagged <code>dc.raw.&lt;topic&gt;</code> and routed to <code>raw.destination</code>.</li>
+</ol>
+<p>The only requirement is that the message package is on the Bridge's
+<code>AMENT_PREFIX_PATH</code> — the same requirement <code>ros2 topic echo</code> has. A type that can't be
+resolved is logged once and skipped; the rest of the graph is still collected.</p>
+<h3 id="tags-and-routing"><a class="header" href="#tags-and-routing">Tags and routing</a></h3>
+<p>A raw Record's Tag is the topic name with the leading <code>/</code> dropped and the rest turned
+into dots, under the <code>dc.raw.</code> namespace:</p>
+<div class="table-wrapper"><table><thead><tr><th>Topic</th><th>Tag</th><th>Shipper route</th></tr></thead><tbody>
+<tr><td><code>/imu</code></td><td><code>dc.raw.imu</code></td><td><code>dc.dc.raw</code></td></tr>
+<tr><td><code>/robot/battery_state</code></td><td><code>dc.raw.robot.battery_state</code></td><td><code>dc.dc.raw</code></td></tr>
+</tbody></table>
+</div>
+<p>Unlike a Measurement's Tag, the <em>whole namespace</em> shares one Vector route
+(<code>dc.dc.raw</code>), matched with <code>starts_with</code> rather than an exact comparison. That is what
+makes discovery possible at all: a rendered Shipper config is fixed when the Bridge
+starts, but raw mode mints new Tags whenever a topic appears, and those Records still
+have to reach a sink without restarting Vector. A <a href="./destinations.html">passthrough
+sink</a> can consume <code>dc.dc.raw</code> like any other route.</p>
+<p>The Tag is carried on the event itself, so a single dump file or table stays
+topic-attributable — check the <code>tag</code> field.</p>
+<h3 id="what-a-record-looks-like"><a class="header" href="#what-a-record-looks-like">What a Record looks like</a></h3>
+<p>The JSON mirrors the message structure, field for field: nested messages become nested
+objects, arrays and sequences become arrays, <code>string</code> stays a string. A
+<code>dc_interfaces/msg/StringStamped</code> on <code>/demo/custom</code> arrives as:</p>
+<pre><code class="language-json">{
+  "tag": "dc.raw.demo.custom",
+  "date": "2026-08-12T09:51:33.114777089",
+  "header": {"frame_id": "base_link", "stamp": {"sec": 1786528293, "nanosec": 114777089}},
+  "data": "{\"value\": 2}",
+  "group_key": "demo"
+}
+</code></pre>
+<p>Messages that start with a <code>std_msgs/msg/Header</code> are timestamped from
+<code>header.stamp</code> — the moment the data was <em>captured</em>. Everything else is stamped with the
+Bridge's own clock on arrival.</p>
+<h3 id="type-mapping"><a class="header" href="#type-mapping">Type mapping</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>ROS field</th><th>JSON</th></tr></thead><tbody>
+<tr><td><code>bool</code></td><td>boolean</td></tr>
+<tr><td><code>int8</code>…<code>int64</code>, <code>uint8</code>…<code>uint64</code>, <code>byte</code>, <code>char</code></td><td>number</td></tr>
+<tr><td><code>float32</code>, <code>float64</code></td><td>number</td></tr>
+<tr><td><code>string</code></td><td>string</td></tr>
+<tr><td><code>wstring</code></td><td>string (transcoded UTF-16 → UTF-8)</td></tr>
+<tr><td>a nested message</td><td>object</td></tr>
+<tr><td>any array or sequence (fixed, bounded, unbounded)</td><td>array</td></tr>
+</tbody></table>
+</div>
+<p>Two things about numbers are worth knowing before you point a query at the result:</p>
+<ul>
+<li><strong><code>NaN</code> and <code>Infinity</code> both become <code>null</code>.</strong> JSON has neither, so there is nowhere else
+for them to go — but it means <code>+Inf</code>, <code>-Inf</code>, <code>NaN</code> and "the producer sent nothing" are
+indistinguishable downstream. This is not a corner case: ROS messages routinely use
+<code>NaN</code> as a sentinel (<code>sensor_msgs/msg/BatteryState.temperature</code> is <code>NaN</code> when the
+battery has no temperature sensor), so expect nulls in fields whose message definition
+documents one.</li>
+<li><strong><code>float32</code> is widened to double</strong>, so a value written as <code>4.05</code> reads back as
+<code>4.050000190734863</code>: the exact binary32 value. If the extra digits bother a dashboard,
+round at the query layer.</li>
+</ul>
+<p>A <code>uint8[]</code> serializes as an array of plain numbers — DC does not compress raw payloads on
+the way out. That is one more reason the size and type limits below exist: the answer to a
+megabyte of image bytes is to not collect it, rather than to encode it more cleverly.</p>
+<h2 id="choosing-what-to-collect"><a class="header" href="#choosing-what-to-collect">Choosing what to collect</a></h2>
+<pre><code class="language-yaml">    raw:
+      include: ["^/"]                       # topic-name regexes: the allowlist
+      exclude: ["^/rosout$", "^/parameter_events$", "^/dc/measurement/", "^/dc/group/"]
+      exclude_types:                        # message-type regexes
+        - "^sensor_msgs/msg/(Image|CompressedImage|PointCloud|PointCloud2|LaserScan)$"
+        - "^tf2_msgs/msg/TFMessage$"
+      rescan_interval_secs: 5.0
+</code></pre>
+<p>A topic is collected when it matches at least one <code>include</code> pattern, no <code>exclude</code>
+pattern, and its type matches no <code>exclude_types</code> pattern. All three are ECMAScript
+regexes matched with <code>regex_search</code>, so they are <strong>unanchored</strong> unless you anchor them:
+<code>camera</code> matches <code>/front/camera/info</code>, <code>^/front/</code> matches only that namespace.</p>
+<p>The values above are the defaults, and they matter:</p>
+<ul>
+<li><strong><code>/rosout</code> is excluded</strong> — it carries the Bridge's own log messages, including the
+warnings raw mode emits about volume.</li>
+<li><strong><code>/dc/measurement/*</code> and <code>/dc/group/*</code> are excluded</strong> — those topics already reach
+their Destinations as Measurement and Group Records. Collecting them raw as well ships
+everything twice, under two different Tags.</li>
+<li><strong>High-rate sensor types are excluded</strong>, by type rather than by name (a camera topic is
+not reliably called anything in particular). One 640×480 <code>sensor_msgs/msg/Image</code> is
+900 kB on the wire and roughly 3.7 MB once every pixel byte is a JSON number; at 30 Hz
+nothing downstream is sized for it. Override the list deliberately if you want them —
+DC will not stop you, but read the next section first.</li>
+</ul>
+<p>To replace a list, write the replacement; note that an <em>empty</em> YAML list (<code>[]</code>) cannot be
+loaded by rclcpp (it has no inferable element type), so use a pattern that matches
+nothing, e.g. <code>["^$"]</code>, to disable a default.</p>
+<p><code>rescan_interval_secs</code> re-scans the graph so topics that appear after startup are picked
+up — a driver started later, a node that respawned. The cost is that a topic is collected
+only from ~one interval after it is first advertised: messages published before that are
+not captured. Set it to <code>0</code> to scan once at startup and never again.</p>
+<p>Topics advertising more than one type are skipped and logged: one subscription carries
+one type, and picking arbitrarily would silently drop the other publisher's messages.</p>
+<p>QoS is matched to the topic's current publishers, the same way <code>ros2 bag record</code> does
+it — best effort if any publisher is best effort, transient local if all of them are.
+Without that, a generic subscription silently receives nothing from a sensor driver.</p>
+<h2 id="backpressure-and-volume"><a class="header" href="#backpressure-and-volume">Backpressure and volume</a></h2>
+<p>Collecting everything can outrun the Shipper trivially. Raw mode's contract is that it
+<strong>sheds at the source rather than buffering inside the Bridge</strong> — an unbounded in-process
+queue would just move a data problem into a memory problem. Four bounds, in the order a
+message meets them:</p>
+<ol>
+<li><strong><code>qos_depth</code></strong> (default 10) — the subscription's own history. If the Bridge is
+momentarily busy, the middleware drops the oldest messages beyond this depth before DC
+ever sees them.</li>
+<li><strong><code>max_message_size_bytes</code></strong> (default 1 MiB, 0 = unlimited) — a serialized message
+above this is dropped whole, <em>before</em> deserialization, so an unexpected point cloud
+costs nothing but a throttled warning. This is a <strong>per-message circuit breaker</strong> — see
+the warning below.</li>
+<li><strong><code>max_rate_hz</code></strong> (default 10, per topic, 0 = unlimited) — at most one Record per
+<code>1/rate</code> seconds per topic: a message passes once that long has elapsed since the last
+one that passed, so each Record is the newest message at the moment it is emitted and
+nothing is held back. A 200 Hz topic at the default becomes 10 Hz of Records. This is
+decimation: it flattens exactly the bursty traffic shape a token bucket would let
+through all at once.</li>
+<li><strong>The Shipper refusing the Record</strong> — if Vector is unreachable or its socket is blocked
+past the Forwarder's write timeout, the raw Record is dropped and counted. Measurement
+Records are kept in the Forwarder's unacked window for resend; raw Records are not,
+because a firehose fills that window and pushes real Records out of it.</li>
+</ol>
+<p>Everything past those bounds behaves like any other Record: Vector's disk buffer
+(<code>shipper.buffer_max_bytes</code>) absorbs a Destination outage, and delivery to the Shipper is
+acknowledged (see <a href="./destinations.html#delivery-guarantees">Destinations</a>).</p>
+<h3 id="how-much-data-is-this"><a class="header" href="#how-much-data-is-this">How much data is this?</a></h3>
+<p>These figures were measured on a simulated robot:
+<code>tools/sim/scripts/measure_raw_volume.sh</code> boots <code>dc_simulation</code>'s warehouse world, drives
+the TurtleBot3-Waffle in a slow circle, points a Bridge in raw mode at its live topics,
+and reports what a <code>file</code> Destination stored, per Tag. Everything below is one run of it —
+re-run it after anything that changes what a Record costs. It's meant for manual local
+runs; its header explains the three configurations and why its rates are counted in
+<em>simulated</em> seconds.</p>
+<p>Rates are that world's Waffle's: IMU 200 Hz, odometry and TF 30 Hz (the <code>DiffDrive</code>
+plugin), lidar and both RGBD cameras 5 Hz. <code>/cmd_vel</code> and <code>/clock</code> are left out — the
+first is the benchmark's own driving, the second exists only because the robot is
+simulated.</p>
+<div class="table-wrapper"><table><thead><tr><th>Configuration</th><th>Shipped</th></tr></thead><tbody>
+<tr><td><strong>Defaults</strong> (10 Hz cap, sensor types excluded)</td><td>24 kB/s — <strong>86 MB/hour, 2.1 GB/day</strong></td></tr>
+<tr><td>…plus <code>scan</code> and <code>tf</code> re-enabled</td><td>69 kB/s — <strong>5.9 GB/day</strong></td></tr>
+<tr><td>…plus both 1280×720 cameras re-enabled</td><td>≈ <strong>9.5 TB/day</strong>, if anything could carry it</td></tr>
+</tbody></table>
+</div>
+<p>Per-Record cost, which is what to multiply by your own topics' rates:</p>
+<div class="table-wrapper"><table><thead><tr><th>Topic (message)</th><th>Publishes at</th><th>Bytes per Record</th></tr></thead><tbody>
+<tr><td><code>/joint_states</code> (<code>JointState</code>, 2 joints)</td><td>1 000 Hz †</td><td>355</td></tr>
+<tr><td><code>/tf</code> (<code>TFMessage</code>, 1 transform)</td><td>30 Hz</td><td>406</td></tr>
+<tr><td><code>…/camera_info</code> (<code>CameraInfo</code>)</td><td>5 Hz</td><td>581</td></tr>
+<tr><td><code>/odom</code> (<code>Odometry</code>)</td><td>30 Hz</td><td>669</td></tr>
+<tr><td><code>/imu</code> (<code>Imu</code>)</td><td>200 Hz</td><td>767</td></tr>
+<tr><td><code>/scan</code> (<code>LaserScan</code>, 360 ranges + intensities)</td><td>5 Hz</td><td>7 878</td></tr>
+<tr><td><code>…/image_raw</code> (<code>Image</code>, 1280×720 <code>rgb8</code>)</td><td>5 Hz</td><td><strong>10 981 032</strong></td></tr>
+</tbody></table>
+</div>
+<p>† the simulator's <code>JointStatePublisher</code> runs every physics step; a real driver is far
+slower. It makes no difference to the total, which is the point of the next paragraph.</p>
+<p><strong>The rate cap is what makes the first row affordable.</strong> A topic
+publishing faster than <code>max_rate_hz</code> contributes <code>bytes_per_record × 10</code> per second no
+matter how fast it actually runs, so <code>joint_states</code> at 1 000 Hz and <code>imu</code> at 200 Hz cost
+3.6 kB/s and 7.7 kB/s respectively. Only the topics <em>below</em> the cap — the 5 Hz sensors —
+bill at their real rate, which is why re-enabling one 5 Hz lidar (7.9 kB per Record, 40
+kB/s, 3.5 GB/day) nearly triples the total on its own.</p>
+<p>The last row is the whole argument for the default type exclusions: one 1280×720 frame
+costs as much as ~16 000 odometry Records. JSON does not merely double a byte array —
+<code>10 981 032</code> bytes for a 2 764 800-byte frame is <strong>four times</strong> the wire size, because
+most pixel values print as three digits and a comma.</p>
+<p>Two cameras at 5 Hz is 110 MB/s of Records, and <strong>nothing in the pipeline carries that</strong>,
+which is why that row says "if anything could carry it": in the run it comes from, the
+Shipper refused 475 of the 894 Records offered to it (<code>dropped … 475 shipper</code>, 53 %). The
+collapse was not confined to the images either — <code>imu</code> arrived at 4 Hz instead of 200 and
+<code>odom</code> at 0.7 Hz instead of 30, because the Bridge spent the window serializing frames.
+Collecting a camera raw does not cost you a camera's worth of storage; it costs you the
+rest of your collection.</p>
+<p><strong>The size cap will not save you from a camera</strong> — and it should not be asked to. A
+640×480 <code>rgb8</code> frame is 921 600 bytes on the wire, <em>under</em> the default
+<code>max_message_size_bytes</code> of 1 MiB, so it passes the size gate and lands as megabytes of
+JSON. (This world's 1280×720 frames are three times that and the default cap does drop
+them whole — which is why the benchmark's camera profile has to lift it to measure
+anything at all. Relying on that is a collection policy that silently switches on the day
+someone fits a smaller sensor.) It is <code>exclude_types</code> that keeps images out, and removing
+that list removes the protection entirely.</p>
+<p>The tempting fix — lower the size cap until frames stop fitting — is a bad trade, because
+<strong>the two limits fail differently</strong>:</p>
+<ul>
+<li><code>max_rate_hz</code> drops <em>by time</em>, uniformly. Every window is still represented, so you get
+an honest lower-resolution time series.</li>
+<li><code>max_message_size_bytes</code> drops <em>by content</em>. On any topic whose messages vary in size —
+a compressed image, a point cloud that grows with scene complexity, a diagnostics array,
+a string payload — it removes precisely the large ones and keeps the small ones. The
+result looks complete and is silently biased toward the least interesting data, with
+nothing in the stored Records to say what went missing.</li>
+</ul>
+<p>So set the size cap high enough that it essentially never fires, and treat it as a circuit
+breaker against the pathological and unanticipated (the topic you did not know carried
+100 MB). To <em>not</em> collect something, exclude it by type or topic: all-or-nothing, visible
+in the startup log, and no biased sample. The only case for a low size cap is when you
+genuinely want "this topic, except its outliers" — which is rarely what anyone means.</p>
+<p>Every drop is counted, and the counters are on the Bridge's readiness service — the
+fastest way to answer "is raw mode shedding?":</p>
+<pre><code class="language-console">$ ros2 service call /dc_bridge/ready std_srvs/srv/Trigger
+response: success=True, message='vector is accepting connections | raw: 12 topic(s),
+  3480 forwarded, dropped 51200 rate / 0 oversize / 0 shipper / 0 undecodable'
+</code></pre>
+<p><code>dropped rate</code> climbing is normal and healthy (it is the limiter doing its job).
+<code>dropped shipper</code> climbing means the pipeline is genuinely behind: raise
+<code>shipper.buffer_max_bytes</code>, lower <code>max_rate_hz</code>, or narrow <code>include</code>.</p>
+<h2 id="when-not-to-use-it"><a class="header" href="#when-not-to-use-it">When <em>not</em> to use it</a></h2>
+<p>Raw mode ships whatever a topic happens to contain. It has no
+<a href="./conditions.html">Conditions</a>, no <a href="./data_validation.html">data validation</a>, no
+<a href="./groups.html">Groups</a>, and no File uploads — a Measurement is still the right tool for
+data you know you want, in a shape you control, joined with other data. Raw mode is for
+the case where you don't know yet, or where "all of it" <em>is</em> the requirement.</p>
+<p>It is also not a rosbag replacement: JSON in Postgres is not a replayable recording. If
+you want replay, point a <a href="./demos/mcap_recording.html">passthrough sink</a> at the
+<code>dc.dc.raw</code> route and let <code>dc_mcap_writer</code> record it, or run <code>ros2 bag record</code> alongside
+DC.</p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/raw_topics.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../dc/destinations.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../dc/kpi_views.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../dc/destinations.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../dc/kpi_views.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../js/mermaid.js"></script>
+        <script src="../js/mermaid-init.js"></script>
+        <script src="../js/theme.js"></script>
+        <script src="../js/distro.js"></script>
+
+
+    </body>
+</html>

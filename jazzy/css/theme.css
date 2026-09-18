@@ -1,0 +1,103 @@
+/*
+ * SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+ *
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+#nav-separator{
+    border-top: 1px solid var(--sidebar-active);
+}
+
+/* Same Markdown page is used on Github and documentation, we just hide some elements on the doc */
+.github-only {
+    display: none !important;
+}
+
+/* Sidebar footer: social icons and license */
+.sidebar-footer {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    padding: 0.8rem 1.4rem;
+}
+
+.sidebar-footer a {
+    color: var(--sidebar-fg);
+    opacity: 0.65;
+}
+
+.sidebar-footer a:hover {
+    opacity: 1;
+    color: var(--sidebar-active);
+}
+
+.sidebar-footer .lni {
+    font-size: 1.35rem;
+}
+
+.sidebar-footer .sidebar-license {
+    margin-left: auto;
+    font-size: 0.8em;
+}
+
+/* About and Contact page */
+.maintainer-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.maintainer-card .maintainer-avatar {
+    border-radius: 50%;
+}
+
+.maintainer-card p {
+    margin: 0;
+}
+
+.maintainer-card .maintainer-name {
+    font-weight: 600;
+}
+
+.contact-list p {
+    margin: 0.4rem 0;
+}
+
+.contact-list .lni {
+    color: var(--sidebar-active);
+    margin-right: 0.4rem;
+}
+
+/* Distro version selector (doc/js/distro.js) */
+.distro-selector:empty {
+    display: none;
+}
+
+.distro-selector {
+    display: flex;
+    gap: 0.3rem;
+    padding: 0.6rem 1rem;
+}
+
+.distro-selector a {
+    flex: 1;
+    padding: 0.25rem 0.4rem;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.9em;
+    color: var(--sidebar-fg);
+    opacity: 0.65;
+}
+
+.distro-selector a:hover {
+    opacity: 1;
+    color: var(--sidebar-active);
+}
+
+.distro-selector a.current {
+    opacity: 1;
+    font-weight: 600;
+    background-color: var(--sidebar-active);
+    color: var(--sidebar-bg);
+}

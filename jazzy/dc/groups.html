@@ -1,0 +1,429 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Groups - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/lineicon.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../open-in.css">
+        <link rel="stylesheet" href=".././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../css/logo.css">
+        <link rel="stylesheet" href="../css/lineicon.css">
+        <link rel="stylesheet" href="../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/jazzy/doc/src/dc/groups.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="groups"><a class="header" href="#groups">Groups</a></h1>
+<h2 id="description"><a class="header" href="#description">Description</a></h2>
+<p>A <strong>Group</strong> merges the Records of several Measurements into one Record, based on time
+proximity. For example, grouping the <code>cpu</code> and <code>position</code> Measurements publishes a single
+merged Record on <code>/dc/group/my_group</code>:</p>
+<pre><code class="language-json">{
+    "cpu": ...,
+    "position": ...,
+}
+</code></pre>
+<p>A merged Record is an ordinary Record from there on: it carries the Tag derived from its
+output topic, and a Destination receives it by listing that topic in <code>inputs</code>.</p>
+<p>Envelope fields do not get nested under a member's key: a member's <code>tags</code> is replaced by the
+Group's own, and the <code>incident_id</code> on its envelope — the id a Measurement stamps on a Record
+it released as part of an <a href="./measurements.html">incident</a> — is carried onto the merged Record's
+own envelope (first non-empty wins, so a partial Record built from a mix of released and live
+members still carries it). The Bridge lifts that envelope field into the payload's top level,
+where a <code>postgres</code> Destination has a column for it; buried under <code>&lt;group_key&gt;.incident_id</code> it
+would simply be dropped by that sink. A member payload that is not a JSON object — a bare
+scalar or an array — has no such fields to lift, and is merged as it is under its
+<code>group_key</code>.</p>
+<div id="admonition-info" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-title">
+<div class="admonition-title">
+<div id="admonition-info-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info"></a>
+</div>
+<div>
+<p>The Group node is written in Python: allocating and passing a variable number of inputs to
+the <code>ApproximateTimeSynchronizer</code> is straightforward there and awkward in C++.</p>
+</div>
+</div>
+<h2 id="node-parameters"><a class="header" href="#node-parameters">Node parameters</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
+<tr><td>groups</td><td>Groups to enable</td><td>list[str]</td><td>N/A</td></tr>
+<tr><td>group_measurement_plugins</td><td>Collect the members' <code>plugin</code> fields into the merged Record's <code>plugins</code> list</td><td>bool</td><td>true</td></tr>
+</tbody></table>
+</div>
+<h2 id="group-parameters"><a class="header" href="#group-parameters">Group parameters</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
+<tr><td>inputs</td><td>Name of the input topics to group</td><td>list[str]</td><td>N/A</td></tr>
+<tr><td>output</td><td>Output topic to send the data to</td><td>str</td><td>"/dc/group/{group}"</td></tr>
+<tr><td>sync_delay</td><td>Delay to wait during all subscriber data need to reach before being published again</td><td>float</td><td>5.0</td></tr>
+<tr><td>sync_timeout</td><td>Seconds an incomplete set may wait before <code>on_sync_timeout</code> applies. 0.0 disables it</td><td>float</td><td>0.0</td></tr>
+<tr><td>on_sync_timeout</td><td>What to do with an incomplete set once <code>sync_timeout</code> elapses: <code>drop</code>/<code>emit_partial</code></td><td>str</td><td>"drop"</td></tr>
+<tr><td>sync_timeout_log_throttle</td><td>Seconds between two sync-timeout warnings for this group. 0.0 logs every one</td><td>float</td><td>60.0</td></tr>
+<tr><td>group_key</td><td>Dictionary key under which data is grouped</td><td>str</td><td>{group_name}</td></tr>
+<tr><td>exclude_keys</td><td>List of keys to exclude from the published data. Data depth is separated by a dot. An entry holding glob syntax (<code>*</code>, <code>?</code>, <code>[seq]</code>) is a glob over the flattened key, one without is a key prefix</td><td>list[str]</td><td>N/A</td></tr>
+<tr><td>nested_data</td><td>Whether measurements are nested dictionaries or flat</td><td>bool</td><td>true</td></tr>
+<tr><td>include_group_name</td><td>Include group name in the JSON as key="name" and value=&lt;group_key&gt;</td><td>bool</td><td>true</td></tr>
+</tbody></table>
+</div>
+<h2 id="incomplete-sets"><a class="header" href="#incomplete-sets">Incomplete sets</a></h2>
+<p>A Group only publishes once <em>every</em> one of its <code>inputs</code> has produced a Record close enough
+in time. If one Measurement stops publishing — a camera unplugged, a plugin crashed, a
+<code>gate_condition</code> that never opens — the whole Group goes silent, and the Records of the
+inputs that <em>are</em> working never reach a Destination.</p>
+<p><code>sync_timeout</code> puts a deadline on that wait. It is measured from the arrival of the first
+Record of a set, and it is a different thing from <code>sync_delay</code>: <code>sync_delay</code> is the
+synchroniser's slop, the maximum spread between the <em>timestamps</em> of Records that may be
+merged together, whereas <code>sync_timeout</code> is real time spent waiting for a set to complete.</p>
+<div class="table-wrapper"><table><thead><tr><th><code>sync_timeout</code></th><th><code>on_sync_timeout</code></th><th>Behaviour</th></tr></thead><tbody>
+<tr><td><code>0.0</code></td><td>(ignored)</td><td>No deadline. The Group waits indefinitely and the synchroniser evicts stale Records on its own</td></tr>
+<tr><td><code>&gt; 0.0</code></td><td><code>drop</code></td><td>The incomplete set is discarded when the deadline elapses. Nothing is published, a warning is logged</td></tr>
+<tr><td><code>&gt; 0.0</code></td><td><code>emit_partial</code></td><td>The Records that did arrive are published as one <strong>partial Record</strong>, then the set is discarded</td></tr>
+</tbody></table>
+</div>
+<p><code>drop</code> is the default, so a Group that sets nothing new behaves exactly as it did before.
+<code>emit_partial</code> needs a positive <code>sync_timeout</code> to have a deadline to fire on; configured
+without one, the Group logs an error and falls back to <code>drop</code>.</p>
+<div id="admonition-info-1" class="admonition admonish-info" role="note" aria-labelledby="admonition-info-1-title">
+<div class="admonition-title">
+<div id="admonition-info-1-title">
+<p>Info</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-info-1"></a>
+</div>
+<div>
+<p>The deadline is on the set as a whole, not on each input: it starts with the first Record
+of a set and later Records do not push it back. After a set times out, the Group forgets
+every Record it was holding, so a Record already published in a partial set is never
+merged a second time when its late partner finally arrives.</p>
+</div>
+</div>
+<h3 id="warnings-and-throttling"><a class="header" href="#warnings-and-throttling">Warnings and throttling</a></h3>
+<p>Every timeout logs a warning naming the group, the deadline it missed, and the input
+topics that produced nothing — including under <code>drop</code>, where the warning is the only trace
+left since nothing is published:</p>
+<pre><code class="language-text">[WARN] [group_server]: Group 'memory_cpu': no complete set after 10.0s, dropping the
+incomplete set (no Record from: ['/dc/measurement/memory'])
+</code></pre>
+<p>A Measurement that dies stays dead, so the group keeps timing out and an unthrottled
+warning would repeat every <code>sync_timeout</code> for as long as the robot runs.
+<code>sync_timeout_log_throttle</code> caps this at one warning per group per window (60s by default);
+set it to <code>0.0</code> to log every timeout. The first timeout after a quiet window always logs
+immediately, and reports how many warnings the throttle swallowed since the last one:</p>
+<pre><code class="language-text">[WARN] [group_server]: Group 'memory_cpu': no complete set after 10.0s, dropping the
+incomplete set (no Record from: ['/dc/measurement/memory']) [+5 more in the last 60.0s]
+</code></pre>
+<p>The throttle is per group, so a permanently broken group does not silence the warnings of a
+healthy one that starts failing. Only the <em>log line</em> is rate-limited — under <code>emit_partial</code>
+every timeout still publishes its partial Record, throttled or not.</p>
+<h3 id="what-a-partial-record-looks-like"><a class="header" href="#what-a-partial-record-looks-like">What a partial Record looks like</a></h3>
+<p>A partial Record has the same shape as a complete one, minus the inputs that did not
+report, plus two keys that mark it as partial:</p>
+<pre><code class="language-json">{
+    "cpu": { "used": 12.0 },
+    "partial": true,
+    "missing_inputs": ["/dc/measurement/memory"],
+    "tags": [""],
+    "name": "memory_cpu"
+}
+</code></pre>
+<ul>
+<li><strong>A missing input's key is omitted, not present-and-null.</strong> The Group node knows a
+missing input's <em>topic</em> and nothing else: a Record's <code>group_key</code> and its fields both
+travel inside the Record itself, so there is no correctly shaped null placeholder the
+Group could invent for a Measurement that never published. Consumers with a flat column
+schema — the <code>postgres</code> sink maps a Record's top-level keys onto existing columns — see
+those columns stay <code>NULL</code> for that row, the same as any other column a Record does not
+populate.</li>
+<li><strong><code>partial</code> and <code>missing_inputs</code> appear only on partial Records.</strong> A complete Record is
+byte-for-byte what the Group published before this option existed, so nothing downstream
+has to change to keep consuming complete Records. Treat the absence of <code>partial</code> as
+<code>false</code>.</li>
+<li><code>missing_inputs</code> lists the input <em>topics</em> that contributed no Record, in <code>inputs</code> order.</li>
+<li><code>tags</code>, <code>name</code> and <code>plugins</code> behave as they do on a complete Record — <code>plugins</code> only
+lists the plugins that actually reported.</li>
+<li><code>incident_id</code> behaves the same way: if any member that <em>did</em> arrive was released as part
+of an <a href="./measurements.html">incident</a>, the merged Record carries its <code>incident_id</code>, so a
+partial Record of an incident is still queryable as one.</li>
+</ul>
+<div id="admonition-add-the-columns-before-charting-a-partial-record" class="admonition admonish-warning" role="note" aria-labelledby="admonition-add-the-columns-before-charting-a-partial-record-title">
+<div class="admonition-title">
+<div id="admonition-add-the-columns-before-charting-a-partial-record-title">
+<p>Add the columns before charting a partial Record</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-add-the-columns-before-charting-a-partial-record"></a>
+</div>
+<div>
+<p>Vector's <code>postgres</code> sink silently drops top-level keys that have no matching column, so
+<code>partial</code> and <code>missing_inputs</code> are discarded unless you add <code>partial boolean</code> and
+<code>missing_inputs jsonb</code> to the destination table yourself.</p>
+</div>
+</div>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<pre><code class="language-yaml">group_server:
+  ros__parameters:
+    groups: ["memory_cpu", "memory_uptime", "cameras", "map"]
+    memory_cpu:
+      inputs: ["/dc/measurement/memory", "/dc/measurement/cpu"]
+      output: "/dc/group/memory_cpu"
+      sync_delay: 5.0
+      group_key: "memory_cpu"
+    memory_uptime:
+      inputs: ["/dc/measurement/memory", "/dc/measurement/uptime"]
+      output: "/dc/group/memory_uptime"
+      sync_delay: 5.0
+      # Publish whatever arrived rather than nothing if one of the two is 10s late
+      sync_timeout: 10.0
+      on_sync_timeout: "emit_partial"
+      group_key: "memory_uptime"
+    cameras:
+      inputs: ["/dc/measurement/camera"]
+      output: "/dc/group/cameras"
+      sync_delay: 5.0
+      group_key: "cameras"
+    map:
+      inputs: ["/dc/measurement/map"]
+      output: "/dc/group/map"
+      sync_delay: 5.0
+      group_key: "map"
+</code></pre>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/groups.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../dc/data_validation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../dc/lifecycle_manager.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../dc/data_validation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../dc/lifecycle_manager.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../js/mermaid.js"></script>
+        <script src="../js/mermaid-init.js"></script>
+        <script src="../js/theme.js"></script>
+        <script src="../js/distro.js"></script>
+
+
+    </body>
+</html>

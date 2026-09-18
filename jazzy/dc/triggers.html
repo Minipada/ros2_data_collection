@@ -1,0 +1,479 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js navy">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Triggers - Data Collection for ROS 2</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/lineicon.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../open-in.css">
+        <link rel="stylesheet" href=".././css/mdbook-admonish.css">
+        <link rel="stylesheet" href="../css/logo.css">
+        <link rel="stylesheet" href="../css/lineicon.css">
+        <link rel="stylesheet" href="../css/theme.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Hotjar -->
+        <script>
+            if (window.location.href.startsWith("https://minipada.github.io/ros2_data_collection")) {
+            (function(h,o,t,j,a,r){
+                h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+                h._hjSettings={hjid:3435761,hjsv:6};
+                a=o.getElementsByTagName('head')[0];
+                r=o.createElement('script');r.async=1;
+                r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+                a.appendChild(r);
+            })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "navy";
+        </script>
+        <!-- Populates mdbook-sidebar-scrollbox below, prefixing each toc link with
+             path_to_root -- the toc helper's own hrefs are root-relative, only correct as-is on
+             the site root page itself. -->
+        <script src="../toc.js"></script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <a id="a-logo-dc" href="/"><img id="logo-dc"></a>
+            <!-- Distro version selector; doc/js/distro.js fills it in. -->
+            <nav id="distro-selector" class="distro-selector" aria-label="ROS 2 distro"></nav>
+            <div class="sidebar-scrollbox">
+                <mdbook-sidebar-scrollbox></mdbook-sidebar-scrollbox>
+                <noscript>
+                    <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+                </noscript>
+                <footer id="nav-separator"></footer>
+                <div class="sidebar-footer">
+                    <a href="https://github.com/minipada/ros2_data_collection" target="_blank" aria-label="GitHub repository">
+                        <i class="lni lni-github"></i>
+                    </a>
+                    <a href="mailto:d.bensoussan@proton.me" aria-label="Email the maintainer">
+                        <i class="lni lni-envelope"></i>
+                    </a>
+                    <a class="sidebar-license" target="_blank"
+                        href="https://tldrlegal.com/license/mozilla-public-license-2.0-(mpl-2)">MPL-2.0</a>
+                </div>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Data Collection for ROS 2</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/minipada/ros2_data_collection/edit/jazzy/doc/src/dc/triggers.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="triggers"><a class="header" href="#triggers">Triggers</a></h1>
+<h2 id="description"><a class="header" href="#description">Description</a></h2>
+<p>A <strong>Trigger</strong> fires a one-shot signal — a <code>dc_interfaces/msg/FlushEvent</code> — when a composition
+of <a href="./conditions.html">Conditions</a> goes from false to true. Measurements listening for that
+event release the window of recent data they have been holding back, so the seconds <em>leading
+up to</em> an event are collected too, alongside the seconds after it.</p>
+<p>The motivating case is incident review: when an autonomous robot emergency-brakes, what
+matters is what happened before the brake. A Condition cannot express that — it gates
+collection going forward, and by the time it turns true the run-up is gone. A Trigger can,
+because the Measurement was already buffering.</p>
+<h2 id="trigger-vs-condition"><a class="header" href="#trigger-vs-condition">Trigger vs Condition</a></h2>
+<p>Both are described with the same <code>if_all</code>/<code>if_any</code>/<code>if_none</code> Condition lists, and a Trigger is
+built out of Condition plugins — but they answer different questions.</p>
+<div class="table-wrapper"><table><thead><tr><th></th><th>Condition</th><th>Trigger</th></tr></thead><tbody>
+<tr><td>Question it answers</td><td>"Should this Measurement be collecting <em>right now</em>?"</td><td>"Did something just happen?"</td></tr>
+<tr><td>Shape of the signal</td><td>A level: true for as long as the predicate holds</td><td>An edge: fires once on the false→true transition</td></tr>
+<tr><td>Effect on collection</td><td>Gates live publishing while true</td><td>Releases a pre-collected buffer, once</td></tr>
+<tr><td>Data it can give you</td><td>Everything <em>from</em> the moment it turned true</td><td>Everything from the <code>buffer_duration_sec</code> <em>before</em> the event, plus post-roll</td></tr>
+<tr><td>Where it is configured</td><td>Per Measurement (<code>if_all_conditions</code>, …)</td><td>On the <code>trigger_broadcast_node</code>, once for the whole robot</td></tr>
+<tr><td>How Measurements see it</td><td>Directly, as their own gate</td><td>Indirectly, as a <code>FlushEvent</code> on a topic several Measurements can share</td></tr>
+<tr><td>Scope</td><td>One Measurement</td><td>Every Measurement subscribed to its <code>flush_topic</code></td></tr>
+</tbody></table>
+</div>
+<p>They compose: a Trigger is <em>made of</em> Conditions, and a buffering Measurement can still be
+gated by its own Conditions. Nothing about a Trigger changes what a Condition means.</p>
+<div id="admonition-trigger-is-a-specific-word-here" class="admonition admonish-warning" role="note" aria-labelledby="admonition-trigger-is-a-specific-word-here-title">
+<div class="admonition-title">
+<div id="admonition-trigger-is-a-specific-word-here-title">
+<p>Trigger is a specific word here</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-trigger-is-a-specific-word-here"></a>
+</div>
+<div>
+<p>Before this feature existed, "trigger" was loose talk for "a Condition turning on", and the
+<a href="./concepts.html#glossary">glossary</a> told you to avoid the word. It now names a real, distinct
+plugin type. Say <strong>Condition</strong> for a gate that stays true, and <strong>Trigger</strong> only for the
+edge-firing plugin documented here.</p>
+</div>
+</div>
+<h2 id="the-flush-broadcast"><a class="header" href="#the-flush-broadcast">The flush broadcast</a></h2>
+<p>The <code>trigger_broadcast_node</code> loads the Condition plugins named in <code>condition_plugins</code> (the same
+Condition plugins Measurements use) plus one Trigger plugin, polls the Trigger on a timer, and
+publishes a <code>FlushEvent</code> on a configurable topic (<code>/dc/flush</code> by default) each time it fires:</p>
+<pre><code>                    ┌──────────────────────┐
+   /odom, … ───────▶│  Condition plugins   │
+                    └──────────┬───────────┘
+                               │ if_all / if_any / if_none
+                    ┌──────────▼───────────┐
+                    │  Trigger (EdgeTrigger)│  false → true?
+                    └──────────┬───────────┘
+                               │ FlushEvent { incident_id }
+                    ┌──────────▼───────────┐
+                    │      /dc/flush       │
+                    └───┬──────────────┬───┘
+                        │              │
+              ┌─────────▼────┐  ┌──────▼───────┐
+              │ Measurement A│  │ Measurement B│   release their buffered windows,
+              │  (buffering) │  │  (buffering) │   both tagged with the same incident_id
+              └──────────────┘  └──────────────┘
+</code></pre>
+<p>The node mints a fresh <code>incident_id</code> (a UUID) for every firing; nothing else generates one, so
+every subscriber of one event shares one ID. Several Measurements can point at the same
+<code>flush_topic</code>, which is the whole reason the signal is broadcast on a topic rather than wired
+per Measurement: adding a sensor stream to an existing incident-capture setup needs no change
+to the Trigger.</p>
+<div id="admonition-only-self-updating-conditions-are-meaningful-here" class="admonition admonish-note" role="note" aria-labelledby="admonition-only-self-updating-conditions-are-meaningful-here-title">
+<div class="admonition-title">
+<div id="admonition-only-self-updating-conditions-are-meaningful-here-title">
+<p>Only self-updating Conditions are meaningful here</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-only-self-updating-conditions-are-meaningful-here"></a>
+</div>
+<div>
+<p>A Measurement passes its own freshly-collected Record to each Condition it consults, so
+plugins like <code>Compare</code> read a field out of that Record. A Trigger has no Record of its
+own: it only makes sense to compose Conditions that maintain their own state from a
+subscription, such as <a href="./conditions/moving.html">Moving</a>.</p>
+</div>
+</div>
+<div id="admonition-running-the-broadcast-node" class="admonition admonish-info" role="note" aria-labelledby="admonition-running-the-broadcast-node-title">
+<div class="admonition-title">
+<div id="admonition-running-the-broadcast-node-title">
+<p>Running the broadcast node</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-running-the-broadcast-node"></a>
+</div>
+<div>
+<p><code>trigger_broadcast_node</code> is a lifecycle node, like the Measurement server, but it is not part
+of <code>dc_bringup</code>'s launch file yet — run it alongside the rest of the stack and transition it
+yourself (or add it to your own launch file and lifecycle manager <code>node_names</code>):</p>
+<pre><code>ros2 run dc_triggers trigger_broadcast_node --ros-args --params-file &lt;your_params.yaml&gt;
+</code></pre>
+<p>A Measurement subscribes to a plain topic, so anything publishing a <code>FlushEvent</code> on
+<code>flush_topic</code> releases the buffer — including <code>ros2 topic pub</code>, which is how the
+<code>tools/e2e/scripts/run_incident.sh</code> scenario drives a flush.</p>
+</div>
+</div>
+<h2 id="flushevent"><a class="header" href="#flushevent"><code>FlushEvent</code></a></h2>
+<p><code>dc_interfaces/msg/FlushEvent</code> is the entire contract between the Trigger side and the
+Measurement side:</p>
+<div class="table-wrapper"><table><thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>incident_id</code></td><td>string</td><td>UUID minted by the broadcast node, one per firing</td></tr>
+</tbody></table>
+</div>
+<p>A Measurement adopts the <code>incident_id</code> it receives; it never generates its own. An event that
+arrives while a Measurement is already flushing, in post-roll, or in cooldown is ignored.</p>
+<h2 id="incident_id"><a class="header" href="#incident_id"><code>incident_id</code></a></h2>
+<p><code>incident_id</code> is a typed field of the <code>dc_interfaces/msg/StringStamped</code> Record envelope,
+beside <code>group_key</code> — not a key nested inside the measurement's own data. Every Record and
+File released by one flush cycle carries the same value, so "everything from this one event"
+is a single query rather than a timestamp range reconstructed by hand:</p>
+<pre><code class="language-sql">SELECT * FROM dc_records WHERE incident_id = '3f2b1c7e-…' ORDER BY date;
+</code></pre>
+<ul>
+<li>A <code>postgres</code> Destination writes it to its own <strong><code>incident_id</code> column</strong> — the column must
+exist in the table beforehand; see <a href="./destinations.html#incident_id">Destinations</a>.</li>
+<li>A Record collected outside an incident carries an empty <code>incident_id</code>, leaving the column
+NULL.</li>
+<li>A <a href="./groups.html">Group</a> carries a member's envelope <code>incident_id</code> onto its own output
+envelope, so grouping does not bury it.</li>
+<li>Every Destination receives it as a top-level key of the JSON the Bridge ships: the Bridge
+lifts the envelope field into the payload before handing a Record to its Destinations.</li>
+</ul>
+<h2 id="available-plugins"><a class="header" href="#available-plugins">Available plugins</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody>
+<tr><td><a href="./triggers/edge_trigger.html">Edge trigger</a></td><td>Fires once on the false→true rising edge of an <code>if_all</code>/<code>if_any</code>/<code>if_none</code> Condition composition</td></tr>
+</tbody></table>
+</div>
+<h2 id="node-parameters"><a class="header" href="#node-parameters">Node parameters</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Parameter name</th><th>Description</th><th>Type(s)</th><th>Default</th></tr></thead><tbody>
+<tr><td>condition_plugins</td><td>Name of the condition plugins to load</td><td>list[str]</td><td>[]</td></tr>
+</tbody></table>
+</div>
+<h2 id="plugin-parameters"><a class="header" href="#plugin-parameters">Plugin parameters</a></h2>
+<p>Every Trigger plugin loaded by this node is namespaced under <code>trigger</code> and shares these
+parameters:</p>
+<div class="table-wrapper"><table><thead><tr><th>Parameter name</th><th>Description</th><th>Type(s)</th><th>Default</th></tr></thead><tbody>
+<tr><td>trigger.plugin</td><td>Name of the trigger plugin to load</td><td>str</td><td>N/A (mandatory)</td></tr>
+<tr><td>trigger.if_all_conditions</td><td>Fire only once every named Condition is active</td><td>list[str]</td><td>[]</td></tr>
+<tr><td>trigger.if_any_conditions</td><td>Fire once any named Condition is active</td><td>list[str]</td><td>[]</td></tr>
+<tr><td>trigger.if_none_conditions</td><td>Fire only once no named Condition is active</td><td>list[str]</td><td>[]</td></tr>
+<tr><td>trigger.topic</td><td>Topic <code>FlushEvent</code> messages are published on</td><td>str</td><td>"/dc/flush"</td></tr>
+<tr><td>trigger.polling_interval</td><td>Interval in milliseconds at which the composed Condition state is checked</td><td>int</td><td>100</td></tr>
+</tbody></table>
+</div>
+<h2 id="measurement-parameters"><a class="header" href="#measurement-parameters">Measurement parameters</a></h2>
+<p>The other half of the feature lives on each Measurement: what it buffers, and what it does
+once a <code>FlushEvent</code> releases it. All five are optional, and a Measurement that leaves
+<code>buffer_duration_sec</code> at 0 behaves exactly as it always has — this feature is entirely
+opt-in. They are documented in full, with the state machine and how Files are staged, in
+<a href="./measurements.html#plugin-parameters">Measurements</a>.</p>
+<div class="table-wrapper"><table><thead><tr><th>Parameter name</th><th>Description</th><th>Type(s)</th><th>Default</th></tr></thead><tbody>
+<tr><td>buffer_duration_sec</td><td>Seconds of history to hold instead of publishing live; 0 disables buffering entirely</td><td>float</td><td>0</td></tr>
+<tr><td>post_roll_duration_sec</td><td>Seconds to keep publishing live after the release finishes, still tagged with the same <code>incident_id</code>; 0 means pre-roll only</td><td>float</td><td>0</td></tr>
+<tr><td>cooldown_sec</td><td>Seconds to ignore further <code>FlushEvent</code>s once post-roll ends, before buffering re-arms itself; 0 re-arms immediately</td><td>float</td><td>0</td></tr>
+<tr><td>max_flush_rate_hz</td><td>Ceiling in Records per second on how fast the released window is emitted; 0 releases it in one burst</td><td>float</td><td>0</td></tr>
+<tr><td>flush_topic</td><td>Topic the <code>FlushEvent</code> that releases this Measurement is received on</td><td>str</td><td>"/dc/flush"</td></tr>
+</tbody></table>
+</div>
+<p>An armed Measurement moves through four states per incident — <strong>Buffering</strong> (accumulate,
+publish nothing) → <strong>Flushing</strong> (release the window, oldest first, rate-limited) →
+<strong>PostRoll</strong> (publish live, same <code>incident_id</code>) → <strong>Cooldown</strong> (ignore further events) → back
+to Buffering, with no manual re-arm.</p>
+<div id="admonition-sizing-max_flush_rate_hz" class="admonition admonish-tip" role="note" aria-labelledby="admonition-sizing-max_flush_rate_hz-title">
+<div class="admonition-title">
+<div id="admonition-sizing-max_flush_rate_hz-title">
+<p>Sizing max_flush_rate_hz</p>
+</div>
+<a class="admonition-anchor-link" href="#admonition-sizing-max_flush_rate_hz"></a>
+</div>
+<div>
+<p>A Measurement's data publisher is <code>KeepLast(1)</code>. A whole window published back-to-back in one
+callback is coalesced down to its last Record before any subscriber runs, so a burst release
+(<code>max_flush_rate_hz: 0</code>) only delivers the full window to a subscriber that keeps up. Set a
+rate comfortably above the collection rate being released — 20 Hz for a 2 Hz Measurement — and
+the window is paced out intact, which is also what keeps a backlog dump from competing with
+live collection right after an incident.</p>
+</div>
+</div>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<p>An emergency-brake capture: the robot buffers the last 10 seconds of uptime data, and the
+moment it starts moving the buffer is released and collection continues live for 5 more
+seconds. Swap the <code>moving</code> Condition for whatever expresses your event.</p>
+<p><code>trigger_broadcast_node</code>'s parameters:</p>
+<pre><code class="language-yaml">trigger_broadcast_node:
+  ros__parameters:
+    condition_plugins: ["moving"]
+
+    moving:
+      plugin: "dc_conditions/Moving"
+      odom_topic: "/odom"
+
+    trigger:
+      plugin: "dc_triggers/EdgeTrigger"
+      if_all_conditions: ["moving"]
+      topic: "/dc/flush"
+      polling_interval: 100
+</code></pre>
+<p>The Measurements listening for it:</p>
+<pre><code class="language-yaml">measurement_server:
+  ros__parameters:
+    measurement_plugins: ["uptime", "memory"]
+
+    # Armed: publishes nothing until a FlushEvent arrives on /dc/flush, then releases the
+    # last 10 seconds of collection tagged with that event's incident_id.
+    uptime:
+      plugin: "dc_measurements/Uptime"
+      polling_interval: 500
+      group_key: "uptime"
+      buffer_duration_sec: 10.0
+      post_roll_duration_sec: 5.0
+      cooldown_sec: 30.0
+      max_flush_rate_hz: 20.0
+      flush_topic: "/dc/flush"
+
+    # Not armed: collects live as usual, and its Records leave incident_id NULL.
+    memory:
+      plugin: "dc_measurements/Memory"
+      polling_interval: 1000
+      group_key: "memory"
+</code></pre>
+<p>A runnable end-to-end version of this — two Measurements, one armed, both landing in the same
+Postgres table, with the <code>incident_id</code> column asserted by query — is
+<code>tools/e2e/scripts/run_incident.sh</code>.</p>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/triggers.md">Edit this page on GitHub.</a></footer>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../dc/conditions/same_as_previous.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../dc/triggers/edge_trigger.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../dc/conditions/same_as_previous.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../dc/triggers/edge_trigger.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+        <script>
+            window.playground_line_numbers = true;
+        </script>
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+        <script src="../ace.js"></script>
+        <script src="../editor.js"></script>
+        <script src="../mode-rust.js"></script>
+        <script src="../theme-dawn.js"></script>
+        <script src="../theme-tomorrow_night.js"></script>
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../js/mermaid.js"></script>
+        <script src="../js/mermaid-init.js"></script>
+        <script src="../js/theme.js"></script>
+        <script src="../js/distro.js"></script>
+
+
+    </body>
+</html>
