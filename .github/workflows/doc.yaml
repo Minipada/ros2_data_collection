@@ -1,36 +1,28 @@
 # SPDX-FileCopyrightText: 2022-2026 David Bensoussan
 # SPDX-License-Identifier: MPL-2.0
 
-# DC 2.0 (Jazzy) documentation build and deploy (#252). Builds the mdbook site and the
-# strictdoc requirements export, and publishes to GitHub Pages on pushes to `jazzy`.
+# Docs build and publish for this distro's section of the versioned site (#534). Every
+# distro branch (rolling, lyrical, jazzy) carries this same workflow and publishes its own
+# build to /<distro>/ on the one Pages site via tools/ci/deploy_doc_site.sh — no step
+# composes the site from all distros, and each publish leaves sibling sections alone.
 #
 # Like ci.yaml, this runs the same script a developer runs locally
 # (tools/ci/pre-commit/build_doc.sh, also the `build-doc` pre-commit hook) inside a Podman
-# image built from containers/doc/Containerfile — no CI-only docs script, and the pinned
-# mdbook toolchain is identical in both places. The image is tagged with the commit SHA
-# for traceability but is not pushed: nothing else consumes it (CLAUDE.md, "Containers:
-# Podman, not Docker").
-#
-# The docs build is a real gate: mdbook's linkcheck backend fails the job on a broken
-# internal link, and book.toml sets `create-missing = false` so a SUMMARY.md entry
-# pointing at a missing page fails too. External links are not followed — see the comment
-# on `follow-web-links` in doc/book.toml.
+# image built from containers/doc/Containerfile — one pinned mdbook toolchain in both
+# places. The build is a gate: mdbook's linkcheck backend fails the job on a broken
+# internal link, and book.toml's `create-missing = false` fails it on a SUMMARY.md entry
+# pointing at a missing page. External links are not followed — see the comment on
+# `follow-web-links` in doc/book.toml.
 #
 # Build cache (#315): each run is a fresh runner, so podman's build cache is otherwise
-# local-only and never survives between runs — this image (Rust toolchain + five `cargo
-# install`s) was rebuilding from scratch every time. Mirrors ci.yaml's `build-workspace`
-# job: log into ghcr.io, compute a stable `dc-doc-cache` ref, and pass it to
-# build_doc.sh's `--cache-from`/`--cache-to`. `packages: write` only actually lands for
-# same-repo events — GitHub forces GITHUB_TOKEN to read-only on `pull_request` from a
-# fork regardless of what's requested here. That just means a fork PR pushes no cache and
-# builds cold, same as before this change; it does not fail the build.
+# local-only — log into ghcr.io and pass a stable `dc-doc-cache` ref to build_doc.sh's
+# --cache-from/--cache-to, so the rust toolchain + cargo-installed preprocessors layers
+# stay warm on a cold runner. `packages: write` only lands for same-repo events; a fork
+# PR pushes no cache and builds cold, which does not fail the build.
 #
 # PR preview (#135): on pull_request the built site is uploaded as a workflow artifact,
-# not deployed — only pushes to `jazzy` reach Pages. `pull_request` (not
-# `pull_request_target`) keeps fork PRs safe — the default `GITHUB_TOKEN` is read-only
-# there, which is all an artifact upload needs. The job summary step below turns that
-# artifact into a one-click link from the PR's Checks tab instead of leaving reviewers
-# to dig through the run's Artifacts section.
+# not deployed — pushes to this branch are the only publisher. The job summary step links
+# the artifact from the PR's Checks tab.
 
 name: Documentation
 
@@ -44,6 +36,7 @@ on:
       - requirements/**
       - containers/doc/Containerfile
       - tools/ci/pre-commit/build_doc.sh
+      - tools/ci/deploy_doc_site.sh
       - .github/workflows/doc.yaml
   pull_request:
     branches:
@@ -53,6 +46,7 @@ on:
       - requirements/**
       - containers/doc/Containerfile
       - tools/ci/pre-commit/build_doc.sh
+      - tools/ci/deploy_doc_site.sh
       - .github/workflows/doc.yaml
 
 permissions:
@@ -90,6 +84,10 @@ jobs:
         env:
           IMAGE_TAG: dc-doc:${{ github.sha }}
           CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
+          # The distro section this build publishes as: this branch on push, the target
+          # branch for a PR preview. Same value either way on a distro branch — previews
+          # build exactly what merging would publish.
+          DISTRO: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
         run: ./tools/ci/pre-commit/build_doc.sh
 
       - name: Upload the built site
@@ -103,6 +101,7 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           ARTIFACT_URL: ${{ steps.upload-doc-site.outputs.artifact-url }}
+          DISTRO: ${{ github.base_ref }}
         run: |
           {
             echo "### 📖 Documentation preview"
@@ -110,13 +109,12 @@ jobs:
             echo "[Download the built site](${ARTIFACT_URL}) (\`doc-site\`)."
             echo
             echo "This is a workflow artifact, not a hosted deploy — unzip it and open"
-            echo "\`index.html\`. Downloading requires a GitHub login with read access to"
-            echo "this repo, same as any other Actions artifact."
+            echo "\`${DISTRO}/index.html\`. Downloading requires a GitHub login with read"
+            echo "access to this repo, same as any other Actions artifact."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Deploy to GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/jazzy'
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./doc/book/html
+      - name: Publish this distro's section to GitHub Pages
+        if: github.event_name == 'push'
+        env:
+          DISTRO: ${{ github.ref_name }}
+        run: ./tools/ci/deploy_doc_site.sh
