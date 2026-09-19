@@ -23,10 +23,12 @@ site (#534): `doc.yaml` builds with `DISTRO=<branch>` and
 No humble section: that line's docs live on its own branch.
 
 - `rolling` — default branch and development tip: tracks ROS 2 rolling head (external Vector
-  shipper, C++ Bridge). New work — including everything `run_once.sh` picks up — branches from
-  and merges into `rolling`, then gets ported to the distro branches.
-- `jazzy` — ROS 2 Jazzy line (Ubuntu noble).
-- `lyrical` — ROS 2 Lyrical line (Ubuntu resolute).
+  shipper, C++ Bridge). All new work — including everything `run_once.sh` picks up — branches
+  from and merges into `rolling`; a PR labeled `backport:jazzy`/`backport:lyrical` is then
+  cherry-picked onto that branch automatically when it merges (`tools/ci/backport.sh`), with
+  conflicts left in an open PR for a human.
+- `jazzy` — ROS 2 Jazzy line (Ubuntu noble); receives rolling backports until 05/2029.
+- `lyrical` — ROS 2 Lyrical line (Ubuntu resolute); receives rolling backports until 05/2031.
 - `humble` — legacy/stable line, ROS 2 Humble, embedded Fluent Bit architecture; its own
   unrelated CI.
 

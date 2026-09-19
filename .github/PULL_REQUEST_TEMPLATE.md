@@ -35,5 +35,6 @@ This will automatically close the issue when this PR gets merged.
 - [ ] 📑 I documented correctly following our [guidelines](./CONTRIBUTING.md)
 - [ ] 💯 I tested locally and it is working
 - [ ] 🟢 My code does not fail neither code linting checks nor unit test.
+- [ ] 🔙 I added `backport:jazzy` / `backport:lyrical` labels if this must land on those distro branches
 
 Thank you!

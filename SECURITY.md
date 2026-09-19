@@ -3,13 +3,16 @@
 ## Supported branches
 
 DC has no versioned releases yet, so there is nothing to support per version: fixes land on
-branch tips.
+branch tips. Development happens on `rolling`; the distro lines receive those fixes as
+cherry-pick backports (the `backport:jazzy`/`backport:lyrical` PR labels).
 
-| Branch   | What it is                                     | Security fixes                       |
-| -------- | ---------------------------------------------- | ------------------------------------ |
-| `jazzy`  | active development (DC 2.0, ROS 2 Jazzy)        | yes — fixes land here first          |
-| `humble` | legacy line (DC 1.x, ROS 2 Humble, Fluent Bit) | high and critical severity only      |
-| anything else (feature branches, forks) | not a release line             | no                                   |
+| Branch   | What it is                                       | Security fixes                              |
+| -------- | ------------------------------------------------ | ------------------------------------------- |
+| `rolling` | active development (DC 2.0, ROS 2 rolling)       | yes — fixes land here first                 |
+| `jazzy`   | maintained distro line (ROS 2 Jazzy, until 05/2029) | yes, as a backport from `rolling`          |
+| `lyrical` | maintained distro line (ROS 2 Lyrical, until 05/2031) | yes, as a backport from `rolling`       |
+| `humble`  | legacy line (DC 1.x, ROS 2 Humble, Fluent Bit)   | high and critical severity only             |
+| anything else (feature branches, forks) | not a release line | no                                          |
 
 ## Reporting a vulnerability
 
@@ -39,7 +42,7 @@ Useful in a report:
 | Acknowledgement that the report was received         | 3 business days    |
 | Initial assessment: accepted or rejected, + severity | 10 business days   |
 | Status update while a fix is being worked on         | every 14 days      |
-| Fix on `jazzy`                                       | severity-dependent |
+| Fix on `rolling` and its distro backports            | severity-dependent |
 
 DC is maintained by one person with no commercial support contract behind it, so these are
 targets rather than an SLA. If the acknowledgement window passes in silence, chase through the
@@ -48,7 +51,8 @@ other channel above.
 ## Disclosure
 
 Disclosure is coordinated. The default embargo is 90 days from acknowledgement, or until a fix
-is on `jazzy`, whichever comes first — shorter for something trivially fixed, longer if the fix
+is on `rolling` and backported to the distro lines, whichever comes first — shorter for something
+trivially fixed, longer if the fix
 has to be coordinated upstream (ROS 2, Vector, the AWS SDK). Fixed issues are published as a
 GitHub Security Advisory, with a CVE requested through GitHub when the impact warrants one.
 Reporters are credited by name or handle unless they ask not to be.
