@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+# SPDX-License-Identifier: MPL-2.0
+
+# Opens cherry-pick backport PRs when a merged rolling PR carries a backport:<distro>
+# label (#535). All logic lives in tools/ci/backport.sh — this file only wires triggers
+# and credentials to it, so the same script also serves a maintainer's dry run:
+#   gh workflow run backport.yml -f pr_number=<N>            # plan only
+#   gh workflow run backport.yml -f pr_number=<N> -f dry_run=false
+
+name: Backport
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - rolling
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request to backport (or to plan, with dry run)
+        required: true
+        type: number
+      dry_run:
+        description: Print the cherry-pick plan and create nothing
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backport:
+    name: Backport PR ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The cherry-picks need the merged PR commits' full history.
+          fetch-depth: 0
+
+      - name: Backport
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+        run: ./tools/ci/backport.sh "$PR_NUMBER"

@@ -40,6 +40,37 @@ You can contribute to the source code with Pull Requests, for example:
   * Make sure to add tests.
   * Make sure to add documentation if it's relevant.
 
+### Branches and backports
+
+Development happens on `rolling`, the repository's default branch: open every PR against
+`rolling`. One branch per ROS 2 distro keeps the release lines:
+
+| Branch    | Role                                                                                  |
+| --------- | ------------------------------------------------------------------------------------- |
+| `rolling` | development tip — all new work lands here first                                       |
+| `jazzy`   | ROS 2 Jazzy line, receives rolling backports until its EOL (05/2029)                  |
+| `lyrical` | ROS 2 Lyrical line, receives rolling backports until its EOL (05/2031)                |
+| `humble`  | legacy line (DC 1.x, embedded Fluent Bit), maintained on its own branch, no backports |
+
+To have a merged change land on a distro branch too, label the PR `backport:jazzy` and/or
+`backport:lyrical` before merging. Small mechanical fixes port cleanly; restructuring
+changes usually don't — keep those rolling-only. When the PR merges, the Backport workflow
+cherry-picks the PR's commits onto each labeled branch and opens a PR there, linking back
+to the original. A cherry-pick that conflicts still opens a PR, with the conflict markers
+left in the files and the conflicting files listed in the PR body: resolve them there.
+
+Backport PRs created by the workflow don't start CI on their own — GitHub doesn't run
+workflows for PRs created with the workflow's own token. Close and reopen one to trigger
+its checks.
+
+Preview what a merge would backport, creating nothing:
+
+```bash
+./tools/ci/backport.sh <pr-number> --dry-run
+# or the same plan through the workflow:
+gh workflow run backport.yml -f pr_number=<pr-number>
+```
+
 
 ### Setup environment
 #### ROS
