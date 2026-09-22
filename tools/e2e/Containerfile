@@ -371,6 +371,11 @@ RUN --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} \
       --as-root=apt:false --dependency-types=exec \
       --skip-keys="slam_toolbox nav2_rviz_plugins" && \
+    # rmw_cyclonedds_cpp: no dc manifest exec-depends on it (nothing selects an RMW in
+    # package.xml), but tools/sim/scripts/run.sh runs its containers on CycloneDDS —
+    # this is the stage sim.yaml builds, and without the .so here rcl exits 1 at init.
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      ros-${ROS_DISTRO}-rmw-cyclonedds-cpp && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/partial src
 
 COPY --from=workspace /root/ws/install install
