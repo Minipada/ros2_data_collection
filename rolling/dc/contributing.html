@@ -228,6 +228,30 @@ states the supported branches, the response targets and what is in scope.</p>
 </ul>
 </li>
 </ul>
+<h3 id="branches-and-backports"><a class="header" href="#branches-and-backports">Branches and backports</a></h3>
+<p>Development happens on <code>rolling</code>, the repository's default branch: open every PR against
+<code>rolling</code>. One branch per ROS 2 distro keeps the release lines:</p>
+<div class="table-wrapper"><table><thead><tr><th>Branch</th><th>Role</th></tr></thead><tbody>
+<tr><td><code>rolling</code></td><td>development tip — all new work lands here first</td></tr>
+<tr><td><code>jazzy</code></td><td>ROS 2 Jazzy line, receives rolling backports until its EOL (05/2029)</td></tr>
+<tr><td><code>lyrical</code></td><td>ROS 2 Lyrical line, receives rolling backports until its EOL (05/2031)</td></tr>
+<tr><td><code>humble</code></td><td>legacy line (DC 1.x, embedded Fluent Bit), maintained on its own branch, no backports</td></tr>
+</tbody></table>
+</div>
+<p>To have a merged change land on a distro branch too, label the PR <code>backport:jazzy</code> and/or
+<code>backport:lyrical</code> before merging. Small mechanical fixes port cleanly; restructuring
+changes usually don't — keep those rolling-only. When the PR merges, the Backport workflow
+cherry-picks the PR's commits onto each labeled branch and opens a PR there, linking back
+to the original. A cherry-pick that conflicts still opens a PR, with the conflict markers
+left in the files and the conflicting files listed in the PR body: resolve them there.</p>
+<p>Backport PRs created by the workflow don't start CI on their own — GitHub doesn't run
+workflows for PRs created with the workflow's own token. Close and reopen one to trigger
+its checks.</p>
+<p>Preview what a merge would backport, creating nothing:</p>
+<pre><code class="language-bash">./tools/ci/backport.sh &lt;pr-number&gt; --dry-run
+# or the same plan through the workflow:
+gh workflow run backport.yml -f pr_number=&lt;pr-number&gt;
+</code></pre>
 <h3 id="setup-environment"><a class="header" href="#setup-environment">Setup environment</a></h3>
 <h4 id="ros"><a class="header" href="#ros">ROS</a></h4>
 <p>Follow the steps to build your workspace and install dependencies in the <a href="./setup.html">setup section</a></p>
