@@ -37,7 +37,12 @@ class _RecordHandler(socketserver.StreamRequestHandler):
 
 class _McapTcpServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True
-    daemon_threads = True
+    # Non-daemon, so `server_close()` joins the handler before `main()`'s
+    # `mcap_writer.close()` finishes the file: Vector drains its buffer and closes the
+    # connection while the whole stack is shutting down, and those last records must be
+    # in the file when it is finished. A daemon handler dies with the process instead,
+    # dropping them (the bug test_cli_smoke.py's SIGTERM-while-flushing test pins).
+    daemon_threads = False
 
     def __init__(self, server_address, handler_class, mcap_writer: RotatingMcapWriter):
         super().__init__(server_address, handler_class)
