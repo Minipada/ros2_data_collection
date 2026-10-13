@@ -114,3 +114,5 @@ jobs:
           name: sim-logs
           path: tools/sim/.run/**
           if-no-files-found: ignore
+          # The log dir is a dot-path; v4 skips hidden files unless told otherwise.
+          include-hidden-files: true
