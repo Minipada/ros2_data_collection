@@ -134,6 +134,11 @@ std::string raw_tag(const std::string& tag_prefix, const std::string& topic);
 /// Record is the newest message at the instant it is emitted (nothing is buffered and
 /// released later); between emissions, the most recent Record is up to one window old.
 ///
+/// The cap is a ceiling, not a setpoint: arrival jitter decides whether the first tick
+/// past a window's edge is the window's own or the next one's, so a source whose tick is
+/// a sizeable fraction of the window stores measurably less than the cap (a 30 Hz source
+/// under a 10 Hz cap stores ~8.4 Hz — see raw_config_test's jittered-source test).
+///
 /// Deliberately not a token bucket — a bucket lets a burst through all at once, which is
 /// exactly the shape of traffic this exists to flatten. Dropping by time like this is
 /// uniform: every window is represented, so the result is an unbiased lower-resolution

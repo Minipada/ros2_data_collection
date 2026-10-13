@@ -9,6 +9,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
+#include <cstdint>
 #include <string>
 
 using namespace dc_bridge;
@@ -138,6 +140,51 @@ TEST(RawRateLimiter, DecimatesAFirehoseToTheConfiguredRate)
   // One per 100 ms across a 1 s window, plus the first message.
   EXPECT_GE(passed, 9u);
   EXPECT_LE(passed, 11u);
+}
+
+TEST(RawRateLimiter, AJitteredCoarseSourceStoresBelowTheCapWithoutEverBreakingIt)
+{
+  // A 30 Hz source under a 10 Hz cap (the shape an external review of the released
+  // stack measured at 8.36-8.52 Hz stored). Re-anchoring the window to the arrival
+  // instant means the 3rd tick lands before the window opens whenever its jitter beats
+  // the admitting tick's — a coin flip under independent jitter — so windows average
+  // 3.5 source ticks (~116.7 ms), not 3. That is the documented shape of this limiter
+  // (a hard cap over an unbuffered stream, not a sampler): the test pins both halves,
+  // the below-cap long-run rate and the never-violated cap, so a future change to
+  // either shows up here.
+  RawRateLimiter limiter(10.0);
+  const auto period =
+      std::chrono::duration_cast<RawRateLimiter::Clock::duration>(std::chrono::duration<double>(1.0 / 10.0));
+  std::uint64_t seed = 1234;
+  const auto jitter_ms = [&seed]() {
+    seed = seed * 6364136223846793005ULL + 1442695040888963407ULL;
+    return static_cast<double>(seed >> 11) / 9007199254740992.0 * 4.0 - 2.0;
+  };
+
+  const double tick_ns = 1e9 / 30.0;
+  const long arrivals = 30L * 100;  // 100 simulated seconds at 30 Hz
+  long passed = 0;
+  RawRateLimiter::Clock::time_point last_pass{};
+  bool had_pass = false;
+  for (long i = 0; i < arrivals; ++i)
+  {
+    const auto arrival =
+        RawRateLimiter::Clock::time_point(std::chrono::nanoseconds(std::llround(i * tick_ns + jitter_ms() * 1e6)));
+    if (limiter.allow("/imu", arrival))
+    {
+      if (had_pass)
+      {
+        // The contract the docs state: at most one Record per 1/rate, measured between
+        // Records — no admission may close the gap below the window.
+        EXPECT_GE(arrival - last_pass, period);
+      }
+      last_pass = arrival;
+      had_pass = true;
+      ++passed;
+    }
+  }
+  EXPECT_GE(passed, 800);  // 8.0 Hz
+  EXPECT_LE(passed, 880);  // 8.8 Hz
 }
 
 TEST(RawRateLimiter, LimitsAreIndependentPerTopic)
