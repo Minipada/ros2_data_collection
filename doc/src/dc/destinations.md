@@ -318,6 +318,13 @@ buffer**, not the disk buffer `dc_bridge` gives every blessed sink, and it is th
 snippet's job to make re-delivery idempotent if the store cares — the Shipper is
 at-least-once ([ADR-0002](./adr/0002-vector-as-default-shipper.md)) either way.
 
+Shutdown is part of this. That in-memory buffer has no disk-buffer second chance: on
+SIGTERM Vector drains what it still holds to the sink and closes the connection, and
+whatever the sink has not accepted by the time the container's stop grace period ends
+(`podman stop -t`, systemd's `TimeoutStopSec`) is gone. Give the drain that grace, and
+write sinks that keep reading until the connection closes — `dc_mcap_writer` joins its
+socket handler before finishing the current `.mcap` file for exactly this reason.
+
 The [Elasticsearch tutorial](./demos/elasticsearch.md) is the worked example for all of
 this, end to end; the [InfluxDB demo](./demos/tb3_aws_influxdb.md) is the same mechanism
 against a simulated robot. [MCAP recording](./demos/mcap_recording.md)

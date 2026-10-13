@@ -188,7 +188,11 @@ message meets them:
    one that passed, so each Record is the newest message at the moment it is emitted and
    nothing is held back. A 200 Hz topic at the default becomes 10 Hz of Records. This is
    decimation: it flattens exactly the bursty traffic shape a token bucket would let
-   through all at once.
+   through all at once. The cap is a ceiling, not a setpoint: arrival jitter decides
+   whether the first message past a window's edge arrives in time, so a source whose
+   tick is a sizeable fraction of the window stores measurably less — a 30 Hz source
+   under a 10 Hz cap stores ~8.4 Hz (measured, and pinned by dc_bridge's rate-limiter
+   test). Size storage for the ceiling, not for a rate you expect to see exactly.
 4. **The Shipper refusing the Record** — if Vector is unreachable or its socket is blocked
    past the Forwarder's write timeout, the raw Record is dropped and counted. Measurement
    Records are kept in the Forwarder's unacked window for resend; raw Records are not,
@@ -196,7 +200,7 @@ message meets them:
 
 Everything past those bounds behaves like any other Record: Vector's disk buffer
 (`shipper.buffer_max_bytes`) absorbs a Destination outage, and delivery to the Shipper is
-acknowledged (see [Destinations](./destinations.md#delivery-guarantees)).
+acknowledged ([ADR-0002](./adr/0002-vector-as-default-shipper.md)).
 
 ### How much data is this?
 
