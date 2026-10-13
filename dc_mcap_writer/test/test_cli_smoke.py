@@ -180,6 +180,75 @@ def test_tcp_socket_mode_survives_sigterm_with_a_valid_mcap_file(tmp_path):
     assert payloads == [0, 1, 2, 3]
 
 
+def test_sigterm_while_a_sink_connection_is_still_flushing_keeps_the_late_records(tmp_path):
+    """Records in flight at SIGTERM must still land in the .mcap file.
+
+    An external review (VeluneOS, 2026-10-13) saw Vector's disk-buffer ledger holding
+    a final forwarded record that never reached a sink at shutdown, once per distro.
+    In-process this is a shutdown race: the e2e entrypoint
+    (tools/e2e/scripts/entrypoint.sh) SIGTERMs this process and `ros2 launch` at the
+    same instant, and the handler reading Vector's socket used to be a daemon thread —
+    so `server_close()` returned without waiting for it and `mcap_writer.close()`
+    finished the file while Vector's last flush was still in flight. The test plays
+    both sides of the real shutdown: like Vector, the client may still be flushing
+    records it buffered when the SIGTERM arrives, and it closes the connection only
+    once its own drain finishes.
+
+    Args:
+        tmp_path: pytest's per-test temporary directory fixture.
+    """
+    port = _free_port()
+    proc = _spawn("--output-dir", str(tmp_path), "--host", "127.0.0.1", "--port", str(port))
+    try:
+        deadline = time.monotonic() + 10.0
+        client = None
+        last_error = None
+        while time.monotonic() < deadline:
+            try:
+                client = socket.create_connection(("127.0.0.1", port), timeout=1.0)
+                break
+            except OSError as exc:
+                last_error = exc
+                time.sleep(0.1)
+        assert client is not None, f"dc_mcap_writer never opened its listening port: {last_error}"
+
+        records = [_record("dc.measurement.uptime", i) for i in range(4)]
+        with client:
+            for record in records:
+                client.sendall((json.dumps(record) + "\n").encode("utf-8"))
+            # Four tiny records cross a loopback socket and a local handler in
+            # microseconds; this sleep only has to be long enough that they are
+            # through before the SIGTERM below.
+            time.sleep(1.0)
+
+            proc.send_signal(signal.SIGTERM)
+            # A writer that joined its handler before closing the file is still alive
+            # here — blocked waiting for this connection to close. One that closed the
+            # file first has already exited, which is exactly the bug.
+            deadline = time.monotonic() + 5.0
+            while proc.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.05)
+
+            late_records = [_record("dc.measurement.uptime", i) for i in range(4, 6)]
+            try:
+                for record in late_records:
+                    client.sendall((json.dumps(record) + "\n").encode("utf-8"))
+                client.shutdown(socket.SHUT_WR)
+            except OSError:
+                pass  # the writer already exited; its handler died with the process
+
+        stdout, _ = proc.communicate(timeout=10)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.communicate(timeout=10)
+
+    assert proc.returncode == 0, stdout
+    messages = _read_all_messages(tmp_path)
+    seqs = sorted(json.loads(message.data)["seq"] for _, _, message in messages)
+    assert seqs == [0, 1, 2, 3, 4, 5], f"records lost at shutdown: {seqs}"
+
+
 @pytest.mark.parametrize("signum", [signal.SIGTERM, signal.SIGINT])
 def test_server_mode_exits_cleanly_with_no_records(tmp_path, signum):
     """Even an idle listener must finish a readable (empty) .mcap file on shutdown."""
