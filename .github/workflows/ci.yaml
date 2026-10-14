@@ -187,15 +187,18 @@ jobs:
       # directory instead, so ALL THREE mounts — dc-ccache (compiler object files),
       # dc-apt (#474, downloaded .deb archives) and dc-pip (pip wheels) — actually
       # survive between runs on
-      # GitHub's otherwise-ephemeral runners. Caching the parent dir, not
-      # `.../buildah-cache` itself: buildah names it `buildah-cache-<uid>`
-      # (confirmed via a diagnostic run — `buildah-cache-1001` on this runner user),
-      # a detail not worth hardcoding. The buildah-ccache-* restore-key keeps the
-      # pre-#474 (ccache-only) cache warm for the first runs after the key rename.
+      # GitHub's otherwise-ephemeral runners. Only the warmth mounts, not the whole
+      # buildah cache dir: dc-build-* holds colcon's build/ tree (see the Containerfile's
+      # workspace stage), too big for the ~10GB cache budget and useless between runs.
+      # The `buildah-cache*` glob rides over buildah's `-<uid>` dir-name suffix
+      # (confirmed via a diagnostic run — `buildah-cache-1001` on this runner user).
       - name: Cache the RUN --mount=type=cache content (ccache + apt archives + pip wheels)
         uses: actions/cache@v4
         with:
-          path: ${{ runner.temp }}/buildah-tmp
+          path: |
+            ${{ runner.temp }}/buildah-tmp/buildah-cache*/dc-ccache-*
+            ${{ runner.temp }}/buildah-tmp/buildah-cache*/dc-apt-*
+            ${{ runner.temp }}/buildah-tmp/buildah-cache*/dc-pip-*
           key: buildah-buildcache-${{ env.ROS_DISTRO }}-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             buildah-buildcache-${{ env.ROS_DISTRO }}-${{ runner.os }}-
@@ -297,23 +300,10 @@ jobs:
     permissions:
       contents: read
       packages: write
-    # The coverage-instrumented workspace layer is bigger than the boot disk's free
-    # space; podman's layer commit died with ENOSPC. Keep every container-fs write on
-    # the runner's data disk.
-    env:
-      CONTAINERS_STORAGE_CONF: /mnt/podman-storage/storage.conf
     outputs:
       runtime_ref: ${{ steps.refs.outputs.runtime_ref }}
     steps:
       - uses: actions/checkout@v5
-
-      - name: Move podman storage to the data disk
-        run: |
-          sudo mkdir -p /mnt/podman-storage/graphroot /mnt/podman-storage/runroot
-          sudo chown -R "$(id -u):$(id -g)" /mnt/podman-storage
-          printf '[storage]\ndriver = "overlay"\nrunroot = "/mnt/podman-storage/runroot"\ngraphroot = "/mnt/podman-storage/graphroot"\n' > /mnt/podman-storage/storage.conf
-          df -h / /mnt
-          df -i /mnt
 
       - name: Verify podman
         run: |
@@ -365,31 +355,40 @@ jobs:
       - name: Cache the RUN --mount=type=cache content (ccache + apt archives)
         uses: actions/cache@v4
         with:
-          path: /mnt/podman-storage/buildah-tmp-coverage
+          # Warmth mounts only — dc-build-* (the coverage build/ tree) would blow the
+          # ~10GB cache budget and is useless between runs. Same rationale as the
+          # Release job's cache step above.
+          path: |
+            ${{ runner.temp }}/buildah-tmp-coverage/buildah-cache*/dc-ccache-*
+            ${{ runner.temp }}/buildah-tmp-coverage/buildah-cache*/dc-apt-*
+            ${{ runner.temp }}/buildah-tmp-coverage/buildah-cache*/dc-pip-*
           key: buildah-buildcache-coverage-${{ env.ROS_DISTRO }}-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             buildah-buildcache-coverage-${{ env.ROS_DISTRO }}-${{ runner.os }}-
 
-      # DIAGNOSTIC (PR #558): background df poller to size the coverage layer. Trim
-      # once the storage question is settled.
+      # DIAGNOSTIC (PR #558): background df poller + report below to confirm the
+      # cache-mounted build/ keeps the layer commit small. Trim once green.
       - name: Build + test the DC workspace (coverage-instrumented)
         env:
           IMAGE_TAG: ${{ steps.refs.outputs.workspace_ref }}
           CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
-          BUILDAH_TMPDIR: /mnt/podman-storage/buildah-tmp-coverage
+          BUILDAH_TMPDIR: ${{ runner.temp }}/buildah-tmp-coverage
           CCOV: "true"
           TARGET: workspace
           DF_LOG: ${{ runner.temp }}/df.log
         run: |
-          ( while :; do { df -h / /mnt; df -i /mnt; } >> "$DF_LOG" 2>&1; sleep 60; done ) &
+          ( while :; do { df -h /; df -i /; } >> "$DF_LOG" 2>&1; sleep 60; done ) &
           ./tools/e2e/scripts/build.sh
 
       - name: Report disk usage during the build
         if: always()
         run: |
           tail -36 "$RUNNER_TEMP/df.log" 2>/dev/null || true
-          echo '--- podman storage roots ---'
-          du -sh /mnt/podman-storage/* "$HOME/.local/share/containers" /var/lib/containers 2>/dev/null || true
+          echo '--- buildah cache-mount layout (what the actions/cache globs must match) ---'
+          ls -la "$RUNNER_TEMP/buildah-tmp-coverage/buildah-cache"*/ 2>/dev/null || true
+          echo '--- disk now ---'
+          du -sh "$RUNNER_TEMP/buildah-tmp-coverage" "$HOME/.local/share/containers" /var/lib/containers 2>/dev/null || true
+          df -h /
 
       - name: Stop the test-dependency stores
         if: always()
@@ -431,7 +430,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.refs.outputs.runtime_ref }}
           CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
-          BUILDAH_TMPDIR: /mnt/podman-storage/buildah-tmp-coverage
+          BUILDAH_TMPDIR: ${{ runner.temp }}/buildah-tmp-coverage
           CCOV: "true"
           TARGET: runtime
         run: ./tools/e2e/scripts/build.sh
