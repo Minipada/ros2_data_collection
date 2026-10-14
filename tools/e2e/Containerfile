@@ -28,8 +28,12 @@
 #   re-running rosdep install on the same package set skips the network round-trip)
 #   and `dc-pip` (wheels for toolchain-base's pip install). Mount ids carry a
 #   `-${ROS_DISTRO}` suffix so two distros can never share cached content (#530).
-#   All three mounts live
-#   under buildah's own
+#   Two more mounts keep the throwaway trees out of the layer itself: `dc-build` and
+#   `dc-log` (colcon's build/ and log/ — nothing downstream reads them, the runtime
+#   stage copies install/ only and the test verdict rides in TEST_RESULT, and a
+#   coverage build/ snapshot alone once ENOSPC'd the layer commit). Unlike the three
+#   above, CI does not archive these two (see the cache paths in ci.yaml).
+#   All five mounts live
 #   $TMPDIR/buildah-cache/<id>, entirely separate from --cache-from/--cache-to's
 #   registry export (which only carries *layers*, not cache-mount content — verified
 #   against two live CI runs, not assumed); on a fresh runner they survive only if the
@@ -238,7 +242,25 @@ COPY . src/ros2_data_collection
 # podman never tags an image at all, so the caller (ci.yaml) would have nothing to
 # `podman run` the coverage data out of. ci.yaml checks TEST_RESULT itself, after
 # extracting coverage, and only pushes the image when it reads 0.
+<<<<<<< HEAD
 RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
+=======
+#
+# dc-build/dc-log: CCOV is in the id on purpose — a mount is keyed by id alone, and
+# without it a CCOV flip on one machine would drop a Debug build tree under a Release
+# colcon invocation (or vice versa), which the old layer-keyed build/ never allowed.
+#
+# SC2086: NAV2_PKGS below is meant to word-split into one skip name per package.
+# hadolint ignore=SC2086
+RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
+    --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
+    --mount=type=cache,id=dc-build-${CCOV}-${ROS_DISTRO},target=/root/ws/build \
+    --mount=type=cache,id=dc-log-${CCOV}-${ROS_DISTRO},target=/root/ws/log \
+    apt-get -q update && \
+    # Same two nav2-satellite skips as the toolchain stage above.
+    DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false \
+      --skip-keys="slam_toolbox nav2_rviz_plugins" && \
+>>>>>>> 2958f7d0 (fix(ci): keep colcon's build/ tree out of the coverage workspace layer)
     # shellcheck disable=SC1091
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
     if [ "$CCOV" = "true" ]; then \
