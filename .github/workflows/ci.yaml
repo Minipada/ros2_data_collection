@@ -309,6 +309,7 @@ jobs:
           sudo mkdir -p /mnt/podman-storage/graphroot /mnt/podman-storage/runroot
           sudo chown -R "$(id -u):$(id -g)" /mnt/podman-storage
           printf '[storage]\ndriver = "overlay"\nrunroot = "/mnt/podman-storage/runroot"\ngraphroot = "/mnt/podman-storage/graphroot"\n' > /mnt/podman-storage/storage.conf
+          df -h / /mnt
 
       - name: Verify podman
         run: podman --version
@@ -363,6 +364,8 @@ jobs:
           restore-keys: |
             buildah-buildcache-coverage-${{ env.ROS_DISTRO }}-${{ runner.os }}-
 
+      # DIAGNOSTIC (PR #558): background df poller to size the coverage layer. Trim
+      # once the storage question is settled.
       - name: Build + test the DC workspace (coverage-instrumented)
         env:
           IMAGE_TAG: ${{ steps.refs.outputs.workspace_ref }}
@@ -370,7 +373,15 @@ jobs:
           BUILDAH_TMPDIR: /mnt/podman-storage/buildah-tmp-coverage
           CCOV: "true"
           TARGET: workspace
-        run: ./tools/e2e/scripts/build.sh
+        run: |
+          ( for i in $(seq 1 180); do df -h / /mnt >> /mnt/df.log 2>&1; sleep 60; done ) &
+          ./tools/e2e/scripts/build.sh
+
+      - name: Report disk usage during the build
+        if: always()
+        run: |
+          tail -24 /mnt/df.log 2>/dev/null || true
+          du -sh /mnt/podman-storage/* 2>/dev/null || true
 
       - name: Stop the test-dependency stores
         if: always()
