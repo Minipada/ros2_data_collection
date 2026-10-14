@@ -294,10 +294,21 @@ jobs:
     permissions:
       contents: read
       packages: write
+    # The coverage-instrumented workspace layer is bigger than the boot disk's free
+    # space; podman's layer commit died with ENOSPC. Keep every container-fs write on
+    # the runner's data disk.
+    env:
+      CONTAINERS_STORAGE_CONF: /mnt/podman-storage/storage.conf
     outputs:
       runtime_ref: ${{ steps.refs.outputs.runtime_ref }}
     steps:
       - uses: actions/checkout@v5
+
+      - name: Move podman storage to the data disk
+        run: |
+          sudo mkdir -p /mnt/podman-storage/graphroot /mnt/podman-storage/runroot
+          sudo chown -R "$(id -u):$(id -g)" /mnt/podman-storage
+          printf '[storage]\ndriver = "overlay"\nrunroot = "/mnt/podman-storage/runroot"\ngraphroot = "/mnt/podman-storage/graphroot"\n' > /mnt/podman-storage/storage.conf
 
       - name: Verify podman
         run: podman --version
@@ -347,7 +358,7 @@ jobs:
       - name: Cache the RUN --mount=type=cache content (ccache + apt archives)
         uses: actions/cache@v4
         with:
-          path: ${{ runner.temp }}/buildah-tmp-coverage
+          path: /mnt/podman-storage/buildah-tmp-coverage
           key: buildah-buildcache-coverage-${{ env.ROS_DISTRO }}-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             buildah-buildcache-coverage-${{ env.ROS_DISTRO }}-${{ runner.os }}-
@@ -356,7 +367,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.refs.outputs.workspace_ref }}
           CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
-          BUILDAH_TMPDIR: ${{ runner.temp }}/buildah-tmp-coverage
+          BUILDAH_TMPDIR: /mnt/podman-storage/buildah-tmp-coverage
           CCOV: "true"
           TARGET: workspace
         run: ./tools/e2e/scripts/build.sh
@@ -401,7 +412,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.refs.outputs.runtime_ref }}
           CACHE_REF: ${{ steps.refs.outputs.cache_ref }}
-          BUILDAH_TMPDIR: ${{ runner.temp }}/buildah-tmp-coverage
+          BUILDAH_TMPDIR: /mnt/podman-storage/buildah-tmp-coverage
           CCOV: "true"
           TARGET: runtime
         run: ./tools/e2e/scripts/build.sh
