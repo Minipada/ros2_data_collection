@@ -317,9 +317,12 @@ jobs:
           sudo chown -R "$(id -u):$(id -g)" /mnt/podman-storage
           printf '[storage]\ndriver = "overlay"\nrunroot = "/mnt/podman-storage/runroot"\ngraphroot = "/mnt/podman-storage/graphroot"\n' > /mnt/podman-storage/storage.conf
           df -h / /mnt
+          df -i /mnt
 
       - name: Verify podman
-        run: podman --version
+        run: |
+          podman --version
+          podman info --format 'graphroot={{.Store.GraphRoot}} driver={{.Store.GraphDriverName}}'
 
       - name: Log in to ghcr.io
         run: |
@@ -380,15 +383,17 @@ jobs:
           BUILDAH_TMPDIR: /mnt/podman-storage/buildah-tmp-coverage
           CCOV: "true"
           TARGET: workspace
+          DF_LOG: ${{ runner.temp }}/df.log
         run: |
-          ( for i in $(seq 1 180); do df -h / /mnt >> /mnt/df.log 2>&1; sleep 60; done ) &
+          ( while :; do { df -h / /mnt; df -i /mnt; } >> "$DF_LOG" 2>&1; sleep 60; done ) &
           ./tools/e2e/scripts/build.sh
 
       - name: Report disk usage during the build
         if: always()
         run: |
-          tail -24 /mnt/df.log 2>/dev/null || true
-          du -sh /mnt/podman-storage/* 2>/dev/null || true
+          tail -36 "$RUNNER_TEMP/df.log" 2>/dev/null || true
+          echo '--- podman storage roots ---'
+          du -sh /mnt/podman-storage/* "$HOME/.local/share/containers" /var/lib/containers 2>/dev/null || true
 
       - name: Stop the test-dependency stores
         if: always()
