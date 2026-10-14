@@ -306,9 +306,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Verify podman
-        run: |
-          podman --version
-          podman info --format 'graphroot={{.Store.GraphRoot}} driver={{.Store.GraphDriverName}}'
+        run: podman --version
 
       - name: Log in to ghcr.io
         run: |
@@ -366,8 +364,6 @@ jobs:
           restore-keys: |
             buildah-buildcache-coverage-${{ env.ROS_DISTRO }}-${{ runner.os }}-
 
-      # DIAGNOSTIC (PR #558): background df poller + report below to confirm the
-      # cache-mounted build/ keeps the layer commit small. Trim once green.
       - name: Build + test the DC workspace (coverage-instrumented)
         env:
           IMAGE_TAG: ${{ steps.refs.outputs.workspace_ref }}
@@ -375,20 +371,7 @@ jobs:
           BUILDAH_TMPDIR: ${{ runner.temp }}/buildah-tmp-coverage
           CCOV: "true"
           TARGET: workspace
-          DF_LOG: ${{ runner.temp }}/df.log
-        run: |
-          ( while :; do { df -h /; df -i /; } >> "$DF_LOG" 2>&1; sleep 60; done ) &
-          ./tools/e2e/scripts/build.sh
-
-      - name: Report disk usage during the build
-        if: always()
-        run: |
-          tail -36 "$RUNNER_TEMP/df.log" 2>/dev/null || true
-          echo '--- buildah cache-mount layout (what the actions/cache globs must match) ---'
-          ls -la "$RUNNER_TEMP/buildah-tmp-coverage/buildah-cache"*/ 2>/dev/null || true
-          echo '--- disk now ---'
-          du -sh "$RUNNER_TEMP/buildah-tmp-coverage" "$HOME/.local/share/containers" /var/lib/containers 2>/dev/null || true
-          df -h /
+        run: ./tools/e2e/scripts/build.sh
 
       - name: Stop the test-dependency stores
         if: always()
