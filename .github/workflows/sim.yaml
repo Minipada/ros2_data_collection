@@ -107,8 +107,8 @@ jobs:
           DC_SIM_STAGES: ${{ inputs.stages || 'lint sim nav waypoints' }}
         run: ./tools/sim/scripts/run.sh
 
-      - name: Upload simulation logs (on failure)
-        if: failure()
+      - name: Upload simulation logs (on failure or cancellation)
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: sim-logs
