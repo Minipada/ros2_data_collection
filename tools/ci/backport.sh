@@ -178,7 +178,32 @@ for target in "${TARGETS[@]}"; do
         fi
     done
 
-    git -C "$WORKTREE" push --force origin "HEAD:refs/heads/$BRANCH"
+    # GITHUB_TOKEN can never push changes under .github/workflows/*: GitHub rejects
+    # any push that modifies workflow files from a token without the workflow scope —
+    # a hard anti-escalation rule, not a permissions-block setting (#558's backport
+    # died exactly here). The distro branches keep their own workflows anyway, so on
+    # that specific rejection strip them and flag them in the PR body; a push with a
+    # maintainer's workflow-scoped credentials never takes this path.
+    WORKFLOW_EXCLUDED=""
+    if ! PUSH_ERR="$(git -C "$WORKTREE" push --force origin "HEAD:refs/heads/$BRANCH" 2>&1)"; then
+        if grep -q "refusing to allow.*workflow" <<<"$PUSH_ERR"; then
+            WORKFLOW_EXCLUDED="$(git -C "$WORKTREE" diff --name-only "refs/remotes/origin/$target" HEAD -- .github/workflows)"
+            git -C "$WORKTREE" restore -s "refs/remotes/origin/$target" -SW -- .github/workflows
+            git -C "$WORKTREE" "${GIT_ID[@]}" commit -m \
+                "chore(backport): keep ${target}'s own .github/workflows (workflow changes in #${PR} excluded)" \
+                -- .github/workflows
+            if git -C "$WORKTREE" diff --quiet "refs/remotes/origin/$target" HEAD; then
+                say "==> #${PR}: nothing but workflow changes for ${target}; excluded, so nothing to backport"
+                git worktree remove --force "$WORKTREE" 2>/dev/null || true
+                git worktree prune
+                continue
+            fi
+            git -C "$WORKTREE" push --force origin "HEAD:refs/heads/$BRANCH"
+        else
+            printf '%s\n' "$PUSH_ERR" >&2
+            die "pushing $BRANCH failed"
+        fi
+    fi
 
     BODY="Backport of #${PR} to \`${target}\`, cherry-picked by the [Backport workflow](${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-$REPO}/actions/workflows/backport.yml).
 
@@ -197,6 +222,15 @@ Commits:
             BODY+="- \`${file}\`
 "
         done
+    fi
+    if [[ -n "$WORKFLOW_EXCLUDED" ]]; then
+        BODY+="
+⚠️ \`.github/workflows/\` changes from #${PR} are **not** in this backport: a workflow's own token may not push workflow-file changes, so the ${target} branch's own copies are kept. Port them by hand if ${target} needs them:
+"
+        while IFS= read -r file; do
+            BODY+="- \`${file}\`
+"
+        done <<<"$WORKFLOW_EXCLUDED"
     fi
     BODY+="
 This PR does not start CI on its own (workflows don't run for PRs created with a workflow's token); close and reopen it to trigger the checks."
