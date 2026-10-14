@@ -282,14 +282,21 @@ jobs:
   # `workspace_ref` here is a bare local tag (no registry): only the slim `runtime`
   # derivative gets pushed, so the multi-GB coverage layer never reaches ghcr.io.
   #
+<<<<<<< HEAD
   # Gated to push (a real merge to `lyrical`) or workflow_dispatch (manual — GitHub's
+=======
+  # Gated to push (a real merge to `rolling`), workflow_dispatch (manual — GitHub's
+>>>>>>> 93ca4933 (feat(ci): label-gate the coverage job for PRs)
   # "Run workflow" button, or `gh workflow run ci.yaml --ref <branch>`, against any
-  # branch/PR head) — never plain `pull_request`, which would double every PR's
-  # compute cost for a report almost no PR needs. build-dc-ros-coverage-image/
+  # branch/PR head), or a PR carrying the `ci:coverage` label — never plain
+  # `pull_request`, which would double every PR's compute cost for a report almost no
+  # PR needs. The label is how a PR exercises this job's own changes pre-merge (#558's
+  # storage move being the first). build-dc-ros-coverage-image/
   # build-dc-uploader-coverage-image below need no `if:` of their own: a job skipped
   # by its own condition skips its `needs:` dependents too, by default.
   build-workspace-coverage:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'ci:coverage')
     runs-on: ubuntu-latest
     permissions:
       contents: read
