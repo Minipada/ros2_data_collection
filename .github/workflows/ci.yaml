@@ -285,11 +285,7 @@ jobs:
   # `workspace_ref` here is a bare local tag (no registry): only the slim `runtime`
   # derivative gets pushed, so the multi-GB coverage layer never reaches ghcr.io.
   #
-<<<<<<< HEAD
-  # Gated to push (a real merge to `jazzy`) or workflow_dispatch (manual — GitHub's
-=======
-  # Gated to push (a real merge to `rolling`), workflow_dispatch (manual — GitHub's
->>>>>>> 93ca4933 (feat(ci): label-gate the coverage job for PRs)
+  # Gated to push (a real merge to `jazzy`), workflow_dispatch (manual — GitHub's
   # "Run workflow" button, or `gh workflow run ci.yaml --ref <branch>`, against any
   # branch/PR head), or a PR carrying the `ci:coverage` label — never plain
   # `pull_request`, which would double every PR's compute cost for a report almost no
