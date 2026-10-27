@@ -274,16 +274,8 @@ COPY . src/ros2_data_collection
 # SC2086: NAV2_PKGS below is meant to word-split into one skip name per package.
 # hadolint ignore=SC2086
 RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
-<<<<<<< HEAD
-=======
-    --mount=type=cache,id=dc-apt-${ROS_DISTRO},target=/var/cache/apt/archives \
     --mount=type=cache,id=dc-build-${CCOV}-${ROS_DISTRO},target=/root/ws/build \
     --mount=type=cache,id=dc-log-${CCOV}-${ROS_DISTRO},target=/root/ws/log \
-    apt-get -q update && \
-    # Same two nav2-satellite skips as the toolchain stage above.
-    DEBIAN_FRONTEND=noninteractive rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} --as-root=apt:false \
-      --skip-keys="slam_toolbox nav2_rviz_plugins" && \
->>>>>>> 2958f7d0 (fix(ci): keep colcon's build/ tree out of the coverage workspace layer)
     # shellcheck disable=SC1091
     . /opt/ros/${ROS_DISTRO}/setup.sh && \
     if [ "$CCOV" = "true" ]; then \
