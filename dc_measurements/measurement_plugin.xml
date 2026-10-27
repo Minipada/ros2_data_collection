@@ -264,6 +264,14 @@ SPDX-License-Identifier: MPL-2.0
         </class>
     </library>
 
+    <library path="dc_topic_statistics_measurement">
+        <class name="dc_measurements/TopicStatistics" type="dc_measurements::TopicStatistics" base_class_type="dc_core::Measurement">
+            <description>
+                dc_measurement_topic_statistics
+            </description>
+        </class>
+    </library>
+
     <library path="dc_uptime_measurement">
         <class name="dc_measurements/Uptime" type="dc_measurements::Uptime" base_class_type="dc_core::Measurement">
             <description>

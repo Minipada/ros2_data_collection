@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TopicStatistics",
+  "description": "Per-topic statistics from a statistics_msgs/MetricsMessage, as reported on the /statistics topic",
+  "properties": {
+    "measurement_source_name": {
+      "description": "Node, topic or process name being measured",
+      "type": "string"
+    },
+    "metrics_source": {
+      "description": "The measured metric, e.g. the measured topic's name or \"message_age\"",
+      "type": "string"
+    },
+    "unit": {
+      "description": "Unit of the statistics, e.g. seconds or ms; empty when the producer left it unset",
+      "type": "string"
+    },
+    "window_start": {
+      "description": "Start of the window the statistics cover",
+      "properties": {
+        "sec": {
+          "description": "Seconds since epoch",
+          "type": "integer"
+        },
+        "nanosec": {
+          "description": "Nanosecond part of the timestamp",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sec",
+        "nanosec"
+      ],
+      "type": "object"
+    },
+    "window_stop": {
+      "description": "End of the window the statistics cover",
+      "properties": {
+        "sec": {
+          "description": "Seconds since epoch",
+          "type": "integer"
+        },
+        "nanosec": {
+          "description": "Nanosecond part of the timestamp",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sec",
+        "nanosec"
+      ],
+      "type": "object"
+    },
+    "average": {
+      "description": "Mean over the window",
+      "type": "number"
+    },
+    "minimum": {
+      "description": "Smallest value observed in the window",
+      "type": "number"
+    },
+    "maximum": {
+      "description": "Largest value observed in the window",
+      "type": "number"
+    },
+    "stddev": {
+      "description": "Standard deviation over the window",
+      "type": "number"
+    },
+    "sample_count": {
+      "description": "Messages observed in the window",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "measurement_source_name",
+    "metrics_source",
+    "window_start",
+    "window_stop"
+  ],
+  "type": "object"
+}

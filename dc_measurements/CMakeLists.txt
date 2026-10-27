@@ -28,6 +28,7 @@ set(dependencies
   rclcpp_components
   rclcpp_lifecycle
   sensor_msgs
+  statistics_msgs
   std_msgs
   tf2
   tf2_geometry_msgs
@@ -67,6 +68,7 @@ set(link_dependencies
   rclcpp_components::component_manager
   rclcpp_lifecycle::rclcpp_lifecycle
   sensor_msgs::sensor_msgs__rosidl_typesupport_cpp
+  statistics_msgs::statistics_msgs__rosidl_typesupport_cpp
   std_msgs::std_msgs__rosidl_typesupport_cpp
   tf2::tf2
   tf2_geometry_msgs::tf2_geometry_msgs
@@ -276,6 +278,7 @@ dc_add_measurement_plugin(dc_storage_measurement SOURCES plugins/measurements/st
 dc_add_measurement_plugin(dc_string_stamped_measurement SOURCES plugins/measurements/string_stamped.cpp)
 dc_add_measurement_plugin(dc_tcp_health_measurement SOURCES plugins/measurements/tcp_health.cpp)
 dc_add_measurement_plugin(dc_thermal_measurement SOURCES plugins/measurements/thermal.cpp)
+dc_add_measurement_plugin(dc_topic_statistics_measurement SOURCES plugins/measurements/topic_statistics.cpp)
 dc_add_measurement_plugin(dc_uptime_measurement
   SOURCES plugins/measurements/uptime.cpp ${system_sources}
 )
@@ -383,6 +386,7 @@ set(tests
   test_measurement_storage
   test_measurement_tcp_health
   test_measurement_thermal
+  test_measurement_topic_statistics
   test_measurement_uptime
   test_publish_gate
   test_record_enricher
