@@ -226,4 +226,5 @@ error is logged: it blocks collection when listed in `if_all_conditions` or
 | [String stamped](./measurements/string_stamped.md)       | Republish a string stamped message, can be used for external data                                       |
 | [TCP Health](./measurements/tcp_health.md)               | Health status of a TCP Server                                                                           |
 | [Thermal](./measurements/thermal.md)                       | Temperatures (CPU, GPU, board, …) from the kernel's thermal sysfs interface                              |
+| [Topic statistics](./measurements/topic_statistics.md)      | Per-topic period statistics from `/statistics` (`statistics_msgs/MetricsMessage`), one Record per message |
 | [Uptime](./measurements/uptime.md)                       | How long the machine has been turned on                                                                 |

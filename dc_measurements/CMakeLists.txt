@@ -27,6 +27,7 @@ set(dependencies
   rclcpp_components
   rclcpp_lifecycle
   sensor_msgs
+  statistics_msgs
   std_msgs
   tf2
   tf2_geometry_msgs
@@ -40,6 +41,41 @@ foreach(Dependency IN ITEMS ${dependencies})
   find_package(${Dependency} REQUIRED)
 endforeach()
 
+<<<<<<< HEAD
+=======
+# Message packages have no pkg::pkg umbrella target -- their C++ typesupport target
+# carries the generated code. dc_common/dc_core are header-only
+# (include dirs wired per target below); yaml_cpp_vendor exports no target
+# (yaml-cpp::yaml-cpp is found and linked directly); PkgConfig is tooling, not a library.
+# The schema-validator vendor's upstream (v2.4.0) exports only the namespaced target
+# nlohmann_json_schema_validator::validator -- a bare name here would link with no include dirs.
+set(link_dependencies
+  action_msgs::action_msgs__rosidl_typesupport_cpp
+  ament_index_cpp::ament_index_cpp
+  controller_manager_msgs::controller_manager_msgs__rosidl_typesupport_cpp
+  cv_bridge::cv_bridge
+  dc_interfaces::dc_interfaces__rosidl_typesupport_cpp
+  dc_util::base64_library
+  diagnostic_msgs::diagnostic_msgs__rosidl_typesupport_cpp
+  geometry_msgs::geometry_msgs__rosidl_typesupport_cpp
+  lifecycle_msgs::lifecycle_msgs__rosidl_typesupport_cpp
+  moveit_msgs::moveit_msgs__rosidl_typesupport_cpp
+  nav2_msgs::nav2_msgs__rosidl_typesupport_cpp
+  nav2_ros_common::nav2_ros_common
+  nav2_util::nav2_util_core
+  pluginlib::pluginlib
+  rclcpp_action::rclcpp_action
+  rclcpp_components::component_manager
+  rclcpp_lifecycle::rclcpp_lifecycle
+  sensor_msgs::sensor_msgs__rosidl_typesupport_cpp
+  statistics_msgs::statistics_msgs__rosidl_typesupport_cpp
+  std_msgs::std_msgs__rosidl_typesupport_cpp
+  tf2::tf2
+  tf2_geometry_msgs::tf2_geometry_msgs
+  unique_identifier_msgs::unique_identifier_msgs__rosidl_typesupport_cpp
+)
+
+>>>>>>> 156bcc6 (feat(dc_measurements): add the TopicStatistics Measurement for /statistics MetricsMessages)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(UUID REQUIRED uuid)
 
@@ -236,6 +272,7 @@ dc_add_measurement_plugin(dc_storage_measurement SOURCES plugins/measurements/st
 dc_add_measurement_plugin(dc_string_stamped_measurement SOURCES plugins/measurements/string_stamped.cpp)
 dc_add_measurement_plugin(dc_tcp_health_measurement SOURCES plugins/measurements/tcp_health.cpp)
 dc_add_measurement_plugin(dc_thermal_measurement SOURCES plugins/measurements/thermal.cpp)
+dc_add_measurement_plugin(dc_topic_statistics_measurement SOURCES plugins/measurements/topic_statistics.cpp)
 dc_add_measurement_plugin(dc_uptime_measurement
   SOURCES plugins/measurements/uptime.cpp ${system_sources}
 )
@@ -346,6 +383,7 @@ set(tests
   test_measurement_storage
   test_measurement_tcp_health
   test_measurement_thermal
+  test_measurement_topic_statistics
   test_measurement_uptime
   test_publish_gate
   test_record_enricher
