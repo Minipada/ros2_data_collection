@@ -11,6 +11,7 @@
 #include "dc_util/node_utils.hpp"
 #include "statistics_msgs/msg/metrics_message.hpp"
 #include "statistics_msgs/msg/statistic_data_point.hpp"
+#include "statistics_msgs/msg/statistic_data_type.hpp"
 
 namespace dc_measurements
 {
