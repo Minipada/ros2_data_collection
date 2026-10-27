@@ -12,15 +12,15 @@ const char* statFieldName(uint8_t data_type)
 {
   switch (data_type)
   {
-    case statistics_msgs::msg::StatisticDataPoint::AVERAGE:
+    case statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_AVERAGE:
       return "average";
-    case statistics_msgs::msg::StatisticDataPoint::MINIMUM:
+    case statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_MINIMUM:
       return "minimum";
-    case statistics_msgs::msg::StatisticDataPoint::MAXIMUM:
+    case statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_MAXIMUM:
       return "maximum";
-    case statistics_msgs::msg::StatisticDataPoint::STDDEV:
+    case statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_STDDEV:
       return "stddev";
-    case statistics_msgs::msg::StatisticDataPoint::SAMPLE_COUNT:
+    case statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_SAMPLE_COUNT:
       return "sample_count";
     default:
       return nullptr;
@@ -66,7 +66,7 @@ void TopicStatistics::metricsCb(const statistics_msgs::msg::MetricsMessage& msg)
       continue;
     }
     // sample_count is a count carried in a float64 field; the Record types it as an integer.
-    record[field] = point.data_type == statistics_msgs::msg::StatisticDataPoint::SAMPLE_COUNT ?
+    record[field] = point.data_type == statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_SAMPLE_COUNT ?
                         json(static_cast<int64_t>(point.data)) :
                         json(point.data);
   }
