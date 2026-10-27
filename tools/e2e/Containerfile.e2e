@@ -31,4 +31,21 @@ COPY scripts/entrypoint.sh /opt/e2e/entrypoint.sh
 COPY scripts/entrypoint_uploader.sh /opt/e2e/entrypoint_uploader.sh
 RUN chmod +x /opt/e2e/entrypoint.sh /opt/e2e/entrypoint_uploader.sh
 
+# The TopicStatistics smoke's producer (scripts/run_pulse.sh): ros2_pulse has no rolling
+# apt package (upstream README lists humble/jazzy/kilted), so it is source-built at a
+# pinned SHA into its own overlay workspace, which the smoke sources beside /root/ws.
+ARG ROS_DISTRO=rolling
+ARG ROS2_PULSE_SHA=3d040396ae6ecd5eac16db41838ec73c7455acc6
+RUN git clone -q https://github.com/TanayK07/ros2_pulse.git /opt/ros2_pulse/src/ros2_pulse && \
+    git -C /opt/ros2_pulse/src/ros2_pulse checkout -q ${ROS2_PULSE_SHA} && \
+    bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && cd /opt/ros2_pulse && \
+    colcon build --packages-select ros2_pulse --cmake-args -DBUILD_TESTING=OFF"
+
+# The smoke's own container-side half, its assertion subscriber and its params (run with
+# --entrypoint, not by the ENTRYPOINT below).
+COPY scripts/pulse_smoke.sh /opt/e2e/pulse_smoke.sh
+COPY scripts/expect_topic_statistics_record.py /opt/e2e/expect_topic_statistics_record.py
+COPY params/pulse_smoke_params.yaml /opt/e2e/pulse_smoke_params.yaml
+RUN chmod +x /opt/e2e/pulse_smoke.sh
+
 ENTRYPOINT ["/opt/e2e/entrypoint.sh"]

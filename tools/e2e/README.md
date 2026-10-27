@@ -221,6 +221,25 @@ more cheaply at `dc_bridge/test/forwarder_test.cpp`'s existing mock-ingest-peer 
 `AckPolicy` describing when/whether a chunk gets acknowledged) — no container needed for
 that; see that file for the corresponding unit tests.
 
+## Topic statistics smoke
+
+```sh
+./tools/e2e/scripts/run_pulse.sh
+```
+
+A deliberately small sibling of `run.sh`: one container, no Postgres/RustFS, no loss
+accounting — the zero-loss scenarios above own those. It proves the one thing the
+`dc_measurements/TopicStatistics` unit tests cannot: the plugin consuming a *live*
+producer. The container starts [ros2_pulse](https://github.com/TanayK07/ros2_pulse)'s
+`pulse_bridge` beside an `LD_PRELOAD`-ed publisher (ros2_pulse's own producer model; no
+rolling apt package exists, so `Containerfile.e2e` source-builds it at a pinned SHA) and
+the DC stack with `params/pulse_smoke_params.yaml`, then hard-fails unless a Record
+carrying `average` and `sample_count` lands on `/dc/measurement/topic_statistics`. The
+producer must be preloaded against an instrumented `libtracetools.so` — the smoke checks
+that first and fails fast when it is missing, since without it no window is ever written.
+`.github/workflows/ci.yaml` runs this same script as its own small `e2e-topic-statistics`
+job on every PR.
+
 ## Synthetic load driver (#378)
 
 The first piece of #323's limits harness: `scripts/load_driver.py` speaks the shipper
@@ -870,6 +889,10 @@ Not wired into `ci.yaml`, same as every scenario above.
   unmanaged-shipper mode (#444), the config handover across a shared volume, no
   orchestrator-level startup ordering, per-container credential scoping, independent
   restarts, and zero loss across an induced outage.
+- `params/pulse_smoke_params.yaml` / `scripts/run_pulse.sh` — the Topic statistics smoke
+  described above, with its container-side half (`scripts/pulse_smoke.sh`) and assertion
+  subscriber (`scripts/expect_topic_statistics_record.py`) baked into the `dc-e2e` image,
+  which also carries the source-built ros2_pulse overlay (`/opt/ros2_pulse`).
 
 ## `.dockerignore`
 
