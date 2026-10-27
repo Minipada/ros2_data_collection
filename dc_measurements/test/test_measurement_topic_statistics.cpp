@@ -4,6 +4,7 @@
 #include "measurement_test_bench.hpp"
 #include "statistics_msgs/msg/metrics_message.hpp"
 #include "statistics_msgs/msg/statistic_data_point.hpp"
+#include "statistics_msgs/msg/statistic_data_type.hpp"
 
 class MeasurementTopicStatisticsTest : public MeasurementBench
 {
@@ -55,10 +56,11 @@ TEST_F(MeasurementTopicStatisticsTest, FlattensEveryStatisticIntoItsNamedField)
   waitForSubscriber("/statistics");
 
   ASSERT_TRUE(spinUntil([&] {
-    publishMetrics(
-        { statistics_msgs::msg::StatisticDataPoint::AVERAGE, statistics_msgs::msg::StatisticDataPoint::MINIMUM,
-          statistics_msgs::msg::StatisticDataPoint::MAXIMUM, statistics_msgs::msg::StatisticDataPoint::STDDEV,
-          statistics_msgs::msg::StatisticDataPoint::SAMPLE_COUNT });
+    publishMetrics({ statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_AVERAGE,
+                     statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_MINIMUM,
+                     statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_MAXIMUM,
+                     statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_STDDEV,
+                     statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_SAMPLE_COUNT });
     return callback_active_;
   })) << "no Record ever arrived";
 
@@ -88,7 +90,7 @@ TEST_F(MeasurementTopicStatisticsTest, StatisticTypesTheProducerOmitsStayOutOfTh
   waitForSubscriber("/statistics");
 
   ASSERT_TRUE(spinUntil([&] {
-    publishMetrics({ statistics_msgs::msg::StatisticDataPoint::MAXIMUM });
+    publishMetrics({ statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_MAXIMUM });
     return callback_active_;
   })) << "no Record ever arrived";
 
