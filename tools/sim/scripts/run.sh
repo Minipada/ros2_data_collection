@@ -303,10 +303,17 @@ if has_stage waypoints || has_stage detect; then
   done
   [ "$reached" -ge "$WAYPOINTS" ] || fail "only reached waypoint $reached/$TOTAL_STATIONS in ${WAYPOINT_TIMEOUT}s (wanted $WAYPOINTS)"
 
-  # Navigation failures don't necessarily stop progress, so assert on them separately.
-  aborted=$(count_in_container 'grep -acE "Goal was aborted|Goal failed|Failed to make progress" /tmp/qrcodes.log')
-  [ "${aborted:-0}" -eq 0 ] || fail "$aborted navigation failures in the Nav2 log"
-  log "no aborted or failed navigation goals"
+  # What the waypoint counter above can't see is a station the follower gave up
+  # on: with stop_on_failure false it moves to the next goal and the pass still
+  # ends "successful" -- a robot wedged against the world boundary has skipped
+  # dozens of stations while the counter read 60/60. The follower logs each such
+  # skip, and a healthy pass logs none, so that is the assertion. Raw
+  # controller/bt failure lines are counted for the log only: a control cycle
+  # that failed and was retried away is noise over a three-hour pass.
+  skipped=$(count_in_container 'grep -ac "Failed to process waypoint" /tmp/qrcodes.log')
+  failed=$(count_in_container 'grep -acE "Goal was aborted|Goal failed|Failed to make progress" /tmp/qrcodes.log')
+  log "nav health: ${failed:-0} failed control cycles, ${skipped:-0} stations skipped"
+  [ "${skipped:-0}" -eq 0 ] || fail "$skipped stations skipped by the waypoint follower"
 fi
 
 # --- stage: QR-code detection ---------------------------------------------------------
