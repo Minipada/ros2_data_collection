@@ -7,6 +7,9 @@ other Measurement. The two known producers of that message are ROS 2's built-in 
 statistics (enabled per subscription with `enable_topic_statistics`) and
 [ros2_pulse](https://github.com/TanayK07/ros2_pulse)'s `pulse_bridge`; this Measurement is a
 generic `MetricsMessage` consumer and never subscribes to the topic being measured.
+Run `./tools/e2e/scripts/run_pulse.sh` to prove the ros2_pulse path end to end: the script
+runs one Podman container where a preloaded publisher feeds `pulse_bridge` and this
+Measurement, and fails unless a Record with `average` and `sample_count` arrives.
 
 The message's `StatisticDataPoint[]` array is enum-coded, so it is flattened into named fields
 (`average`, `minimum`, `maximum`, `stddev`, `sample_count`). A statistic the producer did not
