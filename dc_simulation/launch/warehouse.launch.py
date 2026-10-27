@@ -129,6 +129,19 @@ def generate_launch_description():
         ],
     )
 
+    # The watchdog keeps the bridged command stream continuous: nav2's chain
+    # ends each episode in a few zero commands and then silence, and gz-sim's
+    # DiffDrive holds the last twist it received forever -- a dropped terminal
+    # zero under DDS congestion used to drive the robot out of its aisle at
+    # cruise velocity until it wedged against the world boundary. See the
+    # cmd_vel_watchdog module docstring.
+    cmd_vel_watchdog_cmd = Node(
+        package="dc_simulation",
+        executable="cmd_vel_watchdog",
+        output="screen",
+        parameters=[{"use_sim_time": False}],
+    )
+
     set_tb3_model_path_cmd = AppendEnvironmentVariable("GZ_SIM_RESOURCE_PATH", tb3_models_dir)
 
     ld = LaunchDescription()
@@ -147,6 +160,7 @@ def generate_launch_description():
 
     ld.add_action(gz_sim_cmd)
     ld.add_action(spawn_robot_cmd)
+    ld.add_action(cmd_vel_watchdog_cmd)
     ld.add_action(bridge_cmd)
 
     return ld

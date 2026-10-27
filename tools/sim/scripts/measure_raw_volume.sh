@@ -119,8 +119,9 @@ for profile in $PROFILES; do
   # A stationary robot is the wrong thing to measure: odometry and TF of a robot that is
   # not moving are zeros, and a JSON zero is a fraction of the ~17 characters a real
   # double costs. Drive it in a slow circle instead. The publisher runs on wall time, so
-  # /cmd_vel itself is excluded from collection (see the params files).
-  rbg "$SOURCE && ros2 topic pub -r 1 /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.15}, angular: {z: 0.3}}' > /tmp/drive.log 2>&1"
+  # /cmd_vel itself is excluded from collection (see the params files). TwistStamped to
+  # match the cmd_vel_watchdog the warehouse launch puts on /cmd_vel.
+  rbg "$SOURCE && ros2 topic pub -r 1 /cmd_vel geometry_msgs/msg/TwistStamped '{twist: {linear: {x: 0.15}, angular: {z: 0.3}}}' > /tmp/drive.log 2>&1"
 
   # Under the camera profile the graph query itself gets slow; a miss here only
   # costs the report its type column.

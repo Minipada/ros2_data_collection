@@ -203,8 +203,9 @@ def check_cmd_vel(node, report):
         return
     start = node.odom.pose.pose.position
 
-    # Stamped to match the bridge: nav2's command chain here is TwistStamped
-    # end to end, and one topic can't carry two types (see the bridge config).
+    # Stamped to match the watchdog: the actuation path is /cmd_vel through the
+    # cmd_vel_watchdog and the bridge to gz-sim's DiffDrive, all TwistStamped,
+    # and one topic can't carry two types (see the bridge config).
     twist = TwistStamped()
     twist.twist.linear.x = 0.2
     end_ns = node.get_clock().now().nanoseconds + DRIVE_S * 1e9

@@ -17,7 +17,11 @@
   gz_type_name: "gz.msgs.Clock"
   direction: GZ_TO_ROS
 
-- ros_topic_name: "cmd_vel"
+# cmd_vel_gz, not cmd_vel: the watchdog (launched alongside this bridge)
+# re-streams the collision monitor's cmd_vel here, so a dropped command can cost
+# one cycle instead of latching the last twist in gz-sim's DiffDrive, which has
+# no command timeout. See dc_simulation/cmd_vel_watchdog.py.
+- ros_topic_name: "cmd_vel_gz"
   gz_topic_name: "/cmd_vel"
   # TwistStamped: nav2's command chain (controller_server through
   # collision_monitor) is stamped end to end and one topic can't carry two types, so
