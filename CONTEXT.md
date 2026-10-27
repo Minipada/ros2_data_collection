@@ -95,6 +95,12 @@ _Avoid_: buffer (reserved for the Shipper buffer, above — a separate store wit
 A label carried by a Record naming a Destination that must receive it.
 _Avoid_: route (a "route" is the Shipper-side path a Tag selects)
 
+**Topic statistics**:
+Per-topic period/rate statistics the ROS graph itself reports (`statistics_msgs/MetricsMessage`
+on `/statistics`), carried as Records by a Measurement that never subscribes to the measured
+topic.
+_Avoid_: metrics (a generic word), topic monitoring
+
 ## Relationships
 
 - A **Measurement** emits **Records**, optionally gated by one or more **Conditions**

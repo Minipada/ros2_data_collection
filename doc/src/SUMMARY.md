@@ -63,6 +63,7 @@
   - [String stamped](./dc/measurements/string_stamped.md)
   - [TCP Health](./dc/measurements/tcp_health.md)
   - [Thermal](./dc/measurements/thermal.md)
+  - [Topic statistics](./dc/measurements/topic_statistics.md)
   - [Uptime](./dc/measurements/uptime.md)
 - [Conditions](./dc/conditions.md)
   - [Compare](./dc/conditions/compare.md)

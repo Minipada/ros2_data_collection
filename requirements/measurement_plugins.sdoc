@@ -64,6 +64,11 @@ UID: MP-PLU-012
 TITLE: Can collect position data
 STATEMENT: The system should be able to collect position of the robot
 
+[REQUIREMENT]
+UID: MP-PLU-013
+TITLE: Can collect ROS 2 topic statistics
+STATEMENT: The system should be able to collect the per-topic statistics reported as statistics_msgs/MetricsMessage on the /statistics topic.
+
 [/SECTION]
 
 [SECTION]
