@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+#
+# SPDX-License-Identifier: MPL-2.0
+
+# The TopicStatistics smoke's params (tools/e2e/scripts/run_pulse.sh): one Measurement
+# fed by ros2_pulse's live pulse_bridge — the only scenario where /statistics has a real
+# producer. The `file` Destination exists because the Bridge refuses to start without
+# one; its NDJSON is a debugging artifact, not an assertion (the gate is the
+# subscription on topic_output, run by pulse_smoke.sh inside the container).
+
+measurement_server:
+  ros__parameters:
+    save_local_base_path: "$HOME/.dc/e2e/data/%Y/%M/%D/%H"
+    all_base_path: "e2e"
+    measurement_plugins: ["topic_statistics"]
+
+    topic_statistics:
+      plugin: "dc_measurements/TopicStatistics"
+      topic: "/statistics"
+      topic_output: "/dc/measurement/topic_statistics"
+      group_key: "topic_statistics"
+      # Event-driven: the Record is published from the MetricsMessage callback, so there
+      # is no polling_interval and nothing to collect at activation.
+      init_collect: false
+
+dc_bridge:
+  ros__parameters:
+    shipper:
+      data_dir: "$HOME/.dc/e2e/buffer"
+    destinations: ["smoke_records"]
+    smoke_records:
+      type: file
+      receives: records
+      inputs: ["/dc/measurement/topic_statistics"]
+      path: "/root/.dc/e2e/data/smoke/records.ndjson"
+      time_key: "date"
+    vector_forward_host: "127.0.0.1"
+    vector_forward_port: 24224
