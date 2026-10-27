@@ -15,11 +15,13 @@ its cruise velocity: it has driven out of its aisle and wedged against the
 warehouse boundary for the rest of a daily sim run, skipping every remaining
 waypoint while the pass still reports success.
 
-This node sits between the collision monitor and the bridge. It forwards every
-command and, on a timer, re-publishes the latest one -- or a zero once the
-stream has been quiet for longer than --timeout-seconds. The gz side therefore
-sees a continuous stream: a dropped message costs one cycle instead of latching
-a twist, and a genuinely dead chain stops the robot instead of running it away.
+This node sits between the collision monitor and the bridge. It re-publishes
+the latest command while the stream is fresh, and zeros from the first quiet
+moment past --timeout-seconds. The window is a few control periods -- long
+enough to bridge consecutive dropped commands, and no longer: an aborted goal
+ends the stream on a cruise velocity with no terminal zeros, and replaying
+that for seconds walks the robot off-route (the first full-pass verification
+lost 47 stations to 15 m of cumulative creep across 169 aborted attempts).
 """
 
 import rclpy
@@ -29,14 +31,17 @@ from rclpy.qos import QoSProfile
 
 
 class CmdVelWatchdog(Node):
-    """Re-stream cmd_vel into the bridge at a fixed rate."""
+    """Bridge dropped commands with the latest one; zero on quiet."""
 
     def __init__(self):
         super().__init__("cmd_vel_watchdog")
         self.declare_parameter("input_topic", "cmd_vel")
         self.declare_parameter("output_topic", "cmd_vel_gz")
         self.declare_parameter("publish_rate", 20.0)
-        self.declare_parameter("timeout_seconds", 2.0)
+        # A few control periods (the controller loop is 20 Hz, ~19 under load):
+        # longer than any in-flight drop, far shorter than an aborted goal's
+        # silence, so a replayed pre-abort command can't outlive the abort.
+        self.declare_parameter("timeout_seconds", 0.15)
 
         input_topic = self.get_parameter("input_topic").value
         output_topic = self.get_parameter("output_topic").value

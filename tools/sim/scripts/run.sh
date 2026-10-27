@@ -151,6 +151,20 @@ start_stack() {
     "$IMAGE" sleep infinity >/dev/null
 }
 
+# DDS receive buffers, raised on the host before the container exists: the sysctl is
+# per-network-namespace and a new one copies the value at creation, so the sim's DDS
+# sockets inherit it (verified: the container warns about exactly the host's number).
+# CycloneDDS wants 8 MiB; the 1 MiB CI default drops messages under sim load, which is
+# what strands nav2's costmaps mid-pass. Best-effort: CI runners have passwordless
+# sudo, a dev box without it keeps the warning and its lossy DDS.
+raise_rmem() {
+  if sudo -n sysctl -w net.core.rmem_max=8388608 >/dev/null 2>&1; then
+    log "net.core.rmem_max raised to 8388608 (CycloneDDS recommendation)"
+  else
+    log "WARNING: could not raise net.core.rmem_max (no passwordless sudo); DDS may drop under load"
+  fi
+}
+
 stop_stack() {
   [ -n "$CONTAINER" ] || return 0
   mkdir -p "$RUN_DIR"
@@ -162,6 +176,8 @@ stop_stack() {
 # `ros2 launch` needs a writable HOME for its log directory.
 rin() { podman exec -e HOME=/root "$CONTAINER" bash -lc "$1"; }
 rbg() { podman exec -d -e HOME=/root "$CONTAINER" bash -lc "$1" >/dev/null; }
+
+raise_rmem
 
 # --- stage: static lint ---------------------------------------------------------------
 if has_stage lint; then
