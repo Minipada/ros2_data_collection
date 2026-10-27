@@ -265,7 +265,9 @@ COPY . src/ros2_data_collection
 # /root/ws/TEST_RESULT rather than failing the RUN/build itself: a failing `RUN` means
 # podman never tags an image at all, so the caller (ci.yaml) would have nothing to
 # `podman run` the coverage data out of. ci.yaml checks TEST_RESULT itself, after
-# extracting coverage, and only pushes the image when it reads 0.
+# extracting coverage, and only pushes the image when it reads 0. COVERAGE_RESULT
+# rides the same way: a coverage build whose report generation failed is a red job
+# (ci.yaml checks it), without costing the image the coverage partial it did produce.
 #
 # dc-build/dc-log: CCOV is in the id on purpose — a mount is keyed by id alone, and
 # without it a CCOV flip on one machine would drop a Debug build tree under a Release
@@ -311,7 +313,8 @@ RUN --mount=type=cache,id=dc-ccache-${ROS_DISTRO},target=/root/.ccache \
     done && \
     ( colcon test --packages-skip aws_sdk_vendor ${NAV2_PKGS} --event-handlers desktop_notification- status- ; echo $? > /tmp/test_exit ) && \
     ( colcon test-result --verbose ; echo $? > /tmp/result_exit ) && \
-    ( src/ros2_data_collection/tools/code_coverage_report.bash ci || echo "warning: coverage report generation produced no data (non-coverage build?)" >&2 ) && \
+    echo 0 > COVERAGE_RESULT && \
+    ( src/ros2_data_collection/tools/code_coverage_report.bash ci || { [ "$CCOV" = "true" ] && echo 1 > COVERAGE_RESULT || echo "warning: coverage report generation produced no data (non-coverage build?)" >&2; } ) && \
     mkdir -p coverage && \
     ( [ -f lcov/total_coverage.info ] && cp lcov/total_coverage.info coverage/cpp.info || true ) && \
     TEST_EXIT=$(cat /tmp/test_exit) && RESULT_EXIT=$(cat /tmp/result_exit) && \

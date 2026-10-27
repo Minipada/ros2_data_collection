@@ -388,6 +388,7 @@ jobs:
           podman run --rm --entrypoint bash -v "${{ github.workspace }}/coverage:/out:Z" "$REF" -c '
             [ -f /root/ws/coverage/cpp.info ] && cp /root/ws/coverage/cpp.info /out/ || true
             cp /root/ws/TEST_RESULT /out/TEST_RESULT
+            cp /root/ws/COVERAGE_RESULT /out/COVERAGE_RESULT
           '
 
       - name: Fail the job if colcon test reported failures
@@ -395,6 +396,14 @@ jobs:
         run: |
           if [ "$(cat coverage/TEST_RESULT)" != "0" ]; then
             echo "colcon test reported failures" >&2
+            exit 1
+          fi
+
+      - name: Fail the job if coverage generation failed
+        if: always()
+        run: |
+          if [ -f coverage/COVERAGE_RESULT ] && [ "$(cat coverage/COVERAGE_RESULT)" != "0" ]; then
+            echo "coverage report generation failed" >&2
             exit 1
           fi
 
