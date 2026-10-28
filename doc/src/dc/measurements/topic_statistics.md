@@ -16,6 +16,23 @@ The message's `StatisticDataPoint[]` array is enum-coded, so it is flattened int
 include stays out of the Record. No rate is derived here: it is downstream work, from
 `sample_count` over the window or `1/average`.
 
+## Enabling the ros2_pulse producer
+
+The robot's processes run preloaded, per [ros2_pulse's README](https://github.com/TanayK07/ros2_pulse):
+
+```bash
+export LD_PRELOAD=$(ros2 pkg prefix ros2_pulse)/lib/libros2_pulse.so
+export ROS_TOPIC_STATS_OUTPUT_FILE=/tmp/pulse.log
+export ROS_TOPIC_STATS_FORMAT=jsonl
+export ROS_TOPIC_STATISTICS_PUBLISH_PERIOD=5.0
+ros2 launch my_robot bringup.launch.py
+```
+
+`ROS_TOPIC_STATS_FORMAT=jsonl` is required: the probe's default is text, and `pulse_bridge`
+refuses text logs, so with the default the bridge publishes nothing. Point the bridge's
+`files` or `glob` at the same file as `ROS_TOPIC_STATS_OUTPUT_FILE`, and this Measurement's
+`topic` at the bridge's `topic` parameter (both default to `/statistics`).
+
 ## Parameters
 
 | Parameter | Description                              | Type | Default                 |
