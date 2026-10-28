@@ -129,8 +129,14 @@ controller_server:
     #
     # Hence 0.1 rad, not the 0.2 this carried. Yaw is the expensive term because
     # it scales with the standoff, and a diff-drive robot turning on the spot
-    # settles well inside 0.1 rad -- measured at no cost in navigation time;
-    # xy stays at 0.1 m, which costs nothing.
+    # settles well inside 0.1 rad -- measured at no cost in navigation time.
+    #
+    # xy sits at 0.145 m: at 0.1 m three daily sim passes died the same way — an
+    # approach passed its station ~0.1 m lateral, the checker stayed silent, and
+    # the coast past the plan end aborted into an unrecoverable cascade (every
+    # later station skipped). 0.145 covers those pass-bys and is the widest the
+    # lint check's decode margin allows (0.15 already lands at -0.001 m on the
+    # tightest aisle-2 station).
     #
     # Worth knowing that this budget is not the whole error: the goal checker
     # compares AMCL's *estimate* of the pose against the goal, so localization
@@ -140,7 +146,7 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.1
+      xy_goal_tolerance: 0.145
       yaw_goal_tolerance: 0.1
     # DWB parameters
     FollowPath:
