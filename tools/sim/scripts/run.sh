@@ -165,17 +165,23 @@ raise_rmem() {
   fi
 }
 
+# A wedged container must fail the stage, not burn the job: every exec gets a
+# ceiling. One frozen podman exec sat silently past the 5h job timeout
+# (run 40637342161), and the kill skipped teardown, so the nav-stage logs were
+# never collected — a timed-out exec fails into the log-collecting path instead.
+EXEC_TIMEOUT=300
+
 stop_stack() {
   [ -n "$CONTAINER" ] || return 0
   mkdir -p "$RUN_DIR"
-  podman exec "$CONTAINER" bash -lc 'cat /tmp/*.log 2>/dev/null' >> "$RUN_DIR/sim.log" 2>/dev/null || true
+  timeout "$EXEC_TIMEOUT" podman exec "$CONTAINER" bash -lc 'cat /tmp/*.log 2>/dev/null' >> "$RUN_DIR/sim.log" 2>/dev/null || true
   podman rm -f "$CONTAINER" >/dev/null 2>&1 || true
   CONTAINER=""
 }
 
 # `ros2 launch` needs a writable HOME for its log directory.
-rin() { podman exec -e HOME=/root "$CONTAINER" bash -lc "$1"; }
-rbg() { podman exec -d -e HOME=/root "$CONTAINER" bash -lc "$1" >/dev/null; }
+rin() { timeout "$EXEC_TIMEOUT" podman exec -e HOME=/root "$CONTAINER" bash -lc "$1"; }
+rbg() { timeout "$EXEC_TIMEOUT" podman exec -d -e HOME=/root "$CONTAINER" bash -lc "$1" >/dev/null; }
 
 raise_rmem
 
