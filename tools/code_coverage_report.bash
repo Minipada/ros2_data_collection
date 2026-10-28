@@ -57,8 +57,13 @@ INCLUDE_PACKAGES=$(
   | xargs)
 
 # Capture executed code data.
+# -j 16 shards the coverage files into ~75-file gcov invocations instead of one per
+# core: gcov dies mid-stream on some translation units (observed on CI: a truncated
+# JSON doc, reproducibly, at the same offset), and everything after the casualty in
+# a single 300+-file invocation is lost with it.
 # shellcheck disable=SC2086
-fastcov --lcov \
+if ! fastcov --lcov \
+  -j 16 \
   -d build \
   --exclude test/ ${EXCLUDE_PACKAGES} \
   --include ${INCLUDE_PACKAGES} \
@@ -66,6 +71,17 @@ fastcov --lcov \
   --validate-sources \
   --dump-statistic \
   --output "${LCOVDIR}/total_coverage.info"
+then
+  # fastcov writes the report before exiting nonzero (unparsable chunk files are
+  # skipped, not fatal), so a report that exists is real coverage: warn and keep
+  # it. Only a missing report is a failure — a coverage build that produces none
+  # is broken, while a non-coverage build legitimately has no .gcno at all.
+  if [ -s "${LCOVDIR}/total_coverage.info" ]; then
+    echo "WARNING: fastcov failed partway; the coverage report is partial" >&2
+  else
+    exit 1
+  fi
+fi
 
 if [ $COVERAGE_REPORT_VIEW = codecovio ]; then
   curl -s https://codecov.io/bash > codecov
