@@ -165,17 +165,18 @@ raise_rmem() {
   fi
 }
 
-# A wedged container must fail the stage, not burn the job: every exec gets a
-# ceiling. One frozen podman exec sat silently past the 5h job timeout
-# (run 40637342161), and the kill skipped teardown, so the nav-stage logs were
-# never collected — a timed-out exec fails into the log-collecting path instead.
+# A wedged container must fail the attempt, not burn the job: every exec gets a
+# ceiling, the waypoint loop treats a timed-out probe as a lost attempt, and the
+# attempt loop retries on a fresh container (runs 40637342161 and 40741469503
+# burned hours re-probing a container that had stopped answering seconds into
+# the follower stage).
 EXEC_TIMEOUT=300
 
 stop_stack() {
   [ -n "$CONTAINER" ] || return 0
   mkdir -p "$RUN_DIR"
   timeout "$EXEC_TIMEOUT" podman exec "$CONTAINER" bash -lc 'cat /tmp/*.log 2>/dev/null' >> "$RUN_DIR/sim.log" 2>/dev/null || true
-  podman rm -f "$CONTAINER" >/dev/null 2>&1 || true
+  timeout "$EXEC_TIMEOUT" podman rm -f "$CONTAINER" >/dev/null 2>&1 || true
   CONTAINER=""
 }
 
@@ -196,21 +197,24 @@ fi
 # Waits for a condition inside the container, polling until a deadline. An
 # optional 4th arg is an abort condition: once it holds, the deadline can't be
 # met any more and polling to the ceiling would only burn the stage's budget
-# (a lifecycle manager that aborted bringup never logs again).
+# (a lifecycle manager that aborted bringup never logs again). Counted in
+# wall-clock seconds (SECONDS), not sleep sums: on a wedged container every
+# probe costs its full EXEC_TIMEOUT, and a counter that only advanced by the
+# sleep amounts (run 40741469503) let its ceiling claim 24 minutes while the
+# wall clock burned four hours.
 wait_for() {
-  local desc="$1" timeout="$2" cmd="$3" abort="${4:-}" waited=0
+  local desc="$1" timeout="$2" cmd="$3" abort="${4:-}" start=$SECONDS
   log "waiting for $desc (up to ${timeout}s)"
-  while [ "$waited" -lt "$timeout" ]; do
+  while [ "$((SECONDS - start))" -lt "$timeout" ]; do
     if rin "$cmd" >/dev/null 2>&1; then
-      log "$desc — ready after ${waited}s"
+      log "$desc — ready after $((SECONDS - start))s"
       return 0
     fi
     if [ -n "$abort" ] && rin "$abort" >/dev/null 2>&1; then
-      log "$desc — gave up after ${waited}s (abort condition met)"
+      log "$desc — gave up after $((SECONDS - start))s (abort condition met)"
       return 1
     fi
     sleep 15
-    waited=$((waited + 15))
   done
   return 1
 }
@@ -235,20 +239,23 @@ if has_stage sim; then
   stop_stack
 fi
 
-# --- stage: simulation + Nav2 ---------------------------------------------------------
+# --- stages: simulation + Nav2 + waypoint following -----------------------------------
 if has_stage nav || has_stage waypoints || has_stage detect; then
-  # Two activation attempts. When the lifecycle manager aborts bringup ("Failed to
-  # bring up all requested nodes" — bt_navigator losing an action-server discovery
-  # race, see qrcodes_nav.yaml's wait_for_service_timeout) it never logs again, so
-  # the abort condition in the wait_for below is what keeps a lost attempt from
-  # burning the whole 1800s ceiling. A fresh container is the retry: pkill-ing the
-  # launch inside the same one leaves the orphaned simulator publishing /clock
-  # alongside the new one (see stop_stack). The managers bring nodes up one at a
-  # time, so their per-node lines say where an attempt stopped — printed before
-  # tearing it down, since the generic log tail is all WARN noise from nodes that
-  # came up fine.
-  nav_up=""
+  # Two full attempts, each on a fresh container, because an attempt can be lost to
+  # things no nav parameter fixes: bringup aborting ("Failed to bring up all requested
+  # nodes" — bt_navigator losing an action-server discovery race, see
+  # qrcodes_nav.yaml's wait_for_service_timeout), and the container itself going under
+  # mid-pass — runs 40637342161 and 40741469503 both stopped answering podman exec
+  # seconds after the follower started and never logged again (40741469503's collected
+  # qrcodes.log even came back shorter than it was at activation: runner-side storage,
+  # not DC code). A fresh container is the retry unit: pkill-ing the launch inside the
+  # same one leaves the orphaned simulator publishing /clock alongside the new one
+  # (see stop_stack). The managers bring nodes up one at a time, so their per-node
+  # lines say where a failed bringup stopped — printed before tearing it down, since
+  # the generic log tail is all WARN noise from nodes that came up fine.
+  ok=""
   for attempt in 1 2; do
+    wedged=""
     start_stack "nav-$attempt"
     # `detect` needs the measurement/bridge half of the demo running; the other stages
     # do not, and leaving it out keeps them cheaper on a runner with no GPU.
@@ -256,86 +263,121 @@ if has_stage nav || has_stage waypoints || has_stage detect; then
     log "launching tb3_qrcodes.launch.py (simulation + Nav2, attempt $attempt of 2, DC $USE_DC)"
     rbg "$SOURCE && ros2 launch dc_demos tb3_qrcodes.launch.py headless:=True use_rviz:=False use_dc:=$USE_DC $QRCODES_LAUNCH_ARGS > /tmp/qrcodes.log 2>&1"
 
-    if wait_for "Nav2 to activate" 1800 \
+    # navigation2's main merged the navigation and localization managers into one
+    # (lifecycle_manager_nav2), so the "Managed nodes are active" line below already
+    # covers map_server/amcl — there is no separate localization manager to wait for.
+    if ! wait_for "Nav2 to activate" 1800 \
       'grep -aq "lifecycle_manager_nav2.*Managed nodes are active" /tmp/qrcodes.log' \
       'grep -aq "Failed to bring up all requested nodes" /tmp/qrcodes.log'
     then
-      nav_up=1
+      # A launch that died on startup is a crash, not a lost response — retrying costs
+      # another bringup for the same outcome, so say which and bail immediately
+      # (cleanup tails the log on failure).
+      rin 'pgrep -f tb3_qrcodes.launch.py >/dev/null' \
+        || fail "the tb3_qrcodes launch died on startup (log tail follows)"
+      rin 'grep -a "Activating\|Managed nodes are active\|Failed to change state\|not available\|Configuring" /tmp/qrcodes.log | tail -30' || true
+      stop_stack
+      continue
+    fi
+
+    rin "$SOURCE && python3 /opt/sim/verify_sim.py nav" || fail "nav checks"
+    if ! has_stage waypoints && ! has_stage detect; then
+      ok=1
       break
     fi
-    # A launch that died on startup is a crash, not a lost response — retrying costs
-    # another bringup for the same outcome, so say which and bail immediately
-    # (cleanup tails the log on failure).
-    rin 'pgrep -f tb3_qrcodes.launch.py >/dev/null' \
-      || fail "the tb3_qrcodes launch died on startup (log tail follows)"
-    rin 'grep -a "Activating\|Managed nodes are active\|Failed to change state\|not available\|Configuring" /tmp/qrcodes.log | tail -30' || true
-    stop_stack
-  done
-  [ -n "$nav_up" ] || fail "nav2 never reported all managed nodes active (both attempts)"
-  # navigation2's main merged the navigation and localization managers into one
-  # (lifecycle_manager_nav2), so the "Managed nodes are active" line above already
-  # covers map_server/amcl — there is no separate localization manager to wait for.
 
-  rin "$SOURCE && python3 /opt/sim/verify_sim.py nav" || fail "nav checks"
-fi
-
-# --- stage: waypoint following --------------------------------------------------------
-if has_stage waypoints || has_stage detect; then
-  if has_stage detect; then
-    log "recording every QR code the demo reads"
-    rbg "$SOURCE && $GROUND_TRUTH_ENV python3 /opt/sim/verify_sim.py record > /tmp/codes.log 2>&1"
-  fi
-  log "running $WAYPOINT_EXEC until it reaches waypoint $WAYPOINTS/$TOTAL_STATIONS"
-  rbg "$SOURCE && ros2 run dc_demos $WAYPOINT_EXEC > /tmp/waypoints.log 2>&1; echo EXIT=\$? >> /tmp/waypoints.log"
-
-  # Progress, not completion: the follower reaching waypoint N proves planning, control,
-  # localization and the goal checker all work. Completion of all 60 is an hour-plus and
-  # belongs in a manual run (DC_SIM_WAYPOINTS=60).
-  # Reading a number out of the container is fiddlier than it looks under
-  # `set -euo pipefail`: grep exits 1 when it matches nothing (so a bare command
-  # substitution kills the script the first time round, before the follower has logged
-  # anything), and `grep -c` prints "0" *and* exits 1 (so a `|| echo 0` fallback yields
-  # "0\n0", which every later [ ] test then chokes on). Swallow the status inside, and
-  # return digits or nothing at all.
-  count_in_container() {
-    local out
-    out="$(rin "$1" 2>/dev/null || true)"
-    printf '%s' "$out" | head -1 | tr -dc '0-9'
-  }
-
-  waited=0
-  reached=0
-  while [ "$waited" -lt "$WAYPOINT_TIMEOUT" ]; do
-    reached=$(count_in_container 'grep -ao "Executing current waypoint: [0-9]*" /tmp/waypoints.log | tail -1 | grep -o "[0-9]*$"')
-    reached="${reached:-0}"
-    if [ "$reached" -ge "$WAYPOINTS" ]; then
-      log "reached waypoint $reached/$TOTAL_STATIONS after ${waited}s"
-      break
+    if has_stage detect; then
+      log "recording every QR code the demo reads"
+      rbg "$SOURCE && $GROUND_TRUTH_ENV python3 /opt/sim/verify_sim.py record > /tmp/codes.log 2>&1"
     fi
-    if rin 'grep -aq "^EXIT=" /tmp/waypoints.log' 2>/dev/null; then
-      if rin 'grep -aq "EXIT=0" /tmp/waypoints.log' 2>/dev/null; then
-        log "follower completed the full pass"
-        reached=$TOTAL_STATIONS
+
+    # Progress, not completion: the follower reaching waypoint N proves planning, control,
+    # localization and the goal checker all work. Completion of all 60 is an hour-plus and
+    # belongs in a manual run (DC_SIM_WAYPOINTS=60).
+    # Reading a number out of the container is fiddlier than it looks under
+    # `set -euo pipefail`: grep exits 1 when it matches nothing (so a bare command
+    # substitution kills the script the first time round, before the follower has logged
+    # anything), and `grep -c` prints "0" *and* exits 1 (so a `|| echo 0` fallback yields
+    # "0\n0", which every later [ ] test then chokes on). Swallow the status inside and
+    # answer "OK <digits>" or "DEAD" — the function runs in a command substitution, so
+    # deadness has to travel on stdout; a variable it sets would die with the subshell.
+    # Only an exec that ran out of EXEC_TIMEOUT (124) or a podman-level failure (125,
+    # the container itself is gone) means dead; grep's own 1 is a healthy no-match.
+    count_in_container() {
+      local out rc=0
+      out="$(rin "$1" 2>/dev/null)" || rc=$?
+      if [ "$rc" -eq 124 ] || [ "$rc" -eq 125 ]; then
+        echo "DEAD"
+      else
+        printf 'OK %s' "$(printf '%s' "$out" | head -1 | tr -dc '0-9')"
+      fi
+    }
+
+    log "running $WAYPOINT_EXEC until it reaches waypoint $WAYPOINTS/$TOTAL_STATIONS"
+    rbg "$SOURCE && ros2 run dc_demos $WAYPOINT_EXEC > /tmp/waypoints.log 2>&1; echo EXIT=\$? >> /tmp/waypoints.log"
+
+    pass_start=$SECONDS
+    reached=0
+    while :; do
+      elapsed=$((SECONDS - pass_start))
+      [ "$elapsed" -lt "$WAYPOINT_TIMEOUT" ] || break
+      probe="$(count_in_container 'grep -ao "Executing current waypoint: [0-9]*" /tmp/waypoints.log | tail -1 | grep -o "[0-9]*$"')"
+      if [ "$probe" = "DEAD" ]; then
+        wedged=1
         break
       fi
-      fail "waypoint follower exited non-zero (see $RUN_DIR/sim.log)"
+      reached="${probe#OK }"
+      reached="${reached:-0}"
+      if [ "$reached" -ge "$WAYPOINTS" ]; then
+        log "reached waypoint $reached/$TOTAL_STATIONS after ${elapsed}s"
+        break
+      fi
+      rc=0
+      rin 'grep -aq "^EXIT=" /tmp/waypoints.log' 2>/dev/null || rc=$?
+      if [ "$rc" -eq 124 ] || [ "$rc" -eq 125 ]; then
+        wedged=1
+        break
+      fi
+      if [ "$rc" -eq 0 ]; then
+        if rin 'grep -aq "EXIT=0" /tmp/waypoints.log' 2>/dev/null; then
+          log "follower completed the full pass"
+          reached=$TOTAL_STATIONS
+          break
+        fi
+        fail "waypoint follower exited non-zero (see $RUN_DIR/sim.log)"
+      fi
+      sleep 30
+    done
+    if [ -n "$wedged" ]; then
+      log "container stopped answering exec probes at waypoint ${reached:-0} — retrying on a fresh container"
+      stop_stack
+      continue
     fi
-    sleep 30
-    waited=$((waited + 30))
-  done
-  [ "$reached" -ge "$WAYPOINTS" ] || fail "only reached waypoint $reached/$TOTAL_STATIONS in ${WAYPOINT_TIMEOUT}s (wanted $WAYPOINTS)"
+    [ "$reached" -ge "$WAYPOINTS" ] || fail "only reached waypoint $reached/$TOTAL_STATIONS in $((SECONDS - pass_start))s (wanted $WAYPOINTS)"
 
-  # What the waypoint counter above can't see is a station the follower gave up
-  # on: with stop_on_failure false it moves to the next goal and the pass still
-  # ends "successful" -- a robot wedged against the world boundary has skipped
-  # dozens of stations while the counter read 60/60. The follower logs each such
-  # skip, and a healthy pass logs none, so that is the assertion. Raw
-  # controller/bt failure lines are counted for the log only: a control cycle
-  # that failed and was retried away is noise over a three-hour pass.
-  skipped=$(count_in_container 'grep -ac "Failed to process waypoint" /tmp/qrcodes.log')
-  failed=$(count_in_container 'grep -acE "Goal was aborted|Goal failed|Failed to make progress" /tmp/qrcodes.log')
-  log "nav health: ${failed:-0} failed control cycles, ${skipped:-0} stations skipped"
-  [ "${skipped:-0}" -eq 0 ] || fail "$skipped stations skipped by the waypoint follower"
+    # What the waypoint counter above can't see is a station the follower gave up
+    # on: with stop_on_failure false it moves to the next goal and the pass still
+    # ends "successful" -- a robot wedged against the world boundary has skipped
+    # dozens of stations while the counter read 60/60. The follower logs each such
+    # skip, and a healthy pass logs none, so that is the assertion. Raw
+    # controller/bt failure lines are counted for the log only: a control cycle
+    # that failed and was retried away is noise over a three-hour pass.
+    count_or_fail() {
+      local probe
+      probe="$(count_in_container "$1")"
+      if [ "$probe" = "DEAD" ]; then
+        fail "the container stopped answering right after the pass — can't count: $1"
+      fi
+      printf '%s' "${probe#OK }"
+    }
+    skipped="$(count_or_fail 'grep -ac "Failed to process waypoint" /tmp/qrcodes.log')"
+    failed="$(count_or_fail 'grep -acE "Goal was aborted|Goal failed|Failed to make progress" /tmp/qrcodes.log')"
+    log "nav health: ${failed:-0} failed control cycles, ${skipped:-0} stations skipped"
+    [ "${skipped:-0}" -eq 0 ] || fail "$skipped stations skipped by the waypoint follower"
+    ok=1
+    break
+  done
+  [ -n "$ok" ] || fail "both attempts were lost — nav2 never activated or the container went under (see $RUN_DIR/sim.log)"
 fi
 
 # --- stage: QR-code detection ---------------------------------------------------------
@@ -364,13 +406,16 @@ if has_stage detect; then
   # warehouse shelving before reaching the first pallet; and if the recorder died on
   # import, its traceback would read as a pile of successful detections.
   reads=0
-  waited=0
-  while [ "$waited" -lt 180 ]; do
-    reads=$(count_in_container 'grep -ac "format=QRCode" /tmp/codes.log')
+  poll_start=$SECONDS
+  while [ "$((SECONDS - poll_start))" -lt 180 ]; do
+    # DEAD this soon after a completed pass means the count can only fail the
+    # assertion below; let it read as zero and take that path.
+    probe="$(count_in_container 'grep -ac "format=QRCode" /tmp/codes.log')"
+    [ "$probe" = "DEAD" ] && probe="OK 0"
+    reads="${probe#OK }"
     reads="${reads:-0}"
     [ "$reads" -ge "$want" ] && break
     sleep 15
-    waited=$((waited + 15))
   done
 
   codes=$(rin 'grep -a "format=QRCode" /tmp/codes.log | grep -ao "code=[0-9]*" | sort -u | tr "\n" " "' 2>/dev/null || true)
@@ -389,7 +434,9 @@ if has_stage detect; then
   # Three distinguishable outcomes, because the first version of this check reported all
   # of them as "estimate_pose off, or no CameraInfo" and sent the investigation to the
   # wrong component: the real cause was the ground-truth reader returning nothing.
-  poses=$(count_in_container 'grep -ac "code_pose=" /tmp/codes.log')
+  poses="$(count_in_container 'grep -ac "code_pose=" /tmp/codes.log')"
+  [ "$poses" = "DEAD" ] && poses="OK 0"
+  poses="${poses#OK }"
   best=$(rin 'grep -ao "gt_err=[0-9.]*" /tmp/codes.log | cut -d= -f2 | sort -g | head -1' 2>/dev/null | head -1 | tr -dc '0-9.' || true)
   if [ -n "${best:-}" ]; then
     log "best QR-code pose landed ${best} m from the world's own placement"
