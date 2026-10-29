@@ -58,7 +58,14 @@ bt_navigator:
     robot_base_frame: base_link
     odom_topic: /odom
     bt_loop_duration: 10
-    default_server_timeout: 20
+    # How long a BT action node waits for its server to acknowledge a goal
+    # request before aborting. The 20s default lost this race on a loaded
+    # runner: mid-waypoint, follow_path's ack never landed within 20s while the
+    # server itself kept processing path updates at 1Hz (run 40811872030,
+    # station 20) -- the abort left the robot wedged against the pallet rows
+    # and the remaining 40 waypoints all skipped. A healthy ack is instant; the
+    # ceiling only bounds a genuinely dead server.
+    default_server_timeout: 60
     # bt_navigator builds the BT's action clients at activation and waits this long
     # (default 1s) for each server to be discoverable. The servers it needs were
     # activated moments earlier by the lifecycle manager, and on a loaded runner DDS
