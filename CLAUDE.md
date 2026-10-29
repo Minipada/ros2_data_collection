@@ -32,6 +32,18 @@ No humble section: that line's docs live on its own branch.
 - `humble` — legacy/stable line, ROS 2 Humble, embedded Fluent Bit architecture; its own
   unrelated CI.
 
+### Backport labeling is part of every rolling PR
+
+The labels are the only trigger for the automation, and nothing reminds you at merge time,
+so check before opening the PR: for every file the PR touches, `git ls-tree
+origin/<branch> -- <file>` on `jazzy` and `lyrical`; a file that exists there gets the
+PR labeled `backport:jazzy`/`backport:lyrical` (untracked CI-only files like a branch's
+own `ci.yaml` don't count). The labels cherry-pick only the PR's own commits, so if the
+change builds on an earlier PR that wasn't backported — the file it patches doesn't exist
+on the target — label the base PR too, or cherry-pick the whole chain by hand; a
+follow-up alone lands as conflict markers on a missing file (#562's sim fix was missed
+this way, and #566 couldn't be labeled cleanly because of it).
+
 ## Repo layout
 
 | Package | Purpose |
