@@ -11,10 +11,12 @@ Run `./tools/e2e/scripts/run_pulse.sh` to prove the ros2_pulse path end to end: 
 runs one Podman container where a preloaded publisher feeds `pulse_bridge` and this
 Measurement, and fails unless a Record with `average` and `sample_count` arrives.
 
-The message's `StatisticDataPoint[]` array is enum-coded, so it is flattened into named fields
-(`average`, `minimum`, `maximum`, `stddev`, `sample_count`). A statistic the producer did not
-include stays out of the Record. No rate is derived here: it is downstream work, from
-`sample_count` over the window or `1/average`.
+The message's `StatisticDataPoint[]` array is enum-coded, so it is flattened into the five named
+fields (`average`, `minimum`, `maximum`, `stddev`, `sample_count`). Every field is present in
+every Record: `null` means the producer did not measure that statistic in the window, either
+because the point was absent or because it was NaN — the "not measured" marker of rclcpp's
+built-in collector and of `pulse_bridge`'s `metric` layout. No rate is derived here: it is
+downstream work, from `sample_count` over the window or `1/average`.
 
 ## Enabling the ros2_pulse producer
 
@@ -90,24 +92,24 @@ refuses text logs, so with the default the bridge publishes nothing. Point the b
       "type": "object"
     },
     "average": {
-      "description": "Mean over the window",
-      "type": "number"
+      "description": "Mean over the window; null when the producer did not measure it",
+      "type": ["number", "null"]
     },
     "minimum": {
-      "description": "Smallest value observed in the window",
-      "type": "number"
+      "description": "Smallest value observed in the window; null when the producer did not measure it",
+      "type": ["number", "null"]
     },
     "maximum": {
-      "description": "Largest value observed in the window",
-      "type": "number"
+      "description": "Largest value observed in the window; null when the producer did not measure it",
+      "type": ["number", "null"]
     },
     "stddev": {
-      "description": "Standard deviation over the window",
-      "type": "number"
+      "description": "Standard deviation over the window; null when the producer did not measure it",
+      "type": ["number", "null"]
     },
     "sample_count": {
-      "description": "Messages observed in the window",
-      "type": "integer"
+      "description": "Messages observed in the window; null when the producer did not report it",
+      "type": ["integer", "null"]
     }
   },
   "required": ["measurement_source_name", "metrics_source", "window_start", "window_stop"],
