@@ -3,29 +3,30 @@
 
 #include "dc_measurements/plugins/measurements/topic_statistics.hpp"
 
+#include <cmath>
+#include <cstdint>
+#include <map>
+
 namespace dc_measurements
 {
 namespace
 {
 
-const char* statFieldName(uint8_t data_type)
+struct KnownStatistic
 {
-  switch (data_type)
-  {
-    case statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_AVERAGE:
-      return "average";
-    case statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_MINIMUM:
-      return "minimum";
-    case statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_MAXIMUM:
-      return "maximum";
-    case statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_STDDEV:
-      return "stddev";
-    case statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_SAMPLE_COUNT:
-      return "sample_count";
-    default:
-      return nullptr;
-  }
-}
+  uint8_t data_type;
+  const char* field;
+  // sample_count is a count carried in a float64 field; the Record types it as an integer.
+  bool integral;
+};
+
+const KnownStatistic kStatistics[] = {
+  { statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_AVERAGE, "average", false },
+  { statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_MINIMUM, "minimum", false },
+  { statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_MAXIMUM, "maximum", false },
+  { statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_STDDEV, "stddev", false },
+  { statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_SAMPLE_COUNT, "sample_count", true },
+};
 
 }  // namespace
 
@@ -58,17 +59,21 @@ void TopicStatistics::metricsCb(const statistics_msgs::msg::MetricsMessage& msg)
   record["window_start"] = { { "sec", msg.window_start.sec }, { "nanosec", msg.window_start.nanosec } };
   record["window_stop"] = { { "sec", msg.window_stop.sec }, { "nanosec", msg.window_stop.nanosec } };
 
+  std::map<uint8_t, double> points;
   for (const auto& point : msg.statistics)
   {
-    const char* field = statFieldName(point.data_type);
-    if (field == nullptr)
-    {
-      continue;
-    }
-    // sample_count is a count carried in a float64 field; the Record types it as an integer.
-    record[field] = point.data_type == statistics_msgs::msg::StatisticDataType::STATISTICS_DATA_TYPE_SAMPLE_COUNT ?
-                        json(static_cast<int64_t>(point.data)) :
-                        json(point.data);
+    points.emplace(point.data_type, point.data);
+  }
+
+  // Every known statistic is in the Record; null means the producer did not measure it — an
+  // absent point, or a non-finite one (the "not measured" marker of rclcpp's built-in collector
+  // and of pulse_bridge's metric layout).
+  for (const auto& known : kStatistics)
+  {
+    const auto point = points.find(known.data_type);
+    record[known.field] = point != points.end() && std::isfinite(point->second) ?
+                              (known.integral ? json(static_cast<int64_t>(point->second)) : json(point->second)) :
+                              json(nullptr);
   }
 
   publish(record);

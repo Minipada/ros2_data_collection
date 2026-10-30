@@ -52,24 +52,39 @@
       "type": "object"
     },
     "average": {
-      "description": "Mean over the window",
-      "type": "number"
+      "description": "Mean over the window; null when the producer did not measure it",
+      "type": [
+        "number",
+        "null"
+      ]
     },
     "minimum": {
-      "description": "Smallest value observed in the window",
-      "type": "number"
+      "description": "Smallest value observed in the window; null when the producer did not measure it",
+      "type": [
+        "number",
+        "null"
+      ]
     },
     "maximum": {
-      "description": "Largest value observed in the window",
-      "type": "number"
+      "description": "Largest value observed in the window; null when the producer did not measure it",
+      "type": [
+        "number",
+        "null"
+      ]
     },
     "stddev": {
-      "description": "Standard deviation over the window",
-      "type": "number"
+      "description": "Standard deviation over the window; null when the producer did not measure it",
+      "type": [
+        "number",
+        "null"
+      ]
     },
     "sample_count": {
-      "description": "Messages observed in the window",
-      "type": "integer"
+      "description": "Messages observed in the window; null when the producer did not report it",
+      "type": [
+        "integer",
+        "null"
+      ]
     }
   },
   "required": [
