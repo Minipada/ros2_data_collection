@@ -35,6 +35,10 @@ refuses text logs, so with the default the bridge publishes nothing. Point the b
 `files` or `glob` at the same file as `ROS_TOPIC_STATS_OUTPUT_FILE`, and this Measurement's
 `topic` at the bridge's `topic` parameter (both default to `/statistics`).
 
+The bridge's `metrics_source` parameter picks what lands in the Record's `metrics_source`
+field: the default `topic` keeps the measured topic's name there; `metric` is rclcpp's
+built-in layout, where it is `message_period` / `message_age` and the topic name is gone.
+
 ## Parameters
 
 | Parameter | Description                              | Type | Default                 |
