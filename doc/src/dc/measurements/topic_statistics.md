@@ -39,6 +39,11 @@ The bridge's `metrics_source` parameter picks what lands in the Record's `metric
 field: the default `topic` keeps the measured topic's name there; `metric` is rclcpp's
 built-in layout, where it is `message_period` / `message_age` and the topic name is gone.
 
+By default the probe reports only `average` and `sample_count`: `minimum`, `maximum` and
+`stddev` carry values only when the probed process tracks gaps — `ROS_TOPIC_STATS_JITTER=1`,
+or an expected-rate spec (`ROS_TOPIC_STATS_EXPECTED`) that asks for it. Otherwise those
+fields are `null`.
+
 ## Parameters
 
 | Parameter | Description                              | Type | Default                 |
