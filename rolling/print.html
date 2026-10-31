@@ -3797,6 +3797,7 @@ error is logged: it blocks collection when listed in <code>if_all_conditions</co
 <tr><td><a href="dc/./measurements/string_stamped.html">String stamped</a></td><td>Republish a string stamped message, can be used for external data</td></tr>
 <tr><td><a href="dc/./measurements/tcp_health.html">TCP Health</a></td><td>Health status of a TCP Server</td></tr>
 <tr><td><a href="dc/./measurements/thermal.html">Thermal</a></td><td>Temperatures (CPU, GPU, board, …) from the kernel's thermal sysfs interface</td></tr>
+<tr><td><a href="dc/./measurements/topic_statistics.html">Topic statistics</a></td><td>Per-topic period statistics from <code>/statistics</code> (<code>statistics_msgs/MetricsMessage</code>), one Record per message</td></tr>
 <tr><td><a href="dc/./measurements/uptime.html">Uptime</a></td><td>How long the machine has been turned on</td></tr>
 </tbody></table>
 </div><footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="battery"><a class="header" href="#battery">Battery</a></h1>
@@ -6779,12 +6780,146 @@ thermal:
   "gpu-thermal": 61.5
 }
 </code></pre>
-<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/thermal.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="uptime"><a class="header" href="#uptime">Uptime</a></h1>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/thermal.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="topic-statistics"><a class="header" href="#topic-statistics">Topic statistics</a></h1>
 <h2 id="description-34"><a class="header" href="#description-34">Description</a></h2>
-<p>Time since when the robot PC has been on.</p>
+<p>Subscribes to <code>/statistics</code> (<code>statistics_msgs/MetricsMessage</code>) and publishes one Record per
+message, so the per-topic statistics the ROS graph itself reports reach Destinations like any
+other Measurement. The two known producers of that message are ROS 2's built-in topic
+statistics (enabled per subscription with <code>enable_topic_statistics</code>) and
+<a href="https://github.com/TanayK07/ros2_pulse">ros2_pulse</a>'s <code>pulse_bridge</code>; this Measurement is a
+generic <code>MetricsMessage</code> consumer and never subscribes to the topic being measured.
+Run <code>./tools/e2e/scripts/run_pulse.sh</code> to prove the ros2_pulse path end to end: the script
+runs one Podman container where a preloaded publisher feeds <code>pulse_bridge</code> and this
+Measurement, and fails unless a Record with <code>average</code> and <code>sample_count</code> arrives.</p>
+<p>The message's <code>StatisticDataPoint[]</code> array is enum-coded, so it is flattened into the five named
+fields (<code>average</code>, <code>minimum</code>, <code>maximum</code>, <code>stddev</code>, <code>sample_count</code>). Every field is present in
+every Record: <code>null</code> means the producer did not measure that statistic in the window, either
+because the point was absent or because it was NaN — the "not measured" marker of rclcpp's
+built-in collector and of <code>pulse_bridge</code>'s <code>metric</code> layout. No rate is derived here: it is
+downstream work, from <code>sample_count</code> over the window or <code>1/average</code>.</p>
+<h2 id="enabling-the-ros2_pulse-producer"><a class="header" href="#enabling-the-ros2_pulse-producer">Enabling the ros2_pulse producer</a></h2>
+<p>The robot's processes run preloaded, per <a href="https://github.com/TanayK07/ros2_pulse">ros2_pulse's README</a>:</p>
+<pre><code class="language-bash">export LD_PRELOAD=$(ros2 pkg prefix ros2_pulse)/lib/libros2_pulse.so
+export ROS_TOPIC_STATS_OUTPUT_FILE=/tmp/pulse.log
+export ROS_TOPIC_STATS_FORMAT=jsonl
+export ROS_TOPIC_STATISTICS_PUBLISH_PERIOD=5.0
+ros2 launch my_robot bringup.launch.py
+</code></pre>
+<p><code>ROS_TOPIC_STATS_FORMAT=jsonl</code> is required: the probe's default is text, and <code>pulse_bridge</code>
+refuses text logs, so with the default the bridge publishes nothing. Point the bridge's
+<code>files</code> or <code>glob</code> at the same file as <code>ROS_TOPIC_STATS_OUTPUT_FILE</code>, and this Measurement's
+<code>topic</code> at the bridge's <code>topic</code> parameter (both default to <code>/statistics</code>).</p>
+<p>The bridge's <code>metrics_source</code> parameter picks what lands in the Record's <code>metrics_source</code>
+field: the default <code>topic</code> keeps the measured topic's name there; <code>metric</code> is rclcpp's
+built-in layout, where it is <code>message_period</code> / <code>message_age</code> and the topic name is gone.</p>
+<p>By default the probe reports only <code>average</code> and <code>sample_count</code>: <code>minimum</code>, <code>maximum</code> and
+<code>stddev</code> carry values only when the probed process tracks gaps — <code>ROS_TOPIC_STATS_JITTER=1</code>,
+or an expected-rate spec (<code>ROS_TOPIC_STATS_EXPECTED</code>) that asks for it. Otherwise those
+fields are <code>null</code>.</p>
 <h2 id="parameters-32"><a class="header" href="#parameters-32">Parameters</a></h2>
-<p>This Measurement has no parameters beyond the <a href="dc/measurements/../measurements.html#plugin-parameters">common Plugin parameters</a>.</p>
+<div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
+<tr><td><strong>topic</strong></td><td>Topic to subscribe to for topic statistics</td><td>str</td><td>"/statistics" (Optional)</td></tr>
+</tbody></table>
+</div>
 <h2 id="schema-32"><a class="header" href="#schema-32">Schema</a></h2>
+<pre><code class="language-json">{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TopicStatistics",
+  "description": "Per-topic statistics from a statistics_msgs/MetricsMessage, as reported on the /statistics topic",
+  "properties": {
+    "measurement_source_name": {
+      "description": "Node, topic or process name being measured",
+      "type": "string"
+    },
+    "metrics_source": {
+      "description": "The measured metric, e.g. the measured topic's name or \"message_age\"",
+      "type": "string"
+    },
+    "unit": {
+      "description": "Unit of the statistics, e.g. seconds or ms; empty when the producer left it unset",
+      "type": "string"
+    },
+    "window_start": {
+      "description": "Start of the window the statistics cover",
+      "properties": {
+        "sec": {
+          "description": "Seconds since epoch",
+          "type": "integer"
+        },
+        "nanosec": {
+          "description": "Nanosecond part of the timestamp",
+          "type": "integer"
+        }
+      },
+      "required": ["sec", "nanosec"],
+      "type": "object"
+    },
+    "window_stop": {
+      "description": "End of the window the statistics cover",
+      "properties": {
+        "sec": {
+          "description": "Seconds since epoch",
+          "type": "integer"
+        },
+        "nanosec": {
+          "description": "Nanosecond part of the timestamp",
+          "type": "integer"
+        }
+      },
+      "required": ["sec", "nanosec"],
+      "type": "object"
+    },
+    "average": {
+      "description": "Mean over the window; null when the producer did not measure it",
+      "type": ["number", "null"]
+    },
+    "minimum": {
+      "description": "Smallest value observed in the window; null when the producer did not measure it",
+      "type": ["number", "null"]
+    },
+    "maximum": {
+      "description": "Largest value observed in the window; null when the producer did not measure it",
+      "type": ["number", "null"]
+    },
+    "stddev": {
+      "description": "Standard deviation over the window; null when the producer did not measure it",
+      "type": ["number", "null"]
+    },
+    "sample_count": {
+      "description": "Messages observed in the window; null when the producer did not report it",
+      "type": ["integer", "null"]
+    }
+  },
+  "required": ["measurement_source_name", "metrics_source", "window_start", "window_stop"],
+  "type": "object"
+}
+</code></pre>
+<h2 id="configuration-35"><a class="header" href="#configuration-35">Configuration</a></h2>
+<pre><code class="language-yaml">...
+topic_statistics:
+  plugin: "dc_measurements/TopicStatistics"
+  topic_output: "/dc/measurement/topic_statistics"
+</code></pre>
+<h2 id="example-output-32"><a class="header" href="#example-output-32">Example output</a></h2>
+<pre><code class="language-json">{
+  "measurement_source_name": "topic_statistics_test_node",
+  "metrics_source": "/cmd_vel",
+  "unit": "ms",
+  "window_start": {"sec": 1700000000, "nanosec": 100},
+  "window_stop": {"sec": 1700000010, "nanosec": 200},
+  "average": 12.5,
+  "minimum": 8.0,
+  "maximum": 30.0,
+  "stddev": 4.2,
+  "sample_count": 5
+}
+</code></pre>
+<footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/topic_statistics.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="uptime"><a class="header" href="#uptime">Uptime</a></h1>
+<h2 id="description-35"><a class="header" href="#description-35">Description</a></h2>
+<p>Time since when the robot PC has been on.</p>
+<h2 id="parameters-33"><a class="header" href="#parameters-33">Parameters</a></h2>
+<p>This Measurement has no parameters beyond the <a href="dc/measurements/../measurements.html#plugin-parameters">common Plugin parameters</a>.</p>
+<h2 id="schema-33"><a class="header" href="#schema-33">Schema</a></h2>
 <pre><code class="language-json">{
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Uptime",
@@ -6799,13 +6934,13 @@ thermal:
     "type": "object"
 }
 </code></pre>
-<h2 id="configuration-35"><a class="header" href="#configuration-35">Configuration</a></h2>
+<h2 id="configuration-36"><a class="header" href="#configuration-36">Configuration</a></h2>
 <pre><code class="language-yaml">...
 uptime:
   plugin: "dc_measurements/Uptime"
   topic_output: "/dc/measurement/uptime"
 </code></pre>
-<h2 id="example-output-32"><a class="header" href="#example-output-32">Example output</a></h2>
+<h2 id="example-output-33"><a class="header" href="#example-output-33">Example output</a></h2>
 <pre><code class="language-json">{
   "flattened": false,
   "name": "uptime",
@@ -6815,7 +6950,7 @@ uptime:
 }
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/measurements/uptime.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="overview"><a class="header" href="#overview">Overview</a></h1>
-<h2 id="description-35"><a class="header" href="#description-35">Description</a></h2>
+<h2 id="description-36"><a class="header" href="#description-36">Description</a></h2>
 <p>A condition enables or disables one or multiple measurements to be published and thus collected. We could for example enable collecting camera images only when a robot is stopped.</p>
 <p>Each condition is enabled or disabled through a pluginlib plugin. It has these configuration parameters.</p>
 <div id="admonition-conditions-only-see-forward-in-time" class="admonition admonish-note" role="note" aria-labelledby="admonition-conditions-only-see-forward-in-time-title">
@@ -6863,12 +6998,12 @@ Measurement it gates, so one Condition can gate several Measurements at once.</l
 <tr><td><a href="dc/./conditions/same_as_previous.html">Same as previous</a></td><td>Value of the key is the same as the previous one</td></tr>
 </tbody></table>
 </div><footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/conditions.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="compare"><a class="header" href="#compare">Compare</a></h1>
-<h2 id="description-36"><a class="header" href="#description-36">Description</a></h2>
+<h2 id="description-37"><a class="header" href="#description-37">Description</a></h2>
 <p>Compare the value of a JSON key against a configured operand and activate while the comparison
 holds. One plugin covers the whole family: <code>comparison</code> picks the operator and the type you give
 <code>value</code> picks the operand type (the two axes thirteen former per-operator plugins each
 hard-coded).</p>
-<h2 id="parameters-33"><a class="header" href="#parameters-33">Parameters</a></h2>
+<h2 id="parameters-34"><a class="header" href="#parameters-34">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
 <tr><td><strong>key</strong></td><td>JSON key where value is located, separate nested dictionary with <strong>/</strong></td><td>str</td><td>N/A (Mandatory)</td></tr>
 <tr><td><strong>comparison</strong></td><td>Operator: <code>eq</code>, <code>ne</code>, <code>gt</code>, <code>ge</code>, <code>lt</code>, <code>le</code>, <code>match</code> or <code>exists</code></td><td>str</td><td>N/A (Mandatory)</td></tr>
@@ -6880,7 +7015,7 @@ hard-coded).</p>
 <p>The JSON comparison is <strong>type-strict</strong>: a Record field written as <code>5</code> is an integer and never
 matches a <code>float</code> operand (and <code>5.0</code> never matches an <code>int</code> one). <code>gt</code>/<code>ge</code>/<code>lt</code>/<code>le</code> need an
 <code>int</code> or <code>float</code> operand; <code>ne</code> inverts <code>eq</code> for every operand type.</p>
-<h2 id="configuration-36"><a class="header" href="#configuration-36">Configuration</a></h2>
+<h2 id="configuration-37"><a class="header" href="#configuration-37">Configuration</a></h2>
 <p>Only forward a <a href="dc/conditions/../measurements/tcp_health.html">TCP Health</a> Record when the check actually
 failed — suppressing the steady stream of <code>active: true</code> polls and keeping only outage alerts:</p>
 <pre><code class="language-yaml">measurement_server:
@@ -6975,9 +7110,9 @@ participant joining the DDS graph:</p>
 </div>
 <p><code>ne</code> (value differs) and scalar <code>str</code> equality are new with <code>Compare</code>.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/conditions/compare.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="moving"><a class="header" href="#moving">Moving</a></h1>
-<h2 id="description-37"><a class="header" href="#description-37">Description</a></h2>
+<h2 id="description-38"><a class="header" href="#description-38">Description</a></h2>
 <p>Use a <a href="https://www.wikiwand.com/en/Hysteresis">hysteresis</a> on robot position to know whether the robot is moving.</p>
-<h2 id="parameters-34"><a class="header" href="#parameters-34">Parameters</a></h2>
+<h2 id="parameters-35"><a class="header" href="#parameters-35">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
 <tr><td><strong>odom_topic</strong></td><td>Topic from where odom is used to know if the robot is moving</td><td>str</td><td>"/odom"</td></tr>
 <tr><td><strong>speed_threshold</strong></td><td>Speed threshold used in the hysteresis</td><td>float</td><td>0.2</td></tr>
@@ -6985,7 +7120,7 @@ participant joining the DDS graph:</p>
 <tr><td><strong>count_hysteresis</strong></td><td>Hysteresis counter</td><td>int</td><td>5</td></tr>
 </tbody></table>
 </div>
-<h2 id="configuration-37"><a class="header" href="#configuration-37">Configuration</a></h2>
+<h2 id="configuration-38"><a class="header" href="#configuration-38">Configuration</a></h2>
 <p>Only record camera images while the robot is stationary
 (<code>dc_demos/params/qrcodes_stdout.yaml</code>):</p>
 <pre><code class="language-yaml">measurement_server:
@@ -7000,15 +7135,15 @@ participant joining the DDS graph:</p>
       cam_topic: "/right_intel_realsense_r200_depth/image_raw"
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/conditions/moving.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="same-as-previous"><a class="header" href="#same-as-previous">Same as previous</a></h1>
-<h2 id="description-38"><a class="header" href="#description-38">Description</a></h2>
+<h2 id="description-39"><a class="header" href="#description-39">Description</a></h2>
 <p>Compare JSON key value to the value passed in parameter and returns true if match.</p>
-<h2 id="parameters-35"><a class="header" href="#parameters-35">Parameters</a></h2>
+<h2 id="parameters-36"><a class="header" href="#parameters-36">Parameters</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Parameter</th><th>Description</th><th>Type</th><th>Default</th></tr></thead><tbody>
 <tr><td><strong>keys</strong></td><td>JSON keys where values are located, separate nested dictionary with <strong>/</strong></td><td>list[str]</td><td>N/A (Mandatory)</td></tr>
 <tr><td><strong>exclude</strong></td><td>JSON keys to exclude in comparison</td><td>list[str]</td><td>N/A (Mandatory)</td></tr>
 </tbody></table>
 </div>
-<h2 id="configuration-38"><a class="header" href="#configuration-38">Configuration</a></h2>
+<h2 id="configuration-39"><a class="header" href="#configuration-39">Configuration</a></h2>
 <p>Skip republishing <a href="dc/conditions/../measurements/diagnostics.html">Diagnostics</a> when nothing has changed
 since the last collection — <code>/diagnostics</code> is typically high-volume and mostly unchanging:</p>
 <pre><code class="language-yaml">measurement_server:
@@ -7026,7 +7161,7 @@ since the last collection — <code>/diagnostics</code> is typically high-volume
       names: ["motor_driver", "battery"]
 </code></pre>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/conditions/same_as_previous.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="triggers"><a class="header" href="#triggers">Triggers</a></h1>
-<h2 id="description-39"><a class="header" href="#description-39">Description</a></h2>
+<h2 id="description-40"><a class="header" href="#description-40">Description</a></h2>
 <p>A <strong>Trigger</strong> fires a one-shot signal — a <code>dc_interfaces/msg/FlushEvent</code> — when a composition
 of <a href="dc/./conditions.html">Conditions</a> goes from false to true. Measurements listening for that
 event release the window of recent data they have been holding back, so the seconds <em>leading
@@ -7250,14 +7385,14 @@ seconds. Swap the <code>moving</code> Condition for whatever expresses your even
 Postgres table, with the <code>incident_id</code> column asserted by query — is
 <code>tools/e2e/scripts/run_incident.sh</code>.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/triggers.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="edge-trigger"><a class="header" href="#edge-trigger">Edge trigger</a></h1>
-<h2 id="description-40"><a class="header" href="#description-40">Description</a></h2>
+<h2 id="description-41"><a class="header" href="#description-41">Description</a></h2>
 <p>Composes the Condition plugins named in <code>if_all_conditions</code>/<code>if_any_conditions</code>/
 <code>if_none_conditions</code> — the exact same rules Measurements already use — and fires exactly
 once on the false→true rising edge of the composed result. A sustained <code>true</code> fires only
 once; the Trigger stays quiet until the composed result falls back to <code>false</code> and rises
 again. No rule-evaluation logic of its own: composition is entirely delegated to the same
 <code>ConditionSet</code> evaluator <code>dc_measurements::Measurement</code> uses for live gating.</p>
-<h2 id="parameters-36"><a class="header" href="#parameters-36">Parameters</a></h2>
+<h2 id="parameters-37"><a class="header" href="#parameters-37">Parameters</a></h2>
 <p>See <a href="dc/triggers/../triggers.html#plugin-parameters">Plugin parameters</a> — <code>EdgeTrigger</code> has no parameters
 of its own beyond the shared <code>trigger.*</code> ones every Trigger plugin reads.</p>
 <h2 id="trigger-vs-condition-1"><a class="header" href="#trigger-vs-condition-1">Trigger vs Condition</a></h2>
@@ -8736,7 +8871,7 @@ the ones the demos and examples assume:</p>
 <p>The compose files live in <code>tools/infrastructure/docker/</code>. None of this is required to run
 DC — the <code>console</code> and <code>file</code> Destinations need nothing external.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="adminer"><a class="header" href="#adminer">Adminer</a></h1>
-<h2 id="description-41"><a class="header" href="#description-41">Description</a></h2>
+<h2 id="description-42"><a class="header" href="#description-42">Description</a></h2>
 <p>Adminer (formerly phpMinAdmin) is a full-featured database management tool written in PHP. Conversely to phpMyAdmin, it consist of a single file ready to deploy to the target server. Adminer is available for MySQL, MariaDB, PostgreSQL, SQLite, MS SQL, Oracle, Elasticsearch, MongoDB and others via plugin</p>
 <h2 id="start-in-a-container"><a class="header" href="#start-in-a-container">Start in a container</a></h2>
 <p>Execute:</p>
@@ -8759,7 +8894,7 @@ DC — the <code>console</code> and <code>file</code> Destinations need nothing 
 <p>Natively, by accessing <a href="http://localhost:80/adminer">http://localhost:80/adminer</a>, and in a container, by accessing <a href="http://localhost:8080">http://localhost:8080</a>, you will be able to see this page:</p>
 <p><img src="dc/infrastructure_setup/../../images/adminer.png" alt="Adminer" /></p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/adminer.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="elasticsearch"><a class="header" href="#elasticsearch">Elasticsearch</a></h1>
-<h2 id="description-42"><a class="header" href="#description-42">Description</a></h2>
+<h2 id="description-43"><a class="header" href="#description-43">Description</a></h2>
 <p><a href="https://www.elastic.co/elasticsearch">Elasticsearch</a> is a distributed, JSON-native search
 and analytics engine. It stores Records as documents — no schema to declare up front, no
 columns to pre-create — which makes it a natural fit for the <a href="dc/infrastructure_setup/../destinations.html#passthrough-custom_config_files">passthrough
@@ -8834,7 +8969,7 @@ on a laptop. Elasticsearch's own sizing guidance applies for a real deployment.<
 out — the tutorial's verification step queries the <code>_search</code> API with <code>curl</code> and needs
 only Elasticsearch.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/elasticsearch.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="grafana-1"><a class="header" href="#grafana-1">Grafana</a></h1>
-<h2 id="description-43"><a class="header" href="#description-43">Description</a></h2>
+<h2 id="description-44"><a class="header" href="#description-44">Description</a></h2>
 <p><a href="https://grafana.com/">Grafana</a> is a multi-platform open source analytics and interactive visualization web application. It provides charts, graphs, and alerts for the web when connected to supported data sources.</p>
 <h2 id="start-in-a-container-2"><a class="header" href="#start-in-a-container-2">Start in a container</a></h2>
 <p>Execute:</p>
@@ -8862,7 +8997,7 @@ dashboards ship: <strong>Home</strong>, <strong>Robot</strong>, <strong>KPI</str
 <p>Open <a href="http://localhost:3000">http://localhost:3000</a> and log in; the provisioned dashboards are under <em>Dashboards</em>:</p>
 <p><img src="dc/infrastructure_setup/../../images/grafana-1.png" alt="Grafana" /></p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/grafana.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="influxdb-1"><a class="header" href="#influxdb-1">InfluxDB</a></h1>
-<h2 id="description-44"><a class="header" href="#description-44">Description</a></h2>
+<h2 id="description-45"><a class="header" href="#description-45">Description</a></h2>
 <p><a href="https://www.influxdata.com/">InfluxDB</a> is a time-series database purpose-built for
 metrics and events. DC has no blessed <code>influxdb</code> Destination — Vector's <code>influxdb_logs</code>
 sink is reached through the <a href="dc/infrastructure_setup/../destinations.html#passthrough-custom_config_files">passthrough Destination</a>,
@@ -8931,7 +9066,7 @@ Dummy video device (0x0000) (platform:v4l2loopback-000):
 <li>A container engine installed (Podman by default)</li>
 <li>Its compose plugin installed</li>
 </ol>
-<h2 id="description-45"><a class="header" href="#description-45">Description</a></h2>
+<h2 id="description-46"><a class="header" href="#description-46">Description</a></h2>
 <p>RustFS is an S3-compatible object storage server, written in Rust and licensed Apache 2.0. It is the <code>s3</code> blessed Destination's recommended backing store — MinIO's community edition was archived upstream in 2026 and no longer receives maintenance, so DC 2.0's own examples and E2E harness (<code>tools/e2e/</code>) both target RustFS instead; existing MinIO or Ceph RGW deployments work identically since <code>dc_bridge</code>'s <code>s3</code> Destination just talks plain S3 API. See <a href="dc/infrastructure_setup/../destinations.html">Destinations</a> for the full Destination contract.</p>
 <h2 id="start-in-a-container-4"><a class="header" href="#start-in-a-container-4">Start in a container</a></h2>
 <p>Execute:</p>
@@ -8960,7 +9095,7 @@ Dummy video device (0x0000) (platform:v4l2loopback-000):
 </div>
 <p>These are RustFS's built-in default credentials (no environment variables are set in <code>docker-compose.rustfs.yaml</code>) — set your own for anything beyond a local demo.</p>
 <footer id="open-on-gh">Found a bug? <a href="https://github.com/minipada/ros2_data_collection/edit/main/doc/src/dc/infrastructure_setup/rustfs.md">Edit this page on GitHub.</a></footer><div style="break-before: page; page-break-before: always;"></div><h1 id="postgresql-3"><a class="header" href="#postgresql-3">PostgreSQL</a></h1>
-<h2 id="description-46"><a class="header" href="#description-46">Description</a></h2>
+<h2 id="description-47"><a class="header" href="#description-47">Description</a></h2>
 <p>PostgreSQL is a powerful, open source object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads. The origins of PostgreSQL date back to 1986 as part of the POSTGRES project at the University of California at Berkeley and has more than 35 years of active development on the core platform.</p>
 <h2 id="start-in-a-container-5"><a class="header" href="#start-in-a-container-5">Start in a container</a></h2>
 <p>Execute:</p>
