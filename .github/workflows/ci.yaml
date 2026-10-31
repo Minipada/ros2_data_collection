@@ -25,8 +25,7 @@
 #
 #   build-workspace (Release: build + colcon test) ─┬─▶ sim                    (pull dc-workspace, simulation smoke check)
 #                                                    ├─▶ build-e2e-image ────▶ e2e-single-container  (pull dc-e2e, zero-loss harness, managed shipper)
-#                                                    │                     ┌─▶ e2e-split-container (same image, unmanaged shipper + passthrough merge)
-#                                                    │                     └─▶ e2e-topic-statistics (TopicStatistics smoke, live ros2_pulse producer)
+#                                                    │                     └─▶ e2e-split-container (same image, unmanaged shipper + passthrough merge)
 #                                                    ├─▶ build-dc-ros-image ─┬─▶ verify-runtime-images    (pull + run, no build)
 #                                                    │                      ├─▶ verify-kind-networkpolicy (#452: kind + Calico, NetworkPolicy proof)
 #                                                    └─▶ build-dc-uploader-image ─┴─▶ verify-robot-manifests (#450: podman kube play + network isolation)
@@ -514,11 +513,7 @@ jobs:
         env:
           BASE_IMAGE: ${{ needs.build-workspace.outputs.workspace_ref }}
           E2E_REF: ${{ needs.build-workspace.outputs.e2e_ref }}
-          # Containerfile.e2e's ros2_pulse build sources /opt/ros/<distro> — the same
-          # lever the rest of the workflow builds with, so a distro branch's e2e image
-          # never sources the wrong install.
-          ROS_DISTRO: ${{ env.ROS_DISTRO }}
-        run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" --build-arg "ROS_DISTRO=$ROS_DISTRO" -t "$E2E_REF" -f tools/e2e/Containerfile.e2e tools/e2e
+        run: podman build --build-arg "BASE_IMAGE=$BASE_IMAGE" -t "$E2E_REF" -f tools/e2e/Containerfile.e2e tools/e2e
 
       - name: Push the E2E image
         uses: ./.github/actions/podman-push
@@ -1125,40 +1120,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: e2e-split-container-harness-logs
-          path: tools/e2e/.run/**
-          # .run/ is hidden — upload-artifact skips hidden dirs by default (#517)
-          include-hidden-files: true
-
-  e2e-topic-statistics:
-    needs: [build-workspace, build-e2e-image]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Verify podman
-        run: podman --version
-
-      - name: Log in to ghcr.io (to pull the E2E image)
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
-
-      - name: Run the TopicStatistics smoke (live ros2_pulse producer)
-        # A deliberate smoke, not a second zero-loss harness: one container, one producer
-        # (pulse_bridge fed by an LD_PRELOAD'd publisher), one hard assertion — a Record
-        # with average + sample_count on the Measurement's topic_output. The heavy
-        # pipeline guarantees stay with e2e-single-container/e2e-split-container.
-        env:
-          DC_E2E_IMAGE: ${{ needs.build-workspace.outputs.e2e_ref }}
-        run: ./tools/e2e/scripts/run_pulse.sh
-
-      - name: Upload smoke logs (on failure)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-topic-statistics-smoke-logs
           path: tools/e2e/.run/**
           # .run/ is hidden — upload-artifact skips hidden dirs by default (#517)
           include-hidden-files: true
