@@ -58,7 +58,14 @@ bt_navigator:
     robot_base_frame: base_link
     odom_topic: /odom
     bt_loop_duration: 10
-    default_server_timeout: 20
+    # How long a BT action node waits for its server to acknowledge a goal
+    # request before aborting. The 20s default lost this race on a loaded
+    # runner: mid-waypoint, follow_path's ack never landed within 20s while the
+    # server itself kept processing path updates at 1Hz (run 40811872030,
+    # station 20) -- the abort left the robot wedged against the pallet rows
+    # and the remaining 40 waypoints all skipped. A healthy ack is instant; the
+    # ceiling only bounds a genuinely dead server.
+    default_server_timeout: 60
     # bt_navigator builds the BT's action clients at activation and waits this long
     # (default 1s) for each server to be discoverable. The servers it needs were
     # activated moments earlier by the lifecycle manager, and on a loaded runner DDS
@@ -127,10 +134,27 @@ controller_server:
     #     0.1 + 0.73*tan(0.1) + 0.181 = 0.354 <= 0.73*tan(30) = 0.422   OK
     #     0.1 + 0.73*tan(0.2) + 0.181 = 0.429 <= 0.422                  false
     #
-    # Hence 0.1 rad, not the 0.2 this carried. Yaw is the expensive term because
+    # Hence rejecting the 0.2 this carried. Yaw is the expensive term because
     # it scales with the standoff, and a diff-drive robot turning on the spot
-    # settles well inside 0.1 rad -- measured at no cost in navigation time;
-    # xy stays at 0.1 m, which costs nothing.
+    # settles well inside 0.1 rad -- measured at no cost in navigation time.
+    #
+    # The station goals face a pallet, 90 degrees off the travel direction, so the
+    # checker can only fire once DWB has stopped the robot and rotated it in place
+    # -- and DWB only does that inside FollowPath's own xy_goal_tolerance (kept
+    # equal below). A checker window wider than the rotate window is a trap: an
+    # approach drifting between the two never stops, cruises past the plan's end,
+    # and aborts (run 40787707809: one such miss at station 14 cascaded into 46
+    # skipped stations, the abort coast carrying the robot until AMCL latched a
+    # phantom pose outside the warehouse walls).
+    #
+    # xy sits at 0.175 m with yaw at 0.05: two daily passes died when a mid-aisle
+    # approach drifted ~0.15 m lateral, past both windows (0.145/0.1 in the later
+    # one -- its checker was latched but nothing ever stopped the robot). The yaw
+    # tightening is what pays for the extra xy: the decode budget spends
+    # d*tan(|yaw error|) per metre of standoff, so halving yaw frees the 3 cm of
+    # xy headroom, and the lint check's worst-case decode margin lands at +0.004 m
+    # on the tightest aisle-2 station (0.16 rad yaw would take it back below
+    # zero).
     #
     # Worth knowing that this budget is not the whole error: the goal checker
     # compares AMCL's *estimate* of the pose against the goal, so localization
@@ -140,8 +164,8 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.1
-      yaw_goal_tolerance: 0.1
+      xy_goal_tolerance: 0.175
+      yaw_goal_tolerance: 0.05
     # DWB parameters
     FollowPath:
       plugin: "dwb_core::DWBLocalPlanner"
@@ -169,7 +193,10 @@ controller_server:
       linear_granularity: 0.05
       angular_granularity: 0.025
       transform_tolerance: 0.2
-      xy_goal_tolerance: 0.1
+      # Kept equal to general_goal_checker's xy_goal_tolerance: this window is
+      # what triggers the stop-and-rotate the checker waits for (see the
+      # general_goal_checker comment above).
+      xy_goal_tolerance: 0.175
       trans_stopped_velocity: 0.05
       short_circuit_trajectory_evaluation: True
       stateful: True
