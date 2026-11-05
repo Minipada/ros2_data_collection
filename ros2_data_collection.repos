@@ -41,4 +41,5 @@ repositories:
   navigation2:
     type: git
     url: https://github.com/ros-navigation/navigation2.git
-    version: main
+    # Temporary pin: nightly sim hangs at bt_navigator configure from 11-03 on; last main before that.
+    version: c633de75b9663e54dbe48d8177b1a2cd11cfd986
