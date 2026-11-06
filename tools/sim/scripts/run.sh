@@ -247,6 +247,8 @@ if has_stage nav || has_stage waypoints || has_stage detect; then
     rin 'pgrep -f tb3_qrcodes.launch.py >/dev/null' \
       || fail "the tb3_qrcodes launch died on startup (log tail follows)"
     rin 'grep -a "Activating\|Managed nodes are active\|Failed to change state\|not available\|Configuring" /tmp/qrcodes.log | tail -30' || true
+    # A stall at 'Configuring bt_navigator' prints nothing more; backtrace the hung node.
+    rin 'apt-get install -y -q gdb >/dev/null 2>&1; pid=$(pgrep -f "bt_navigator/bt_navigator" | head -1); echo "bt_navigator pid=$pid"; [ -n "$pid" ] && gdb -p "$pid" -batch -ex "thread apply all bt 25" 2>&1 | tail -150; uptime' || true
     stop_stack
   done
   [ -n "$nav_up" ] || fail "nav2 never reported all managed nodes active (both attempts)"
