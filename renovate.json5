@@ -1,0 +1,28 @@
+// SPDX-FileCopyrightText: 2022-2026 David Bensoussan
+// SPDX-License-Identifier: MPL-2.0
+
+// Renovate reads this file from the default branch only. Updates land on rolling;
+// jazzy/lyrical inherit through the backport:* labels (tools/ci/backport.sh). humble's
+// tree diverged (embedded Fluent Bit), so its updates stay manual.
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended"],
+  schedule: ["before 6am on monday"],
+  // pyproject.toml's ranges are deliberate ABI/API constraints (numpy<2, pydantic<2);
+  // bump uv.lock inside them, never widen them.
+  rangeStrategy: "update-lockfile",
+  baseBranchPatterns: ["rolling"],
+  packageRules: [
+    {
+      // Only rolling PRs exist today; the guard keeps this correct if the pattern
+      // list ever grows.
+      matchBaseBranches: ["rolling"],
+      addLabels: ["backport:jazzy", "backport:lyrical"],
+    },
+    {
+      // pyproject's ruff pin and the ruff-pre-commit rev must stay in step.
+      matchDepNames: ["ruff", "astral-sh/ruff-pre-commit"],
+      groupName: "ruff",
+    },
+  ],
+}
